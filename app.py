@@ -212,12 +212,49 @@ def _is_https(request: Request) -> bool:
     return (request.headers.get("x-forwarded-proto", request.url.scheme) == "https")
 
 
+def _client_ip(request: Request) -> str:
+    fwd = request.headers.get("x-forwarded-for", "")
+    if fwd:
+        return fwd.split(",")[0].strip()
+    return request.client.host if request.client else "?"
+
+
+# brute-force guard: per-IP failed-attempt window (privacy-law hardening)
+_fails = {}  # ip -> [timestamps]
+
+
+def _too_many_fails(ip: str) -> bool:
+    now = time.time()
+    lst = [t for t in _fails.get(ip, []) if now - t < 600]
+    _fails[ip] = lst
+    return len(lst) >= 8
+
+
+def _note_fail(ip: str):
+    _fails.setdefault(ip, []).append(time.time())
+
+
+def _log_login(request: Request, ok: bool):
+    try:
+        sb_insert("bi_login_log", {"ip": _client_ip(request), "ok": ok,
+                                   "ua": request.headers.get("user-agent", "")[:200]})
+    except Exception:
+        pass
+
+
 @app.post("/login")
 async def login_post(request: Request):
+    ip = _client_ip(request)
+    if _too_many_fails(ip):
+        return HTMLResponse(_login_html("יותר מדי ניסיונות — נסה שוב בעוד עשר דקות"),
+                            status_code=429)
     body = (await request.body()).decode("utf-8", "replace")
     form = urllib.parse.parse_qs(body)
     if not _pass_ok(form.get("p", [""])[0]):
+        _note_fail(ip)
+        _log_login(request, False)
         return HTMLResponse(_login_html("סיסמה שגויה"), status_code=401)
+    _log_login(request, True)
     resp = RedirectResponse("/", status_code=303)
     resp.set_cookie(COOKIE_NAME, _session_token(), max_age=60 * 60 * 24 * 30,
                     httponly=True, secure=_is_https(request), samesite="lax")
