@@ -48,6 +48,9 @@ REFRESH_MINUTES = max(5, int(os.environ.get("REFRESH_MINUTES", "15") or 15))
 COOKIE_NAME = "dvbi_session"
 MAX_LINE_SPAN_DAYS = 92
 
+ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+ASK_MODEL = os.environ.get("ASK_MODEL", "claude-sonnet-5")
+
 app = FastAPI(title="Divani BI", docs_url=None, redoc_url=None, openapi_url=None)
 
 _state = {"last_sync": None, "last_rc": None, "last_manual": 0.0, "minmax": None, "minmax_at": 0.0}
@@ -434,6 +437,110 @@ def api_cash(request: Request, d_from: str = "", d_to: str = ""):
         return JSONResponse({"mode": "cashlines", "rows": rows or []})
     agg = sb_rpc("bi_cash_agg", {"p_from": f.isoformat(), "p_to": t.isoformat()})
     return JSONResponse({"mode": "cashagg", "agg": agg or {}})
+
+
+# ---------- free-form questions (Ask) ----------
+
+ASK_SYSTEM = """אתה עוזר נתונים של ויטוריו דיוואני (רשת רהיטים). ענה על שאלות חופשיות של מנהלים
+על נתוני המכירות והתקבולים באמצעות שאילתות SQL (PostgreSQL) דרך הכלי run_sql.
+
+הטבלאות (סכמה public):
+1. bi_order_lines — שורת פריט בהזמנה. עמודות: ordname, ord_date (date), agent (שם סוכן),
+   custname (מס' לקוח), cdes (שם לקוח), branch (קוד סניף), status, otype (סוג מסמך),
+   partname (מק"ט), pdes (תיאור פריט), qprice (מכירה בש"ח לפני מע"מ), qprofit (רווח גולמי), line_no.
+   כללי ברזל אלא אם נאמר אחרת: לסנן status <> 'מבוטלת' וגם cdes <> 'משמש לתחזית מכירות'.
+   דוחות מכירה רגילים מחריגים גם אנשי שירות: agent not in (select agent from bi_service_agents).
+   קודי סניף: 101 נתניה · 102 ראשל"צ · 103 אתר דיוואני · 105 חיפה · 106 ירושלים · 107 בית שמש ·
+   '' = ללא שיוך (לפני 2024 + הזמנות שירות). otype: מכיל 'טלפוני' = ערוץ טלפוני (מוצג כסניף נפרד);
+   ערכים כמו 'תיקון במקום'/'שירות החלפה'/'איסוף לתיקון' = פעולות שירות; ערכים היסטוריים כמו
+   'גרופון'/'וואלה שופס'/'ערוץ הקניות' = שוקי-משנה ישנים. הזמנה = distinct ordname.
+2. bi_receipt_pays — רכיב תשלום בקבלה. עמודות: ivnum, iv_date (date), branch, agent, custname,
+   cdes, ordname, status, kind, means, amount, pay_date. לספור רק status = 'סופית'.
+   kind: cash מזומן · transfer העברה · bit ביט · check שיק (pay_date=פירעון; שיק מזומן כאשר
+   pay_date <= iv_date או ריק) · card אשראי · other. הגדרת "מזומן" של ההנהלה = cash+transfer+bit+שיק מזומן.
+3. bi_service_agents — רשימת אנשי השירות (עמודה: agent).
+הנתונים: מסוף 2014 ועד היום, מתעדכנים כל רבע שעה מפריוריטי.
+
+כללים: ענה בעברית, תמציתי וישר לעניין. סכומים בש"ח עם הפרדת אלפים. ציין תמיד לאיזו תקופה
+הנתון מתייחס. אם השאלה דו-משמעית — בחר פרשנות סבירה וציין אותה במשפט. תוצאת שאילתה מוגבלת
+ל-200 שורות — השתמש ב-GROUP BY וסכימות, אל תשלוף שורות גולמיות. לחיפוש שם השתמש ב-ILIKE עם %.
+התאריך של היום מופיע בשאלת המשתמש. אל תמציא נתונים — כל מספר חייב להגיע משאילתה."""
+
+ASK_TOOLS = [{
+    "name": "run_sql",
+    "description": "מריץ שאילתת SELECT יחידה על בסיס הנתונים ומחזיר עד 200 שורות כ-JSON.",
+    "input_schema": {"type": "object", "required": ["sql"],
+                     "properties": {"sql": {"type": "string",
+                                            "description": "שאילתת SELECT אחת, בלי נקודה-פסיק"}}},
+}]
+
+
+def _anthropic_call(messages):
+    body = json.dumps({"model": ASK_MODEL, "max_tokens": 1500, "system": ASK_SYSTEM,
+                       "messages": messages, "tools": ASK_TOOLS}).encode("utf-8")
+    out = _http("https://api.anthropic.com/v1/messages",
+                {"x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01",
+                 "Content-Type": "application/json"}, data=body, timeout=120)
+    return json.loads(out.decode("utf-8"))
+
+
+@app.post("/api/ask")
+async def api_ask(request: Request):
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    if not ANTHROPIC_KEY:
+        return JSONResponse({"error": "no_key"})
+    try:
+        body = json.loads((await request.body()).decode("utf-8", "replace") or "{}")
+    except ValueError:
+        return JSONResponse({"error": "bad_request"}, status_code=400)
+    q = (body.get("q") or "").strip()[:800]
+    if not q:
+        return JSONResponse({"error": "empty"}, status_code=400)
+    if time.time() - _state.get("last_ask", 0) < 5:
+        return JSONResponse({"error": "rate"}, status_code=429)
+    _state["last_ask"] = time.time()
+    t0 = time.time()
+    today = dt.datetime.now(IL).date().isoformat()
+    messages = [{"role": "user", "content": f"התאריך היום: {today}.\nשאלה: {q}"}]
+    sqls = []
+    try:
+        for _ in range(8):
+            r = _anthropic_call(messages)
+            if r.get("type") == "error" or r.get("error"):
+                detail = str(r.get("error", {}).get("message", ""))[:200]
+                return JSONResponse({"error": "api", "detail": detail})
+            content = r.get("content") or []
+            if r.get("stop_reason") == "tool_use":
+                messages.append({"role": "assistant", "content": content})
+                results = []
+                for blk in content:
+                    if blk.get("type") == "tool_use":
+                        sql = str((blk.get("input") or {}).get("sql", ""))
+                        sqls.append(sql)
+                        try:
+                            out = sb_rpc("bi_ask_sql", {"p_sql": sql})
+                        except Exception as e:
+                            out = {"error": repr(e)[:200]}
+                        results.append({"type": "tool_result", "tool_use_id": blk.get("id"),
+                                        "content": json.dumps(out, ensure_ascii=False)[:30000]})
+                messages.append({"role": "user", "content": results})
+                continue
+            text = "".join(b.get("text", "") for b in content if b.get("type") == "text").strip()
+            ms = int((time.time() - t0) * 1000)
+            try:
+                sb_insert("bi_ask_log", {"q": q, "ok": True, "ms": ms, "sqls": sqls})
+            except Exception:
+                pass
+            return JSONResponse({"answer": text or "לא התקבלה תשובה.", "sqls": sqls})
+        return JSONResponse({"error": "loop"})
+    except Exception as e:
+        try:
+            sb_insert("bi_ask_log", {"q": q, "ok": False,
+                                     "ms": int((time.time() - t0) * 1000), "sqls": sqls})
+        except Exception:
+            pass
+        return JSONResponse({"error": "api", "detail": repr(e)[:200]})
 
 
 @app.post("/api/refresh")

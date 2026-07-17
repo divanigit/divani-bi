@@ -74,6 +74,20 @@
   .frow input,.frow select{font-family:inherit;font-size:14px;color:var(--tx);background:var(--surface);border:1px solid var(--line2);border-radius:9px;padding:9px 10px;min-height:42px}
   .go{font-family:inherit;font-size:13.5px;font-weight:500;min-height:42px;padding:9px 16px;border:0;border-radius:10px;background:var(--bd);color:#fff;cursor:pointer}
   .cover{font-size:11.5px;color:var(--tx3);border-top:1px solid var(--line);padding-top:10px;margin-top:2px}
+  /* ---- ask sheet ---- */
+  #asksheet{position:fixed;right:0;left:0;bottom:0;z-index:120;background:var(--bg);border-radius:18px 18px 0 0;border:1px solid var(--line);border-bottom:0;box-shadow:0 -12px 40px rgba(0,0,0,.25);padding:14px 16px calc(18px + env(safe-area-inset-bottom));display:none;max-height:88vh;overflow-y:auto}
+  @media (min-width:640px){#asksheet{left:50%;right:auto;transform:translateX(50%);width:520px;bottom:auto;top:8vh;border-radius:18px;border-bottom:1px solid var(--line)}}
+  #asksheet.on,#askovl.on{display:block}
+  .askrow{display:flex;gap:8px;align-items:flex-end}
+  .askrow textarea{flex:1;font-family:inherit;font-size:15px;color:var(--tx);background:var(--surface);border:1px solid var(--line2);border-radius:12px;padding:10px 12px;resize:vertical;min-height:48px}
+  .askhint{font-size:11.5px;color:var(--tx3);margin:8px 2px 12px}
+  .askitem{border:1px solid var(--line);border-radius:14px;padding:11px 13px;margin-bottom:10px}
+  .askitem .q{font-size:13.5px;font-weight:700;margin-bottom:7px}
+  .askitem .a{font-size:13.5px;line-height:1.75;white-space:pre-wrap}
+  .askitem .a.err{color:var(--dfg)}
+  .askitem details{margin-top:8px;font-size:11.5px;color:var(--tx3)}
+  .askitem details code{display:block;direction:ltr;text-align:left;background:var(--surface);border-radius:8px;padding:7px 9px;margin-top:5px;font-size:10.5px;overflow-x:auto;white-space:pre}
+  .askwait{display:flex;align-items:center;gap:9px;color:var(--tx3);font-size:13px;padding:6px 0}
   @media (prefers-reduced-motion:reduce){.chev{transition:none}.spin{animation-duration:1.6s}}
   @media (max-width:420px){h1{font-size:19px}.kpi .v{font-size:16px}}
 </style>
@@ -93,6 +107,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
       <span id="sellbl">טוען…</span>
       <svg class="car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <button type="button" class="rfr" id="askbtn" title="שאלה חופשית על הנתונים">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg>
+      שאלה חופשית
     </button>
     <button type="button" class="rfr" id="rfr" title="רענון נתונים מפריוריטי עכשיו">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
@@ -119,6 +137,19 @@
   <div class="sec"><div class="sl">חודש מסוים</div><div class="frow"><select id="msel" aria-label="חודש"></select><select id="ysel" aria-label="שנה"></select><button type="button" class="go" id="mgo">החל</button></div></div>
   <div class="sec"><div class="sl">שנה שלמה</div><div class="frow"><select id="yosel" aria-label="שנה שלמה"></select><button type="button" class="go" id="ygo">החל</button></div></div>
   <div class="cover" id="cover"></div>
+</div>
+<div id="askovl" style="position:fixed;inset:0;background:rgba(10,18,14,.45);z-index:110;display:none"></div>
+<div id="asksheet" role="dialog" aria-modal="true" aria-label="שאלה חופשית">
+  <div class="shead">
+    <span class="t">שאלה חופשית על הנתונים</span>
+    <button type="button" class="x" id="askx" aria-label="סגירה"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+  </div>
+  <div class="askrow">
+    <textarea id="askq" rows="2" placeholder="למשל: כמה מכרנו בנתניה בכל אחד משלושת החודשים האחרונים?"></textarea>
+    <button type="button" class="go" id="asksend">שלח</button>
+  </div>
+  <div class="askhint">התשובות מחושבות ישירות מנתוני פריוריטי שבענן. דוח מוצלח אפשר לקבע בהמשך כדוח קבוע.</div>
+  <div id="asklog"></div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -493,6 +524,52 @@
   }
   document.getElementById('seg').addEventListener('click',function(e){
     var b=e.target.closest('[data-v]');if(b)setView(b.getAttribute('data-v'));
+  });
+
+  /* ---- ask (free questions) ---- */
+  var askSheet=document.getElementById('asksheet'),askOvl=document.getElementById('askovl');
+  function askOpen(){askSheet.classList.add('on');askOvl.classList.add('on');setTimeout(function(){document.getElementById('askq').focus();},50);}
+  function askClose(){askSheet.classList.remove('on');askOvl.classList.remove('on');}
+  document.getElementById('askbtn').addEventListener('click',askOpen);
+  document.getElementById('askx').addEventListener('click',askClose);
+  askOvl.addEventListener('click',askClose);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')askClose();});
+
+  function askErrText(j,st){
+    if(j&&j.error==='no_key')return 'מפתח הבינה המלאכותית עדיין לא הוגדר בשרת. יש להריץ במחשב את "הגדרת מפתח בינה.cmd" שבתיקיית divani_bi\\cloud.';
+    if(st===429||(j&&j.error==='rate'))return 'רגע בין שאלה לשאלה — נסה שוב בעוד כמה שניות.';
+    if(j&&j.error==='loop')return 'השאלה מורכבת מדי לסבב אחד — נסה לפצל אותה.';
+    if(j&&j.detail)return 'שגיאה: '+j.detail;
+    return 'משהו השתבש. נסה שוב.';
+  }
+
+  function askSend(){
+    var qEl=document.getElementById('askq'),q=qEl.value.trim();
+    if(!q)return;
+    var btn=document.getElementById('asksend');btn.disabled=true;
+    var log=document.getElementById('asklog');
+    var item=document.createElement('div');item.className='askitem';
+    item.innerHTML='<div class="q">'+esc(q)+'</div><div class="askwait"><span class="spin"></span>חושב ובודק בנתונים…</div>';
+    log.insertBefore(item,log.firstChild);
+    qEl.value='';
+    fetch('/api/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({q:q})})
+      .then(function(r){if(r.status===401){location.href='/login';throw 0;}return r.json().then(function(j){return {st:r.status,j:j};});})
+      .then(function(x){
+        var j=x.j,h='<div class="q">'+esc(q)+'</div>';
+        if(j.answer){
+          h+='<div class="a">'+esc(j.answer)+'</div>';
+          if(j.sqls&&j.sqls.length)h+='<details><summary>השאילתות שהורצו ('+j.sqls.length+')</summary>'+j.sqls.map(function(s){return '<code>'+esc(s)+'</code>';}).join('')+'</details>';
+        }else{
+          h+='<div class="a err">'+esc(askErrText(j,x.st))+'</div>';
+        }
+        item.innerHTML=h;
+      })
+      .catch(function(e){if(e!==0)item.innerHTML='<div class="q">'+esc(q)+'</div><div class="a err">בעיית תקשורת — בדוק חיבור ונסה שוב.</div>';})
+      .then(function(){btn.disabled=false;});
+  }
+  document.getElementById('asksend').addEventListener('click',askSend);
+  document.getElementById('askq').addEventListener('keydown',function(e){
+    if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();askSend();}
   });
 
   /* refresh now */
