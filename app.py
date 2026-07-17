@@ -38,6 +38,7 @@ INDEX = os.path.join(HERE, "index.html")
 IL = ZoneInfo("Asia/Jerusalem")
 
 DASH_PASS = os.environ.get("DASH_PASS", "")
+DASH_PASS_ADMIN = os.environ.get("DASH_PASS_ADMIN", "")  # Doron's personal password
 SB_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SB_KEY = os.environ.get("SUPABASE_SECRET_KEY", "")
 PRI_USER = os.environ.get("PRI_USER", "")
@@ -62,16 +63,33 @@ def _session_token() -> str:
     return hmac.new(DASH_PASS.encode("utf-8"), b"divani-bi-session-v1", hashlib.sha256).hexdigest()
 
 
+def _admin_token() -> str:
+    # keyed on the ADMIN password: the code is public, so a manager knowing the
+    # shared password must not be able to derive this cookie value
+    return hmac.new(DASH_PASS_ADMIN.encode("utf-8"), b"divani-bi-admin-v1", hashlib.sha256).hexdigest()
+
+
+def _is_admin(request: Request) -> bool:
+    if not DASH_PASS_ADMIN:
+        return False
+    tok = request.cookies.get(COOKIE_NAME, "")
+    return hmac.compare_digest(tok, _admin_token())
+
+
 def _logged_in(request: Request) -> bool:
     if not DASH_PASS:
         return False
     tok = request.cookies.get(COOKIE_NAME, "")
-    return hmac.compare_digest(tok, _session_token())
+    return hmac.compare_digest(tok, _session_token()) or _is_admin(request)
+
+
+def _match(p: str, expected: str) -> bool:
+    # case-insensitive + trimmed (Likey lesson: mobile auto-capitalize lockouts)
+    return bool(expected) and p.strip().casefold() == expected.strip().casefold()
 
 
 def _pass_ok(p: str) -> bool:
-    # case-insensitive + trimmed (Likey lesson: mobile auto-capitalize lockouts)
-    return bool(DASH_PASS) and p.strip().casefold() == DASH_PASS.strip().casefold()
+    return _match(p, DASH_PASS) or _match(p, DASH_PASS_ADMIN)
 
 
 def _login_html(err: str = "") -> str:
@@ -345,13 +363,15 @@ async def login_post(request: Request):
                             status_code=429)
     body = (await request.body()).decode("utf-8", "replace")
     form = urllib.parse.parse_qs(body)
-    if not _pass_ok(form.get("p", [""])[0]):
+    p = form.get("p", [""])[0]
+    if not _pass_ok(p):
         _note_fail(ip)
         _log_login(request, False)
         return HTMLResponse(_login_html("סיסמה שגויה"), status_code=401)
     _log_login(request, True)
     resp = RedirectResponse("/", status_code=303)
-    resp.set_cookie(COOKIE_NAME, _session_token(), max_age=60 * 60 * 24 * 30,
+    tok = _admin_token() if _match(p, DASH_PASS_ADMIN) else _session_token()
+    resp.set_cookie(COOKIE_NAME, tok, max_age=60 * 60 * 24 * 30,
                     httponly=True, secure=_is_https(request), samesite="lax")
     return resp
 
@@ -397,7 +417,8 @@ def api_meta(request: Request):
                          "last_sync": _state["last_sync"],
                          "last_rc": _state["last_rc"],
                          "refresh_minutes": REFRESH_MINUTES,
-                         "line_span_days": MAX_LINE_SPAN_DAYS})
+                         "line_span_days": MAX_LINE_SPAN_DAYS,
+                         "admin": _is_admin(request)})
 
 
 @app.get("/api/range")
@@ -488,6 +509,8 @@ def _anthropic_call(messages):
 async def api_ask(request: Request):
     if not _logged_in(request):
         return JSONResponse({"error": "auth"}, status_code=401)
+    if not _is_admin(request):
+        return JSONResponse({"error": "admin_only"}, status_code=403)
     if not ANTHROPIC_KEY:
         return JSONResponse({"error": "no_key"})
     try:

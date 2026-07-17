@@ -536,6 +536,7 @@
   document.addEventListener('keydown',function(e){if(e.key==='Escape')askClose();});
 
   function askErrText(j,st){
+    if(st===403||(j&&j.error==='admin_only'))return 'שאלות חופשיות פתוחות רק לדורון — יש להתחבר עם הסיסמה האישית.';
     if(j&&j.error==='no_key')return 'מפתח הבינה המלאכותית עדיין לא הוגדר בשרת. יש להריץ במחשב את "הגדרת מפתח בינה.cmd" שבתיקיית divani_bi\\cloud.';
     if(st===429||(j&&j.error==='rate'))return 'רגע בין שאלה לשאלה — נסה שוב בעוד כמה שניות.';
     if(j&&j.error==='loop')return 'השאלה מורכבת מדי לסבב אחד — נסה לפצל אותה.';
@@ -597,6 +598,7 @@
       .then(function(m){
         META=m;
         if(!META.min){stage.innerHTML='<div class="empty">המסד עדיין מתמלא בנתונים — נסה שוב בעוד כמה דקות.</div>';return;}
+        if(!META.admin)document.getElementById('askbtn').style.display='none';
         var ms=document.getElementById('msel'),ys=document.getElementById('ysel'),yo=document.getElementById('yosel');
         ms.innerHTML=MONTHS.map(function(n,i){return '<option value="'+(i+1)+'">'+n+'</option>';}).join('');
         var y0=parseInt(META.min.slice(0,4),10),y1=parseInt(META.max.slice(0,4),10),o='';
