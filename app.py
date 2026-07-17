@@ -116,7 +116,7 @@ def sb_insert(table: str, row: dict):
           data=body, timeout=60)
 
 
-PRI_SEL = ("$select=ORDNAME,CURDATE,ORDSTATUSDES,AGENTNAME,CUSTNAME,CDES,BRANCHNAME"
+PRI_SEL = ("$select=ORDNAME,CURDATE,ORDSTATUSDES,AGENTNAME,CUSTNAME,CDES,BRANCHNAME,TYPEDES"
            "&$expand=ORDERITEMS_SUBFORM($select=PARTNAME,PDES,QPRICE,QPROFIT)")
 
 
@@ -148,6 +148,7 @@ def priority_pull(d_from: dt.date, d_to: dt.date):
                          "a": o.get("AGENTNAME") or "", "cn": o.get("CUSTNAME") or "",
                          "c": o.get("CDES") or "", "b": o.get("BRANCHNAME") or "",
                          "st": o.get("ORDSTATUSDES") or "",
+                         "t": o.get("TYPEDES") or "",
                          "pn": ln.get("PARTNAME") or "", "pd": ln.get("PDES") or "",
                          "s": round(float(ln.get("QPRICE") or 0), 2),
                          "p": round(float(ln.get("QPROFIT") or 0), 2), "ln": i})
