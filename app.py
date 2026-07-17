@@ -24,6 +24,7 @@ import hashlib
 import hmac
 import json
 import os
+import re
 import threading
 import time
 import urllib.parse
@@ -59,7 +60,8 @@ ASK_USD_ILS = float(os.environ.get("ASK_USD_ILS", "3.7"))
 
 app = FastAPI(title="Divani BI", docs_url=None, redoc_url=None, openapi_url=None)
 
-_state = {"last_sync": None, "last_rc": None, "last_manual": 0.0, "minmax": None, "minmax_at": 0.0}
+_state = {"last_sync": None, "last_rc": None, "last_manual": 0.0, "minmax": None,
+          "minmax_at": 0.0, "pending": [], "pending_at": None, "ocr_cache": {}}
 
 
 # ---------- auth ----------
@@ -289,6 +291,10 @@ def _refresher():
                 sync_receipts_window("auto", today - dt.timedelta(days=1), today)
             except Exception as e:
                 print("receipts auto-sync failed:", repr(e)[:300], flush=True)
+            try:
+                _scan_pending_transfers()
+            except Exception as e:
+                print("pending-transfers scan failed:", repr(e)[:300], flush=True)
             if now.hour >= 3 and last_nightly != today:
                 sync_window("nightly", today - dt.timedelta(days=120), today)
                 try:
@@ -458,11 +464,147 @@ def api_cash(request: Request, d_from: str = "", d_to: str = ""):
         return JSONResponse({"error": "bad dates"}, status_code=400)
     if f > t:
         f, t = t, f
+    pend = {"pending": _state.get("pending") or [],
+            "pending_at": _state.get("pending_at")}
     if (t - f).days <= MAX_LINE_SPAN_DAYS:
         rows = sb_rpc("bi_cash_lines", {"p_from": f.isoformat(), "p_to": t.isoformat()})
-        return JSONResponse({"mode": "cashlines", "rows": rows or []})
+        return JSONResponse({"mode": "cashlines", "rows": rows or [], **pend})
     agg = sb_rpc("bi_cash_agg", {"p_from": f.isoformat(), "p_to": t.isoformat()})
-    return JSONResponse({"mode": "cashagg", "agg": agg or {}})
+    return JSONResponse({"mode": "cashagg", "agg": agg or {}, **pend})
+
+
+# ---------- pending bank transfers (העברות בהמתנה לקבלה) ----------
+# A transfer is visible 1-2 days before its receipt: the confirmation screenshot
+# is uploaded to the ORDER's attachments. Detection: attachment description
+# matches TR_DESC_RE + the order still has an open collection balance.
+# Dedup is structural: issuing the receipt zeroes PRIO_BALANCE, so the item
+# leaves this list exactly when the transfer enters the cash report.
+# PRIVACY (hard rule): only amount + customer name are kept; images are read
+# in memory for amount extraction only and never stored.
+
+TR_DESC_RE = re.compile("העבר|אסמכ|אמסכתא")
+PENDING_SCAN_DAYS = 10
+
+
+def _pri_get(path: str, timeout=90):
+    auth = "Basic " + base64.b64encode(f"{PRI_USER}:{PRI_PASS}".encode("utf-8")).decode("ascii")
+    out = _http(f"{PRI_BASE}/{path}", {"Authorization": auth, "Accept": "application/json"},
+                timeout=timeout)
+    return json.loads(out.decode("utf-8"))
+
+
+def _ocr_transfer_amount(ordname: str):
+    """Fetch the order's transfer attachments and read the amount via Claude
+    vision. Returns float or None. Nothing but the amount leaves this function."""
+    j = _pri_get(f"ORDERS?$filter=ORDNAME%20eq%20'{ordname}'&$expand=EXTFILES_SUBFORM")
+    rows = j.get("value", [])
+    if not rows:
+        return None
+    for f in (rows[0].get("EXTFILES_SUBFORM") or []):
+        if not TR_DESC_RE.search(f.get("EXTFILEDES") or ""):
+            continue
+        name = f.get("EXTFILENAME") or ""
+        data = None
+        try:
+            if name.startswith("http"):
+                data = _http(name, {"Accept": "*/*"}, timeout=60)
+            else:
+                m = re.match(r"^data:[^;]+;base64,(.*)$", name, re.S)
+                b64 = m.group(1) if m else name
+                data = base64.b64decode(b64 + "=" * (-len(b64) % 4), validate=False)
+        except Exception:
+            continue
+        if not data or len(data) > 5_000_000:
+            continue
+        if data[:3] == b"\xff\xd8\xff":
+            media = "image/jpeg"
+        elif data[:8] == b"\x89PNG\r\n\x1a\n":
+            media = "image/png"
+        else:
+            continue  # PDFs and other types: fall back to balance estimate
+        body = json.dumps({"model": ASK_MODEL, "max_tokens": 200, "messages": [{
+            "role": "user", "content": [
+                {"type": "image", "source": {"type": "base64", "media_type": media,
+                                             "data": base64.b64encode(data).decode("ascii")}},
+                {"type": "text", "text":
+                    'זהו צילום אסמכתה של העברה בנקאית. החזר JSON בלבד, בלי שום טקסט נוסף: '
+                    '{"amount": הסכום שהועבר בשקלים כמספר או null, '
+                    '"order": "מספר ההזמנה אם כתוב בתיאור ההעברה, אחרת null"}'}]}]}).encode("utf-8")
+        try:
+            r = json.loads(_http("https://api.anthropic.com/v1/messages",
+                                 {"x-api-key": ANTHROPIC_KEY,
+                                  "anthropic-version": "2023-06-01",
+                                  "Content-Type": "application/json"},
+                                 data=body, timeout=90).decode("utf-8"))
+            text = "".join(b.get("text", "") for b in (r.get("content") or [])
+                           if b.get("type") == "text")
+            m = re.search(r"\{.*\}", text, re.S)
+            if not m:
+                continue
+            parsed = json.loads(m.group(0))
+            amt = parsed.get("amount")
+            ref = parsed.get("order")
+            if amt is None:
+                continue
+            # safety: if the slip names a DIFFERENT order, skip this image
+            if ref and ordname not in str(ref).replace(" ", ""):
+                continue
+            return round(float(amt), 2)
+        except Exception as e:
+            print("transfer OCR failed:", ordname, repr(e)[:150], flush=True)
+    return None
+
+
+def _scan_pending_transfers():
+    today = dt.datetime.now(IL).date()
+    pending = []
+    for d in range(PENDING_SCAN_DAYS):
+        day = (today - dt.timedelta(days=d)).isoformat()
+        nxt = (today - dt.timedelta(days=d - 1)).isoformat()
+        path = (f"ORDERS?$filter=CURDATE%20ge%20{day}T00:00:00%2B03:00"
+                f"%20and%20CURDATE%20lt%20{nxt}T00:00:00%2B03:00"
+                "&$select=ORDNAME,CDES,CURDATE,BRANCHNAME,TOTPRICE,PRIO_BALANCE"
+                "&$expand=EXTFILES_SUBFORM($select=EXTFILEDES,UDATE)")
+        try:
+            rows = _pri_get(path).get("value", [])
+        except Exception as e:
+            print("pending scan day failed:", day, repr(e)[:120], flush=True)
+            continue
+        for o in rows:
+            try:
+                bal = float(o.get("PRIO_BALANCE") or 0)
+            except (TypeError, ValueError):
+                continue
+            if bal < 1:  # skip zero and agorot rounding leftovers
+                continue
+            atts = [f for f in (o.get("EXTFILES_SUBFORM") or [])
+                    if TR_DESC_RE.search(f.get("EXTFILEDES") or "")]
+            if not atts:
+                continue
+            up = max((f.get("UDATE") or "") for f in atts)[:10]
+            pending.append({"o": o.get("ORDNAME") or "", "c": o.get("CDES") or "",
+                            "b": o.get("BRANCHNAME") or "", "bal": round(bal, 2),
+                            "d": up})
+    if ANTHROPIC_KEY:
+        for item in pending:
+            key = item["o"]
+            if key not in _state["ocr_cache"]:
+                amt = None
+                try:
+                    amt = _ocr_transfer_amount(key)
+                except Exception as e:
+                    print("pending OCR error:", key, repr(e)[:120], flush=True)
+                _state["ocr_cache"][key] = amt
+            item["amt"] = _state["ocr_cache"][key]
+    for item in pending:
+        ocr = item.get("amt")
+        # never show more than the open balance (partial receipts already
+        # moved the rest into the cash report — no double counting)
+        item["show"] = round(min(ocr, item["bal"]), 2) if ocr else item["bal"]
+        item["src"] = "ocr" if ocr else "est"
+        item.pop("amt", None)
+    _state["pending"] = pending
+    _state["pending_at"] = dt.datetime.now(IL).strftime("%d.%m.%Y %H:%M")
 
 
 # ---------- free-form questions (Ask) ----------
@@ -597,6 +739,10 @@ def api_refresh(request: Request):
         except Exception as e:
             rc_ok = False
             print("receipts manual-sync failed:", repr(e)[:300], flush=True)
+        try:
+            _scan_pending_transfers()
+        except Exception as e:
+            print("pending-transfers manual scan failed:", repr(e)[:300], flush=True)
         return JSONResponse({"ok": True, "last_sync": _state["last_sync"],
                              "receipts_ok": rc_ok})
     except Exception as e:

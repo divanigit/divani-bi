@@ -90,6 +90,13 @@
   .askitem details{margin-top:8px;font-size:11.5px;color:var(--tx3)}
   .askitem details code{display:block;direction:ltr;text-align:left;background:var(--surface);border-radius:8px;padding:7px 9px;margin-top:5px;font-size:10.5px;overflow-x:auto;white-space:pre}
   .askwait{display:flex;align-items:center;gap:9px;color:var(--tx3);font-size:13px;padding:6px 0}
+  /* ---- pending transfers strip ---- */
+  #pendtr{background:var(--wbg);border:1px solid color-mix(in srgb,var(--wfg) 30%,transparent);border-radius:14px;padding:11px 13px;margin:0 0 12px}
+  #pendtr .pt{font-size:13px;font-weight:700;color:var(--wfg);margin-bottom:7px}
+  #pendtr .pr{display:flex;align-items:baseline;gap:8px;font-size:12.5px;padding:3px 0;flex-wrap:wrap}
+  #pendtr .pr .nm2{font-weight:500}
+  #pendtr .pr .mut2{color:var(--tx3);font-size:11px}
+  #pendtr .pn{font-size:11px;color:var(--tx3);margin-top:6px}
   @media (prefers-reduced-motion:reduce){.chev{transition:none}.spin{animation-duration:1.6s}}
   @media (max-width:420px){h1{font-size:19px}.kpi .v{font-size:16px}}
 </style>
@@ -123,6 +130,7 @@
   <div class="notice" id="notice"></div>
 
   <div class="kpis" id="kpis"></div>
+  <div id="pendtr" style="display:none"></div>
   <p class="hint" id="hint">הקש על שורה כדי לצלול · גלול הצידה לעוד עמודות</p>
   <div id="stage"></div>
 </div>
@@ -200,12 +208,13 @@
     document.getElementById('kpis').innerHTML='';
     document.getElementById('notice').style.display='none';
     document.getElementById('hint').style.display='none';
+    if(view!=='cash')document.getElementById('pendtr').style.display='none';
     document.getElementById('sellbl').textContent='טוען…';
     var url=view==='cash'?('/api/cash?d_from='+state.from+'&d_to='+state.to)
                          :('/api/range?d_from='+state.from+'&d_to='+state.to+'&by='+(view==='branches'?'b':(view==='service'?'s':'a')));
     fetch(url,{cache:'no-store'})
       .then(function(r){if(r.status===401){location.href='/login';throw 0;}if(!r.ok)throw new Error('http '+r.status);return r.json();})
-      .then(function(j){if(desiredKey()!==key)return;cache.key=key;cache.mode=j.mode;cache.rows=j.rows||null;cache.agg=j.agg||null;cb();})
+      .then(function(j){if(desiredKey()!==key)return;cache.key=key;cache.mode=j.mode;cache.rows=j.rows||null;cache.agg=j.agg||null;if(j.pending!==undefined){cache.pending=j.pending;cache.pendingAt=j.pending_at;}cb();})
       .catch(function(e){if(desiredKey()!==key)return;if(e!==0){stage.innerHTML='<div class="empty">שגיאה בטעינת נתונים.<br>בדוק חיבור ונסה שוב.</div>';toast('שגיאה בטעינת נתונים');}});
   }
 
@@ -412,7 +421,23 @@
     stage.innerHTML=h;
   }
 
-  function renderStage(R){if(view==='cash'){renderCashTable(R);}else{renderTable(R);}}
+  function renderPending(){
+    var el=document.getElementById('pendtr');
+    var list=(view==='cash'&&cache.pending)?cache.pending:null;
+    if(!list||!list.length){el.style.display='none';el.innerHTML='';return;}
+    var sum=0;list.forEach(function(p){sum+=p.show||0;});
+    var h='<div class="pt">העברות בהמתנה לקבלה · '+list.length+' · '+ils(sum)+'</div>';
+    list.slice().sort(function(a,b){return (b.d||'').localeCompare(a.d||'');}).forEach(function(p){
+      h+='<div class="pr"><span class="nm2">'+esc(p.c||p.o)+'</span><span>'+ils(p.show)+'</span>'+
+         '<span class="mut2">'+esc(brName(p.b))+'</span>'+
+         '<span class="mut2">'+(p.src==='ocr'?'מאומת מהאסמכתא':'משוער לפי יתרת ההזמנה')+'</span>'+
+         (p.d?'<span class="mut2">הועלה '+heDate(p.d)+'</span>':'')+'</div>';
+    });
+    h+='<div class="pn">הסכומים אינם נכללים בסך המזומן — הם יעברו אליו אוטומטית עם הפקת הקבלה.'+(cache.pendingAt?' נסרק '+esc(cache.pendingAt)+'.':'')+'</div>';
+    el.innerHTML=h;el.style.display='block';
+  }
+
+  function renderStage(R){renderPending();if(view==='cash'){renderCashTable(R);}else{renderTable(R);}}
 
   function selLabel(R){
     var lbl;
