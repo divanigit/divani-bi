@@ -16,7 +16,7 @@
   .out{font-size:11.5px;color:var(--tx3);text-decoration:none;padding:6px 2px}
   h1{font-size:20px;font-weight:500;margin:4px 0 10px}
   .seg{display:inline-flex;background:var(--surface);border:1px solid var(--line2);border-radius:12px;padding:3px;margin:0 0 12px}
-  .seg button{font-family:inherit;font-size:13px;font-weight:500;border:0;background:none;color:var(--tx2);padding:8px 16px;min-height:44px;border-radius:9px;cursor:pointer}
+  .seg button{font-family:inherit;font-size:13px;font-weight:500;border:0;background:none;color:var(--tx2);padding:8px 13px;min-height:44px;border-radius:9px;cursor:pointer}
   .seg button.on{background:var(--bd);color:#fff}
   .notice{font-size:12px;color:var(--wfg);margin:6px 2px 0;display:none}
   .selbar{display:flex;align-items:center;gap:8px;margin:0 0 12px;flex-wrap:wrap}
@@ -83,9 +83,10 @@
   <div class="hdr"><div class="brand">דיוואני</div><a class="out" href="/logout">יציאה</a></div>
   <h1 id="h1t">ביצועי סוכנים</h1>
   <div class="seg" id="seg" role="group" aria-label="סוג דוח">
-    <button type="button" data-v="agents" class="on" aria-pressed="true">לפי סוכנים</button>
-    <button type="button" data-v="branches" aria-pressed="false">לפי סניפים</button>
+    <button type="button" data-v="agents" class="on" aria-pressed="true">סוכנים</button>
+    <button type="button" data-v="branches" aria-pressed="false">סניפים</button>
     <button type="button" data-v="cash" aria-pressed="false">מזומן</button>
+    <button type="button" data-v="service" aria-pressed="false">שירות</button>
   </div>
   <div class="selbar">
     <button type="button" class="selbtn" id="selbtn" aria-haspopup="dialog">
@@ -158,7 +159,7 @@
 
   /* ---- data via API ---- */
   function spanDays(){return Math.round((new Date(state.to+'T12:00:00')-new Date(state.from+'T12:00:00'))/86400000);}
-  function desiredKey(){if(view==='cash')return state.from+'|'+state.to+'|C';return state.from+'|'+state.to+'|'+(spanDays()>META.line_span_days?view:'L');}
+  function desiredKey(){if(view==='cash')return state.from+'|'+state.to+'|C';if(view==='service')return state.from+'|'+state.to+'|S';return state.from+'|'+state.to+'|'+(spanDays()>META.line_span_days?view:'L');}
   function fetchRange(cb){
     var key=desiredKey();
     if(cache.key===key){cb();return;}
@@ -168,7 +169,7 @@
     document.getElementById('hint').style.display='none';
     document.getElementById('sellbl').textContent='טוען…';
     var url=view==='cash'?('/api/cash?d_from='+state.from+'&d_to='+state.to)
-                         :('/api/range?d_from='+state.from+'&d_to='+state.to+'&by='+(view==='branches'?'b':'a'));
+                         :('/api/range?d_from='+state.from+'&d_to='+state.to+'&by='+(view==='branches'?'b':(view==='service'?'s':'a')));
     fetch(url,{cache:'no-store'})
       .then(function(r){if(r.status===401){location.href='/login';throw 0;}if(!r.ok)throw new Error('http '+r.status);return r.json();})
       .then(function(j){if(desiredKey()!==key)return;cache.key=key;cache.mode=j.mode;cache.rows=j.rows||null;cache.agg=j.agg||null;cb();})
@@ -314,6 +315,7 @@
 
   function pmTxt(pm){return pm==null?'—':Math.round(pm)+'%';}
   function pill(c){
+    if(view==='service')return '<span class="mut">—</span>';
     if(c.profit<0)return '<span class="pill bad"><span class="crt down"></span>הפסד</span>';
     if(c.pm==null)return '<span class="mut">—</span>';
     var ok=c.pm>=TARGET;
@@ -331,7 +333,7 @@
   function renderTable(R){
     if(!R.k.length){stage.innerHTML=emptyHtml();return;}
     var rows=[];walk(R.k,0,'',rows);
-    var h='<div class="tw"><table><thead><tr><th class="nm">שם</th><th>מכירות</th><th>אחוז מסה"כ</th><th>רווח</th><th>אחוז רווח</th><th>לקוחות</th><th>ממוצע</th></tr></thead><tbody>';
+    var h='<div class="tw"><table><thead><tr><th class="nm">שם</th><th>'+(view==='service'?'חיובים':'מכירות')+'</th><th>אחוז מסה"כ</th><th>רווח</th><th>אחוז רווח</th><th>לקוחות</th><th>ממוצע</th></tr></thead><tbody>';
     rows.forEach(function(it){
       var c=it.c, cls=it.depth===0?'d0':'dn', ind=it.depth*14;
       var pct=(R.pos>0&&c.s>0)?Math.round(c.s/R.pos*100)+'%':'—';
@@ -346,9 +348,9 @@
 
   function renderKpis(R){
     document.getElementById('kpis').innerHTML=
-      '<div class="kpi"><div class="l">מכירות</div><div class="v">'+ils(R.s)+'</div></div>'+
+      '<div class="kpi"><div class="l">'+(view==='service'?'חיובים':'מכירות')+'</div><div class="v">'+ils(R.s)+'</div></div>'+
       '<div class="kpi"><div class="l">רווח</div><div class="v">'+ils(R.p)+'</div></div>'+
-      '<div class="kpi"><div class="l">אחוז רווח</div><div class="v">'+pmTxt(R.pm)+'</div></div>'+
+      '<div class="kpi"><div class="l">אחוז רווח</div><div class="v">'+(view==='service'?'—':pmTxt(R.pm))+'</div></div>'+
       '<div class="kpi"><div class="l">לקוחות</div><div class="v">'+R.c+'</div></div>';
   }
 
@@ -399,6 +401,7 @@
     if(view==='branches'&&state.from<'2024-03-01')msgs.push('שיוך הזמנות לסניפים קיים בפריוריטי רק מתחילת 2024 (במלואו מסוף פברואר) — הזמנות מוקדמות יותר מופיעות תחת "ללא שיוך סניף".');
     if(view==='cash'&&state.from<'2024-03-01')msgs.push('שיוך קבלות לסניפים קיים בפריוריטי רק משנת 2024 — קבלות מוקדמות יותר מופיעות כולן תחת "ללא שיוך סניף".');
     else if(view==='cash')msgs.push('חלק מהקבלות נרשמות בפריוריטי בלי שיוך סניף ומופיעות בשורה נפרדת.');
+    if(view==='service')msgs.push('מוצגת פעילות אנשי השירות בלבד — היא אינה נספרת בדוחות המכירות.');
     if(msgs.length){nt.style.display='block';nt.textContent=msgs.join(' ');}else{nt.style.display='none';}
     var hintEl=document.getElementById('hint');
     if(cache.mode==='lines'){hintEl.textContent='הקש על שורה כדי לצלול · גלול הצידה לעוד עמודות';hintEl.style.display='block';}
@@ -482,7 +485,8 @@
   function setView(v){
     if(view===v)return;
     view=v;
-    document.getElementById('h1t').textContent=v==='branches'?'מכירות לפי סניפים':(v==='cash'?'תקבולים במזומן':'ביצועי סוכנים');
+    var H1={agents:'ביצועי סוכנים',branches:'מכירות לפי סניפים',cash:'תקבולים במזומן',service:'פעילות שירות'};
+    document.getElementById('h1t').textContent=H1[v]||H1.agents;
     var bs=document.querySelectorAll('#seg button');
     for(var i=0;i<bs.length;i++){var on=bs[i].getAttribute('data-v')===v;bs[i].classList.toggle('on',on);bs[i].setAttribute('aria-pressed',on?'true':'false');}
     if(META&&state.from)apply();

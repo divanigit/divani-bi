@@ -406,8 +406,12 @@ def api_range(request: Request, d_from: str = "", d_to: str = "", by: str = "a")
     if f > t:
         f, t = t, f
     if (t - f).days <= MAX_LINE_SPAN_DAYS:
-        rows = sb_rpc("bi_range_lines", {"p_from": f.isoformat(), "p_to": t.isoformat()})
+        fn = "bi_range_lines_svc" if by == "s" else "bi_range_lines"
+        rows = sb_rpc(fn, {"p_from": f.isoformat(), "p_to": t.isoformat()})
         return JSONResponse({"mode": "lines", "rows": rows or []})
+    if by == "s":
+        agg = sb_rpc("bi_range_agents_svc", {"p_from": f.isoformat(), "p_to": t.isoformat()})
+        return JSONResponse({"mode": "agents", "agg": agg or {}})
     if by == "b":
         agg = sb_rpc("bi_range_branches", {"p_from": f.isoformat(), "p_to": t.isoformat()})
         return JSONResponse({"mode": "branches", "agg": agg or {}})
