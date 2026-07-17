@@ -51,6 +51,11 @@ MAX_LINE_SPAN_DAYS = 92
 
 ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 ASK_MODEL = os.environ.get("ASK_MODEL", "claude-sonnet-5")
+# pricing for the live cost indicator (USD per million tokens; override via env
+# if the model/pricing changes) + USD->ILS rate
+ASK_PRICE_IN = float(os.environ.get("ASK_PRICE_IN", "3.0"))
+ASK_PRICE_OUT = float(os.environ.get("ASK_PRICE_OUT", "15.0"))
+ASK_USD_ILS = float(os.environ.get("ASK_USD_ILS", "3.7"))
 
 app = FastAPI(title="Divani BI", docs_url=None, redoc_url=None, openapi_url=None)
 
@@ -527,12 +532,17 @@ async def api_ask(request: Request):
     today = dt.datetime.now(IL).date().isoformat()
     messages = [{"role": "user", "content": f"התאריך היום: {today}.\nשאלה: {q}"}]
     sqls = []
+    tok_in, tok_out = 0, 0
     try:
         for _ in range(8):
             r = _anthropic_call(messages)
             if r.get("type") == "error" or r.get("error"):
                 detail = str(r.get("error", {}).get("message", ""))[:200]
                 return JSONResponse({"error": "api", "detail": detail})
+            u = r.get("usage") or {}
+            tok_in += int(u.get("input_tokens") or 0) + int(u.get("cache_creation_input_tokens") or 0) \
+                + int(u.get("cache_read_input_tokens") or 0)
+            tok_out += int(u.get("output_tokens") or 0)
             content = r.get("content") or []
             if r.get("stop_reason") == "tool_use":
                 messages.append({"role": "assistant", "content": content})
@@ -551,11 +561,16 @@ async def api_ask(request: Request):
                 continue
             text = "".join(b.get("text", "") for b in content if b.get("type") == "text").strip()
             ms = int((time.time() - t0) * 1000)
+            cost_ils = round((tok_in * ASK_PRICE_IN + tok_out * ASK_PRICE_OUT) / 1e6 * ASK_USD_ILS, 4)
             try:
-                sb_insert("bi_ask_log", {"q": q, "ok": True, "ms": ms, "sqls": sqls})
+                sb_insert("bi_ask_log", {"q": q, "ok": True, "ms": ms, "sqls": sqls,
+                                         "tok_in": tok_in, "tok_out": tok_out,
+                                         "cost_ils": cost_ils})
             except Exception:
                 pass
-            return JSONResponse({"answer": text or "לא התקבלה תשובה.", "sqls": sqls})
+            return JSONResponse({"answer": text or "לא התקבלה תשובה.", "sqls": sqls,
+                                 "cost_ils": cost_ils, "tok_in": tok_in,
+                                 "tok_out": tok_out, "ms": ms})
         return JSONResponse({"error": "loop"})
     except Exception as e:
         try:
