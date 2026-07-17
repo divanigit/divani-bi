@@ -291,10 +291,11 @@ def _refresher():
                 sync_receipts_window("auto", today - dt.timedelta(days=1), today)
             except Exception as e:
                 print("receipts auto-sync failed:", repr(e)[:300], flush=True)
-            try:
-                _scan_pending_transfers()
-            except Exception as e:
-                print("pending-transfers scan failed:", repr(e)[:300], flush=True)
+            if ANTHROPIC_KEY:  # without vision there are no slip amounts — nothing to show
+                try:
+                    _scan_pending_transfers()
+                except Exception as e:
+                    print("pending-transfers scan failed:", repr(e)[:300], flush=True)
             if now.hour >= 3 and last_nightly != today:
                 sync_window("nightly", today - dt.timedelta(days=120), today)
                 try:
@@ -598,12 +599,15 @@ def _scan_pending_transfers():
             item["amt"] = _state["ocr_cache"][key]
     for item in pending:
         ocr = item.get("amt")
-        # never show more than the open balance (partial receipts already
-        # moved the rest into the cash report — no double counting)
-        item["show"] = round(min(ocr, item["bal"]), 2) if ocr else item["bal"]
-        item["src"] = "ocr" if ocr else "est"
+        if ocr:
+            # never show more than the open balance (partial receipts already
+            # moved the rest into the cash report — no double counting)
+            item["show"] = round(min(ocr, item["bal"]), 2)
         item.pop("amt", None)
-    _state["pending"] = pending
+    # Doron's rule: a transfer amount comes ONLY from reading the slip photo —
+    # the open balance is NOT evidence (may be a pay-on-delivery remainder).
+    # No amount read -> the item is not shown at all.
+    _state["pending"] = [i for i in pending if i.get("show")]
     _state["pending_at"] = dt.datetime.now(IL).strftime("%d.%m.%Y %H:%M")
 
 
@@ -739,10 +743,11 @@ def api_refresh(request: Request):
         except Exception as e:
             rc_ok = False
             print("receipts manual-sync failed:", repr(e)[:300], flush=True)
-        try:
-            _scan_pending_transfers()
-        except Exception as e:
-            print("pending-transfers manual scan failed:", repr(e)[:300], flush=True)
+        if ANTHROPIC_KEY:
+            try:
+                _scan_pending_transfers()
+            except Exception as e:
+                print("pending-transfers manual scan failed:", repr(e)[:300], flush=True)
         return JSONResponse({"ok": True, "last_sync": _state["last_sync"],
                              "receipts_ok": rc_ok})
     except Exception as e:

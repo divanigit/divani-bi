@@ -429,8 +429,7 @@
     var h='<div class="pt">העברות בהמתנה לקבלה · '+list.length+' · '+ils(sum)+'</div>';
     list.slice().sort(function(a,b){return (b.d||'').localeCompare(a.d||'');}).forEach(function(p){
       h+='<div class="pr"><span class="nm2">'+esc(p.c||p.o)+'</span><span>'+ils(p.show)+'</span>'+
-         '<span class="mut2">'+esc(brName(p.b))+'</span>'+
-         '<span class="mut2">'+(p.src==='ocr'?'מאומת מהאסמכתא':'משוער לפי יתרת ההזמנה')+'</span>'+
+         '<span class="mut2">מאומת מהאסמכתא</span><span class="mut2">'+esc(brName(p.b))+'</span>'+
          (p.d?'<span class="mut2">הועלה '+heDate(p.d)+'</span>':'')+'</div>';
     });
     h+='<div class="pn">הסכומים אינם נכללים בסך המזומן — הם יעברו אליו אוטומטית עם הפקת הקבלה.'+(cache.pendingAt?' נסרק '+esc(cache.pendingAt)+'.':'')+'</div>';
