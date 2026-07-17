@@ -50,7 +50,7 @@ MAX_LINE_SPAN_DAYS = 92
 
 app = FastAPI(title="Divani BI", docs_url=None, redoc_url=None, openapi_url=None)
 
-_state = {"last_sync": None, "last_manual": 0.0, "minmax": None, "minmax_at": 0.0}
+_state = {"last_sync": None, "last_rc": None, "last_manual": 0.0, "minmax": None, "minmax_at": 0.0}
 
 
 # ---------- auth ----------
@@ -170,6 +170,87 @@ def sync_window(kind: str, d_from: dt.date, d_to: dt.date):
     _state["minmax"] = None  # bust cache
 
 
+# ---------- receipts (קבלות) → cash indicator ----------
+
+PAY_CARD_WORDS = ("ישראכרט", "ויזה", "אמריקן", "מאסטר", "דיינרס", "אשראי")
+
+
+def _pay_kind(name: str) -> str:
+    n = name or ""
+    if "ביט" in n:
+        return "bit"
+    if "העברה" in n:
+        return "transfer"
+    if any(w in n for w in PAY_CARD_WORDS):
+        return "card"
+    return "other"
+
+
+def priority_pull_receipts(d_from: dt.date, d_to: dt.date):
+    """Pull receipts (TINVOICES) whose IVDATE date-string is within [d_from, d_to],
+    flattened to one row per payment component. $select is NOT combinable with
+    $expand on TINVOICES (server returns empty rows) — pull full headers."""
+    auth = "Basic " + base64.b64encode(f"{PRI_USER}:{PRI_PASS}".encode("utf-8")).decode("ascii")
+    lo = (d_from - dt.timedelta(days=1)).isoformat() + "T00:00:00%2B02:00"
+    hi = (d_to + dt.timedelta(days=2)).isoformat() + "T00:00:00%2B02:00"
+    url = (f"{PRI_BASE}/TINVOICES?$filter=IVDATE%20ge%20{lo}%20and%20IVDATE%20lt%20{hi}"
+           "&$expand=TPAYMENT_SUBFORM,TPAYMENT2_SUBFORM")
+    recs, guard = [], 0
+    while url and guard < 100:
+        guard += 1
+        j = json.loads(_http(url, {"Authorization": auth, "Accept": "application/json"},
+                             timeout=180).decode("utf-8"))
+        recs += j.get("value", [])
+        url = j.get("@odata.nextLink")
+    rows, n_receipts = [], 0
+    lo_s, hi_s = d_from.isoformat(), d_to.isoformat()
+    for r in recs:
+        d = (r.get("IVDATE") or "")[:10]
+        if not (lo_s <= d <= hi_s):
+            continue
+        comps = []
+        cash = float(r.get("CASHPAYMENT") or 0)
+        if cash:
+            comps.append(("cash", "מזומן", cash, None))
+        for ln in (r.get("TPAYMENT_SUBFORM") or []):
+            amt = float(ln.get("QPRICE") or 0)
+            if amt:
+                comps.append(("check", ("שיק " + (ln.get("BANKNAME") or "")).strip(),
+                              amt, (ln.get("PAYDATE") or "")[:10] or None))
+        for ln in (r.get("TPAYMENT2_SUBFORM") or []):
+            amt = float(ln.get("QPRICE") or 0)
+            nm = ln.get("PAYMENTNAME") or ""
+            if amt:
+                comps.append((_pay_kind(nm), nm, amt, (ln.get("PAYDATE") or "")[:10] or None))
+        if not comps:
+            continue
+        n_receipts += 1
+        base = {"iv": r.get("IVNUM") or "", "d": d, "b": r.get("BRANCHNAME") or "",
+                "a": r.get("AGENTNAME") or "", "cn": r.get("CUSTNAME") or "",
+                "c": r.get("CDES") or "", "o": r.get("ORDNAME") or "",
+                "st": r.get("STATDES") or ""}
+        for k, m, s, pd in comps:
+            row = dict(base)
+            row.update({"k": k, "m": m, "s": round(s, 2), "pd": pd or ""})
+            rows.append(row)
+    return n_receipts, rows
+
+
+def sync_receipts_window(kind: str, d_from: dt.date, d_to: dt.date):
+    t0 = time.time()
+    n_receipts, rows = priority_pull_receipts(d_from, d_to)
+    sb_rpc("bi_replace_rc_window", {"p_from": d_from.isoformat(), "p_to": d_to.isoformat(),
+                                    "p_rows": rows})
+    took = int((time.time() - t0) * 1000)
+    try:
+        sb_insert("bi_sync_log", {"kind": "rc-" + kind, "d_from": d_from.isoformat(),
+                                  "d_to": d_to.isoformat(), "orders": n_receipts,
+                                  "lines": len(rows), "took_ms": took})
+    except Exception:
+        pass
+    _state["last_rc"] = dt.datetime.now(IL).strftime("%d.%m.%Y %H:%M")
+
+
 def _refresher():
     last_nightly = None
     while True:
@@ -177,8 +258,16 @@ def _refresher():
             now = dt.datetime.now(IL)
             today = now.date()
             sync_window("auto", today - dt.timedelta(days=1), today)
+            try:
+                sync_receipts_window("auto", today - dt.timedelta(days=1), today)
+            except Exception as e:
+                print("receipts auto-sync failed:", repr(e)[:300], flush=True)
             if now.hour >= 3 and last_nightly != today:
                 sync_window("nightly", today - dt.timedelta(days=120), today)
+                try:
+                    sync_receipts_window("nightly", today - dt.timedelta(days=120), today)
+                except Exception as e:
+                    print("receipts nightly-sync failed:", repr(e)[:300], flush=True)
                 last_nightly = today
         except Exception:
             pass
@@ -189,7 +278,9 @@ def _configured() -> bool:
     return bool(DASH_PASS and SB_URL and SB_KEY and PRI_USER and PRI_PASS and PRI_BASE)
 
 
-if _configured():
+# DISABLE_REFRESH=1 stops the background writer (local test runs must not
+# compete with production's refresher on the same Supabase windows)
+if _configured() and os.environ.get("DISABLE_REFRESH") != "1":
     threading.Thread(target=_refresher, daemon=True).start()
 
 
@@ -300,6 +391,7 @@ def api_meta(request: Request):
     return JSONResponse({"min": mm.get("min"), "max": mx,
                          "today": today,
                          "last_sync": _state["last_sync"],
+                         "last_rc": _state["last_rc"],
                          "refresh_minutes": REFRESH_MINUTES,
                          "line_span_days": MAX_LINE_SPAN_DAYS})
 
@@ -323,6 +415,22 @@ def api_range(request: Request, d_from: str = "", d_to: str = "", by: str = "a")
     return JSONResponse({"mode": "agents", "agg": agg or {}})
 
 
+@app.get("/api/cash")
+def api_cash(request: Request, d_from: str = "", d_to: str = ""):
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    f, t = _parse_date(d_from), _parse_date(d_to)
+    if not f or not t:
+        return JSONResponse({"error": "bad dates"}, status_code=400)
+    if f > t:
+        f, t = t, f
+    if (t - f).days <= MAX_LINE_SPAN_DAYS:
+        rows = sb_rpc("bi_cash_lines", {"p_from": f.isoformat(), "p_to": t.isoformat()})
+        return JSONResponse({"mode": "cashlines", "rows": rows or []})
+    agg = sb_rpc("bi_cash_agg", {"p_from": f.isoformat(), "p_to": t.isoformat()})
+    return JSONResponse({"mode": "cashagg", "agg": agg or {}})
+
+
 @app.post("/api/refresh")
 def api_refresh(request: Request):
     if not _logged_in(request):
@@ -333,6 +441,13 @@ def api_refresh(request: Request):
     today = dt.datetime.now(IL).date()
     try:
         sync_window("manual", today - dt.timedelta(days=1), today)
-        return JSONResponse({"ok": True, "last_sync": _state["last_sync"]})
+        rc_ok = True
+        try:
+            sync_receipts_window("manual", today - dt.timedelta(days=1), today)
+        except Exception as e:
+            rc_ok = False
+            print("receipts manual-sync failed:", repr(e)[:300], flush=True)
+        return JSONResponse({"ok": True, "last_sync": _state["last_sync"],
+                             "receipts_ok": rc_ok})
     except Exception as e:
         return JSONResponse({"ok": False, "reason": repr(e)[:200]}, status_code=502)

@@ -85,6 +85,7 @@
   <div class="seg" id="seg" role="group" aria-label="סוג דוח">
     <button type="button" data-v="agents" class="on" aria-pressed="true">לפי סוכנים</button>
     <button type="button" data-v="branches" aria-pressed="false">לפי סניפים</button>
+    <button type="button" data-v="cash" aria-pressed="false">מזומן</button>
   </div>
   <div class="selbar">
     <button type="button" class="selbtn" id="selbtn" aria-haspopup="dialog">
@@ -157,12 +158,18 @@
 
   /* ---- data via API ---- */
   function spanDays(){return Math.round((new Date(state.to+'T12:00:00')-new Date(state.from+'T12:00:00'))/86400000);}
-  function desiredKey(){return state.from+'|'+state.to+'|'+(spanDays()>META.line_span_days?view:'L');}
+  function desiredKey(){if(view==='cash')return state.from+'|'+state.to+'|C';return state.from+'|'+state.to+'|'+(spanDays()>META.line_span_days?view:'L');}
   function fetchRange(cb){
     var key=desiredKey();
     if(cache.key===key){cb();return;}
     stage.innerHTML='<div class="load"><span class="spin"></span>טוען נתונים…</div>';
-    fetch('/api/range?d_from='+state.from+'&d_to='+state.to+'&by='+(view==='branches'?'b':'a'),{cache:'no-store'})
+    document.getElementById('kpis').innerHTML='';
+    document.getElementById('notice').style.display='none';
+    document.getElementById('hint').style.display='none';
+    document.getElementById('sellbl').textContent='טוען…';
+    var url=view==='cash'?('/api/cash?d_from='+state.from+'&d_to='+state.to)
+                         :('/api/range?d_from='+state.from+'&d_to='+state.to+'&by='+(view==='branches'?'b':'a'));
+    fetch(url,{cache:'no-store'})
       .then(function(r){if(r.status===401){location.href='/login';throw 0;}if(!r.ok)throw new Error('http '+r.status);return r.json();})
       .then(function(j){if(desiredKey()!==key)return;cache.key=key;cache.mode=j.mode;cache.rows=j.rows||null;cache.agg=j.agg||null;cb();})
       .catch(function(e){if(desiredKey()!==key)return;if(e!==0){stage.innerHTML='<div class="empty">שגיאה בטעינת נתונים.<br>בדוק חיבור ונסה שוב.</div>';toast('שגיאה בטעינת נתונים');}});
@@ -250,9 +257,58 @@
     return {c:tc,s:ts,p:tp,pm:ts>0?100*tp/ts:null,av:tc>0?ts/tc:0,k:kids,orders:agg.orders||0,pos:pos};
   }
 
+  /* cash slots: mz=מזומן, hv=העברות+ביט, sk=שיקים לא דחויים, ot=אשראי/אחר/שיקים דחויים */
+  function cashSlot(k,pd,d){
+    if(k==='cash')return 'mz';
+    if(k==='transfer'||k==='bit')return 'hv';
+    if(k==='check')return (pd&&pd>d)?'ot':'sk';
+    return 'ot';
+  }
+
+  function buildCash(rows){
+    var brs={}, T={mz:0,hv:0,sk:0,ot:0};
+    rows.forEach(function(x){
+      var slot=cashSlot(x.k,x.pd,x.d);
+      var bn=brName(x.b), bk='b_'+bn;
+      var br=brs[bk]||(brs[bk]={n:bn,mz:0,hv:0,sk:0,ot:0,rc:{}});
+      var rc=br.rc['i_'+x.iv]||(br.rc['i_'+x.iv]={n:x.c||x.cn||'קבלה',code:x.iv+(state.from!==state.to?' · '+heShort(x.d):''),mz:0,hv:0,sk:0,ot:0});
+      br[slot]+=x.s; rc[slot]+=x.s; T[slot]+=x.s;
+    });
+    var totalRc=0;
+    var kids=Object.keys(brs).map(function(bk){
+      var br=brs[bk];
+      var rcs=Object.keys(br.rc).map(function(ik){
+        var rc=br.rc[ik];rc.tot=rc.mz+rc.hv+rc.sk;rc.s=rc.tot;rc.k=null;return rc;
+      });
+      totalRc+=rcs.length;
+      var tot=br.mz+br.hv+br.sk;
+      return {n:br.n,mz:br.mz,hv:br.hv,sk:br.sk,ot:br.ot,tot:tot,s:tot,k:rcs};
+    });
+    return {mz:T.mz,hv:T.hv,sk:T.sk,ot:T.ot,tot:T.mz+T.hv+T.sk,k:kids,orders:totalRc};
+  }
+
+  function buildCashAgg(agg){
+    var brs={};
+    (agg.rows||[]).forEach(function(g){
+      var bn=brName(g.b), bk='b_'+bn;
+      var br=brs[bk]||(brs[bk]={n:bn,mz:0,hv:0,sk:0,ot:0});
+      var slot=g.k==='cash'?'mz':(g.k==='transfer'||g.k==='bit')?'hv':(g.k==='check_now')?'sk':'ot';
+      br[slot]+=(g.s||0);
+    });
+    var T={mz:0,hv:0,sk:0,ot:0};
+    var kids=Object.keys(brs).map(function(bk){
+      var br=brs[bk];T.mz+=br.mz;T.hv+=br.hv;T.sk+=br.sk;T.ot+=br.ot;
+      var tot=br.mz+br.hv+br.sk;
+      return {n:br.n,mz:br.mz,hv:br.hv,sk:br.sk,ot:br.ot,tot:tot,s:tot,k:null};
+    });
+    return {mz:T.mz,hv:T.hv,sk:T.sk,ot:T.ot,tot:T.mz+T.hv+T.sk,k:kids,orders:agg.receipts||0};
+  }
+
   function ROOT(){
     if(cache.mode==='agents')return buildAgg(cache.agg||{});
     if(cache.mode==='branches')return buildAggBr(cache.agg||{});
+    if(cache.mode==='cashagg')return buildCashAgg(cache.agg||{});
+    if(cache.mode==='cashlines')return buildCash(cache.rows||[]);
     return view==='branches'?buildBr(cache.rows||[]):build(cache.rows||[]);
   }
 
@@ -296,12 +352,39 @@
       '<div class="kpi"><div class="l">לקוחות</div><div class="v">'+R.c+'</div></div>';
   }
 
+  function renderCashKpis(R){
+    document.getElementById('kpis').innerHTML=
+      '<div class="kpi"><div class="l">סה"כ מזומן</div><div class="v">'+ils(R.tot)+'</div></div>'+
+      '<div class="kpi"><div class="l">מזומן בקופה</div><div class="v">'+ils(R.mz)+'</div></div>'+
+      '<div class="kpi"><div class="l">העברות</div><div class="v">'+ils(R.hv)+'</div></div>'+
+      '<div class="kpi"><div class="l">שיקים מזומן</div><div class="v">'+ils(R.sk)+'</div></div>';
+  }
+
+  function renderCashTable(R){
+    if(!R.k.length){
+      stage.innerHTML='<div class="empty">אין קבלות בתקופה שנבחרה.'+(state.to>=META.max?'<br>אפשר לנסות "רענן עכשיו" למשיכת נתונים טריים מפריוריטי.':'')+'</div>';
+      return;
+    }
+    var rows=[];walk(R.k,0,'',rows);
+    var h='<div class="tw"><table><thead><tr><th class="nm">שם</th><th>מזומן</th><th>העברות</th><th>שיקים מזומן</th><th>סה"כ מזומן</th><th>שאר תקבולים</th></tr></thead><tbody>';
+    rows.forEach(function(it){
+      var c=it.c, cls=it.depth===0?'d0':'dn', ind=it.depth*14;
+      var ch=it.hasK?chevSvg(!!eT[it.id]):'<span style="width:15px;flex:none"></span>';
+      var sub=c.code?'<div class="c" title="'+esc(c.code)+'">'+esc(c.code)+'</div>':'';
+      h+='<tr class="'+cls+(it.hasK?' row':'')+'" '+(it.hasK?'data-t="'+it.id+'" role="button" tabindex="0"':'')+'><td class="nm"><div class="nmc" style="margin-right:'+ind+'px">'+ch+'<div class="nlab'+(it.depth?' rail':'')+'"><div class="t" style="font-weight:'+(it.depth===0?500:400)+'">'+esc(c.n)+'</div>'+sub+'</div></div></td><td>'+ils(c.mz)+'</td><td>'+ils(c.hv)+'</td><td>'+ils(c.sk)+'</td><td style="font-weight:500">'+ils(c.tot)+'</td><td class="mut">'+ils(c.ot)+'</td></tr>';
+    });
+    h+='</tbody><tfoot><tr><td class="nm">סך הכל</td><td>'+ils(R.mz)+'</td><td>'+ils(R.hv)+'</td><td>'+ils(R.sk)+'</td><td>'+ils(R.tot)+'</td><td>'+ils(R.ot)+'</td></tr></tfoot></table></div>';
+    stage.innerHTML=h;
+  }
+
+  function renderStage(R){if(view==='cash'){renderCashTable(R);}else{renderTable(R);}}
+
   function selLabel(R){
     var lbl;
     if(state.preset&&!state.clip){lbl=presetLabel(state.preset)+' · '+(state.from===state.to?heShort(state.from):heShort(state.from)+'–'+heShort(state.to));}
     else if(state.from===state.to){lbl=heDate(state.from);}
     else{lbl=heShort(state.from)+' – '+heShort(state.to);}
-    return lbl+' · '+R.orders+' הזמנות';
+    return lbl+' · '+R.orders+(view==='cash'?' קבלות':' הזמנות');
   }
 
   function renderMeta(R){
@@ -312,12 +395,18 @@
     var longSpan=spanDays()>META.line_span_days;
     if(longSpan&&cache.mode==='agents')msgs.push('בטווח ארוך מוצג סיכום לפי סוכן, בלי צלילה ללקוחות.');
     if(longSpan&&cache.mode==='branches')msgs.push('בטווח ארוך מוצג סיכום לפי סניף, בלי צלילה.');
+    if(longSpan&&cache.mode==='cashagg')msgs.push('בטווח ארוך מוצג סיכום לפי סניף, בלי פירוט קבלות.');
     if(view==='branches'&&state.from<'2024-03-01')msgs.push('שיוך הזמנות לסניפים קיים בפריוריטי רק מתחילת 2024 (במלואו מסוף פברואר) — הזמנות מוקדמות יותר מופיעות תחת "ללא שיוך סניף".');
+    if(view==='cash'&&state.from<'2024-03-01')msgs.push('שיוך קבלות לסניפים קיים בפריוריטי רק משנת 2024 — קבלות מוקדמות יותר מופיעות כולן תחת "ללא שיוך סניף".');
+    else if(view==='cash')msgs.push('חלק מהקבלות נרשמות בפריוריטי בלי שיוך סניף ומופיעות בשורה נפרדת.');
     if(msgs.length){nt.style.display='block';nt.textContent=msgs.join(' ');}else{nt.style.display='none';}
-    document.getElementById('hint').style.display=cache.mode==='lines'?'block':'none';
+    var hintEl=document.getElementById('hint');
+    if(cache.mode==='lines'){hintEl.textContent='הקש על שורה כדי לצלול · גלול הצידה לעוד עמודות';hintEl.style.display='block';}
+    else if(cache.mode==='cashlines'){hintEl.textContent='הקש על סניף לפירוט קבלות · סה"כ מזומן = מזומן + העברות + שיקים לא דחויים';hintEl.style.display='block';}
+    else{hintEl.style.display='none';}
   }
 
-  function renderAll(){var R=ROOT();renderKpis(R);renderMeta(R);renderTable(R);}
+  function renderAll(){var R=ROOT();if(view==='cash'){renderCashKpis(R);}else{renderKpis(R);}renderMeta(R);renderStage(R);}
 
   function apply(){eT={};renderChips();fetchRange(renderAll);}
 
@@ -327,8 +416,9 @@
     if(noOverlap){
       state.from=f;state.to=t;state.preset=preset||null;state.clip=false;
       eT={};renderChips();
-      var R={c:0,s:0,p:0,pm:null,av:0,k:[],orders:0,pos:0};
-      renderKpis(R);renderMeta(R);
+      if(view==='cash'){var R0={mz:0,hv:0,sk:0,ot:0,tot:0,k:[],orders:0};renderCashKpis(R0);renderMeta(R0);}
+      else{var R={c:0,s:0,p:0,pm:null,av:0,k:[],orders:0,pos:0};renderKpis(R);renderMeta(R);}
+      document.getElementById('hint').style.display='none';
       stage.innerHTML='<div class="empty">אין נתונים בתקופה שבחרת.<br>יש נתונים מ־'+heDate(META.min)+' עד '+heDate(META.max)+'.</div>';
       return;
     }
@@ -392,7 +482,7 @@
   function setView(v){
     if(view===v)return;
     view=v;
-    document.getElementById('h1t').textContent=v==='branches'?'מכירות לפי סניפים':'ביצועי סוכנים';
+    document.getElementById('h1t').textContent=v==='branches'?'מכירות לפי סניפים':(v==='cash'?'תקבולים במזומן':'ביצועי סוכנים');
     var bs=document.querySelectorAll('#seg button');
     for(var i=0;i<bs.length;i++){var on=bs[i].getAttribute('data-v')===v;bs[i].classList.toggle('on',on);bs[i].setAttribute('aria-pressed',on?'true':'false');}
     if(META&&state.from)apply();
@@ -409,14 +499,15 @@
       .then(function(x){
         if(!x.ok){toast(x.j&&x.j.reason==='rate'?'רענון אחרון היה לפני פחות מדקה':'הרענון נכשל');return;}
         if(x.j.last_sync)META.last_sync=x.j.last_sync;
+        if(x.j.receipts_ok===false)toast('המכירות עודכנו, אך רענון הקבלות נכשל — נתוני המזומן עלולים להיות ישנים');
         cache.key=null;apply();
       })
       .catch(function(){toast('הרענון נכשל');})
       .then(function(){setTimeout(function(){b.disabled=false;},3000);});
   });
 
-  stage.addEventListener('click',function(e){var t=e.target.closest('[data-t]');if(t){var id=t.getAttribute('data-t');eT[id]=!eT[id];renderTable(ROOT());}});
-  stage.addEventListener('keydown',function(e){if((e.key==='Enter'||e.key===' ')&&e.target.hasAttribute&&e.target.hasAttribute('data-t')){e.preventDefault();var id=e.target.getAttribute('data-t');eT[id]=!eT[id];renderTable(ROOT());}});
+  stage.addEventListener('click',function(e){var t=e.target.closest('[data-t]');if(t){var id=t.getAttribute('data-t');eT[id]=!eT[id];renderStage(ROOT());}});
+  stage.addEventListener('keydown',function(e){if((e.key==='Enter'||e.key===' ')&&e.target.hasAttribute&&e.target.hasAttribute('data-t')){e.preventDefault();var id=e.target.getAttribute('data-t');eT[id]=!eT[id];renderStage(ROOT());}});
 
   /* ---- boot ---- */
   function boot(){
