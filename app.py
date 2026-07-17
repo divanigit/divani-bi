@@ -87,7 +87,7 @@ input{width:100%;height:46px;border:1px solid var(--line2);border-radius:10px;ba
 button{width:100%;height:46px;margin-top:10px;border:0;border-radius:10px;background:var(--bd);color:#fff;font-family:inherit;font-size:15px;font-weight:500;cursor:pointer}
 .err{color:var(--dfg);font-size:13px;margin-top:10px;min-height:18px}
 </style></head><body><div class="wrap"><form class="card" method="post" action="/login" autocomplete="off">
-<div class="bd">דיוואני</div><h1>ביצועי סוכנים</h1><p>הזן סיסמה כדי להיכנס — למנהלים בלבד</p>
+<div class="bd">דיוואני</div><h1>דוחות ביצועים</h1><p>הזן סיסמה כדי להיכנס — למנהלים בלבד</p>
 <input name="p" type="password" placeholder="סיסמה" autocapitalize="off" autocorrect="off" spellcheck="false">
 <button type="submit">כניסה</button>__ERR__</form></div></body></html>""").replace("__ERR__", e)
 
@@ -305,7 +305,7 @@ def api_meta(request: Request):
 
 
 @app.get("/api/range")
-def api_range(request: Request, d_from: str = "", d_to: str = ""):
+def api_range(request: Request, d_from: str = "", d_to: str = "", by: str = "a"):
     if not _logged_in(request):
         return JSONResponse({"error": "auth"}, status_code=401)
     f, t = _parse_date(d_from), _parse_date(d_to)
@@ -316,6 +316,9 @@ def api_range(request: Request, d_from: str = "", d_to: str = ""):
     if (t - f).days <= MAX_LINE_SPAN_DAYS:
         rows = sb_rpc("bi_range_lines", {"p_from": f.isoformat(), "p_to": t.isoformat()})
         return JSONResponse({"mode": "lines", "rows": rows or []})
+    if by == "b":
+        agg = sb_rpc("bi_range_branches", {"p_from": f.isoformat(), "p_to": t.isoformat()})
+        return JSONResponse({"mode": "branches", "agg": agg or {}})
     agg = sb_rpc("bi_range_agents", {"p_from": f.isoformat(), "p_to": t.isoformat()})
     return JSONResponse({"mode": "agents", "agg": agg or {}})
 
