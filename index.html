@@ -16,7 +16,7 @@
   .out{font-size:11.5px;color:var(--tx3);text-decoration:none;padding:6px 2px}
   h1{font-size:20px;font-weight:500;margin:4px 0 10px}
   .seg{display:inline-flex;background:var(--surface);border:1px solid var(--line2);border-radius:12px;padding:3px;margin:0 0 12px}
-  .seg button{font-family:inherit;font-size:13px;font-weight:500;border:0;background:none;color:var(--tx2);padding:8px 13px;min-height:44px;border-radius:9px;cursor:pointer}
+  .seg button{font-family:inherit;font-size:13px;font-weight:500;border:0;background:none;color:var(--tx2);padding:8px 10px;min-height:44px;border-radius:9px;cursor:pointer}
   .seg button.on{background:var(--bd);color:#fff}
   .notice{font-size:12px;color:var(--wfg);margin:6px 2px 0;display:none}
   .selbar{display:flex;align-items:center;gap:8px;margin:0 0 12px;flex-wrap:wrap}
@@ -110,6 +110,7 @@
     <button type="button" data-v="branches" aria-pressed="false">סניפים</button>
     <button type="button" data-v="cash" aria-pressed="false">מזומן</button>
     <button type="button" data-v="service" aria-pressed="false">שירות</button>
+    <button type="button" data-v="collect" aria-pressed="false">מקדמות</button>
   </div>
   <div class="selbar">
     <button type="button" class="selbtn" id="selbtn" aria-haspopup="dialog">
@@ -200,7 +201,7 @@
 
   /* ---- data via API ---- */
   function spanDays(){return Math.round((new Date(state.to+'T12:00:00')-new Date(state.from+'T12:00:00'))/86400000);}
-  function desiredKey(){if(view==='cash')return state.from+'|'+state.to+'|C';if(view==='service')return state.from+'|'+state.to+'|S';return state.from+'|'+state.to+'|'+(spanDays()>META.line_span_days?view:'L');}
+  function desiredKey(){if(view==='cash')return state.from+'|'+state.to+'|C';if(view==='service')return state.from+'|'+state.to+'|S';if(view==='collect')return state.from+'|'+state.to+'|P';return state.from+'|'+state.to+'|'+(spanDays()>META.line_span_days?view:'L');}
   function fetchRange(cb){
     var key=desiredKey();
     if(cache.key===key){cb();return;}
@@ -211,7 +212,8 @@
     if(view!=='cash')document.getElementById('pendtr').style.display='none';
     document.getElementById('sellbl').textContent='טוען…';
     var url=view==='cash'?('/api/cash?d_from='+state.from+'&d_to='+state.to)
-                         :('/api/range?d_from='+state.from+'&d_to='+state.to+'&by='+(view==='branches'?'b':(view==='service'?'s':'a')));
+           :view==='collect'?('/api/collect?d_from='+state.from+'&d_to='+state.to)
+           :('/api/range?d_from='+state.from+'&d_to='+state.to+'&by='+(view==='branches'?'b':(view==='service'?'s':'a')));
     fetch(url,{cache:'no-store'})
       .then(function(r){if(r.status===401){location.href='/login';throw 0;}if(!r.ok)throw new Error('http '+r.status);return r.json();})
       .then(function(j){if(desiredKey()!==key)return;cache.key=key;cache.mode=j.mode;cache.rows=j.rows||null;cache.agg=j.agg||null;if(j.pending!==undefined){cache.pending=j.pending;cache.pendingAt=j.pending_at;}cb();})
@@ -347,11 +349,26 @@
     return {mz:T.mz,hv:T.hv,sk:T.sk,ot:T.ot,tot:T.mz+T.hv+T.sk,k:kids,orders:agg.receipts||0};
   }
 
+  function buildCollect(agg){
+    var kids=(agg.agents||[]).map(function(g){
+      var s=g.s||0, sg=g.sg||0, r=g.r||0, disc=g.disc||0;
+      return {n:g.a||'ללא סוכן',s:s,r:r,ratio:sg>0?100*r/sg:null,disc:disc,
+              dpct:(s+disc)>0?100*disc/(s+disc):null,sg:sg,k:null};
+    });
+    var T={s:0,sg:0,r:0,disc:0};
+    kids.forEach(function(a){T.s+=a.s;T.sg+=a.sg;T.r+=a.r;T.disc+=a.disc;});
+    return {s:T.s,sg:T.sg,r:T.r,disc:T.disc,
+            ratio:T.sg>0?100*T.r/T.sg:null,
+            dpct:(T.s+T.disc)>0?100*T.disc/(T.s+T.disc):null,
+            k:kids,orders:kids.length};
+  }
+
   function ROOT(){
     if(cache.mode==='agents')return buildAgg(cache.agg||{});
     if(cache.mode==='branches')return buildAggBr(cache.agg||{});
     if(cache.mode==='cashagg')return buildCashAgg(cache.agg||{});
     if(cache.mode==='cashlines')return buildCash(cache.rows||[]);
+    if(cache.mode==='collect')return buildCollect(cache.agg||{});
     return view==='branches'?buildBr(cache.rows||[]):build(cache.rows||[]);
   }
 
@@ -436,14 +453,36 @@
     el.innerHTML=h;el.style.display='block';
   }
 
-  function renderStage(R){renderPending();if(view==='cash'){renderCashTable(R);}else{renderTable(R);}}
+  function renderCollectKpis(R){
+    document.getElementById('kpis').innerHTML=
+      '<div class="kpi"><div class="l">יחס מקדמות למחזור</div><div class="v">'+(R.ratio==null?'—':Math.round(R.ratio)+'%')+'</div></div>'+
+      '<div class="kpi"><div class="l">מחזור</div><div class="v">'+ils(R.s)+'</div></div>'+
+      '<div class="kpi"><div class="l">תקבולים</div><div class="v">'+ils(R.r)+'</div></div>'+
+      '<div class="kpi"><div class="l">אחוז הנחה</div><div class="v">'+(R.dpct==null?'—':R.dpct.toFixed(1)+'%')+'</div></div>';
+  }
+
+  function renderCollectTable(R){
+    if(!R.k.length){stage.innerHTML='<div class="empty">אין נתונים בתקופה שנבחרה.</div>';return;}
+    var h='<div class="tw"><table><thead><tr><th class="nm">סוכן</th><th>מכירות</th><th>תקבולים</th><th>יחס מקדמות</th><th>הנחות</th><th>אחוז הנחה</th></tr></thead><tbody>';
+    R.k.slice().sort(function(x,y){return y.s-x.s;}).forEach(function(c){
+      h+='<tr class="d0"><td class="nm"><div class="nmc"><span style="width:15px;flex:none"></span><div class="nlab"><div class="t" style="font-weight:500">'+esc(c.n)+'</div></div></div></td>'+
+         '<td>'+ils(c.s)+'</td><td>'+ils(c.r)+'</td>'+
+         '<td>'+(c.ratio==null?'<span class="mut">—</span>':Math.round(c.ratio)+'%')+'</td>'+
+         '<td>'+ils(c.disc)+'</td>'+
+         '<td>'+(c.dpct==null?'<span class="mut">—</span>':c.dpct.toFixed(1)+'%')+'</td></tr>';
+    });
+    h+='</tbody><tfoot><tr><td class="nm">סך הכל</td><td>'+ils(R.s)+'</td><td>'+ils(R.r)+'</td><td>'+(R.ratio==null?'—':Math.round(R.ratio)+'%')+'</td><td>'+ils(R.disc)+'</td><td>'+(R.dpct==null?'—':R.dpct.toFixed(1)+'%')+'</td></tr></tfoot></table></div>';
+    stage.innerHTML=h;
+  }
+
+  function renderStage(R){renderPending();if(view==='cash'){renderCashTable(R);}else if(view==='collect'){renderCollectTable(R);}else{renderTable(R);}}
 
   function selLabel(R){
     var lbl;
     if(state.preset&&!state.clip){lbl=presetLabel(state.preset)+' · '+(state.from===state.to?heShort(state.from):heShort(state.from)+'–'+heShort(state.to));}
     else if(state.from===state.to){lbl=heDate(state.from);}
     else{lbl=heShort(state.from)+' – '+heShort(state.to);}
-    return lbl+' · '+R.orders+(view==='cash'?' קבלות':' הזמנות');
+    return lbl+' · '+R.orders+(view==='cash'?' קבלות':(view==='collect'?' סוכנים':' הזמנות'));
   }
 
   function renderMeta(R){
@@ -459,6 +498,7 @@
     if(view==='cash'&&state.from<'2024-03-01')msgs.push('שיוך קבלות לסניפים קיים בפריוריטי רק משנת 2024 — קבלות מוקדמות יותר מופיעות כולן תחת "ללא שיוך סניף".');
     else if(view==='cash')msgs.push('חלק מהקבלות נרשמות בפריוריטי בלי שיוך סניף ומופיעות בשורה נפרדת.');
     if(view==='service')msgs.push('מוצגת פעילות אנשי השירות בלבד — היא אינה נספרת בדוחות המכירות.');
+    if(view==='collect')msgs.push('התקבולים כוללים מע"מ; יחס המקדמות מחושב מול המחזור בהמרה לכולל מע"מ. הנחות = שורות קיזוז, קופונים ושוברים.');
     if(msgs.length){nt.style.display='block';nt.textContent=msgs.join(' ');}else{nt.style.display='none';}
     var hintEl=document.getElementById('hint');
     if(cache.mode==='lines'){hintEl.textContent='הקש על שורה כדי לצלול · גלול הצידה לעוד עמודות';hintEl.style.display='block';}
@@ -466,7 +506,7 @@
     else{hintEl.style.display='none';}
   }
 
-  function renderAll(){var R=ROOT();if(view==='cash'){renderCashKpis(R);}else{renderKpis(R);}renderMeta(R);renderStage(R);}
+  function renderAll(){var R=ROOT();if(view==='cash'){renderCashKpis(R);}else if(view==='collect'){renderCollectKpis(R);}else{renderKpis(R);}renderMeta(R);renderStage(R);}
 
   function apply(){eT={};renderChips();fetchRange(renderAll);}
 
@@ -477,6 +517,7 @@
       state.from=f;state.to=t;state.preset=preset||null;state.clip=false;
       eT={};renderChips();
       if(view==='cash'){var R0={mz:0,hv:0,sk:0,ot:0,tot:0,k:[],orders:0};renderCashKpis(R0);renderMeta(R0);}
+      else if(view==='collect'){var R1={s:0,sg:0,r:0,disc:0,ratio:null,dpct:null,k:[],orders:0};renderCollectKpis(R1);renderMeta(R1);}
       else{var R={c:0,s:0,p:0,pm:null,av:0,k:[],orders:0,pos:0};renderKpis(R);renderMeta(R);}
       document.getElementById('hint').style.display='none';
       stage.innerHTML='<div class="empty">אין נתונים בתקופה שבחרת.<br>יש נתונים מ־'+heDate(META.min)+' עד '+heDate(META.max)+'.</div>';
@@ -542,7 +583,7 @@
   function setView(v){
     if(view===v)return;
     view=v;
-    var H1={agents:'ביצועי סוכנים',branches:'מכירות לפי סניפים',cash:'תקבולים במזומן',service:'פעילות שירות'};
+    var H1={agents:'ביצועי סוכנים',branches:'מכירות לפי סניפים',cash:'תקבולים במזומן',service:'פעילות שירות',collect:'מקדמות והנחות'};
     document.getElementById('h1t').textContent=H1[v]||H1.agents;
     var bs=document.querySelectorAll('#seg button');
     for(var i=0;i<bs.length;i++){var on=bs[i].getAttribute('data-v')===v;bs[i].classList.toggle('on',on);bs[i].setAttribute('aria-pressed',on?'true':'false');}

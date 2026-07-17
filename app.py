@@ -456,6 +456,19 @@ def api_range(request: Request, d_from: str = "", d_to: str = "", by: str = "a")
     return JSONResponse({"mode": "agents", "agg": agg or {}})
 
 
+@app.get("/api/collect")
+def api_collect(request: Request, d_from: str = "", d_to: str = ""):
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    f, t = _parse_date(d_from), _parse_date(d_to)
+    if not f or not t:
+        return JSONResponse({"error": "bad dates"}, status_code=400)
+    if f > t:
+        f, t = t, f
+    agg = sb_rpc("bi_range_collect", {"p_from": f.isoformat(), "p_to": t.isoformat()})
+    return JSONResponse({"mode": "collect", "agg": agg or {}})
+
+
 @app.get("/api/cash")
 def api_cash(request: Request, d_from: str = "", d_to: str = ""):
     if not _logged_in(request):
