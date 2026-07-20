@@ -317,12 +317,41 @@ def sync_customers_window(days_back: int):
     return len(rows)
 
 
+# descriptor words that are never a model name (parser guard)
+_NOT_MODEL = ("בד", "עור", "צבע", "גודל", "רגלי", "רגל", "מבצע", "קיזוז", "מספר",
+              "ימין", "שמאל", "פינה", "אוכל", "נפתח", "סלון", "זכוכית", "עץ")
+
+
+def parse_model_version(pdes: str):
+    """Model + version from a part description.
+    Grammar: 'X-דגם-<model>-<version...>' or '<type>-<model>-<version...>'."""
+    toks = [t.strip() for t in pdes.replace("+", "-").split("-") if t.strip()]
+    if not toks:
+        return "", ""
+    if "דגם" in toks:
+        i = toks.index("דגם")
+        if i + 1 < len(toks):
+            m = toks[i + 1]
+            if m.isdigit() or m in _NOT_MODEL:   # 'ידית דגם 31', 'השוואת דגם'
+                return "", ""
+            return m, "-".join(toks[i + 2:])
+        return "", ""
+    # chair-style grammar: type-model-version...
+    if len(toks) >= 2 and not toks[1].isdigit() and toks[1] not in _NOT_MODEL:
+        return toks[1], "-".join(toks[2:])
+    return "", ""
+
+
 def sync_parts():
-    """Upsert the full part catalog (part -> family/category). Small table."""
+    """Upsert the full part catalog (part -> family + parsed model/version)."""
     auth = "Basic " + base64.b64encode(f"{PRI_USER}:{PRI_PASS}".encode("utf-8")).decode("ascii")
-    url = f"{PRI_BASE}/LOGPART?$select=PARTNAME,FAMILYDES"
-    rows = [{"pn": r.get("PARTNAME") or "", "f": r.get("FAMILYDES") or ""}
-            for r in _pri_pages(url, auth, guard_max=400)]
+    url = f"{PRI_BASE}/LOGPART?$select=PARTNAME,PARTDES,FAMILYDES"
+    rows = []
+    for r in _pri_pages(url, auth, guard_max=400):
+        d = r.get("PARTDES") or ""
+        m, v = parse_model_version(d)
+        rows.append({"pn": r.get("PARTNAME") or "", "f": r.get("FAMILYDES") or "",
+                     "d": d, "m": m, "v": v})
     if rows:
         for i in range(0, len(rows), 2000):
             sb_rpc("bi_upsert_parts", {"p_rows": rows[i:i + 2000]})
@@ -567,6 +596,55 @@ def api_panel(request: Request, name: str = "", d_from: str = "", d_to: str = ""
         params["p_anchor"], params["p_addon"] = a, b
     agg = sb_rpc(rpc, params)
     return JSONResponse({"mode": "panel", "panel": name, "agg": agg or {}})
+
+
+@app.get("/api/pareto")
+def api_pareto(request: Request, d_from: str = "", d_to: str = "", list_n: int = 25):
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    f, t = _parse_date(d_from), _parse_date(d_to)
+    if not f or not t:
+        return JSONResponse({"error": "bad dates"}, status_code=400)
+    if f > t:
+        f, t = t, f
+    agg = sb_rpc("bi_pareto", {"p_from": f.isoformat(), "p_to": t.isoformat(),
+                               "p_list": max(1, min(list_n, 800))})
+    return JSONResponse({"mode": "panel", "panel": "pareto", "agg": agg or {}})
+
+
+@app.get("/api/tree")
+def api_tree(request: Request, d_from: str = "", d_to: str = "",
+             grp: str = "", fam: str = "", model: str = ""):
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    f, t = _parse_date(d_from), _parse_date(d_to)
+    if not f or not t:
+        return JSONResponse({"error": "bad dates"}, status_code=400)
+    if f > t:
+        f, t = t, f
+    if max(len(grp), len(fam), len(model)) > 120:
+        return JSONResponse({"error": "bad key"}, status_code=400)
+    agg = sb_rpc("bi_cat_tree", {"p_from": f.isoformat(), "p_to": t.isoformat(),
+                                 "p_grp": grp or None, "p_fam": fam or None,
+                                 "p_model": model or None})
+    return JSONResponse({"mode": "tree", "agg": agg or {}})
+
+
+@app.get("/api/segdrill")
+def api_segdrill(request: Request, d_from: str = "", d_to: str = "",
+                 seg: str = "", key: str = ""):
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    f, t = _parse_date(d_from), _parse_date(d_to)
+    if not f or not t:
+        return JSONResponse({"error": "bad dates"}, status_code=400)
+    if f > t:
+        f, t = t, f
+    if seg not in ("city", "sector", "source") or not (0 < len(key) <= 120):
+        return JSONResponse({"error": "bad seg"}, status_code=400)
+    agg = sb_rpc("bi_seg_drill", {"p_from": f.isoformat(), "p_to": t.isoformat(),
+                                  "p_seg": seg, "p_key": key})
+    return JSONResponse({"mode": "segdrill", "seg": seg, "key": key, "agg": agg or {}})
 
 
 @app.get("/api/dim")

@@ -48,8 +48,13 @@
   tbody tr+tr td{border-top:1px solid var(--line)}
   tfoot td{border-top:2px solid var(--line2);background:var(--surface);font-weight:500}
   .nmc{display:flex;align-items:center;gap:7px}.nlab{min-width:0}
-  .nlab .t{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px}
-  .nlab .c{font-size:10.5px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px}
+  .nlab .t{font-size:12.5px;white-space:normal;word-break:break-word;max-width:230px;text-align:right}
+  .nlab .c{font-size:10.5px;color:var(--tx3);white-space:normal;word-break:break-word;max-width:230px;text-align:right}
+  th[data-hsort]{cursor:pointer;user-select:none}
+  th[data-hsort].on{color:var(--bd)}
+  .crumbs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+  .crumbs .chip{font-family:inherit;font-size:12px;border:1px solid var(--line2);background:var(--bg);color:var(--tx2);padding:6px 11px;min-height:36px;border-radius:999px;cursor:pointer}
+  .crumbs .chip.here{background:var(--surface);border-color:var(--bd);color:var(--bd);font-weight:600;cursor:default}
   .rail{border-right:2px solid color-mix(in srgb,var(--bd) 40%,transparent);padding-right:8px}
   .empty{border:1px dashed var(--line2);border-radius:14px;padding:34px 16px;text-align:center;color:var(--tx3);font-size:13.5px;line-height:1.7}
   .load{display:flex;align-items:center;justify-content:center;gap:10px;padding:40px 0;color:var(--tx3);font-size:13px}
@@ -159,9 +164,6 @@
     <button type="button" class="chip" data-d="city" aria-pressed="false">ערים</button>
     <button type="button" class="chip" data-d="sector" aria-pressed="false">מגזר</button>
     <button type="button" class="chip" data-d="source" aria-pressed="false">מקור הגעה</button>
-    <span class="dimsep"></span>
-    <button type="button" class="chip on" data-m="s" aria-pressed="true">לפי כסף</button>
-    <button type="button" class="chip" data-m="q" aria-pressed="false">לפי כמות</button>
   </div>
   <div class="selbar">
     <button type="button" class="selbtn" id="selbtn" aria-haspopup="dialog">
@@ -218,6 +220,7 @@
 <script>
 (function(){
   var META=null, TARGET=50, view='agents', dimKind='fam', dimMeasure='s';
+  var dimPath={grp:null,fam:null,model:null}, dimSeg=null, dimSort=null, insParetoN=25;
   var DIMH={fam:'קטגוריות',part:'מוצרים',city:'ערים',sector:'מגזר',source:'מקור הגעה'};
   var SECN={'חילו.':'חילוני','חר.':'חרדי','ד.לא.':'דתי לאומי','רוס':'דובר רוסית','ע.ר':'המגזר הערבי','אחר':'אחר','לקוח מרחוק':'לקוח מרחוק','הזמנת שרות':'הזמנת שירות'};
   function dimName(k){if(dimKind==='sector')return SECN[k]||k;return k;}
@@ -264,11 +267,16 @@
     if(view==='cash')return state.from+'|'+state.to+'|C';
     if(view==='service')return state.from+'|'+state.to+'|S';
     if(view==='collect')return state.from+'|'+state.to+'|P';
-    if(view==='dim')return state.from+'|'+state.to+'|D|'+dimKind+'|'+dimMeasure;
+    if(view==='dim'){
+      if(dimKind==='fam')return state.from+'|'+state.to+'|T|'+(dimPath.grp||'')+'|'+(dimPath.fam||'')+'|'+(dimPath.model||'');
+      if(dimSeg)return state.from+'|'+state.to+'|SG|'+dimSeg.seg+'|'+dimSeg.key;
+      return state.from+'|'+state.to+'|D|'+dimKind+'|'+dimMeasure;
+    }
     if(view==='ins'){
       if(insPanel==='alerts'||insPanel==='selfcheck')return 'N|'+insPanel;
       if(insPanel==='trend'){var tr=trendRange();return tr[0]+'|'+tr[1]+'|N|trend|'+insDim.trend;}
       if(insPanel==='pairs'&&insDrill)return state.from+'|'+state.to+'|N|PD|'+insDrill.a+'|'+insDrill.b;
+      if(insPanel==='pareto')return state.from+'|'+state.to+'|N|pareto|'+insParetoN;
       var dm=insDim[insPanel]||'';
       return state.from+'|'+state.to+'|N|'+insPanel+(dm?'|'+dm:'');
     }
@@ -296,10 +304,15 @@
     }
     var url=view==='cash'?('/api/cash?d_from='+state.from+'&d_to='+state.to)
            :view==='collect'?('/api/collect?d_from='+state.from+'&d_to='+state.to)
-           :view==='dim'?('/api/dim?d_from='+state.from+'&d_to='+state.to+'&dim='+dimKind+'&rank='+dimMeasure)
+           :view==='dim'?(function(){
+              if(dimKind==='fam')return '/api/tree?d_from='+state.from+'&d_to='+state.to+(dimPath.grp?'&grp='+encodeURIComponent(dimPath.grp):'')+(dimPath.fam?'&fam='+encodeURIComponent(dimPath.fam):'')+(dimPath.model?'&model='+encodeURIComponent(dimPath.model):'');
+              if(dimSeg)return '/api/segdrill?d_from='+state.from+'&d_to='+state.to+'&seg='+dimSeg.seg+'&key='+encodeURIComponent(dimSeg.key);
+              return '/api/dim?d_from='+state.from+'&d_to='+state.to+'&dim='+dimKind+'&rank='+dimMeasure;
+            })()
            :view==='ins'?(function(){
               if(insPanel==='alerts'||insPanel==='selfcheck')return '/api/panel?name='+insPanel;
               if(insPanel==='trend'){var tr=trendRange();return '/api/panel?name=trend&d_from='+tr[0]+'&d_to='+tr[1]+'&dim='+insDim.trend;}
+              if(insPanel==='pareto')return '/api/pareto?d_from='+state.from+'&d_to='+state.to+'&list_n='+insParetoN;
               if(insPanel==='pairs'&&insDrill)return '/api/panel?name=pairdrill&d_from='+state.from+'&d_to='+state.to+'&a='+encodeURIComponent(insDrill.a)+'&b='+encodeURIComponent(insDrill.b);
               var dm=insDim[insPanel];
               return '/api/panel?name='+insPanel+'&d_from='+state.from+'&d_to='+state.to+(dm?'&dim='+dm:'');
@@ -458,7 +471,7 @@
     var kids=(agg.rows||[]).map(function(g){
       var s=g.s||0,p=g.p||0;
       return {n:(dimKind==='part'?(g.lbl||g.k||'ללא תיאור'):dimName(g.k||'ללא נתון')),
-              code:(dimKind==='part'?(g.k||''):null),
+              code:(dimKind==='part'?(g.k||''):null),rawk:(g.k||''),
               s:s,profit:p,pm:s>0?100*p/s:null,q:g.q||0,c:g.c||0,no:g.n||0,k:null};
     });
     return {s:agg.total_s||0,q:agg.total_q||0,p:agg.total_p||0,
@@ -472,8 +485,16 @@
     if(cache.mode==='cashagg')return buildCashAgg(cache.agg||{});
     if(cache.mode==='cashlines')return buildCash(cache.rows||[]);
     if(cache.mode==='collect')return buildCollect(cache.agg||{});
-    if(cache.mode==='dim')return buildDim(cache.agg||{});
+    if(cache.mode==='dim'||cache.mode==='tree'||cache.mode==='segdrill')return buildDim(cache.agg||{});
     return view==='branches'?buildBr(cache.rows||[]):build(cache.rows||[]);
+  }
+  function treeDepth(){return dimPath.model?3:(dimPath.fam?2:(dimPath.grp?1:0));}
+  function treeCrumbs(){
+    var h='<div class="crumbs"><button type="button" class="chip'+(treeDepth()===0?' here':'')+'" data-crumb="0">קטגוריות־אב</button>';
+    if(dimPath.grp)h+='<button type="button" class="chip'+(treeDepth()===1?' here':'')+'" data-crumb="1">'+esc(dimPath.grp)+'</button>';
+    if(dimPath.fam)h+='<button type="button" class="chip'+(treeDepth()===2?' here':'')+'" data-crumb="2">'+esc(dimPath.fam)+'</button>';
+    if(dimPath.model)h+='<button type="button" class="chip here" data-crumb="3">'+esc(dimPath.model)+'</button>';
+    return h+'</div>';
   }
 
   function pmTxt(pm){return pm==null?'—':Math.round(pm)+'%';}
@@ -566,17 +587,53 @@
       '<div class="kpi"><div class="l">לקוחות</div><div class="v">'+R.c+'</div></div>';
   }
 
+  function renderSegDrill(R){
+    var a=cache.agg||{};
+    var segH={city:'עיר',sector:'מגזר',source:'מקור הגעה'};
+    var nm=dimKind==='sector'?secName(dimSeg.key):dimSeg.key;
+    var h='<div class="crumbs"><button type="button" class="chip" data-segback="1">→ חזרה ל'+(DIMH[dimKind]||'רשימה')+'</button><button type="button" class="chip here">'+esc(nm)+'</button></div>';
+    h+='<div class="tw"><table><thead><tr><th class="nm">קטגוריית־אב</th><th>מכירות</th><th>כמות</th><th>הזמנות</th></tr></thead><tbody>';
+    (a.groups||[]).forEach(function(g){
+      h+='<tr class="d0"><td class="nm"><div class="nmc"><span style="width:15px;flex:none"></span><div class="nlab"><div class="t" style="font-weight:500">'+esc(g.k)+'</div></div></div></td><td>'+ils(g.s)+'</td><td>'+qf(g.q||0)+'</td><td class="mut">'+g.n+'</td></tr>';
+    });
+    h+='</tbody></table></div>';
+    if((a.models||[]).length){
+      h+='<p class="hint" style="display:block;margin-top:14px">הדגמים המובילים אצל '+esc(nm)+'</p>';
+      h+='<div class="tw"><table><thead><tr><th class="nm">דגם</th><th>מכירות</th><th>כמות</th><th>הזמנות</th></tr></thead><tbody>';
+      (a.models||[]).forEach(function(m){
+        h+='<tr class="d0"><td class="nm"><div class="nmc"><span style="width:15px;flex:none"></span><div class="nlab"><div class="t" style="font-weight:500">'+esc(m.k)+'</div><div class="c">'+esc(m.f||'')+'</div></div></div></td><td>'+ils(m.s)+'</td><td>'+qf(m.q||0)+'</td><td class="mut">'+m.n+'</td></tr>';
+      });
+      h+='</tbody></table></div>';
+    }
+    stage.innerHTML=h;
+  }
+
   function renderDimTable(R){
-    if(!R.k.length){stage.innerHTML=emptyHtml();return;}
-    var byQ=dimMeasure==='q';
-    var kids=R.k;  // server already ranks by the chosen measure
+    if(cache.mode==='segdrill'&&dimSeg){renderSegDrill(R);return;}
+    var isTree=cache.mode==='tree';
+    if(!R.k.length){stage.innerHTML=(isTree?treeCrumbs():'')+emptyHtml();return;}
+    var kids=R.k.slice();
+    if(dimSort){
+      var col=dimSort.col,dir=dimSort.dir;
+      kids.sort(function(x,y){
+        var vx=col==='s'?x.s:col==='q'?x.q:col==='p'?x.profit:col==='c'?x.c:x.s;
+        var vy=col==='s'?y.s:col==='q'?y.q:col==='p'?y.profit:col==='c'?y.c:y.s;
+        return dir*(vy-vx);
+      });
+    }
+    var byQ=dimSort&&dimSort.col==='q';
     var totS=R.s,totQ=R.q;
-    var h='<div class="tw"><table><thead><tr><th class="nm">'+(DIMH[dimKind]||'שם')+'</th><th>מכירות</th><th>כמות</th><th>אחוז מסה"כ</th><th>רווח</th><th>אחוז רווח</th><th>לקוחות</th></tr></thead><tbody>';
+    var lvl=['קטגוריית־אב','קטגוריה','דגם','וורסיה'];
+    var title=isTree?lvl[treeDepth()]:(DIMH[dimKind]||'שם');
+    var canDrill=isTree?(treeDepth()<3):(dimKind==='city'||dimKind==='sector'||dimKind==='source');
+    function hs(col,label){var on=dimSort&&dimSort.col===col;return '<th data-hsort="'+col+'"'+(on?' class="on"':'')+'>'+label+(on?(dimSort.dir===1?' ↑':' ↓'):'')+'</th>';}
+    var h=(isTree?treeCrumbs():'')+'<div class="tw"><table><thead><tr><th class="nm">'+title+'</th>'+hs('s','מכירות')+hs('q','כמות')+'<th>אחוז מסה"כ</th>'+hs('p','רווח')+'<th>אחוז רווח</th>'+hs('c','לקוחות')+'</tr></thead><tbody>';
     kids.forEach(function(c){
       var base=byQ?totQ:totS,val=byQ?c.q:c.s;
       var pct=(base>0&&val>0)?Math.round(100*val/base)+'%':'—';
       var sub=c.code?'<div class="c" title="'+esc(c.code)+'">'+esc(c.code)+'</div>':'';
-      h+='<tr class="d0"><td class="nm"><div class="nmc"><span style="width:15px;flex:none"></span><div class="nlab"><div class="t" style="font-weight:500">'+esc(c.n)+'</div>'+sub+'</div></div></td>'+
+      var drillAttr=canDrill?(isTree?' data-treek="'+esc(c.rawk)+'" role="button" tabindex="0"':' data-segk="'+esc(c.rawk)+'" role="button" tabindex="0"'):'';
+      h+='<tr class="d0'+(canDrill?' row':'')+'"'+drillAttr+'><td class="nm"><div class="nmc">'+(canDrill?chevSvg(false):'<span style="width:15px;flex:none"></span>')+'<div class="nlab"><div class="t" style="font-weight:500">'+esc(c.n)+'</div>'+sub+'</div></div></td>'+
          '<td>'+ils(c.s)+'</td><td>'+qf(c.q)+'</td><td class="mut">'+pct+'</td>'+
          '<td>'+ils(c.profit)+'</td><td>'+pill(c)+'</td><td>'+c.c+'</td></tr>';
     });
@@ -605,7 +662,12 @@
   function insName(dim,k){if(dim==='sector')return secName(k);if(dim==='branch')return brName(k==='PHONE'?'PHONE':k);return k;}
 
   function renderPareto(a){
-    insKpis([['מוצרים שנמכרו',a.n||0],['מייצרים 80 אחוז',a.n80||0],['מייצרים 50 אחוז',a.n50||0],['סך מכירות חיוביות',ils(a.total||0)]]);
+    function tile(label,val,pn){var on=insParetoN===pn;return '<div class="kpi'+(pn?' row':'')+'"'+(pn?' data-pn="'+pn+'" role="button" tabindex="0" style="cursor:pointer'+(on?';outline:2px solid var(--bd)':'')+'"':'')+'><div class="l">'+label+(pn?' ⌄':'')+'</div><div class="v">'+val+'</div></div>';}
+    document.getElementById('kpis').innerHTML=
+      tile('מוצרים שנמכרו',a.n||0,Math.min(a.n||25,800))+
+      tile('מייצרים 80 אחוז',a.n80||0,a.n80||25)+
+      tile('מייצרים 50 אחוז',a.n50||0,a.n50||25)+
+      tile('סך מכירות חיוביות',ils(a.total||0),0);
     var curve=a.curve||[],W=560,H=200,L=36,B=170,n=a.n||1;
     var pts=curve.map(function(p){return [L+(W-L-10)*(p.r/Math.min(n,400)),B-(B-24)*(p.c/100)];});
     var path=pts.length?('M'+pts.map(function(p){return p[0].toFixed(1)+' '+p[1].toFixed(1);}).join(' L ')):'';
@@ -923,6 +985,10 @@
     if((insPanel==='newret'||insPanel==='basket')&&insDim[insPanel]==='sector'&&state.from<'2025-01-01')msgs.push('תיוג מגזר מלא רק מלקוחות שנוצרו משנת 2025.');
     if(msgs.length){nt.style.display='block';nt.textContent=msgs.join(' ');}else{nt.style.display='none';}
     document.getElementById('hint').style.display='none';
+    var fixed=(insPanel==='trend'||insPanel==='alerts'||insPanel==='selfcheck');
+    var sb2=document.getElementById('selbtn');
+    sb2.style.opacity=fixed?'.45':'';sb2.style.pointerEvents=fixed?'none':'';
+    sb2.title=fixed?'הפאנל הזה מחושב על חלון זמן קבוע':'';
   }
   function renderAll(){
     if(view==='ins'){renderInsMeta();renderInsStage();return;}
@@ -1011,10 +1077,16 @@
     for(var i=0;i<bs.length;i++){var on=bs[i].getAttribute('data-v')===v;bs[i].classList.toggle('on',on);bs[i].setAttribute('aria-pressed',on?'true':'false');}
     document.getElementById('dimbar').style.display=(v==='dim')?'flex':'none';
     document.getElementById('insbar').style.display=(v==='ins')?'flex':'none';
+    if(v!=='ins'){var sb3=document.getElementById('selbtn');sb3.style.opacity='';sb3.style.pointerEvents='';sb3.title='';}
     if(META&&state.from)apply();
   }
   document.getElementById('seg').addEventListener('click',function(e){
     var b=e.target.closest('[data-v]');if(b)setView(b.getAttribute('data-v'));
+  });
+  document.getElementById('kpis').addEventListener('click',function(e){
+    if(view!=='ins'||insPanel!=='pareto')return;
+    var pt=e.target.closest('[data-pn]');
+    if(pt){var nn=parseInt(pt.getAttribute('data-pn'),10)||25;insParetoN=nn;if(META&&state.from)apply();}
   });
   document.getElementById('insbar').addEventListener('click',function(e){
     var p=e.target.closest('[data-p]');
@@ -1027,6 +1099,33 @@
     if(META&&state.from)apply();
   });
   stage.addEventListener('click',function(e){
+    if(view==='dim'){
+      var tk=e.target.closest('[data-treek]');
+      if(tk){var d=treeDepth();var kv=tk.getAttribute('data-treek');
+        if(d===0)dimPath.grp=kv;else if(d===1)dimPath.fam=kv;else if(d===2)dimPath.model=kv;
+        dimSort=null;if(META&&state.from)apply();return;}
+      var cr=e.target.closest('[data-crumb]');
+      if(cr){var lv=parseInt(cr.getAttribute('data-crumb'),10);
+        if(lv<=0){dimPath={grp:null,fam:null,model:null};}
+        else if(lv===1){dimPath.fam=null;dimPath.model=null;}
+        else if(lv===2){dimPath.model=null;}
+        else return;
+        dimSort=null;if(META&&state.from)apply();return;}
+      var sk=e.target.closest('[data-segk]');
+      if(sk){dimSeg={seg:dimKind,key:sk.getAttribute('data-segk')};if(META&&state.from)apply();return;}
+      var sb=e.target.closest('[data-segback]');
+      if(sb){dimSeg=null;if(META&&state.from)apply();return;}
+      var th=e.target.closest('th[data-hsort]');
+      if(th){var col=th.getAttribute('data-hsort');
+        if(dimKind==='part'&&(col==='s'||col==='q')){dimMeasure=col;dimSort={col:col,dir:1};apply();return;}
+        dimSort=(dimSort&&dimSort.col===col)?{col:col,dir:-dimSort.dir}:{col:col,dir:1};
+        renderAll();return;}
+    }
+    if(view==='ins'&&insPanel==='pareto'){
+      var pt=e.target.closest('[data-pn]');
+      if(pt){var nn=parseInt(pt.getAttribute('data-pn'),10)||25;
+        insParetoN=nn;if(META&&state.from)apply();return;}
+    }
     var back=e.target.closest('[data-drillback]');
     if(back){insDrill=null;if(META&&state.from)apply();return;}
     var dr=e.target.closest('[data-drilla]');
@@ -1052,6 +1151,7 @@
     if(d){
       if(dimKind===d.getAttribute('data-d'))return;
       dimKind=d.getAttribute('data-d');
+      dimPath={grp:null,fam:null,model:null};dimSeg=null;dimSort=null;
       var cs=document.querySelectorAll('#dimbar [data-d]');
       for(var i=0;i<cs.length;i++){var on=cs[i].getAttribute('data-d')===dimKind;cs[i].classList.toggle('on',on);cs[i].setAttribute('aria-pressed',on?'true':'false');}
       if(META&&state.from)apply();
