@@ -15,8 +15,10 @@
   .brand{font-size:12px;font-weight:500;letter-spacing:.12em;color:var(--bd);text-transform:uppercase}
   .out{font-size:11.5px;color:var(--tx3);text-decoration:none;padding:6px 2px}
   h1{font-size:20px;font-weight:500;margin:4px 0 10px}
-  .seg{display:inline-flex;background:var(--surface);border:1px solid var(--line2);border-radius:12px;padding:3px;margin:0 0 12px}
-  .seg button{font-family:inherit;font-size:13px;font-weight:500;border:0;background:none;color:var(--tx2);padding:8px 10px;min-height:44px;border-radius:9px;cursor:pointer}
+  .seg{display:inline-flex;background:var(--surface);border:1px solid var(--line2);border-radius:12px;padding:3px;margin:0 0 12px;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .seg::-webkit-scrollbar{display:none}
+  .seg button{font-family:inherit;font-size:13px;font-weight:500;border:0;background:none;color:var(--tx2);padding:8px 10px;min-height:44px;border-radius:9px;cursor:pointer;flex:none;white-space:nowrap}
+  @media (max-width:390px){.seg button{padding:8px 8px;font-size:12.5px}}
   .seg button.on{background:var(--bd);color:#fff}
   .notice{font-size:12px;color:var(--wfg);margin:6px 2px 0;display:none}
   .selbar{display:flex;align-items:center;gap:8px;margin:0 0 12px;flex-wrap:wrap}
@@ -97,6 +99,10 @@
   #pendtr .pr .nm2{font-weight:500}
   #pendtr .pr .mut2{color:var(--tx3);font-size:11px}
   #pendtr .pn{font-size:11px;color:var(--tx3);margin-top:6px}
+  .dimbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 12px}
+  .dimbar .chip{font-family:inherit;font-size:13px;border:1px solid var(--line2);background:var(--surface);color:var(--tx2);padding:8px 12px;min-height:40px;border-radius:999px;cursor:pointer}
+  .dimbar .chip.on{background:var(--bd);border-color:var(--bd);color:#fff}
+  .dimsep{width:1px;height:22px;background:var(--line2);margin:0 4px}
   @media (prefers-reduced-motion:reduce){.chev{transition:none}.spin{animation-duration:1.6s}}
   @media (max-width:420px){h1{font-size:19px}.kpi .v{font-size:16px}}
 </style>
@@ -111,6 +117,17 @@
     <button type="button" data-v="cash" aria-pressed="false">מזומן</button>
     <button type="button" data-v="service" aria-pressed="false">שירות</button>
     <button type="button" data-v="collect" aria-pressed="false">מקדמות</button>
+    <button type="button" data-v="dim" aria-pressed="false">פילוח</button>
+  </div>
+  <div class="dimbar" id="dimbar" style="display:none" role="group" aria-label="בחירת פילוח">
+    <button type="button" class="chip on" data-d="fam" aria-pressed="true">קטגוריות</button>
+    <button type="button" class="chip" data-d="part" aria-pressed="false">מוצרים</button>
+    <button type="button" class="chip" data-d="city" aria-pressed="false">ערים</button>
+    <button type="button" class="chip" data-d="sector" aria-pressed="false">מגזר</button>
+    <button type="button" class="chip" data-d="source" aria-pressed="false">מקור הגעה</button>
+    <span class="dimsep"></span>
+    <button type="button" class="chip on" data-m="s" aria-pressed="true">לפי כסף</button>
+    <button type="button" class="chip" data-m="q" aria-pressed="false">לפי כמות</button>
   </div>
   <div class="selbar">
     <button type="button" class="selbtn" id="selbtn" aria-haspopup="dialog">
@@ -166,7 +183,10 @@
 
 <script>
 (function(){
-  var META=null, TARGET=50, view='agents';
+  var META=null, TARGET=50, view='agents', dimKind='fam', dimMeasure='s';
+  var DIMH={fam:'קטגוריות',part:'מוצרים',city:'ערים',sector:'מגזר',source:'מקור הגעה'};
+  var SECN={'חילו.':'חילוני','חר.':'חרדי','ד.לא.':'דתי לאומי','רוס':'דובר רוסית','ע.ר':'המגזר הערבי','אחר':'אחר','לקוח מרחוק':'לקוח מרחוק','הזמנת שרות':'הזמנת שירות'};
+  function dimName(k){if(dimKind==='sector')return SECN[k]||k;return k;}
   var BRN={'':'ללא שיוך סניף','PHONE':'טלפוני','101':'נתניה','102':'ראשל"צ','103':'אתר דיוואני','104':'מוקד משרדים','105':'חיפה','106':'ירושלים','107':'בית שמש'};
   function brName(b){var k=(b==null?'':String(b));return BRN[k]||('סניף '+k);}
   var eT={}, stage=document.getElementById('stage');
@@ -201,7 +221,7 @@
 
   /* ---- data via API ---- */
   function spanDays(){return Math.round((new Date(state.to+'T12:00:00')-new Date(state.from+'T12:00:00'))/86400000);}
-  function desiredKey(){if(view==='cash')return state.from+'|'+state.to+'|C';if(view==='service')return state.from+'|'+state.to+'|S';if(view==='collect')return state.from+'|'+state.to+'|P';return state.from+'|'+state.to+'|'+(spanDays()>META.line_span_days?view:'L');}
+  function desiredKey(){if(view==='cash')return state.from+'|'+state.to+'|C';if(view==='service')return state.from+'|'+state.to+'|S';if(view==='collect')return state.from+'|'+state.to+'|P';if(view==='dim')return state.from+'|'+state.to+'|D|'+dimKind+'|'+dimMeasure;return state.from+'|'+state.to+'|'+(spanDays()>META.line_span_days?view:'L');}
   function fetchRange(cb){
     var key=desiredKey();
     if(cache.key===key){cb();return;}
@@ -213,6 +233,7 @@
     document.getElementById('sellbl').textContent='טוען…';
     var url=view==='cash'?('/api/cash?d_from='+state.from+'&d_to='+state.to)
            :view==='collect'?('/api/collect?d_from='+state.from+'&d_to='+state.to)
+           :view==='dim'?('/api/dim?d_from='+state.from+'&d_to='+state.to+'&dim='+dimKind+'&rank='+dimMeasure)
            :('/api/range?d_from='+state.from+'&d_to='+state.to+'&by='+(view==='branches'?'b':(view==='service'?'s':'a')));
     fetch(url,{cache:'no-store'})
       .then(function(r){if(r.status===401){location.href='/login';throw 0;}if(!r.ok)throw new Error('http '+r.status);return r.json();})
@@ -363,12 +384,25 @@
             k:kids,orders:kids.length};
   }
 
+  function buildDim(agg){
+    var kids=(agg.rows||[]).map(function(g){
+      var s=g.s||0,p=g.p||0;
+      return {n:(dimKind==='part'?(g.lbl||g.k||'ללא תיאור'):dimName(g.k||'ללא נתון')),
+              code:(dimKind==='part'?(g.k||''):null),
+              s:s,profit:p,pm:s>0?100*p/s:null,q:g.q||0,c:g.c||0,no:g.n||0,k:null};
+    });
+    return {s:agg.total_s||0,q:agg.total_q||0,p:agg.total_p||0,
+            orders:agg.orders||0,c:agg.customers||0,qcov:agg.qcov==null?null:agg.qcov,
+            rest:agg.rest||null,k:kids};
+  }
+
   function ROOT(){
     if(cache.mode==='agents')return buildAgg(cache.agg||{});
     if(cache.mode==='branches')return buildAggBr(cache.agg||{});
     if(cache.mode==='cashagg')return buildCashAgg(cache.agg||{});
     if(cache.mode==='cashlines')return buildCash(cache.rows||[]);
     if(cache.mode==='collect')return buildCollect(cache.agg||{});
+    if(cache.mode==='dim')return buildDim(cache.agg||{});
     return view==='branches'?buildBr(cache.rows||[]):build(cache.rows||[]);
   }
 
@@ -453,6 +487,34 @@
     el.innerHTML=h;el.style.display='block';
   }
 
+  function qf(x){return Math.round(x).toLocaleString('en-US');}
+  function renderDimKpis(R){
+    document.getElementById('kpis').innerHTML=
+      '<div class="kpi"><div class="l">מכירות</div><div class="v">'+ils(R.s)+'</div></div>'+
+      '<div class="kpi"><div class="l">כמות פריטים</div><div class="v">'+qf(R.q)+'</div></div>'+
+      '<div class="kpi"><div class="l">הזמנות</div><div class="v">'+R.orders+'</div></div>'+
+      '<div class="kpi"><div class="l">לקוחות</div><div class="v">'+R.c+'</div></div>';
+  }
+
+  function renderDimTable(R){
+    if(!R.k.length){stage.innerHTML=emptyHtml();return;}
+    var byQ=dimMeasure==='q';
+    var kids=R.k;  // server already ranks by the chosen measure
+    var totS=R.s,totQ=R.q;
+    var h='<div class="tw"><table><thead><tr><th class="nm">'+(DIMH[dimKind]||'שם')+'</th><th>מכירות</th><th>כמות</th><th>אחוז מסה"כ</th><th>רווח</th><th>אחוז רווח</th><th>לקוחות</th></tr></thead><tbody>';
+    kids.forEach(function(c){
+      var base=byQ?totQ:totS,val=byQ?c.q:c.s;
+      var pct=(base>0&&val>0)?Math.round(100*val/base)+'%':'—';
+      var sub=c.code?'<div class="c" title="'+esc(c.code)+'">'+esc(c.code)+'</div>':'';
+      h+='<tr class="d0"><td class="nm"><div class="nmc"><span style="width:15px;flex:none"></span><div class="nlab"><div class="t" style="font-weight:500">'+esc(c.n)+'</div>'+sub+'</div></div></td>'+
+         '<td>'+ils(c.s)+'</td><td>'+qf(c.q)+'</td><td class="mut">'+pct+'</td>'+
+         '<td>'+ils(c.profit)+'</td><td>'+pill(c)+'</td><td>'+c.c+'</td></tr>';
+    });
+    if(R.rest&&R.rest.cnt)h+='<tr class="dn"><td class="nm"><div class="nmc"><span style="width:15px;flex:none"></span><div class="nlab rail"><div class="t">עוד '+R.rest.cnt+' נוספים</div></div></div></td><td class="mut">'+ils(R.rest.s||0)+'</td><td class="mut">'+qf(R.rest.q||0)+'</td><td class="mut">—</td><td class="mut">'+ils(R.rest.p||0)+'</td><td class="mut">—</td><td class="mut">—</td></tr>';
+    h+='</tbody><tfoot><tr><td class="nm">סך הכל</td><td>'+ils(R.s)+'</td><td>'+qf(R.q)+'</td><td>100%</td><td>'+ils(R.p)+'</td><td>'+pill({s:R.s,profit:R.p,pm:R.s>0?100*R.p/R.s:null})+'</td><td>'+R.c+'</td></tr></tfoot></table></div>';
+    stage.innerHTML=h;
+  }
+
   function renderCollectKpis(R){
     document.getElementById('kpis').innerHTML=
       '<div class="kpi"><div class="l">יחס מקדמות למחזור</div><div class="v">'+(R.ratio==null?'—':Math.round(R.ratio)+'%')+'</div></div>'+
@@ -475,7 +537,7 @@
     stage.innerHTML=h;
   }
 
-  function renderStage(R){renderPending();if(view==='cash'){renderCashTable(R);}else if(view==='collect'){renderCollectTable(R);}else{renderTable(R);}}
+  function renderStage(R){renderPending();if(view==='cash'){renderCashTable(R);}else if(view==='collect'){renderCollectTable(R);}else if(view==='dim'){renderDimTable(R);}else{renderTable(R);}}
 
   function selLabel(R){
     var lbl;
@@ -499,6 +561,13 @@
     else if(view==='cash')msgs.push('חלק מהקבלות נרשמות בפריוריטי בלי שיוך סניף ומופיעות בשורה נפרדת.');
     if(view==='service')msgs.push('מוצגת פעילות אנשי השירות בלבד — היא אינה נספרת בדוחות המכירות.');
     if(view==='collect')msgs.push('התקבולים כוללים מע"מ; יחס המקדמות מחושב מול המחזור בהמרה לכולל מע"מ. הנחות = שורות קיזוז, קופונים ושוברים.');
+    if(view==='dim'){
+      if(dimKind==='sector'&&state.from<'2025-01-01')msgs.push('תיוג מגזר קיים בפריוריטי באופן מלא רק מלקוחות שנוצרו משנת 2025 — הזמנות מוקדמות יותר מופיעות תחת "ללא נתון".');
+      if(dimKind==='city'&&state.from<'2022-01-01')msgs.push('רישום עיר הלקוח מלא בפריוריטי רק משנת 2022 — הזמנות מוקדמות יותר מופיעות תחת "ללא נתון".');
+      if(dimKind==='source'&&state.from<'2020-01-01')msgs.push('רישום מקור ההגעה מלא בפריוריטי רק משנת 2020 — הזמנות מוקדמות יותר מופיעות תחת "ללא נתון".');
+      var Rq=cache.mode==='dim'?(cache.agg||{}):{};
+      if(Rq.qcov!=null&&Rq.qcov<100)msgs.push('נתוני כמות קיימים כרגע עבור '+Rq.qcov+' אחוז מהשורות בתקופה — המילוי ההיסטורי בעיצומו.');
+    }
     if(msgs.length){nt.style.display='block';nt.textContent=msgs.join(' ');}else{nt.style.display='none';}
     var hintEl=document.getElementById('hint');
     if(cache.mode==='lines'){hintEl.textContent='הקש על שורה כדי לצלול · גלול הצידה לעוד עמודות';hintEl.style.display='block';}
@@ -506,7 +575,7 @@
     else{hintEl.style.display='none';}
   }
 
-  function renderAll(){var R=ROOT();if(view==='cash'){renderCashKpis(R);}else if(view==='collect'){renderCollectKpis(R);}else{renderKpis(R);}renderMeta(R);renderStage(R);}
+  function renderAll(){var R=ROOT();if(view==='cash'){renderCashKpis(R);}else if(view==='collect'){renderCollectKpis(R);}else if(view==='dim'){renderDimKpis(R);}else{renderKpis(R);}renderMeta(R);renderStage(R);}
 
   function apply(){eT={};renderChips();fetchRange(renderAll);}
 
@@ -518,6 +587,7 @@
       eT={};renderChips();
       if(view==='cash'){var R0={mz:0,hv:0,sk:0,ot:0,tot:0,k:[],orders:0};renderCashKpis(R0);renderMeta(R0);}
       else if(view==='collect'){var R1={s:0,sg:0,r:0,disc:0,ratio:null,dpct:null,k:[],orders:0};renderCollectKpis(R1);renderMeta(R1);}
+      else if(view==='dim'){var R2={s:0,q:0,p:0,orders:0,c:0,qcov:null,rest:null,k:[]};renderDimKpis(R2);renderMeta(R2);}
       else{var R={c:0,s:0,p:0,pm:null,av:0,k:[],orders:0,pos:0};renderKpis(R);renderMeta(R);}
       document.getElementById('hint').style.display='none';
       stage.innerHTML='<div class="empty">אין נתונים בתקופה שבחרת.<br>יש נתונים מ־'+heDate(META.min)+' עד '+heDate(META.max)+'.</div>';
@@ -583,14 +653,34 @@
   function setView(v){
     if(view===v)return;
     view=v;
-    var H1={agents:'ביצועי סוכנים',branches:'מכירות לפי סניפים',cash:'תקבולים במזומן',service:'פעילות שירות',collect:'מקדמות והנחות'};
+    var H1={agents:'ביצועי סוכנים',branches:'מכירות לפי סניפים',cash:'תקבולים במזומן',service:'פעילות שירות',collect:'מקדמות והנחות',dim:'פילוח מכירות'};
     document.getElementById('h1t').textContent=H1[v]||H1.agents;
     var bs=document.querySelectorAll('#seg button');
     for(var i=0;i<bs.length;i++){var on=bs[i].getAttribute('data-v')===v;bs[i].classList.toggle('on',on);bs[i].setAttribute('aria-pressed',on?'true':'false');}
+    document.getElementById('dimbar').style.display=(v==='dim')?'flex':'none';
     if(META&&state.from)apply();
   }
   document.getElementById('seg').addEventListener('click',function(e){
     var b=e.target.closest('[data-v]');if(b)setView(b.getAttribute('data-v'));
+  });
+  document.getElementById('dimbar').addEventListener('click',function(e){
+    var d=e.target.closest('[data-d]');
+    if(d){
+      if(dimKind===d.getAttribute('data-d'))return;
+      dimKind=d.getAttribute('data-d');
+      var cs=document.querySelectorAll('#dimbar [data-d]');
+      for(var i=0;i<cs.length;i++){var on=cs[i].getAttribute('data-d')===dimKind;cs[i].classList.toggle('on',on);cs[i].setAttribute('aria-pressed',on?'true':'false');}
+      if(META&&state.from)apply();
+      return;
+    }
+    var m=e.target.closest('[data-m]');
+    if(m){
+      if(dimMeasure===m.getAttribute('data-m'))return;
+      dimMeasure=m.getAttribute('data-m');
+      var ms=document.querySelectorAll('#dimbar [data-m]');
+      for(var i2=0;i2<ms.length;i2++){var on2=ms[i2].getAttribute('data-m')===dimMeasure;ms[i2].classList.toggle('on',on2);ms[i2].setAttribute('aria-pressed',on2?'true':'false');}
+      if(META&&state.from)apply();  // measure is part of the fetch key — server re-ranks
+    }
   });
 
   /* ---- ask (free questions) ---- */

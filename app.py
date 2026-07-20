@@ -286,7 +286,8 @@ def sync_receipts_window(kind: str, d_from: dt.date, d_to: dt.date):
 # ---------- customer attributes + product catalog sync (פילוח) ----------
 
 def _pri_pages(url: str, auth: str, guard_max: int = 200):
-    """Yield rows across OData pages."""
+    """Yield rows across OData pages. A guard exhaustion with pages left is a
+    truncated pull — raise so callers never mistake it for a complete sync."""
     guard = 0
     while url and guard < guard_max:
         guard += 1
@@ -295,6 +296,8 @@ def _pri_pages(url: str, auth: str, guard_max: int = 200):
         for r in j.get("value", []):
             yield r
         url = j.get("@odata.nextLink")
+    if url:
+        raise RuntimeError(f"pagination guard exhausted ({guard_max} pages), pull truncated")
 
 
 def sync_customers_window(days_back: int):
@@ -352,11 +355,16 @@ def _refresher():
                     sync_receipts_window("nightly", today - dt.timedelta(days=120), today)
                 except Exception as e:
                     print("receipts nightly-sync failed:", repr(e)[:300], flush=True)
+                # wide window: sector tags are edited on RETURNING customers'
+                # cards, so re-pull ~3 years of customer creations nightly
                 try:
-                    sync_customers_window(120)  # catch late tagging edits
+                    sync_customers_window(1100)
+                except Exception as e:
+                    print("customers nightly-sync failed:", repr(e)[:300], flush=True)
+                try:
                     sync_parts()                # catalog families
                 except Exception as e:
-                    print("dims nightly-sync failed:", repr(e)[:300], flush=True)
+                    print("parts nightly-sync failed:", repr(e)[:300], flush=True)
                 last_nightly = today
         except Exception:
             pass
@@ -515,7 +523,8 @@ _DIMS = {"fam", "part", "city", "sector", "source"}
 
 
 @app.get("/api/dim")
-def api_dim(request: Request, d_from: str = "", d_to: str = "", dim: str = "fam"):
+def api_dim(request: Request, d_from: str = "", d_to: str = "", dim: str = "fam",
+            rank: str = "s"):
     if not _logged_in(request):
         return JSONResponse({"error": "auth"}, status_code=401)
     f, t = _parse_date(d_from), _parse_date(d_to)
@@ -523,11 +532,11 @@ def api_dim(request: Request, d_from: str = "", d_to: str = "", dim: str = "fam"
         return JSONResponse({"error": "bad dates"}, status_code=400)
     if f > t:
         f, t = t, f
-    if dim not in _DIMS:
+    if dim not in _DIMS or rank not in ("s", "q"):
         return JSONResponse({"error": "bad dim"}, status_code=400)
     agg = sb_rpc("bi_range_dim", {"p_from": f.isoformat(), "p_to": t.isoformat(),
-                                  "p_dim": dim})
-    return JSONResponse({"mode": "dim", "dim": dim, "agg": agg or {}})
+                                  "p_dim": dim, "p_rank": rank})
+    return JSONResponse({"mode": "dim", "dim": dim, "rank": rank, "agg": agg or {}})
 
 
 @app.get("/api/collect")
