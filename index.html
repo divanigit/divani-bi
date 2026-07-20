@@ -222,7 +222,7 @@
   var SECN={'חילו.':'חילוני','חר.':'חרדי','ד.לא.':'דתי לאומי','רוס':'דובר רוסית','ע.ר':'המגזר הערבי','אחר':'אחר','לקוח מרחוק':'לקוח מרחוק','הזמנת שרות':'הזמנת שירות'};
   function dimName(k){if(dimKind==='sector')return SECN[k]||k;return k;}
   function secName(k){return SECN[k]||k;}
-  var insPanel='pareto', insDim={trend:'sector',cmp:'fam',newret:'sector',basket:'sector'};
+  var insPanel='pareto', insDim={trend:'sector',cmp:'fam',newret:'sector',basket:'sector'}, insDrill=null;
   var INSH={pareto:'פארטו מוצרים',trend:'מגמות פלחים',cmp:'השוואה מול אשתקד',newret:'לקוח חדש מול חוזר',basket:'סל ממוצע',pairs:'צמדי מוצרים',geo:'חדירה גאוגרפית',roi:'ערוצי שיווק',alerts:'התראות חכמות',selfcheck:'תקינות נתונים'};
   var PAL=['#0d9668','#3a6fc4','#b0791f','#8a5bc4'];
   function trendRange(){var t=(META&&META.today)||iso(new Date());var e=new Date(t.slice(0,7)+'-01T12:00:00');e.setDate(0);var d=new Date(e.getFullYear(),e.getMonth()-11,1,12);return [iso(d),iso(e)];}
@@ -268,6 +268,7 @@
     if(view==='ins'){
       if(insPanel==='alerts'||insPanel==='selfcheck')return 'N|'+insPanel;
       if(insPanel==='trend'){var tr=trendRange();return tr[0]+'|'+tr[1]+'|N|trend|'+insDim.trend;}
+      if(insPanel==='pairs'&&insDrill)return state.from+'|'+state.to+'|N|PD|'+insDrill.a+'|'+insDrill.b;
       var dm=insDim[insPanel]||'';
       return state.from+'|'+state.to+'|N|'+insPanel+(dm?'|'+dm:'');
     }
@@ -299,6 +300,7 @@
            :view==='ins'?(function(){
               if(insPanel==='alerts'||insPanel==='selfcheck')return '/api/panel?name='+insPanel;
               if(insPanel==='trend'){var tr=trendRange();return '/api/panel?name=trend&d_from='+tr[0]+'&d_to='+tr[1]+'&dim='+insDim.trend;}
+              if(insPanel==='pairs'&&insDrill)return '/api/panel?name=pairdrill&d_from='+state.from+'&d_to='+state.to+'&a='+encodeURIComponent(insDrill.a)+'&b='+encodeURIComponent(insDrill.b);
               var dm=insDim[insPanel];
               return '/api/panel?name='+insPanel+'&d_from='+state.from+'&d_to='+state.to+(dm?'&dim='+dm:'');
             })()
@@ -736,11 +738,29 @@
       var anch,addon,pAdd,pTogether,nAnch;
       if((r.na||0)>=(r.nb||0)){anch=r.a;addon=r.b;pAdd=r.pa;pTogether=r.pb;nAnch=r.na;}
       else{anch=r.b;addon=r.a;pAdd=r.pb;pTogether=r.pa;nAnch=r.nb;}
-      h+='<div class="insrow"><span class="ic"></span><span>מתוך '+nf(nAnch)+' קוני <b>'+esc(anch)+'</b> — '+pAdd+' אחוז הוסיפו <b>'+esc(addon)+'</b>'
+      h+='<div class="insrow row" role="button" tabindex="0" data-drilla="'+esc(anch)+'" data-drillb="'+esc(addon)+'" style="cursor:pointer"><span class="ic"></span><span>מתוך '+nf(nAnch)+' קוני <b>'+esc(anch)+'</b> — '+pAdd+' אחוז הוסיפו <b>'+esc(addon)+'</b>'
         +(pTogether>=60?' · '+esc(addon)+' כמעט לא נמכר לבד ('+pTogether+' אחוז ממנו נקנה יחד עם '+esc(anch)+')':' · ומנגד '+pTogether+' אחוז מקוני '+esc(addon)+' קנו גם '+esc(anch))
         +'</span></div>';
     });
     if(!h)h='<div class="empty">אין מספיק נתונים בתקופה שנבחרה.</div>';
+    else h+='<p class="hint" style="display:block">הקש על צמד כדי לצלול לדגמים.</p>';
+    stage.innerHTML=h;
+  }
+
+  function renderPairDrill(a){
+    var an=a.anchor_n||0,wn=a.with_n||0;
+    var pct=an>0?Math.round(100*wn/an):0;
+    insKpis([['הזמנות '+insDrill.a,nf(an)],['מהן עם '+insDrill.b,nf(wn)],['אחוז הצמדה',pct+' אחוז'],['ללא '+insDrill.b,nf(an-wn)]]);
+    var h='<div class="subchips"><button type="button" class="chip" data-drillback="1">→ חזרה לצמדים</button></div>';
+    h+='<div class="tw"><table><thead><tr><th class="nm">דגם '+esc(insDrill.b)+'</th><th>הזמנות</th><th>כמות</th><th>מכירות</th><th>מחיר ליחידה</th></tr></thead><tbody>';
+    (a.models||[]).forEach(function(m){
+      var promo=m.u!=null&&m.u<50;
+      h+='<tr class="d0"><td class="nm"><div class="nmc"><span style="width:15px;flex:none"></span><div class="nlab"><div class="t" style="font-weight:500">'+esc(m.d||'ללא תיאור')+'</div>'+(promo?'<div class="c">במסגרת מבצע — המחיר מגולם בעוגן</div>':'')+'</div></div></td>'
+        +'<td>'+nf(m.n)+'</td><td>'+qf(m.q||0)+'</td><td>'+ils(m.s||0)+'</td>'
+        +'<td class="'+(promo?'mut':'')+'">'+(m.u==null?'—':ils(m.u))+'</td></tr>';
+    });
+    if(a.rest&&a.rest.cnt)h+='<tr class="dn"><td class="nm"><div class="nmc"><span style="width:15px;flex:none"></span><div class="nlab rail"><div class="t">עוד '+a.rest.cnt+' דגמים</div></div></div></td><td class="mut">'+nf(a.rest.n||0)+'</td><td class="mut">—</td><td class="mut">'+ils(a.rest.s||0)+'</td><td class="mut">—</td></tr>';
+    h+='</tbody></table></div>';
     stage.innerHTML=h;
   }
 
@@ -808,6 +828,7 @@
   function renderInsStage(){
     var a=cache.agg||{};
     if(cache.mode==='cmp'){renderCmp(a,cache.agg2||{});return;}
+    if(cache.panel==='pairdrill'&&insDrill){renderPairDrill(a);return;}
     if(insPanel==='pareto')renderPareto(a);
     else if(insPanel==='trend')renderTrend(a);
     else if(insPanel==='newret')renderNewRet(a);
@@ -881,6 +902,7 @@
 
   function renderInsMeta(){
     var lbl=INSH[insPanel]||'';
+    if(insPanel==='pairs'&&insDrill)lbl=insDrill.a+' ← '+insDrill.b;
     if(insPanel==='trend'){var tr=trendRange();lbl+=' · '+heShort(tr[0])+' – '+heShort(tr[1]);}
     else if(insPanel==='alerts'||insPanel==='selfcheck'){}
     else{lbl+=' · '+(state.from===state.to?heDate(state.from):heShort(state.from)+' – '+heShort(state.to));}
@@ -892,7 +914,8 @@
     if(insPanel==='cmp'){msgs.push('ההשוואה היא מול אותם תאריכים בדיוק לפני שנה. פלח שירד לאפס מוצג עם מינוס מאה אחוז.');if(insDim.cmp==='fam')msgs.push('שים לב: במהלך 2025–2026 עברו הסטים למשפחות "מחולל מק׳טים" — השוואה שנתית של משפחות ספות בודדות מטעה; הסתכל על סך הכול או על קטגוריות יציבות.');}
     if(insPanel==='newret')msgs.push('לקוח חוזר = מי שהקנייה הראשונה שלו אי־פעם קדמה להזמנה הנוכחית.');
     if(insPanel==='basket')msgs.push('סל ממוצע = ממוצע שווי הזמנה (הזמנות חיוביות); פלחים עם פחות מחמש הזמנות לא מוצגים.');
-    if(insPanel==='pairs')msgs.push('הובלה, מק"ט בן ומוצרים כלליים הוחרגו מניתוח הצמדים.');
+    if(insPanel==='pairs'&&insDrill)msgs.push('דגמים במחיר אפס או סמלי הם חלק מחבילת מבצע — מחירם מגולם במוצר העוגן. שדרוג = דגם במחיר מלא.');
+    else if(insPanel==='pairs')msgs.push('הובלה, מק"ט בן ומוצרים כלליים הוחרגו מניתוח הצמדים. שורות במחיר אפס (חבילות מבצע) נספרות.');
     if(insPanel==='geo')msgs.push('אוכלוסייה לפי אומדן הלמ"ס 2023; ערים בלי נתון אוכלוסייה מדורגות לפי מכירות בלבד. נספרות רק הזמנות עם עיר מזוהה — לכן הסכום כאן נמוך מהדוח הראשי.');
     if(insPanel==='roi')msgs.push('לקוחות ותיקים = לקוחות שכבר קנו לפני תחילת התקופה שנבחרה. עלויות פרסום אינן במערכת — זו תמונת תפוקה, לא עלות מול תפוקה.');
     if(insPanel==='alerts')msgs.push('השוואת השבועיים האחרונים מול ממוצע שנים־עשר השבועות שקדמו; מוצגות רק חריגות מהותיות.');
@@ -998,12 +1021,20 @@
     if(!p)return;
     var v=p.getAttribute('data-p');
     if(insPanel===v)return;
-    insPanel=v;
+    insPanel=v;insDrill=null;
     var cs=document.querySelectorAll('#insbar [data-p]');
     for(var i=0;i<cs.length;i++){var on=cs[i].getAttribute('data-p')===insPanel;cs[i].classList.toggle('on',on);cs[i].setAttribute('aria-pressed',on?'true':'false');}
     if(META&&state.from)apply();
   });
   stage.addEventListener('click',function(e){
+    var back=e.target.closest('[data-drillback]');
+    if(back){insDrill=null;if(META&&state.from)apply();return;}
+    var dr=e.target.closest('[data-drilla]');
+    if(dr){
+      insDrill={a:dr.getAttribute('data-drilla'),b:dr.getAttribute('data-drillb')};
+      if(META&&state.from)apply();
+      return;
+    }
     var m={insdim:['trend'],inscmp:['cmp'],insnr:['newret'],insbk:['basket']};
     for(var attr in m){
       var b=e.target.closest('[data-'+attr+']');

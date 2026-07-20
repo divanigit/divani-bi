@@ -532,6 +532,7 @@ _PANELS = {
     "newret":    ("bi_new_ret",    True,  {"all", "sector", "source", "city"}),
     "basket":    ("bi_basket",     True,  {"all", "sector", "source", "city"}),
     "pairs":     ("bi_pairs",      True,  None),
+    "pairdrill": ("bi_pair_drill", True,  None),
     "geo":       ("bi_geo_pen",    True,  None),
     "roi":       ("bi_source_roi", True,  None),
     "alerts":    ("bi_alerts",     False, None),
@@ -541,7 +542,7 @@ _PANELS = {
 
 @app.get("/api/panel")
 def api_panel(request: Request, name: str = "", d_from: str = "", d_to: str = "",
-              dim: str = ""):
+              dim: str = "", a: str = "", b: str = ""):
     if not _logged_in(request):
         return JSONResponse({"error": "auth"}, status_code=401)
     spec = _PANELS.get(name)
@@ -560,6 +561,10 @@ def api_panel(request: Request, name: str = "", d_from: str = "", d_to: str = ""
         if dim not in dims:
             return JSONResponse({"error": "bad dim"}, status_code=400)
         params["p_dim"] = dim
+    if name == "pairdrill":
+        if not (0 < len(a) <= 80 and 0 < len(b) <= 80):
+            return JSONResponse({"error": "bad pair"}, status_code=400)
+        params["p_anchor"], params["p_addon"] = a, b
     agg = sb_rpc(rpc, params)
     return JSONResponse({"mode": "panel", "panel": name, "agg": agg or {}})
 
