@@ -145,7 +145,7 @@ def sb_insert(table: str, row: dict):
 
 
 PRI_SEL = ("$select=ORDNAME,CURDATE,ORDSTATUSDES,AGENTNAME,CUSTNAME,CDES,BRANCHNAME,TYPEDES"
-           "&$expand=ORDERITEMS_SUBFORM($select=PARTNAME,PDES,QPRICE,QPROFIT)")
+           "&$expand=ORDERITEMS_SUBFORM($select=PARTNAME,PDES,QPRICE,QPROFIT,TQUANT)")
 
 
 def priority_pull(d_from: dt.date, d_to: dt.date):
@@ -179,7 +179,10 @@ def priority_pull(d_from: dt.date, d_to: dt.date):
                          "t": o.get("TYPEDES") or "",
                          "pn": ln.get("PARTNAME") or "", "pd": ln.get("PDES") or "",
                          "s": round(float(ln.get("QPRICE") or 0), 2),
-                         "p": round(float(ln.get("QPROFIT") or 0), 2), "ln": i})
+                         "p": round(float(ln.get("QPROFIT") or 0), 2),
+                         "q": (None if ln.get("TQUANT") is None
+                               else round(float(ln.get("TQUANT") or 0), 3)),
+                         "ln": i})
     return n_orders, rows
 
 
@@ -280,6 +283,49 @@ def sync_receipts_window(kind: str, d_from: dt.date, d_to: dt.date):
     _state["last_rc"] = dt.datetime.now(IL).strftime("%d.%m.%Y %H:%M")
 
 
+# ---------- customer attributes + product catalog sync (פילוח) ----------
+
+def _pri_pages(url: str, auth: str, guard_max: int = 200):
+    """Yield rows across OData pages."""
+    guard = 0
+    while url and guard < guard_max:
+        guard += 1
+        j = json.loads(_http(url, {"Authorization": auth, "Accept": "application/json"},
+                             timeout=180).decode("utf-8"))
+        for r in j.get("value", []):
+            yield r
+        url = j.get("@odata.nextLink")
+
+
+def sync_customers_window(days_back: int):
+    """Upsert minimal customer attributes (city/sector/source only — privacy
+    minimization) for customers created in the last `days_back` days."""
+    auth = "Basic " + base64.b64encode(f"{PRI_USER}:{PRI_PASS}".encode("utf-8")).decode("ascii")
+    lo = (dt.datetime.now(IL).date() - dt.timedelta(days=days_back)).isoformat()
+    url = (f"{PRI_BASE}/CUSTOMERS?$filter=CREATEDDATE%20ge%20{lo}T00:00:00%2B02:00"
+           "&$select=CUSTNAME,CITYNAME,RONY_SUGCUSTDES,SPEC4,CREATEDDATE")
+    rows = [{"cn": r.get("CUSTNAME") or "", "ct": r.get("CITYNAME") or "",
+             "sc": r.get("RONY_SUGCUSTDES") or "", "sr": r.get("SPEC4") or "",
+             "cr": (r.get("CREATEDDATE") or "")[:10]}
+            for r in _pri_pages(url, auth)]
+    if rows:
+        for i in range(0, len(rows), 2000):
+            sb_rpc("bi_upsert_customers", {"p_rows": rows[i:i + 2000]})
+    return len(rows)
+
+
+def sync_parts():
+    """Upsert the full part catalog (part -> family/category). Small table."""
+    auth = "Basic " + base64.b64encode(f"{PRI_USER}:{PRI_PASS}".encode("utf-8")).decode("ascii")
+    url = f"{PRI_BASE}/LOGPART?$select=PARTNAME,FAMILYDES"
+    rows = [{"pn": r.get("PARTNAME") or "", "f": r.get("FAMILYDES") or ""}
+            for r in _pri_pages(url, auth, guard_max=400)]
+    if rows:
+        for i in range(0, len(rows), 2000):
+            sb_rpc("bi_upsert_parts", {"p_rows": rows[i:i + 2000]})
+    return len(rows)
+
+
 def _refresher():
     last_nightly = None
     while True:
@@ -291,6 +337,10 @@ def _refresher():
                 sync_receipts_window("auto", today - dt.timedelta(days=1), today)
             except Exception as e:
                 print("receipts auto-sync failed:", repr(e)[:300], flush=True)
+            try:
+                sync_customers_window(3)   # fresh dims for today's new customers
+            except Exception as e:
+                print("customers auto-sync failed:", repr(e)[:300], flush=True)
             if ANTHROPIC_KEY:  # without vision there are no slip amounts — nothing to show
                 try:
                     _scan_pending_transfers()
@@ -302,6 +352,11 @@ def _refresher():
                     sync_receipts_window("nightly", today - dt.timedelta(days=120), today)
                 except Exception as e:
                     print("receipts nightly-sync failed:", repr(e)[:300], flush=True)
+                try:
+                    sync_customers_window(120)  # catch late tagging edits
+                    sync_parts()                # catalog families
+                except Exception as e:
+                    print("dims nightly-sync failed:", repr(e)[:300], flush=True)
                 last_nightly = today
         except Exception:
             pass
@@ -454,6 +509,25 @@ def api_range(request: Request, d_from: str = "", d_to: str = "", by: str = "a")
         return JSONResponse({"mode": "branches", "agg": agg or {}})
     agg = sb_rpc("bi_range_agents", {"p_from": f.isoformat(), "p_to": t.isoformat()})
     return JSONResponse({"mode": "agents", "agg": agg or {}})
+
+
+_DIMS = {"fam", "part", "city", "sector", "source"}
+
+
+@app.get("/api/dim")
+def api_dim(request: Request, d_from: str = "", d_to: str = "", dim: str = "fam"):
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    f, t = _parse_date(d_from), _parse_date(d_to)
+    if not f or not t:
+        return JSONResponse({"error": "bad dates"}, status_code=400)
+    if f > t:
+        f, t = t, f
+    if dim not in _DIMS:
+        return JSONResponse({"error": "bad dim"}, status_code=400)
+    agg = sb_rpc("bi_range_dim", {"p_from": f.isoformat(), "p_to": t.isoformat(),
+                                  "p_dim": dim})
+    return JSONResponse({"mode": "dim", "dim": dim, "agg": agg or {}})
 
 
 @app.get("/api/collect")
