@@ -365,6 +365,10 @@ def _refresher():
                     sync_parts()                # catalog families
                 except Exception as e:
                     print("parts nightly-sync failed:", repr(e)[:300], flush=True)
+                try:
+                    sb_rpc("bi_refresh_firsts", {})  # first-purchase table
+                except Exception as e:
+                    print("firsts nightly-refresh failed:", repr(e)[:300], flush=True)
                 last_nightly = today
         except Exception:
             pass
@@ -521,10 +525,48 @@ def api_range(request: Request, d_from: str = "", d_to: str = "", by: str = "a")
 
 _DIMS = {"fam", "part", "city", "sector", "source"}
 
+# insights panels: name -> (rpc, needs_dates, allowed dims or None)
+_PANELS = {
+    "pareto":    ("bi_pareto",     True,  None),
+    "trend":     ("bi_dim_series", True,  {"fam", "city", "sector", "source", "branch"}),
+    "newret":    ("bi_new_ret",    True,  {"all", "sector", "source", "city"}),
+    "basket":    ("bi_basket",     True,  {"all", "sector", "source", "city"}),
+    "pairs":     ("bi_pairs",      True,  None),
+    "geo":       ("bi_geo_pen",    True,  None),
+    "roi":       ("bi_source_roi", True,  None),
+    "alerts":    ("bi_alerts",     False, None),
+    "selfcheck": ("bi_selfcheck",  False, None),
+}
+
+
+@app.get("/api/panel")
+def api_panel(request: Request, name: str = "", d_from: str = "", d_to: str = "",
+              dim: str = ""):
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    spec = _PANELS.get(name)
+    if not spec:
+        return JSONResponse({"error": "bad panel"}, status_code=400)
+    rpc, needs_dates, dims = spec
+    params = {}
+    if needs_dates:
+        f, t = _parse_date(d_from), _parse_date(d_to)
+        if not f or not t:
+            return JSONResponse({"error": "bad dates"}, status_code=400)
+        if f > t:
+            f, t = t, f
+        params = {"p_from": f.isoformat(), "p_to": t.isoformat()}
+    if dims is not None:
+        if dim not in dims:
+            return JSONResponse({"error": "bad dim"}, status_code=400)
+        params["p_dim"] = dim
+    agg = sb_rpc(rpc, params)
+    return JSONResponse({"mode": "panel", "panel": name, "agg": agg or {}})
+
 
 @app.get("/api/dim")
 def api_dim(request: Request, d_from: str = "", d_to: str = "", dim: str = "fam",
-            rank: str = "s"):
+            rank: str = "s", lim: int = 80):
     if not _logged_in(request):
         return JSONResponse({"error": "auth"}, status_code=401)
     f, t = _parse_date(d_from), _parse_date(d_to)
@@ -532,10 +574,10 @@ def api_dim(request: Request, d_from: str = "", d_to: str = "", dim: str = "fam"
         return JSONResponse({"error": "bad dates"}, status_code=400)
     if f > t:
         f, t = t, f
-    if dim not in _DIMS or rank not in ("s", "q"):
+    if dim not in _DIMS or rank not in ("s", "q") or not (1 <= lim <= 500):
         return JSONResponse({"error": "bad dim"}, status_code=400)
     agg = sb_rpc("bi_range_dim", {"p_from": f.isoformat(), "p_to": t.isoformat(),
-                                  "p_dim": dim, "p_rank": rank})
+                                  "p_dim": dim, "p_rank": rank, "p_limit": lim})
     return JSONResponse({"mode": "dim", "dim": dim, "rank": rank, "agg": agg or {}})
 
 
