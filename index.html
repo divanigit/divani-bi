@@ -732,8 +732,13 @@
     insKpis([['הזמנות עם מוצרים',a.orders||0],['צמדים מובילים',(a.rows||[]).length]]);
     var h='';
     (a.rows||[]).forEach(function(r){
-      h+='<div class="insrow"><span class="ic"></span><span>קנו <b>'+esc(r.a)+'</b> וגם <b>'+esc(r.b)+'</b> — '+r.n+' הזמנות · '
-        +'מתוך קוני '+esc(r.a)+': '+r.pa+' אחוז · מתוך קוני '+esc(r.b)+': '+r.pb+' אחוז</span></div>';
+      // anchor = the family with the larger customer base; the other is the add-on
+      var anch,addon,pAdd,pTogether,nAnch;
+      if((r.na||0)>=(r.nb||0)){anch=r.a;addon=r.b;pAdd=r.pa;pTogether=r.pb;nAnch=r.na;}
+      else{anch=r.b;addon=r.a;pAdd=r.pb;pTogether=r.pa;nAnch=r.nb;}
+      h+='<div class="insrow"><span class="ic"></span><span>מתוך '+nf(nAnch)+' קוני <b>'+esc(anch)+'</b> — '+pAdd+' אחוז הוסיפו <b>'+esc(addon)+'</b>'
+        +(pTogether>=60?' · '+esc(addon)+' כמעט לא נמכר לבד ('+pTogether+' אחוז ממנו נקנה יחד עם '+esc(anch)+')':' · ומנגד '+pTogether+' אחוז מקוני '+esc(addon)+' קנו גם '+esc(anch))
+        +'</span></div>';
     });
     if(!h)h='<div class="empty">אין מספיק נתונים בתקופה שנבחרה.</div>';
     stage.innerHTML=h;
