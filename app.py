@@ -40,6 +40,7 @@ IL = ZoneInfo("Asia/Jerusalem")
 
 DASH_PASS = os.environ.get("DASH_PASS", "")
 DASH_PASS_ADMIN = os.environ.get("DASH_PASS_ADMIN", "")  # Doron's personal password
+DASH_PASS_ASK2 = os.environ.get("DASH_PASS_ASK2", "")  # Haim: ask-enabled personal password
 SB_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SB_KEY = os.environ.get("SUPABASE_SECRET_KEY", "")
 PRI_USER = os.environ.get("PRI_USER", "")
@@ -76,6 +77,21 @@ def _admin_token() -> str:
     return hmac.new(DASH_PASS_ADMIN.encode("utf-8"), b"divani-bi-admin-v1", hashlib.sha256).hexdigest()
 
 
+def _ask2_token() -> str:
+    return hmac.new(DASH_PASS_ASK2.encode("utf-8"), b"divani-bi-ask2-v1", hashlib.sha256).hexdigest()
+
+
+def _is_ask2(request: Request) -> bool:
+    if not DASH_PASS_ASK2:
+        return False
+    tok = request.cookies.get(COOKIE_NAME, "")
+    return hmac.compare_digest(tok, _ask2_token())
+
+
+def _can_ask(request: Request) -> bool:
+    return _is_admin(request) or _is_ask2(request)
+
+
 def _is_admin(request: Request) -> bool:
     if not DASH_PASS_ADMIN:
         return False
@@ -87,7 +103,8 @@ def _logged_in(request: Request) -> bool:
     if not DASH_PASS:
         return False
     tok = request.cookies.get(COOKIE_NAME, "")
-    return hmac.compare_digest(tok, _session_token()) or _is_admin(request)
+    return (hmac.compare_digest(tok, _session_token()) or _is_admin(request)
+            or _is_ask2(request))
 
 
 def _match(p: str, expected: str) -> bool:
@@ -96,7 +113,8 @@ def _match(p: str, expected: str) -> bool:
 
 
 def _pass_ok(p: str) -> bool:
-    return _match(p, DASH_PASS) or _match(p, DASH_PASS_ADMIN)
+    return (_match(p, DASH_PASS) or _match(p, DASH_PASS_ADMIN)
+            or _match(p, DASH_PASS_ASK2))
 
 
 def _login_html(err: str = "") -> str:
@@ -478,7 +496,8 @@ async def login_post(request: Request):
         return HTMLResponse(_login_html("סיסמה שגויה"), status_code=401)
     _log_login(request, True)
     resp = RedirectResponse("/", status_code=303)
-    tok = _admin_token() if _match(p, DASH_PASS_ADMIN) else _session_token()
+    tok = (_admin_token() if _match(p, DASH_PASS_ADMIN)
+           else _ask2_token() if _match(p, DASH_PASS_ASK2) else _session_token())
     resp.set_cookie(COOKIE_NAME, tok, max_age=60 * 60 * 24 * 30,
                     httponly=True, secure=_is_https(request), samesite="lax")
     return resp
@@ -526,7 +545,7 @@ def api_meta(request: Request):
                          "last_rc": _state["last_rc"],
                          "refresh_minutes": REFRESH_MINUTES,
                          "line_span_days": MAX_LINE_SPAN_DAYS,
-                         "admin": _is_admin(request)})
+                         "admin": _can_ask(request)})
 
 
 @app.get("/api/range")
@@ -881,7 +900,7 @@ def _anthropic_call(messages):
 async def api_ask(request: Request):
     if not _logged_in(request):
         return JSONResponse({"error": "auth"}, status_code=401)
-    if not _is_admin(request):
+    if not _can_ask(request):
         return JSONResponse({"error": "admin_only"}, status_code=403)
     if not ANTHROPIC_KEY:
         return JSONResponse({"error": "no_key"})
