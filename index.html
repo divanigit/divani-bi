@@ -619,6 +619,19 @@
     var segH={city:'עיר',sector:'מגזר',source:'מקור הגעה'};
     var nm=dimKind==='sector'?secName(dimSeg.key):dimSeg.key;
     var h='<div class="crumbs"><button type="button" class="chip" data-segback="1">→ חזרה ל'+(DIMH[dimKind]||'רשימה')+'</button><button type="button" class="chip here">'+esc(nm)+'</button></div>';
+    var brs=a.branches||[];
+    if(brs.length){
+      var totB=0;brs.forEach(function(b){totB+=Math.max(b.s,0);});
+      h+='<p class="hint" style="display:block;margin:0 0 8px">באילו סניפים קנו — התפלגות</p>';
+      brs.forEach(function(b){
+        var sh=totB>0?Math.round(100*Math.max(b.s,0)/totB):0;
+        h+='<div style="display:grid;grid-template-columns:96px 1fr 150px;gap:10px;align-items:center;font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--line)">'
+          +'<span>'+esc(brName(b.k)||'ללא שיוך')+'</span>'
+          +'<div class="minibar" style="height:12px"><i style="width:'+sh+'%"></i></div>'
+          +'<span class="mut" style="text-align:left;font-variant-numeric:tabular-nums;white-space:nowrap">'+ils(b.s)+' · '+(sh<1?'פחות מאחוז':sh+'%')+'</span></div>';
+      });
+      h+='<div style="height:14px"></div>';
+    }
     h+='<div class="tw"><table><thead><tr><th class="nm">קטגוריית־אב</th><th>מכירות</th><th>כמות</th><th>הזמנות</th></tr></thead><tbody>';
     (a.groups||[]).forEach(function(g){
       h+='<tr class="d0"><td class="nm"><div class="nmc"><span style="width:15px;flex:none"></span><div class="nlab"><div class="t" style="font-weight:500">'+esc(g.k)+'</div></div></div></td><td>'+ils(g.s)+'</td><td>'+qf(g.q||0)+'</td><td class="mut">'+g.n+'</td></tr>';
