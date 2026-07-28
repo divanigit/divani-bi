@@ -97,6 +97,32 @@
   .frow input,.frow select{font-family:inherit;font-size:14px;color:var(--tx);background:var(--surface);border:1px solid var(--line2);border-radius:9px;padding:9px 10px;min-height:42px}
   .go{font-family:inherit;font-size:13.5px;font-weight:500;min-height:42px;padding:9px 16px;border:0;border-radius:10px;background:var(--bd);color:#fff;cursor:pointer}
   .cover{font-size:11.5px;color:var(--tx3);border-top:1px solid var(--line);padding-top:10px;margin-top:2px}
+  .datefield{font-family:inherit;font-size:14px;color:var(--tx);background:var(--surface);border:1px solid var(--line2);border-radius:9px;padding:9px 12px;min-height:42px;cursor:pointer;text-align:center;min-width:118px;flex:1}
+  .datefield.empty{color:var(--tx3)}
+  #calovl{position:fixed;inset:0;background:rgba(10,18,14,.5);z-index:130;display:none}
+  #calovl.on{display:block}
+  #cal{position:fixed;z-index:131;left:50%;top:50%;transform:translate(-50%,-50%);width:min(342px,92vw);background:var(--bg);border:1px solid var(--line);border-radius:18px;box-shadow:0 14px 48px rgba(0,0,0,.34);padding:14px 14px calc(12px + env(safe-area-inset-bottom));display:none}
+  #cal.on{display:block}
+  .calhd{display:flex;align-items:center;justify-content:space-between;margin:0 0 12px}
+  .calnav{width:40px;height:40px;border-radius:10px;border:1px solid var(--line2);background:var(--surface);color:var(--tx);font-size:22px;line-height:1;cursor:pointer}
+  .caltitle{display:flex;align-items:center;gap:16px}
+  .calsel{font-family:inherit;font-weight:600;font-size:16px;color:var(--tx);background:transparent;border:0;border-bottom:2px solid transparent;padding:4px 4px;cursor:pointer;min-height:40px}
+  .calsel.act{border-bottom-color:var(--bd);color:var(--bd)}
+  .calsel .car{font-size:9px;color:var(--tx3)}
+  .caldow{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin:0 0 4px}
+  .caldow span{text-align:center;font-size:11px;color:var(--tx3);padding:3px 0}
+  .calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+  .calcell{aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;font-size:13.5px;border-radius:9px;cursor:pointer;color:var(--tx);border:1px solid transparent}
+  .calcell.mut{cursor:default}
+  .calcell.off{color:var(--line2);opacity:.55;cursor:default}
+  .calcell.sel{background:var(--bd);color:#fff;font-weight:600}
+  .calcell.today{border-color:var(--bd)}
+  .callist{position:absolute;inset:58px 14px 62px;background:var(--bg);border:1px solid var(--line);border-radius:12px;overflow-y:auto;-webkit-overflow-scrolling:touch;display:none;padding:5px}
+  .callist.on{display:block}
+  .callist button{display:block;width:100%;text-align:center;font-family:inherit;font-size:15px;padding:11px 0;border:0;background:transparent;color:var(--tx);cursor:pointer;border-radius:8px}
+  .callist button.cur{background:var(--bd);color:#fff;font-weight:600}
+  .calft{display:flex;justify-content:space-between;gap:8px;margin-top:12px}
+  .calft button{font-family:inherit;font-size:13.5px;min-height:40px;padding:8px 14px;border-radius:10px;border:1px solid var(--line2);background:var(--bg);color:var(--tx2);cursor:pointer;flex:1}
   /* ---- ask sheet ---- */
   #asksheet{position:fixed;right:0;left:0;bottom:0;z-index:120;background:var(--bg);border-radius:18px 18px 0 0;border:1px solid var(--line);border-bottom:0;box-shadow:0 -12px 40px rgba(0,0,0,.25);padding:14px 16px calc(18px + env(safe-area-inset-bottom));display:none;max-height:88vh;overflow-y:auto}
   @media (min-width:640px){#asksheet{left:50%;right:auto;transform:translateX(50%);width:520px;bottom:auto;top:8vh;border-radius:18px;border-bottom:1px solid var(--line)}}
@@ -223,11 +249,29 @@
     <button type="button" class="x" id="shx" aria-label="סגירה"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
   </div>
   <div class="sec"><div class="sl">בחירה מהירה</div><div class="chips" id="chips"></div></div>
-  <div class="sec"><div class="sl">יום מסוים</div><div class="frow"><input type="date" id="oneday" aria-label="יום מסוים"></div></div>
-  <div class="sec"><div class="sl">מתאריך עד תאריך</div><div class="frow"><label for="d1">מ־</label><input type="date" id="d1"><label for="d2">עד</label><input type="date" id="d2"><button type="button" class="go" id="rgo">החל</button></div></div>
+  <div class="sec"><div class="sl">יום מסוים</div><div class="frow"><button type="button" class="datefield empty" id="oneday" aria-label="יום מסוים">בחר יום</button></div></div>
+  <div class="sec"><div class="sl">מתאריך עד תאריך</div><div class="frow"><button type="button" class="datefield empty" id="d1">מ־ תאריך</button><button type="button" class="datefield empty" id="d2">עד תאריך</button><button type="button" class="go" id="rgo">החל</button></div></div>
   <div class="sec"><div class="sl">חודש מסוים</div><div class="frow"><select id="msel" aria-label="חודש"></select><select id="ysel" aria-label="שנה"></select><button type="button" class="go" id="mgo">החל</button></div></div>
   <div class="sec"><div class="sl">שנה שלמה</div><div class="frow"><select id="yosel" aria-label="שנה שלמה"></select><button type="button" class="go" id="ygo">החל</button></div></div>
   <div class="cover" id="cover"></div>
+</div>
+<div id="calovl"></div>
+<div id="cal" role="dialog" aria-modal="true" aria-label="בחירת תאריך">
+  <div class="calhd">
+    <button type="button" class="calnav" id="calprev" aria-label="חודש קודם">‹</button>
+    <div class="caltitle">
+      <button type="button" class="calsel" id="calmo"></button>
+      <button type="button" class="calsel" id="calyr"></button>
+    </div>
+    <button type="button" class="calnav" id="calnext" aria-label="חודש הבא">›</button>
+  </div>
+  <div class="caldow"><span>א׳</span><span>ב׳</span><span>ג׳</span><span>ד׳</span><span>ה׳</span><span>ו׳</span><span>ש׳</span></div>
+  <div class="calgrid" id="calgrid"></div>
+  <div class="callist" id="callist"></div>
+  <div class="calft">
+    <button type="button" id="caltoday">היום</button>
+    <button type="button" id="calcancel">ביטול</button>
+  </div>
 </div>
 <div id="askovl" style="position:fixed;inset:0;background:rgba(10,18,14,.45);z-index:110;display:none"></div>
 <div id="asksheet" role="dialog" aria-modal="true" aria-label="שאלה חופשית">
@@ -1074,8 +1118,8 @@
   var sheet=document.getElementById('sheet'),ovl=document.getElementById('ovl');
   function openSheet(){
     renderChips();
-    document.getElementById('oneday').value=state.from===state.to?state.from:'';
-    document.getElementById('d1').value=state.from;document.getElementById('d2').value=state.to;
+    setField('oneday',state.from===state.to?state.from:'');
+    setField('d1',state.from);setField('d2',state.to);
     document.getElementById('msel').value=String(parseInt(state.to.slice(5,7),10));
     document.getElementById('ysel').value=state.to.slice(0,4);
     document.getElementById('yosel').value=state.to.slice(0,4);
@@ -1090,14 +1134,64 @@
   document.getElementById('chips').addEventListener('click',function(e){
     var b=e.target.closest('[data-p]');if(b&&!b.disabled)setPreset(b.getAttribute('data-p'));
   });
-  document.getElementById('oneday').addEventListener('change',function(){
-    var v=this.value;if(!v)return;setRange(v,v,null);closeSheet();
-  });
   document.getElementById('rgo').addEventListener('click',function(){
-    var v1=document.getElementById('d1').value,v2=document.getElementById('d2').value;
+    var v1=fieldIso('d1'),v2=fieldIso('d2');
     if(!v1&&!v2)return;if(!v1)v1=v2;if(!v2)v2=v1;
     setRange(v1,v2,null);closeSheet();
   });
+
+  /* ---- custom day calendar (our own, replaces the phone-native picker) ---- */
+  function fieldIso(id){return document.getElementById(id).dataset.iso||'';}
+  function setField(id,isoV){var el=document.getElementById(id);el.dataset.iso=isoV||'';
+    if(isoV){el.textContent=heDate(isoV);el.classList.remove('empty');}
+    else{el.textContent=(id==='d1'?'מ־ תאריך':id==='d2'?'עד תאריך':'בחר יום');el.classList.add('empty');}}
+  var calY,calM,calTarget,calList='';
+  function openCal(t){calTarget=t;calList='';document.getElementById('callist').classList.remove('on');
+    document.getElementById('calmo').classList.remove('act');document.getElementById('calyr').classList.remove('act');
+    var cur=fieldIso(t)||state.to||anchor();calY=parseInt(cur.slice(0,4),10);calM=parseInt(cur.slice(5,7),10)-1;
+    renderCal();document.getElementById('cal').classList.add('on');document.getElementById('calovl').classList.add('on');}
+  function closeCal(){document.getElementById('cal').classList.remove('on');document.getElementById('calovl').classList.remove('on');}
+  function renderCal(){
+    document.getElementById('calmo').innerHTML=MONTHS[calM]+' <span class="car">▼</span>';
+    document.getElementById('calyr').innerHTML=calY+' <span class="car">▼</span>';
+    var start=new Date(calY,calM,1).getDay(),dim=new Date(calY,calM+1,0).getDate();
+    var sel=fieldIso(calTarget),tdy=anchor(),h='';
+    for(var i=0;i<start;i++)h+='<div class="calcell mut"></div>';
+    for(var d=1;d<=dim;d++){var isoD=calY+'-'+pad(calM+1)+'-'+pad(d),cls='calcell';
+      if(isoD<META.min||isoD>META.max)cls+=' off';
+      else if(isoD===sel)cls+=' sel';else if(isoD===tdy)cls+=' today';
+      h+='<div class="'+cls+'" data-d="'+isoD+'">'+d+'</div>';}
+    document.getElementById('calgrid').innerHTML=h;}
+  function showList(mode){calList=mode;var box=document.getElementById('callist'),h='';
+    document.getElementById('calmo').classList.toggle('act',mode==='m');
+    document.getElementById('calyr').classList.toggle('act',mode==='y');
+    if(mode==='m'){for(var i=0;i<12;i++)h+='<button type="button" data-m="'+i+'" class="'+(i===calM?'cur':'')+'">'+MONTHS[i]+'</button>';}
+    else{var a=parseInt(META.min.slice(0,4),10),b=parseInt(META.max.slice(0,4),10);
+      for(var y=b;y>=a;y--)h+='<button type="button" data-y="'+y+'" class="'+(y===calY?'cur':'')+'">'+y+'</button>';}
+    box.innerHTML=h;box.classList.add('on');var c=box.querySelector('.cur');if(c)c.scrollIntoView({block:'center'});}
+  function toggleList(mode){if(calList===mode){document.getElementById('callist').classList.remove('on');calList='';
+      document.getElementById('calmo').classList.remove('act');document.getElementById('calyr').classList.remove('act');}
+    else showList(mode);}
+  document.getElementById('calmo').addEventListener('click',function(){toggleList('m');});
+  document.getElementById('calyr').addEventListener('click',function(){toggleList('y');});
+  document.getElementById('callist').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;
+    if(b.hasAttribute('data-m'))calM=parseInt(b.getAttribute('data-m'),10);else calY=parseInt(b.getAttribute('data-y'),10);
+    this.classList.remove('on');calList='';
+    document.getElementById('calmo').classList.remove('act');document.getElementById('calyr').classList.remove('act');renderCal();});
+  document.getElementById('calprev').addEventListener('click',function(){calM--;if(calM<0){calM=11;calY--;}renderCal();});
+  document.getElementById('calnext').addEventListener('click',function(){calM++;if(calM>11){calM=0;calY++;}renderCal();});
+  document.getElementById('calgrid').addEventListener('click',function(e){var c=e.target.closest('.calcell');
+    if(!c||c.classList.contains('mut')||c.classList.contains('off'))return;
+    var isoD=c.getAttribute('data-d');setField(calTarget,isoD);closeCal();
+    if(calTarget==='oneday'){setRange(isoD,isoD,null);closeSheet();}});
+  document.getElementById('caltoday').addEventListener('click',function(){var t=anchor();calY=parseInt(t.slice(0,4),10);calM=parseInt(t.slice(5,7),10)-1;
+    document.getElementById('callist').classList.remove('on');calList='';
+    document.getElementById('calmo').classList.remove('act');document.getElementById('calyr').classList.remove('act');renderCal();});
+  document.getElementById('calcancel').addEventListener('click',closeCal);
+  document.getElementById('calovl').addEventListener('click',closeCal);
+  document.getElementById('oneday').addEventListener('click',function(){openCal('oneday');});
+  document.getElementById('d1').addEventListener('click',function(){openCal('d1');});
+  document.getElementById('d2').addEventListener('click',function(){openCal('d2');});
   document.getElementById('mgo').addEventListener('click',function(){
     var m=parseInt(document.getElementById('msel').value,10),y=parseInt(document.getElementById('ysel').value,10);
     setRange(y+'-'+pad(m)+'-01',iso(new Date(y,m,0)),null);closeSheet();
