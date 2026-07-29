@@ -576,6 +576,7 @@ _DIMS = {"fam", "part", "city", "sector", "source"}
 # insights panels: name -> (rpc, needs_dates, allowed dims or None)
 _PANELS = {
     "pareto":    ("bi_pareto",     True,  None),
+    "channels":  ("bi_channel_series", True, None),
     "trend":     ("bi_dim_series", True,  {"fam", "city", "sector", "source", "branch"}),
     "newret":    ("bi_new_ret",    True,  {"all", "sector", "source", "city"}),
     "basket":    ("bi_basket",     True,  {"all", "sector", "source", "city"}),
