@@ -577,6 +577,7 @@ _DIMS = {"fam", "part", "city", "sector", "source"}
 _PANELS = {
     "pareto":    ("bi_pareto",     True,  None),
     "channels":  ("bi_channel_series", True, None),
+    "contrib":   ("bi_branch_contribution", False, None),
     "trend":     ("bi_dim_series", True,  {"fam", "city", "sector", "source", "branch"}),
     "newret":    ("bi_new_ret",    True,  {"all", "sector", "source", "city"}),
     "basket":    ("bi_basket",     True,  {"all", "sector", "source", "city"}),
