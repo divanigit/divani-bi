@@ -729,6 +729,14 @@ def api_cash(request: Request, d_from: str = "", d_to: str = ""):
     return JSONResponse({"mode": "cashagg", "agg": agg or {}, **pend})
 
 
+@app.get("/api/pending")
+def api_pending(request: Request):
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    return JSONResponse({"pending": _state.get("pending") or [],
+                         "pending_at": _state.get("pending_at")})
+
+
 # ---------- pending bank transfers (העברות בהמתנה לקבלה) ----------
 # A transfer is visible 1-2 days before its receipt: the confirmation screenshot
 # is uploaded to the ORDER's attachments. Detection: attachment description
@@ -739,7 +747,7 @@ def api_cash(request: Request, d_from: str = "", d_to: str = ""):
 # in memory for amount extraction only and never stored.
 
 TR_DESC_RE = re.compile("העבר|אסמכ|אמסכתא")
-PENDING_SCAN_DAYS = 10
+PENDING_SCAN_DAYS = 14
 
 
 def _pri_get(path: str, timeout=90):

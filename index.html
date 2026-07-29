@@ -215,6 +215,16 @@
   .cbdet b{color:var(--tx)}
   .cbnote{font-size:11.5px;color:var(--tx2);background:var(--surface);border-radius:11px;padding:11px 13px;margin:0 0 10px}
   .cbnote b{color:var(--tx)}
+  .abadge{display:none;align-items:center;justify-content:center;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--dfg);color:#fff;font-size:10px;font-weight:700;margin-inline-start:5px}
+  #alertsheet{position:fixed;right:0;left:0;bottom:0;z-index:121;background:var(--bg);border-radius:18px 18px 0 0;border:1px solid var(--line);border-bottom:0;box-shadow:0 -12px 40px rgba(0,0,0,.25);padding:14px 16px calc(18px + env(safe-area-inset-bottom));display:none;max-height:82vh;overflow-y:auto}
+  @media (min-width:640px){#alertsheet{left:50%;right:auto;transform:translateX(50%);width:470px;bottom:auto;top:10vh;border-radius:18px;border-bottom:1px solid var(--line)}}
+  #alertsheet.on{display:block}
+  .alintro{font-size:12px;color:var(--tx2);margin:0 0 11px;line-height:1.5}
+  .alnone{font-size:13px;color:var(--tx2);text-align:center;padding:22px 6px;line-height:1.6}
+  .alitem{border:1px solid var(--line);border-radius:11px;padding:10px 12px;margin-bottom:8px;border-inline-start:3px solid var(--wfg)}
+  .alr1{display:flex;justify-content:space-between;align-items:center;font-size:14px}
+  .alr1 b{font-weight:600}
+  .alr2{font-size:11px;color:var(--tx2);margin-top:3px}
   .minibar i{display:block;background:var(--bd);height:100%;border-radius:4px 0 0 4px}
   @media (prefers-reduced-motion:reduce){.chev{transition:none}.spin{animation-duration:1.6s}}
   @media (max-width:420px){h1{font-size:19px}.kpi .v{font-size:16px}}
@@ -272,6 +282,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
       PDF
     </button>
+    <button type="button" class="rfr" id="alertbtn" title="התראות">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+      התראות<span class="abadge" id="alertbadge"></span>
+    </button>
     <span class="built" id="builtlbl"></span>
   </div>
   <div id="printhead" aria-hidden="true">
@@ -319,6 +333,11 @@
     <button type="button" id="caltoday">היום</button>
     <button type="button" id="calcancel">ביטול</button>
   </div>
+</div>
+<div id="alertovl" style="position:fixed;inset:0;background:rgba(10,18,14,.45);z-index:120;display:none"></div>
+<div id="alertsheet" role="dialog" aria-modal="true" aria-label="התראות">
+  <div class="shead"><span class="t">התראות</span><button type="button" class="x" id="alertx" aria-label="סגירה"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+  <div id="alertbody"></div>
 </div>
 <div id="askovl" style="position:fixed;inset:0;background:rgba(10,18,14,.45);z-index:110;display:none"></div>
 <div id="asksheet" role="dialog" aria-modal="true" aria-label="שאלה חופשית">
@@ -661,11 +680,15 @@
       '<div class="kpi"><div class="l">לקוחות</div><div class="v">'+R.c+'</div></div>';
   }
 
+  function pendInRange(){
+    var s=0;if(cache.pending)cache.pending.forEach(function(p){var d=p.d||'';if(d>=state.from&&d<=state.to)s+=p.show||0;});return s;}
   function renderCashKpis(R){
+    var pend=pendInRange();
     document.getElementById('kpis').innerHTML=
-      '<div class="kpi"><div class="l">סה"כ מזומן</div><div class="v">'+ils(R.tot)+'</div></div>'+
+      '<div class="kpi"><div class="l">סה"כ מזומן</div><div class="v">'+ils(R.tot+pend)+'</div></div>'+
       '<div class="kpi"><div class="l">מזומן בקופה</div><div class="v">'+ils(R.mz)+'</div></div>'+
-      '<div class="kpi"><div class="l">העברות</div><div class="v">'+ils(R.hv)+'</div></div>'+
+      '<div class="kpi"><div class="l">העברות בקבלה</div><div class="v">'+ils(R.hv)+'</div></div>'+
+      '<div class="kpi"><div class="l">העברות מאומתות</div><div class="v">'+ils(pend)+'</div></div>'+
       '<div class="kpi"><div class="l">שיקים מזומן</div><div class="v">'+ils(R.sk)+'</div></div>';
   }
 
@@ -682,22 +705,25 @@
       var sub=c.code?'<div class="c" title="'+esc(c.code)+'">'+esc(c.code)+'</div>':'';
       h+='<tr class="'+cls+(it.hasK?' row':'')+'" '+(it.hasK?'data-t="'+it.id+'" role="button" tabindex="0"':'')+'><td class="nm"><div class="nmc" style="margin-right:'+ind+'px">'+ch+'<div class="nlab'+(it.depth?' rail':'')+'"><div class="t" style="font-weight:'+(it.depth===0?500:400)+'">'+esc(c.n)+'</div>'+sub+'</div></div></td><td>'+ils(c.mz)+'</td><td>'+ils(c.hv)+'</td><td>'+ils(c.sk)+'</td><td style="font-weight:500">'+ils(c.tot)+'</td><td class="mut">'+ils(c.ot)+'</td></tr>';
     });
-    h+='</tbody><tfoot><tr><td class="nm">סך הכל</td><td>'+ils(R.mz)+'</td><td>'+ils(R.hv)+'</td><td>'+ils(R.sk)+'</td><td>'+ils(R.tot)+'</td><td>'+ils(R.ot)+'</td></tr></tfoot></table></div>';
+    var pend=pendInRange();
+    if(pend>0){h+='<tr class="d0"><td class="nm"><div class="nmc"><span style="width:15px;flex:none"></span><div class="nlab"><div class="t" style="font-weight:500">העברות מאומתות (אסמכתא)</div></div></div></td><td>'+ils(0)+'</td><td>'+ils(pend)+'</td><td>'+ils(0)+'</td><td style="font-weight:500">'+ils(pend)+'</td><td class="mut">'+ils(0)+'</td></tr>';}
+    h+='</tbody><tfoot><tr><td class="nm">סך הכל</td><td>'+ils(R.mz)+'</td><td>'+ils(R.hv+pend)+'</td><td>'+ils(R.sk)+'</td><td>'+ils(R.tot+pend)+'</td><td>'+ils(R.ot)+'</td></tr></tfoot></table></div>';
     stage.innerHTML=h;
   }
 
   function renderPending(){
     var el=document.getElementById('pendtr');
-    var list=(view==='cash'&&cache.pending)?cache.pending:null;
+    var all=(view==='cash'&&cache.pending)?cache.pending:null;
+    var list=all?all.filter(function(p){var d=p.d||'';return d>=state.from&&d<=state.to;}):null;
     if(!list||!list.length){el.style.display='none';el.innerHTML='';return;}
     var sum=0;list.forEach(function(p){sum+=p.show||0;});
-    var h='<div class="pt">העברות בהמתנה לקבלה · '+list.length+' · '+ils(sum)+'</div>';
+    var h='<div class="pt">העברות מאומתות שנזקפו למזומן · '+list.length+' · '+ils(sum)+'</div>';
     list.slice().sort(function(a,b){return (b.d||'').localeCompare(a.d||'');}).forEach(function(p){
       h+='<div class="pr"><span class="nm2">'+esc(p.c||p.o)+'</span><span>'+ils(p.show)+'</span>'+
          '<span class="mut2">מאומת מהאסמכתא</span><span class="mut2">'+esc(brName(p.b))+'</span>'+
-         (p.d?'<span class="mut2">הועלה '+heDate(p.d)+'</span>':'')+'</div>';
+         (p.d?'<span class="mut2">אסמכתא '+heDate(p.d)+'</span>':'')+'</div>';
     });
-    h+='<div class="pn">הסכומים אינם נכללים בסך המזומן — הם יעברו אליו אוטומטית עם הפקת הקבלה.'+(cache.pendingAt?' נסרק '+esc(cache.pendingAt)+'.':'')+'</div>';
+    h+='<div class="pn">נזקפו לסך המזומן לפי תאריך האסמכתא, עוד לפני הפקת הקבלה בפריוריטי. אם לא תופק קבלה תוך כמה ימים — יופיעו בהתראות.'+(cache.pendingAt?' נסרק '+esc(cache.pendingAt)+'.':'')+'</div>';
     el.innerHTML=h;el.style.display='block';
   }
 
@@ -1419,6 +1445,37 @@
   function askOpen(){askSheet.classList.add('on');askOvl.classList.add('on');setTimeout(function(){document.getElementById('askq').focus();},50);}
   function askClose(){askSheet.classList.remove('on');askOvl.classList.remove('on');}
   document.getElementById('askbtn').addEventListener('click',askOpen);
+
+  /* ---- התראות (alerts layer — v1: transfers with an אסמכתא but no receipt yet) ---- */
+  var ALERT_DAYS=3;
+  function alDaysAgo(iso){if(!iso)return 0;var d=new Date(iso+'T12:00:00');return Math.floor((Date.now()-d.getTime())/86400000);}
+  function loadAlerts(){
+    fetch('/api/pending',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){
+      if(!j)return;
+      window.__over=(j.pending||[]).filter(function(p){return p.d&&alDaysAgo(p.d)>=ALERT_DAYS;});
+      var b=document.getElementById('alertbadge');
+      if(window.__over.length){b.textContent=window.__over.length;b.style.display='inline-flex';}
+      else{b.style.display='none';b.textContent='';}
+    }).catch(function(){});
+  }
+  function openAlerts(){
+    var over=window.__over||[],h;
+    if(!over.length){h='<div class="alnone">אין התראות פתוחות.<br>כל האסמכתאות קיבלו קבלה בזמן.</div>';}
+    else{
+      h='<div class="alintro">העברות עם אסמכתא מלפני '+ALERT_DAYS+' ימים או יותר, שעדיין לא הופקה עליהן קבלה בפריוריטי. הכסף כבר נזקף למזומן — חסרה רק הקבלה:</div>';
+      over.slice().sort(function(a,b){return (a.d||'').localeCompare(b.d||'');}).forEach(function(p){
+        h+='<div class="alitem"><div class="alr1"><b>'+esc(p.c||p.o)+'</b><span>'+ils(p.show)+'</span></div>'
+          +'<div class="alr2">'+esc(brName(p.b))+' · אסמכתא '+heDate(p.d)+' · לפני '+alDaysAgo(p.d)+' ימים</div></div>';
+      });
+    }
+    document.getElementById('alertbody').innerHTML=h;
+    document.getElementById('alertsheet').classList.add('on');document.getElementById('alertovl').style.display='block';
+  }
+  function closeAlerts(){document.getElementById('alertsheet').classList.remove('on');document.getElementById('alertovl').style.display='none';}
+  document.getElementById('alertbtn').addEventListener('click',openAlerts);
+  document.getElementById('alertx').addEventListener('click',closeAlerts);
+  document.getElementById('alertovl').addEventListener('click',closeAlerts);
+  loadAlerts();
   document.getElementById('askx').addEventListener('click',askClose);
   askOvl.addEventListener('click',askClose);
   document.addEventListener('keydown',function(e){if(e.key==='Escape')askClose();});
