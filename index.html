@@ -215,6 +215,9 @@
   .cbdet b{color:var(--tx)}
   .cbnote{font-size:11.5px;color:var(--tx2);background:var(--surface);border-radius:11px;padding:11px 13px;margin:0 0 10px}
   .cbnote b{color:var(--tx)}
+  .cbtog{display:flex;gap:6px;margin:0 0 12px}
+  .cbtog button{font-family:inherit;font-size:12.5px;border:1px solid var(--line2);background:var(--bg);color:var(--tx2);padding:7px 15px;min-height:38px;border-radius:999px;cursor:pointer}
+  .cbtog button.on{background:var(--bd);border-color:var(--bd);color:#fff;font-weight:600}
   .abadge{display:none;align-items:center;justify-content:center;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--dfg);color:#fff;font-size:10px;font-weight:700;margin-inline-start:5px}
   #alertsheet{position:fixed;right:0;left:0;bottom:0;z-index:121;background:var(--bg);border-radius:18px 18px 0 0;border:1px solid var(--line);border-bottom:0;box-shadow:0 -12px 40px rgba(0,0,0,.25);padding:14px 16px calc(18px + env(safe-area-inset-bottom));display:none;max-height:82vh;overflow-y:auto}
   @media (min-width:640px){#alertsheet{left:50%;right:auto;transform:translateX(50%);width:470px;bottom:auto;top:10vh;border-radius:18px;border-bottom:1px solid var(--line)}}
@@ -238,7 +241,6 @@
     <button type="button" data-v="agents" class="on" aria-pressed="true">סוכנים</button>
     <button type="button" data-v="branches" aria-pressed="false">סניפים</button>
     <button type="button" data-v="branchsrc" aria-pressed="false">מקורות הגעה</button>
-    <button type="button" data-v="cannib" aria-pressed="false">קניבליזציה</button>
     <button type="button" data-v="cash" aria-pressed="false">מזומן</button>
     <button type="button" data-v="service" aria-pressed="false">שירות</button>
     <button type="button" data-v="collect" aria-pressed="false">מקדמות</button>
@@ -247,6 +249,7 @@
   </div>
   <div class="dimbar" id="insbar" style="display:none" role="group" aria-label="בחירת תובנה">
     <button type="button" class="chip on" data-p="pareto" aria-pressed="true">פארטו</button>
+    <button type="button" class="chip" data-p="contrib" aria-pressed="false">קניבליזציה</button>
     <button type="button" class="chip" data-p="trend" aria-pressed="false">מגמות</button>
     <button type="button" class="chip" data-p="cmp" aria-pressed="false">מול אשתקד</button>
     <button type="button" class="chip" data-p="newret" aria-pressed="false">חדש וחוזר</button>
@@ -363,7 +366,7 @@
   function dimName(k){if(dimKind==='sector')return SECN[k]||k;return k;}
   function secName(k){return SECN[k]||k;}
   var insPanel='pareto', insDim={trend:'sector',cmp:'fam',newret:'sector',basket:'sector'}, insDrill=null;
-  var INSH={pareto:'פארטו מוצרים',trend:'מגמות פלחים',cmp:'השוואה מול אשתקד',newret:'לקוח חדש מול חוזר',basket:'סל ממוצע',pairs:'צמדי מוצרים',geo:'חדירה גאוגרפית',roi:'ערוצי שיווק',alerts:'התראות חכמות',selfcheck:'תקינות נתונים'};
+  var INSH={pareto:'פארטו מוצרים',contrib:'קניבליזציה — כדאיות סניפים',trend:'מגמות פלחים',cmp:'השוואה מול אשתקד',newret:'לקוח חדש מול חוזר',basket:'סל ממוצע',pairs:'צמדי מוצרים',geo:'חדירה גאוגרפית',roi:'ערוצי שיווק',alerts:'התראות חכמות',selfcheck:'תקינות נתונים'};
   var PAL=['#0d9668','#3a6fc4','#b0791f','#8a5bc4'];
   function trendRange(){var t=(META&&META.today)||iso(new Date());var e=new Date(t.slice(0,7)+'-01T12:00:00');e.setDate(0);var d=new Date(e.getFullYear(),e.getMonth()-11,1,12);return [iso(d),iso(e)];}
   var BRN={'':'ללא שיוך סניף','PHONE':'טלפוני','101':'נתניה','102':'ראשל"צ','103':'אתר דיוואני','104':'מוקד משרדים','105':'חיפה','106':'ירושלים','107':'בית שמש'};
@@ -413,7 +416,7 @@
       return state.from+'|'+state.to+'|D|'+dimKind+'|'+dimMeasure;
     }
     if(view==='ins'){
-      if(insPanel==='alerts'||insPanel==='selfcheck')return 'N|'+insPanel;
+      if(insPanel==='alerts'||insPanel==='selfcheck'||insPanel==='contrib')return 'N|'+insPanel;
       if(insPanel==='trend'){var tr=trendRange();return tr[0]+'|'+tr[1]+'|N|trend|'+insDim.trend;}
       if(insPanel==='pairs'&&insDrill)return state.from+'|'+state.to+'|N|PD|'+insDrill.a+'|'+insDrill.b;
       if(insPanel==='pareto')return state.from+'|'+state.to+'|N|pareto|'+insParetoN;
@@ -452,7 +455,7 @@
               return '/api/dim?d_from='+state.from+'&d_to='+state.to+'&dim='+dimKind+'&rank='+dimMeasure;
             })()
            :view==='ins'?(function(){
-              if(insPanel==='alerts'||insPanel==='selfcheck')return '/api/panel?name='+insPanel;
+              if(insPanel==='alerts'||insPanel==='selfcheck'||insPanel==='contrib')return '/api/panel?name='+insPanel;
               if(insPanel==='trend'){var tr=trendRange();return '/api/panel?name=trend&d_from='+tr[0]+'&d_to='+tr[1]+'&dim='+insDim.trend;}
               if(insPanel==='pareto')return '/api/pareto?d_from='+state.from+'&d_to='+state.to+'&list_n='+insParetoN;
               if(insPanel==='pairs'&&insDrill)return '/api/panel?name=pairdrill&d_from='+state.from+'&d_to='+state.to+'&a='+encodeURIComponent(insDrill.a)+'&b='+encodeURIComponent(insDrill.b);
@@ -1054,6 +1057,7 @@
     if(cache.mode==='cmp'){renderCmp(a,cache.agg2||{});return;}
     if(cache.panel==='pairdrill'&&insDrill){renderPairDrill(a);return;}
     if(insPanel==='pareto')renderPareto(a);
+    else if(insPanel==='contrib')renderCannib(a);
     else if(insPanel==='trend')renderTrend(a);
     else if(insPanel==='newret')renderNewRet(a);
     else if(insPanel==='basket')renderBasket(a);
@@ -1120,23 +1124,33 @@
     document.getElementById('builtlbl').textContent=META.last_sync?('עודכן '+META.last_sync):'';
   }
   function cbM(v){v=+v||0;var a=Math.abs(v),s=v<0?'−':'';return a>=1e6?s+(a/1e6).toFixed(2)+' מ׳':s+Math.round(a/1e3)+'K';}
+  var cannibMode='adj';
   function renderCannib(agg){
     var d=agg||[];
     if(!d.length){stage.innerHTML='<div class="empty">אין נתונים לניתוח.</div>';return;}
+    var adj=cannibMode!=='raw';
+    var tog='<div class="cbtog"><button type="button" class="'+(adj?'on':'')+'" data-cbmode="adj">מנוכה צמיחת שוק</button><button type="button" class="'+(!adj?'on':'')+'" data-cbmode="raw">ללא ניכוי</button></div>';
     var cards=d.map(function(s){
-      var pos=(+s.net_s)>=0, pp=(+s.net_p)>=0;
+      var ns=adj?(+s.net_s):((+s.ta)-(+s.tb));
+      var np=adj?(+s.net_p):((+s.tap)-(+s.tbp));
+      var pos=ns>=0, pp=np>=0;
       var badge=pos?'<span class="cbv pos">תרומה חיובית</span>':'<span class="cbv neg">תרומה שלילית</span>';
+      var det=adj
+        ? ('האזור לפני '+cbM(s.tb)+', אחרי '+cbM(s.ta)+' לחודש · השוק '+((+s.ctrl_g)>=0?'+':'')+s.ctrl_g+' אחוז<br>צפוי לפי השוק '+cbM(s.exp_s)+', בפועל '+cbM(s.ta)+', <b>עודף '+(pos?'+':'')+cbM(ns)+'</b>')
+        : ('האזור לפני '+cbM(s.tb)+', אחרי '+cbM(s.ta)+' לחודש<br><b>שינוי מוחלט '+(pos?'+':'')+cbM(ns)+' לחודש</b> · בלי ניכוי צמיחת שוק');
       return '<div class="cbcard" style="--ac:'+(pos?'var(--bd)':'var(--dfg)')+'">'
         +'<div class="cbh"><b>'+esc(s.store)+'</b><span>נפתח '+esc(s.open)+' · '+s.n_after+' חודשים</span></div>'
         +badge
-        +'<div class="cbnet"><div><span>מכירות נטו לחודש</span><b class="'+(pos?'p':'n')+'">'+(pos?'+':'')+cbM(s.net_s)+'</b></div>'
-        +'<div><span>רווח נטו לחודש</span><b class="'+(pp?'p':'n')+'">'+(pp?'+':'')+cbM(s.net_p)+'</b></div></div>'
-        +'<div class="cbdet">האזור לפני '+cbM(s.tb)+', אחרי '+cbM(s.ta)+' לחודש · השוק '+((+s.ctrl_g)>=0?'+':'')+s.ctrl_g+' אחוז<br>צפוי לפי השוק '+cbM(s.exp_s)+', בפועל '+cbM(s.ta)+', <b>עודף '+(pos?'+':'')+cbM(s.net_s)+'</b><br>הסניף עצמו מכר '+cbM(s.own_s)+' לחודש</div>'
+        +'<div class="cbnet"><div><span>מכירות נטו לחודש</span><b class="'+(pos?'p':'n')+'">'+(pos?'+':'')+cbM(ns)+'</b></div>'
+        +'<div><span>רווח נטו לחודש</span><b class="'+(pp?'p':'n')+'">'+(pp?'+':'')+cbM(np)+'</b></div></div>'
+        +'<div class="cbdet">'+det+'<br>הסניף עצמו מכר '+cbM(s.own_s)+' לחודש</div>'
         +'</div>';
     }).join('');
-    var note='<div class="cbnote"><b>איך זה מחושב:</b> לכל סניף לוקחים את האזור שלו — הישובים הקרובים אליו בנסיעה — ומשווים את סך העסק באזור בשנה שלפני הפתיחה מול הממוצע החודשי מאז. "השוק" הוא כמה שאר העסק גדל או ירד באותה תקופה, ומנכים אותו כדי לזקוף לסניף רק את מה שמעבר לשוק. עודף חיובי פירושו שהסניף הביא מכירות ורווח חדשים אמיתיים, לא רק הסטה.</div>'
-      +'<div class="cbnote">שים לב: בתקופה האחרונה שאר העסק דווקא ירד, אז חלק מהתרומה החיובית של הסניפים החדשים היא בכך שהאזור שלהם ירד פחות מהשוק או עלה נגד המגמה. ירושלים ובית שמש עדיין צעירים מאוד, אז אצלם זו תמונה מוקדמת.</div>';
-    stage.innerHTML='<div class="cbwrap">'+cards+'</div>'+note;
+    var note=adj
+      ? '<div class="cbnote"><b>מנוכה צמיחת שוק:</b> לכל סניף לוקחים את האזור שלו, ומנכים כמה שאר העסק גדל או ירד באותה תקופה — כדי לזקוף לסניף רק את מה שמעבר לשוק. עודף חיובי = מכירות ורווח חדשים אמיתיים, לא רק הסטה.</div>'
+      : '<div class="cbnote"><b>ללא ניכוי:</b> השינוי המוחלט של סך העסק באזור, לפני מול אחרי הפתיחה, בלי להשוות לשוק. מכיוון שבשנים האחרונות השוק התכווץ בגלל המלחמה, המבט הזה מראה אם הסניף הגדיל את האזור בפועל, גם כשהשוק ירד.</div>';
+    note+='<div class="cbnote">ירושלים ובית שמש נפתחו רק לפני חצי שנה, אז אצלם זו תמונה מוקדמת בלבד.</div>';
+    stage.innerHTML=tog+'<div class="cbwrap">'+cards+'</div>'+note;
   }
 
   function selLabel(R){
@@ -1178,7 +1192,7 @@
     var lbl=INSH[insPanel]||'';
     if(insPanel==='pairs'&&insDrill)lbl=insDrill.a+' ← '+insDrill.b;
     if(insPanel==='trend'){var tr=trendRange();lbl+=' · '+rangeLbl(tr[0],tr[1]);}
-    else if(insPanel==='alerts'||insPanel==='selfcheck'){}
+    else if(insPanel==='alerts'||insPanel==='selfcheck'||insPanel==='contrib'){}
     else{lbl+=' · '+rangeLbl(state.from,state.to);}
     document.getElementById('sellbl').textContent=lbl;
     document.getElementById('builtlbl').textContent=META.last_sync?('עודכן '+META.last_sync):'';
@@ -1197,7 +1211,7 @@
     if((insPanel==='newret'||insPanel==='basket')&&insDim[insPanel]==='sector'&&state.from<'2025-01-01')msgs.push('תיוג מגזר מלא רק מלקוחות שנוצרו משנת 2025.');
     if(msgs.length){nt.style.display='block';nt.textContent=msgs.join(' ');}else{nt.style.display='none';}
     document.getElementById('hint').style.display='none';
-    var fixed=(insPanel==='trend'||insPanel==='alerts'||insPanel==='selfcheck');
+    var fixed=(insPanel==='trend'||insPanel==='alerts'||insPanel==='selfcheck'||insPanel==='contrib');
     var sb2=document.getElementById('selbtn');
     sb2.style.opacity=fixed?'.45':'';sb2.style.pointerEvents=fixed?'none':'';
     sb2.title=fixed?'הפאנל הזה מחושב על חלון זמן קבוע':'';
@@ -1545,6 +1559,7 @@
 
   stage.addEventListener('click',function(e){var t=e.target.closest('[data-t]');if(t){var id=t.getAttribute('data-t');eT[id]=!eT[id];renderStage(ROOT());}});
   stage.addEventListener('click',function(e){var b=e.target.closest('[data-bs]');if(b){branchSel=parseInt(b.getAttribute('data-bs'),10);renderBranchSrc(cache.agg);}});
+  stage.addEventListener('click',function(e){var b=e.target.closest('[data-cbmode]');if(b){cannibMode=b.getAttribute('data-cbmode');renderCannib(cache.agg);}});
   stage.addEventListener('keydown',function(e){if((e.key==='Enter'||e.key===' ')&&e.target.hasAttribute&&e.target.hasAttribute('data-t')){e.preventDefault();var id=e.target.getAttribute('data-t');eT[id]=!eT[id];renderStage(ROOT());}});
 
   /* ---- boot ---- */
