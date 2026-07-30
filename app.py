@@ -42,6 +42,7 @@ DASH_PASS = os.environ.get("DASH_PASS", "")
 DASH_PASS_ADMIN = os.environ.get("DASH_PASS_ADMIN", "")  # Doron's personal password
 DASH_PASS_ASK2 = os.environ.get("DASH_PASS_ASK2", "")  # Haim: ask-enabled personal password
 DASH_PASS_DOV = os.environ.get("DASH_PASS_DOV", "")  # Dov (operations mgr): own credential, regular view access
+DASH_PASS_SHARON = os.environ.get("DASH_PASS_SHARON", "")  # Sharon: own credential, regular view access
 SB_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SB_KEY = os.environ.get("SUPABASE_SECRET_KEY", "")
 PRI_USER = os.environ.get("PRI_USER", "")
@@ -115,7 +116,8 @@ def _match(p: str, expected: str) -> bool:
 
 def _pass_ok(p: str) -> bool:
     return (_match(p, DASH_PASS) or _match(p, DASH_PASS_ADMIN)
-            or _match(p, DASH_PASS_ASK2) or _match(p, DASH_PASS_DOV))
+            or _match(p, DASH_PASS_ASK2) or _match(p, DASH_PASS_DOV)
+            or _match(p, DASH_PASS_SHARON))
 
 
 def _who(p: str) -> str:
@@ -126,6 +128,8 @@ def _who(p: str) -> str:
         return "חיים"
     if _match(p, DASH_PASS_DOV):
         return "דב"
+    if _match(p, DASH_PASS_SHARON):
+        return "שרון"
     if _match(p, DASH_PASS):
         return "משותף"
     return "?"
