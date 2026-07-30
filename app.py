@@ -41,6 +41,7 @@ IL = ZoneInfo("Asia/Jerusalem")
 DASH_PASS = os.environ.get("DASH_PASS", "")
 DASH_PASS_ADMIN = os.environ.get("DASH_PASS_ADMIN", "")  # Doron's personal password
 DASH_PASS_ASK2 = os.environ.get("DASH_PASS_ASK2", "")  # Haim: ask-enabled personal password
+DASH_PASS_DOV = os.environ.get("DASH_PASS_DOV", "")  # Dov (operations mgr): own credential, regular view access
 SB_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SB_KEY = os.environ.get("SUPABASE_SECRET_KEY", "")
 PRI_USER = os.environ.get("PRI_USER", "")
@@ -114,7 +115,20 @@ def _match(p: str, expected: str) -> bool:
 
 def _pass_ok(p: str) -> bool:
     return (_match(p, DASH_PASS) or _match(p, DASH_PASS_ADMIN)
-            or _match(p, DASH_PASS_ASK2))
+            or _match(p, DASH_PASS_ASK2) or _match(p, DASH_PASS_DOV))
+
+
+def _who(p: str) -> str:
+    # identity label for the login log (most-specific credential first)
+    if _match(p, DASH_PASS_ADMIN):
+        return "אדמין"
+    if _match(p, DASH_PASS_ASK2):
+        return "חיים"
+    if _match(p, DASH_PASS_DOV):
+        return "דב"
+    if _match(p, DASH_PASS):
+        return "משותף"
+    return "?"
 
 
 def _login_html(err: str = "") -> str:
@@ -160,6 +174,14 @@ def sb_insert(table: str, row: dict):
           {"apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY,
            "Content-Type": "application/json", "Prefer": "return=minimal"},
           data=body, timeout=60)
+
+
+def sb_select(path: str):
+    # path = "table?select=...&order=...&limit=..." (PostgREST GET)
+    out = _http(f"{SB_URL}/rest/v1/{path}",
+                {"apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY},
+                timeout=30)
+    return json.loads(out.decode("utf-8")) if out else []
 
 
 PRI_SEL = ("$select=ORDNAME,CURDATE,ORDSTATUSDES,AGENTNAME,CUSTNAME,CDES,BRANCHNAME,TYPEDES"
@@ -473,9 +495,9 @@ def _note_fail(ip: str):
     _fails.setdefault(ip, []).append(time.time())
 
 
-def _log_login(request: Request, ok: bool):
+def _log_login(request: Request, ok: bool, who: str = ""):
     try:
-        sb_insert("bi_login_log", {"ip": _client_ip(request), "ok": ok,
+        sb_insert("bi_login_log", {"ip": _client_ip(request), "ok": ok, "who": who,
                                    "ua": request.headers.get("user-agent", "")[:200]})
     except Exception:
         pass
@@ -492,9 +514,9 @@ async def login_post(request: Request):
     p = form.get("p", [""])[0]
     if not _pass_ok(p):
         _note_fail(ip)
-        _log_login(request, False)
+        _log_login(request, False, _who(p))
         return HTMLResponse(_login_html("סיסמה שגויה"), status_code=401)
-    _log_login(request, True)
+    _log_login(request, True, _who(p))
     resp = RedirectResponse("/", status_code=303)
     tok = (_admin_token() if _match(p, DASH_PASS_ADMIN)
            else _ask2_token() if _match(p, DASH_PASS_ASK2) else _session_token())
@@ -508,6 +530,65 @@ def logout():
     resp = RedirectResponse("/login", status_code=303)
     resp.delete_cookie(COOKIE_NAME)
     return resp
+
+
+def _esc(s) -> str:
+    return (str(s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
+
+
+@app.get("/logins")
+def logins_view(request: Request):
+    # admin-only: who logged in and when (personal credentials, e.g. דב, are labelled)
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    try:
+        rows = sb_select("bi_login_log?select=at,who,ok,ip&order=at.desc&limit=150")
+    except Exception:
+        rows = []
+
+    def fmt(iso):
+        try:
+            d = dt.datetime.fromisoformat(str(iso).replace("Z", "+00:00")).astimezone(IL)
+            return d.strftime("%d/%m/%Y %H:%M")
+        except Exception:
+            return _esc(iso)
+
+    trs = []
+    for r in rows:
+        badge = ('<span class="ok">כניסה</span>' if r.get("ok")
+                 else '<span class="bad">נכשל</span>')
+        trs.append('<tr><td class="t">' + fmt(r.get("at")) + '</td><td class="w">'
+                   + _esc(r.get("who") or "?") + '</td><td>' + badge
+                   + '</td><td class="ip">' + _esc(r.get("ip")) + '</td></tr>')
+    body = "".join(trs) or '<tr><td colspan="4" class="empty">אין רישומים עדיין</td></tr>'
+    html = ("""<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>יומן כניסות — Divani BI</title>
+<style>
+:root{--bg:#f4f8f6;--card:#fff;--ink:#12201b;--ink2:#53635c;--line:#e2e9e5;--bd:#0d9668;--ok:#0b6e4f;--okbg:#e3f3ec;--bad:#a3271f;--badbg:#fbe6e4}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1512;--card:#19211d;--ink:#e9efeb;--ink2:#a2b0a9;--line:#26302b;--bd:#2fbf8f;--ok:#63d3a6;--okbg:#12312765;--bad:#f0968f;--badbg:#2e161465}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,'Segoe UI',Arial;padding:16px}
+.wrap{max-width:640px;margin:0 auto}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:4px}
+h1{font-size:1.2rem;margin:0;font-weight:800}
+.back{font-size:.85rem;color:var(--bd);text-decoration:none;font-weight:700;border:1px solid var(--line);padding:8px 14px;border-radius:999px;min-height:40px;display:inline-flex;align-items:center}
+.sub{font-size:.8rem;color:var(--ink2);margin:0 0 14px}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+th,td{text-align:right;padding:10px 12px;font-size:.85rem;border-bottom:1px solid var(--line)}
+th{font-size:.72rem;color:var(--ink2);font-weight:700;background:transparent}
+tr:last-child td{border-bottom:none}
+td.t{font-variant-numeric:tabular-nums;color:var(--ink2);white-space:nowrap}
+td.w{font-weight:800}
+td.ip{font-variant-numeric:tabular-nums;color:var(--ink2);direction:ltr;text-align:right;font-size:.78rem}
+.ok{background:var(--okbg);color:var(--ok);font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:6px}
+.bad{background:var(--badbg);color:var(--bad);font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:6px}
+.empty{text-align:center;color:var(--ink2);padding:24px}
+</style></head><body><div class="wrap">
+<div class="top"><h1>יומן כניסות</h1><a class="back" href="/">חזרה ללוח</a></div>
+<p class="sub">מאה חמישים הכניסות האחרונות. עמודת "מי" מזהה את בעל הסיסמה.</p>
+<table><thead><tr><th>מתי</th><th>מי</th><th>תוצאה</th><th>כתובת</th></tr></thead><tbody>{ROWS}</tbody></table>
+</div></body></html>""").replace("{ROWS}", body)
+    return HTMLResponse(html)
 
 
 @app.get("/")
