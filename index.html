@@ -215,9 +215,11 @@
   .cbdet b{color:var(--tx)}
   .cbnote{font-size:11.5px;color:var(--tx2);background:var(--surface);border-radius:11px;padding:11px 13px;margin:0 0 10px}
   .cbnote b{color:var(--tx)}
-  .cbtog{display:flex;gap:6px;margin:0 0 12px}
+  .cbtog{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
   .cbtog button{font-family:inherit;font-size:12.5px;border:1px solid var(--line2);background:var(--bg);color:var(--tx2);padding:7px 15px;min-height:38px;border-radius:999px;cursor:pointer}
   .cbtog button.on{background:var(--bd);border-color:var(--bd);color:#fff;font-weight:600}
+  .cbg{font-size:11px;color:var(--tx2);margin:2px 0 10px;line-height:1.55}
+  .cbg b{color:var(--tx);font-weight:700;font-variant-numeric:tabular-nums;unicode-bidi:plaintext}
   .abadge{display:none;align-items:center;justify-content:center;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--dfg);color:#fff;font-size:10px;font-weight:700;margin-inline-start:5px}
   #alertsheet{position:fixed;right:0;left:0;bottom:0;z-index:121;background:var(--bg);border-radius:18px 18px 0 0;border:1px solid var(--line);border-bottom:0;box-shadow:0 -12px 40px rgba(0,0,0,.25);padding:14px 16px calc(18px + env(safe-area-inset-bottom));display:none;max-height:82vh;overflow-y:auto}
   @media (min-width:640px){#alertsheet{left:50%;right:auto;transform:translateX(50%);width:470px;bottom:auto;top:10vh;border-radius:18px;border-bottom:1px solid var(--line)}}
@@ -1120,36 +1122,44 @@
   /* ---- כדאיות סניף — תרומה נטו מנוכת צמיחת שוק (diff-in-diff) ---- */
   function renderCannibMeta(){
     document.getElementById('kpis').innerHTML='';
-    document.getElementById('sellbl').textContent='תרומת כל סניף מאז פתיחתו · מנוכה צמיחת שוק';
+    document.getElementById('sellbl').textContent='תרומת כל סניף מאז פתיחתו';
     document.getElementById('builtlbl').textContent=META.last_sync?('עודכן '+META.last_sync):'';
   }
   function cbM(v){v=+v||0;var a=Math.abs(v),s=v<0?'−':'';return a>=1e6?s+(a/1e6).toFixed(2)+' מ׳':s+Math.round(a/1e3)+'K';}
-  var cannibMode='adj';
+  var cannibMode='mkt';
+  function cbP(v){v=+v||0;return (v>=0?'+':'')+Math.round(v)+' אחוז';}
   function renderCannib(agg){
     var d=agg||[];
     if(!d.length){stage.innerHTML='<div class="empty">אין נתונים לניתוח.</div>';return;}
-    var adj=cannibMode!=='raw';
-    var tog='<div class="cbtog"><button type="button" class="'+(adj?'on':'')+'" data-cbmode="adj">מנוכה צמיחת שוק</button><button type="button" class="'+(!adj?'on':'')+'" data-cbmode="raw">ללא ניכוי</button></div>';
+    var mode=cannibMode;
+    function tgb(m,lbl){return '<button type="button" class="'+(mode===m?'on':'')+'" data-cbmode="'+m+'">'+lbl+'</button>';}
+    var tog='<div class="cbtog">'+tgb('mkt','מול שוק הלמ״ס')+tgb('biz','מול שאר העסק')+tgb('raw','ללא ניכוי')+'</div>';
     var cards=d.map(function(s){
-      var ns=adj?(+s.net_s):((+s.ta)-(+s.tb));
-      var np=adj?(+s.net_p):((+s.tap)-(+s.tbp));
+      var ns,np,exp;
+      if(mode==='raw'){ns=(+s.ta)-(+s.tb);np=(+s.tap)-(+s.tbp);}
+      else if(mode==='biz'){ns=+s.net_s;np=+s.net_p;exp=+s.exp_s;}
+      else{ns=+s.net_s_m;np=+s.net_p_m;exp=+s.exp_s_m;}
       var pos=ns>=0, pp=np>=0;
+      var areaG=(+s.tb>0)?(((+s.ta)/(+s.tb))-1)*100:0;
       var badge=pos?'<span class="cbv pos">תרומה חיובית</span>':'<span class="cbv neg">תרומה שלילית</span>';
-      var det=adj
-        ? ('האזור לפני '+cbM(s.tb)+', אחרי '+cbM(s.ta)+' לחודש · השוק '+((+s.ctrl_g)>=0?'+':'')+s.ctrl_g+' אחוז<br>צפוי לפי השוק '+cbM(s.exp_s)+', בפועל '+cbM(s.ta)+', <b>עודף '+(pos?'+':'')+cbM(ns)+'</b>')
-        : ('האזור לפני '+cbM(s.tb)+', אחרי '+cbM(s.ta)+' לחודש<br><b>שינוי מוחלט '+(pos?'+':'')+cbM(ns)+' לחודש</b> · בלי ניכוי צמיחת שוק');
+      var grow='<div class="cbg">צמיחת האזור <b>'+cbP(areaG)+'</b> · שאר העסק <b>'+cbP(+s.ctrl_g)+'</b> · שוק הלמ״ס <b>'+cbP(+s.mkt_g)+'</b></div>';
+      var det=(mode==='raw')
+        ? ('האזור לפני '+cbM(s.tb)+', אחרי '+cbM(s.ta)+' לחודש<br><b>שינוי מוחלט '+(pos?'+':'')+cbM(ns)+' לחודש</b> · בלי ניכוי')
+        : ('צפוי לפי '+(mode==='biz'?'שאר העסק':'שוק הלמ״ס')+' '+cbM(exp)+', בפועל '+cbM(s.ta)+' לחודש, <b>עודף '+(pos?'+':'')+cbM(ns)+'</b>');
       return '<div class="cbcard" style="--ac:'+(pos?'var(--bd)':'var(--dfg)')+'">'
         +'<div class="cbh"><b>'+esc(s.store)+'</b><span>נפתח '+esc(s.open)+' · '+s.n_after+' חודשים</span></div>'
         +badge
         +'<div class="cbnet"><div><span>מכירות נטו לחודש</span><b class="'+(pos?'p':'n')+'">'+(pos?'+':'')+cbM(ns)+'</b></div>'
         +'<div><span>רווח נטו לחודש</span><b class="'+(pp?'p':'n')+'">'+(pp?'+':'')+cbM(np)+'</b></div></div>'
+        +grow
         +'<div class="cbdet">'+det+'<br>הסניף עצמו מכר '+cbM(s.own_s)+' לחודש</div>'
         +'</div>';
     }).join('');
-    var note=adj
-      ? '<div class="cbnote"><b>מנוכה צמיחת שוק:</b> לכל סניף לוקחים את האזור שלו, ומנכים כמה שאר העסק גדל או ירד באותה תקופה — כדי לזקוף לסניף רק את מה שמעבר לשוק. עודף חיובי = מכירות ורווח חדשים אמיתיים, לא רק הסטה.</div>'
-      : '<div class="cbnote"><b>ללא ניכוי:</b> השינוי המוחלט של סך העסק באזור, לפני מול אחרי הפתיחה, בלי להשוות לשוק. מכיוון שבשנים האחרונות השוק התכווץ בגלל המלחמה, המבט הזה מראה אם הסניף הגדיל את האזור בפועל, גם כשהשוק ירד.</div>';
-    note+='<div class="cbnote">ירושלים ובית שמש נפתחו רק לפני חצי שנה, אז אצלם זו תמונה מוקדמת בלבד.</div>';
+    var note;
+    if(mode==='mkt')note='<div class="cbnote"><b>מול שוק הלמ״ס:</b> מנכים את מגמת שוק הרהיטים הארצי — פדיון בני הקיימא הריאלי של הלשכה המרכזית לסטטיסטיקה — באותם חודשים בדיוק. עודף חיובי פירושו שהסניף צמח מעבר לשוק, ולא רק נסחף עם התאוששות כללית.</div>';
+    else if(mode==='biz')note='<div class="cbnote"><b>מול שאר העסק:</b> מנכים כמה שאר העסק שלך גדל או ירד באותה תקופה. מבודד קניבליזציה פנימית, אבל מוטה כלפי מעלה כששאר העסק התכווץ.</div>';
+    else note='<div class="cbnote"><b>ללא ניכוי:</b> השינוי המוחלט של האזור, לפני מול אחרי הפתיחה, בלי השוואה לשום מגמה.</div>';
+    note+='<div class="cbnote">מדד השוק לשנים 2023 ו־2026 מבוסס משתנה חלופי, כי הלמ״ס לא מפרסם בני קיימא לשנים אלו בנפרד. ירושלים ובית שמש נפתחו לא מזמן, אז אצלם התמונה עדיין מוקדמת.</div>';
     stage.innerHTML=tog+'<div class="cbwrap">'+cards+'</div>'+note;
   }
 
