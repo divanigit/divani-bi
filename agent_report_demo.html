@@ -135,7 +135,7 @@
   <div class="tog" id="tog">
     <button type="button" data-m="total" class="on">מכירות</button>
     <button type="button" data-m="basic">מכירות לשעה</button>
-    <button type="button" data-m="conv">מכירות לנכנס</button>
+    <button type="button" data-m="avgdeal">עסקה ממוצעת</button>
   </div>
 
   <div class="explain" id="explBox" style="display:none"><div class="insight" id="insight"></div></div>
@@ -149,14 +149,16 @@
       <dd>סך המכירות של הסוכן בתקופה. הכי פשוט — מי מכר הכי הרבה כסף.</dd>
       <dt>מכירות לשעה</dt>
       <dd>סך המכירות חלקי שעות העבודה. הוגן להשוואה בין מי שעובד מלא למי שעובד חלקית.</dd>
-      <dt>מכירות לנכנס</dt>
-      <dd>סך מכירות הסוכן חלקי מספר האנשים שנכנסו לסניף. הסכום נמוך כי הוא מפוזר על כל הנכנסים, גם מי שרק הסתכל. מודד מי הכי טוב בלהפוך את הקהל שהגיע לכסף.</dd>
+      <dt>עסקה ממוצעת</dt>
+      <dd>סך המכירות חלקי מספר הלקוחות שקנו — כמה ₪ בעסקה טיפוסית. מספר מוחשי בגובה קבלה, שהחליף את ₪80 לנכנס המעורפל.</dd>
+      <dt>אחוז סגירה</dt>
+      <dd>מתוך כל מי שנכנס לסניף, כמה קנו בפועל. בדמו כמעט זהה לכולם, בין 3.0% ל-3.4%, ולכן יושב בפאנל העומק לאבחון ולא ככותרת דירוג.</dd>
       <dt>פאנל עומק — לחיצה על סוכן</dt>
-      <dd>פותח שמונה מדדים: לקוחות, עסקה ממוצעת, רווחיות, שיעור הנחה, הנחות בכסף, מכירה נלווית, ביטולים, וחדש מול חוזר — ותמהיל מוצרים בפסים, כדי לראות במה כל סוכן חזק: ספות, פינות אוכל או מזרנים. שיעור ההנחה הוא סך ההנחות שנתן חלקי סך מכירותיו, לא ממוצע ללקוח.</dd>
+      <dd>פותח מדדי עומק: לקוחות, נכנסים, אחוז סגירה ומכירות לנכנס (למי שרוצה לצלול פנימה), רווחיות, שיעור הנחה, הנחות בכסף, מכירה נלווית, ביטולים, וחדש מול חוזר — ותמהיל מוצרים בפסים, כדי לראות במה כל סוכן חזק: ספות, פינות אוכל או מזרנים. שיעור ההנחה הוא סך ההנחות שנתן חלקי סך מכירותיו, לא ממוצע ללקוח.</dd>
       <dt>תעודת זהות — התגיות</dt>
-      <dd>נוצרות אוטומטית מהנתונים לפי ספים: עסקה גדולה ומעט לקוחות = <b>סוגר פרימיום</b>, עסקה קטנה והרבה לקוחות = <b>מכונת נפח</b>; קטגוריה מובילה מעל ארבעים וחמישה אחוז = <b>מתמחה</b>; רווחיות גבוהה מול <b>מנדב הנחות</b>; מכירה נלווית גבוהה = <b>אלוף נלווה</b>; ביטולים גבוהים = דגל אזהרה. זה הופך את הדוח מלוח תוצאות לכלי ניהול.</dd>
+      <dd>נוצרות אוטומטית מהנתונים לפי ספים: עסקה גדולה ומעט לקוחות = <b>סוגר פרימיום</b>, עסקה קטנה והרבה לקוחות = <b>מכונת נפח</b>; קטגוריה מובילה מעל 45% = <b>מתמחה</b>; רווחיות גבוהה מול <b>מנדב הנחות</b>; מכירה נלווית גבוהה = <b>אלוף נלווה</b>; ביטולים גבוהים = דגל אזהרה. זה הופך את הדוח מלוח תוצאות לכלי ניהול.</dd>
       <dt>ניתוח סניפים</dt>
-      <dd>מעבר בין ניתוח סוכנים לסניפים בראש העמוד. הסניפים מדורגים לפי המרה — מכירות חלקי מספר הנכנסים. לכל סניף מוצגים מכירות, עסקה ממוצעת, רווחיות והנחה, ותמהיל הקטגוריות הנמכרות ביותר, כדי לראות במה כל סניף חזק ואיפה ההזדמנות.</dd>
+      <dd>מעבר בין ניתוח סוכנים לסניפים בראש העמוד. הסניפים מדורגים לפי סך מכירות — הכסף שבאמת נכנס. לכל סניף מוצגים מכירות, מכירות לשעה, עסקה ממוצעת, רווחיות ואחוז סגירה, ותמהיל הקטגוריות הנמכרות ביותר, כדי לראות במה כל סניף חזק ואיפה ההזדמנות.</dd>
     </dl>
   </div>
 </div>
@@ -182,7 +184,7 @@
   ];
 
   function calc(a){
-    return {total:a.sales, basic:a.sales/a.hours, conv:a.sales/a.visitors};
+    return {total:a.sales, basic:a.sales/a.hours, avgdeal:a.sales/a.customers, close:a.customers/a.visitors*100, revvis:a.sales/a.visitors};
   }
   function money(v){return Math.round(v).toLocaleString('en-US');}
   function shekel(v){return '₪'+money(v);}
@@ -192,8 +194,8 @@
       insight:'<b>סך המכירות של כל סוכן בתקופה.</b> המדד הכי פשוט — מי מכר הכי הרבה כסף. מי שעובד יותר שעות ימכור יותר, ולכן יש גם מכירות לשעה.'},
     basic:{fmt:function(m){return shekel(m.basic)+' לשעה';}, val:function(m){return m.basic;},
       insight:'<b>מכירות לשעת עבודה.</b> סך המכירות חלקי שעות העבודה. הוגן להשוואה בין מי שעובד מלא למי שעובד חלקית.'},
-    conv:{fmt:function(m){return shekel(m.conv)+' לנכנס';}, val:function(m){return m.conv;},
-      insight:'<b>מכירות לכל נכנס.</b> סך המכירות חלקי מספר הנכנסים לסניף — מי הכי טוב בלהפוך את הקהל שהגיע לכסף, בלי קשר לכמה קהל הגיע.'}
+    avgdeal:{fmt:function(m){return shekel(m.avgdeal);}, val:function(m){return m.avgdeal;},
+      insight:'<b>עסקה ממוצעת.</b> סך המכירות חלקי מספר הלקוחות שקנו — כמה ₪ בעסקה טיפוסית. מספר מוחשי בגובה קבלה, במקום ₪80 לנכנס המעורפל. עסקה גדולה = סוגר פרימיום, עסקה קטנה = מוכר בזול או בנפח.'}
   };
 
   var active='total', view='agents', showExplain=false, openSet={};
@@ -221,45 +223,47 @@
     var tags=profile(a).map(function(p){return '<span class="ptag '+p.k+'">'+p.t+'</span>';}).join('');
     var stats=[
       ['לקוחות', a.customers],
-      ['עסקה ממוצעת', shekel(a.sales/a.customers)],
-      ['רווחיות', a.margin+' אחוז'],
-      ['שיעור הנחה', a.disc+' אחוז'],
+      ['נכנסים', a.visitors.toLocaleString('en-US')],
+      ['אחוז סגירה', (Math.round(a.customers/a.visitors*1000)/10)+'%'],
+      ['מכירות לנכנס', shekel(a.sales/a.visitors)],
+      ['רווחיות', a.margin+'%'],
+      ['שיעור הנחה', a.disc+'%'],
       ['הנחות בכסף', shekel(a.sales*a.disc/(100-a.disc))],
-      ['מכירה נלווית', a.attach+' אחוז'],
-      ['ביטולים', a.cancel+' אחוז'],
+      ['מכירה נלווית', a.attach+'%'],
+      ['ביטולים', a.cancel+'%'],
       ['חדש · חוזר', a.newpct+' · '+(100-a.newpct)]
     ].map(function(s){return '<div class="dstat"><span>'+s[0]+'</span><b>'+s[1]+'</b></div>';}).join('');
     var bars=a.mix.map(function(m){
-      return '<div class="mixrow"><span class="mixl">'+m.c+'</span><span class="mixbar"><i style="width:'+m.p+'%"></i></span><span class="mixp">'+m.p+' אחוז</span></div>';
+      return '<div class="mixrow"><span class="mixl">'+m.c+'</span><span class="mixbar"><i style="width:'+m.p+'%"></i></span><span class="mixp">'+m.p+'%</span></div>';
     }).join('');
     return '<div class="ptags">'+tags+'</div>'
       +'<div class="deepgrid">'+stats+'</div>'
       +'<div class="mixhead">תמהיל מוצרים</div>'+bars;
   }
   function computeBranch(b){
-    var s=0,v=0,c=0,p=0,dils=0,dw=0,cats={};
+    var s=0,v=0,c=0,p=0,h=0,dils=0,dw=0,cats={};
     b.agents.forEach(function(a){
-      s+=a.sales; v+=a.visitors; c+=a.customers; p+=a.sales*a.margin/100;
+      s+=a.sales; v+=a.visitors; c+=a.customers; h+=a.hours; p+=a.sales*a.margin/100;
       dils+=a.sales*a.disc/(100-a.disc); dw+=a.sales*a.disc;
       a.mix.forEach(function(m){cats[m.c]=(cats[m.c]||0)+a.sales*m.p/100;});
     });
     var mix=Object.keys(cats).map(function(k){return {c:k,p:Math.round(cats[k]/s*100)};}).sort(function(x,y){return y.p-x.p;});
-    return {name:b.name, sales:s, visitors:v, customers:c, conv:s/v, avgDeal:s/c, profitPct:p/s*100, discPct:dw/s, discIls:dils, mix:mix};
+    return {name:b.name, sales:s, visitors:v, customers:c, hours:h, conv:s/v, avgDeal:s/c, salesPerHour:s/h, closePct:c/v*100, profitPct:p/s*100, discPct:dw/s, discIls:dils, mix:mix};
   }
   function renderBranches(){
-    var rows=BRANCHES.map(computeBranch).sort(function(x,y){return y.conv-x.conv;});
+    var rows=BRANCHES.map(computeBranch).sort(function(x,y){return y.sales-x.sales;});
     report.innerHTML=rows.map(function(r,i){
       var stats=[
         ['מכירות', shekel(r.sales)],
-        ['מכירות לנכנס', shekel(r.conv)],
+        ['מכירות לשעה', shekel(r.salesPerHour)+' לשעה'],
         ['עסקה ממוצעת', shekel(r.avgDeal)],
-        ['רווחיות', Math.round(r.profitPct)+' אחוז'],
-        ['שיעור הנחה', Math.round(r.discPct)+' אחוז'],
+        ['רווחיות', Math.round(r.profitPct)+'%'],
+        ['אחוז סגירה', (Math.round(r.closePct*10)/10)+'%'],
         ['נכנסים', r.visitors.toLocaleString('en-US')]
       ].map(function(s){return '<div class="dstat"><span>'+s[0]+'</span><b>'+s[1]+'</b></div>';}).join('');
-      var bars=r.mix.map(function(m){return '<div class="mixrow"><span class="mixl">'+m.c+'</span><span class="mixbar"><i style="width:'+m.p+'%"></i></span><span class="mixp">'+m.p+' אחוז</span></div>';}).join('');
+      var bars=r.mix.map(function(m){return '<div class="mixrow"><span class="mixl">'+m.c+'</span><span class="mixbar"><i style="width:'+m.p+'%"></i></span><span class="mixp">'+m.p+'%</span></div>';}).join('');
       return '<div class="brcard'+(i===0?' lead':'')+'">'
-        +'<div class="brhead"><b>'+r.name+(i===0?'<span class="brlead-tag">ההמרה הגבוהה בסבב</span>':'')+'</b><span class="bs">'+shekel(r.sales)+'</span></div>'
+        +'<div class="brhead"><b>'+r.name+(i===0?'<span class="brlead-tag">המכירות הגבוהות בסבב</span>':'')+'</b><span class="bs">'+shekel(r.sales)+'</span></div>'
         +'<div class="brmets">'+stats+'</div>'
         +'<div class="mixhead">הנמכרים ביותר לפי קטגוריה</div>'+bars
         +'</div>';
@@ -269,7 +273,7 @@
     document.getElementById('tog').style.display = view==='branches' ? 'none' : '';
     var ib=document.getElementById('insight');
     if(view==='branches'){
-      if(ib) ib.innerHTML='<b>ניתוח סניפים.</b> הסניפים מדורגים לפי מכירות לנכנס — כמה שקל מכירות מניב בממוצע כל אדם שנכנס. לכל סניף גם הנמכרים ביותר לפי קטגוריה.';
+      if(ib) ib.innerHTML='<b>ניתוח סניפים.</b> הסניפים מדורגים לפי סך מכירות — הכסף שבאמת נכנס. לכל סניף גם מכירות לשעה, עסקה ממוצעת, אחוז סגירה, והנמכרים ביותר לפי קטגוריה.';
       renderBranches(); return;
     }
     var M=META[active];
@@ -280,7 +284,7 @@
       var avg=rows.reduce(function(s,r){return s+M.val(r.m);},0)/rows.length;
       rows.sort(function(x,y){return M.val(y.m)-M.val(x.m);});
       html+='<div class="branch"><div class="bh"><h2>'+b.name+'</h2>'
-        +'<div class="bavg">ממוצע הסניף · <b>'+M.fmt({basic:avg,deep:avg,conv:avg})+'</b></div></div><div class="rows">';
+        +'<div class="bavg">ממוצע הסניף · <b>'+M.fmt({total:avg,basic:avg,avgdeal:avg})+'</b></div></div><div class="rows">';
       rows.forEach(function(r,i){
         var d=r.m, a=r.a;
         var vsp=(M.val(d)/avg-1)*100, vs=(vsp>=0?'up':'dn');
@@ -288,12 +292,12 @@
           +'<button type="button" class="atop" data-fold data-name="'+a.name+'">'
           +'<span class="rank">'+(i+1)+'</span>'
           +'<span class="who"><b>'+a.name+'</b><span>'+a.hours+' שעות · '+shekel(a.sales)+' מכירות</span></span>'
-          +'<span class="vsavg '+vs+'">'+(vsp>=0?'+':'')+Math.round(vsp)+' אחוז מול הסניף</span>'
+          +'<span class="vsavg '+vs+'">'+(vsp>=0?'+':'')+Math.round(vsp)+'% מול הסניף</span>'
           +'<span class="chev">⌄</span></button>'
           +'<div class="mets">'
           +met('total','מכירות', shekel(d.total), '')
           +met('basic','מכירות לשעה', shekel(d.basic), '')
-          +met('conv','מכירות לנכנס', shekel(d.conv), '')
+          +met('avgdeal','עסקה ממוצעת', shekel(d.avgdeal), '')
           +'</div>'
           +'<div class="deep">'+deepHtml(a)+'</div>'
           +'</div>';
