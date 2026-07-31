@@ -133,8 +133,8 @@
   </div>
 
   <div class="tog" id="tog">
-    <button type="button" data-m="basic" class="on">מכירות לשעה</button>
-    <button type="button" data-m="deep">מדד עומק</button>
+    <button type="button" data-m="total" class="on">מכירות</button>
+    <button type="button" data-m="basic">מכירות לשעה</button>
     <button type="button" data-m="conv">מכירות לנכנס</button>
   </div>
 
@@ -145,12 +145,12 @@
   <div class="how" id="how" style="display:none">
     <h3>איך כל מדד מחושב</h3>
     <dl>
-      <dt>מכירות לשעה — בסיסי</dt>
-      <dd>מחזור המכירות של הסוכן בתקופה, לחלק לשעות העבודה שלו. פשוט וישיר, אבל מיטיב עם מי שעובד במשמרות החזקות.</dd>
-      <dt>מדד עומק — מנורמל למשמרות</dt>
-      <dd>מכירות לשעה בפועל, לחלק לצפי לפי <span class="pin">פוטנטיות המשמרות</span> שהסוכן עבד בסניף שלו. <b>מעל אחד</b> = מוכר יותר ממה שהמשמרות שלו מניבות בדרך כלל.</dd>
-      <dt>מכירות לנכנס — לפי תנועה</dt>
-      <dd>סך מכירות הסוכן חלקי מספר האנשים שנכנסו לסניף במשמרות שלו. הסכום נמוך כי הוא מפוזר על כל הנכנסים, גם מי שרק הסתכל ולא קנה. מודד עד כמה הסוכן הופך תנועה לכסף, בנטרול כמות הקהל.</dd>
+      <dt>מכירות</dt>
+      <dd>סך המכירות של הסוכן בתקופה. הכי פשוט — מי מכר הכי הרבה כסף.</dd>
+      <dt>מכירות לשעה</dt>
+      <dd>סך המכירות חלקי שעות העבודה. הוגן להשוואה בין מי שעובד מלא למי שעובד חלקית.</dd>
+      <dt>מכירות לנכנס</dt>
+      <dd>סך מכירות הסוכן חלקי מספר האנשים שנכנסו לסניף. הסכום נמוך כי הוא מפוזר על כל הנכנסים, גם מי שרק הסתכל. מודד מי הכי טוב בלהפוך את הקהל שהגיע לכסף.</dd>
       <dt>פאנל עומק — לחיצה על סוכן</dt>
       <dd>פותח שמונה מדדים: לקוחות, עסקה ממוצעת, רווחיות, שיעור הנחה, הנחות בכסף, מכירה נלווית, ביטולים, וחדש מול חוזר — ותמהיל מוצרים בפסים, כדי לראות במה כל סוכן חזק: ספות, פינות אוכל או מזרנים. שיעור ההנחה הוא סך ההנחות שנתן חלקי סך מכירותיו, לא ממוצע ללקוח.</dd>
       <dt>תעודת זהות — התגיות</dt>
@@ -181,22 +181,22 @@
     ]}
   ];
 
-  function calc(a,avgRate){
-    return {basic:a.sales/a.hours, deep:(a.sales/a.hours)/(avgRate*a.potency), conv:a.sales/a.visitors};
+  function calc(a){
+    return {total:a.sales, basic:a.sales/a.hours, conv:a.sales/a.visitors};
   }
   function money(v){return Math.round(v).toLocaleString('en-US');}
   function shekel(v){return '₪'+money(v);}
 
   var META={
+    total:{fmt:function(m){return shekel(m.total);}, val:function(m){return m.total;},
+      insight:'<b>סך המכירות של כל סוכן בתקופה.</b> המדד הכי פשוט — מי מכר הכי הרבה כסף. מי שעובד יותר שעות ימכור יותר, ולכן יש גם מכירות לשעה.'},
     basic:{fmt:function(m){return shekel(m.basic)+' לשעה';}, val:function(m){return m.basic;},
-      insight:'<b>מכירות לשעה גולמי.</b> בכל סניף מי שמוכר הכי הרבה לשעה עולה לראש — אבל שימו לב, הם עובדים במשמרות החזקות. עברו ל<b>מדד עומק</b> לראות מה קורה כשמנרמלים.'},
-    deep:{fmt:function(m){return 'מדד '+m.deep.toFixed(2);}, val:function(m){return m.deep;},
-      insight:'<b>הדירוג התהפך.</b> אחרי נרמול לפי חוזק המשמרות, מי שתקוע במשמרות חלשות עולה לראש, והכוכב לכאורה מתברר כמי שרק רכב על משמרות טובות. מעל אחד = מנצח את המשמרות שלו.'},
+      insight:'<b>מכירות לשעת עבודה.</b> סך המכירות חלקי שעות העבודה. הוגן להשוואה בין מי שעובד מלא למי שעובד חלקית.'},
     conv:{fmt:function(m){return shekel(m.conv)+' לנכנס';}, val:function(m){return m.conv;},
-      insight:'<b>מכירות לכל נכנס לסניף.</b> סך המכירות חלקי מספר האנשים שנכנסו — כמה שקל מניב בממוצע כל מבקר, קונה או לא. הסכום נמוך כי הוא מפוזר על כל הקהל; מודד מי הכי טוב בלהפוך תנועה לכסף.'}
+      insight:'<b>מכירות לכל נכנס.</b> סך המכירות חלקי מספר הנכנסים לסניף — מי הכי טוב בלהפוך את הקהל שהגיע לכסף, בלי קשר לכמה קהל הגיע.'}
   };
 
-  var active='basic', view='agents', showExplain=false, openSet={};
+  var active='total', view='agents', showExplain=false, openSet={};
   var report=document.getElementById('report');
   var explainBtn=document.getElementById('explainBtn');
 
@@ -283,16 +283,16 @@
         +'<div class="bavg">ממוצע הסניף · <b>'+M.fmt({basic:avg,deep:avg,conv:avg})+'</b></div></div><div class="rows">';
       rows.forEach(function(r,i){
         var d=r.m, a=r.a;
-        var vsp=(M.val(d)/avg-1)*100, vs=(vsp>=0?'up':'dn'), pot=Math.round(a.potency*100);
+        var vsp=(M.val(d)/avg-1)*100, vs=(vsp>=0?'up':'dn');
         html+='<div class="agent'+(i===0?' lead':'')+(openSet[a.name]?' open':'')+'">'
           +'<button type="button" class="atop" data-fold data-name="'+a.name+'">'
           +'<span class="rank">'+(i+1)+'</span>'
-          +'<span class="who"><b>'+a.name+'</b><span>'+a.hours+' שעות · '+shekel(a.sales)+' מכירות · פוטנטיות '+pot+' אחוז</span></span>'
+          +'<span class="who"><b>'+a.name+'</b><span>'+a.hours+' שעות · '+shekel(a.sales)+' מכירות</span></span>'
           +'<span class="vsavg '+vs+'">'+(vsp>=0?'+':'')+Math.round(vsp)+' אחוז מול הסניף</span>'
           +'<span class="chev">⌄</span></button>'
           +'<div class="mets">'
+          +met('total','מכירות', shekel(d.total), '')
           +met('basic','מכירות לשעה', shekel(d.basic), '')
-          +met('deep','מדד עומק', d.deep.toFixed(2), d.deep>=1?'good':'bad')
           +met('conv','מכירות לנכנס', shekel(d.conv), '')
           +'</div>'
           +'<div class="deep">'+deepHtml(a)+'</div>'
