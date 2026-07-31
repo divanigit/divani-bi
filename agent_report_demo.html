@@ -30,6 +30,7 @@
     font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
   .wrap{max-width:760px;margin:0 auto;padding:18px 16px 60px}
   .n{font-variant-numeric:tabular-nums;unicode-bidi:plaintext}
+  .who span,.vsavg,.met .val,.bh .bavg b,.dstat b,.brhead .bs,.bcount,.mixp{unicode-bidi:isolate}
 
   .mast{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:10px 12px;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:14px}
   .brand .eyebrow{font-size:.68rem;letter-spacing:.14em;color:var(--brand2);font-weight:700;text-transform:uppercase}
@@ -47,14 +48,14 @@
   .demoban b{font-weight:800}
 
   h1{font-size:1.5rem;font-weight:800;letter-spacing:-.01em;margin:0 0 6px;text-wrap:balance}
-  .lead{font-size:.92rem;color:var(--ink2);margin:0 0 16px}
-  .lead b{color:var(--ink)}
+  /* dead .lead paragraph rule removed — it collided with .agent.lead / .brcard.lead and dimmed the top row */
 
   .tog{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 6px}
   .tog button{font-family:inherit;font-size:13px;font-weight:600;border:1px solid var(--line2);background:var(--panel);color:var(--ink2);
     padding:9px 16px;min-height:42px;border-radius:999px;cursor:pointer;transition:all .15s ease}
   .tog button:hover{border-color:var(--brand2)}
   .tog button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+  .topbar{position:sticky;top:0;z-index:30;background:var(--paper);margin:0 -16px;padding:6px 16px 0}
   .vtog{display:flex;gap:4px;margin:0 0 14px;border-bottom:1px solid var(--line)}
   .vtog button{font-family:inherit;font-size:14px;font-weight:700;border:none;background:none;color:var(--ink3);padding:9px 6px 11px;min-height:42px;cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-1px}
   .vtog button.on{color:var(--ink);border-bottom-color:var(--brand)}
@@ -89,7 +90,14 @@
   .who b{font-size:1rem;font-weight:700;display:block}
   .who span{font-size:.72rem;color:var(--ink3)}
   .vsavg{flex:none;font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:7px}
-  .vsavg.up{background:var(--goodw);color:var(--good)} .vsavg.dn{background:var(--badw);color:var(--bad)}
+  .vsavg.up{background:var(--goodw);color:var(--good)}
+  .vsavg.mid{background:var(--panel2);color:var(--ink3)}
+  .vsavg.warn{background:var(--warnw);color:var(--warn)}
+  .vsavg.bad{background:var(--badw);color:var(--bad)}
+  .agent.attn{border-inline-start:3px solid var(--bad)}
+  .cbar{position:relative;height:7px;border-radius:5px;background:var(--panel2);margin:1px 0 11px}
+  .cbar>i{position:absolute;inset-inline-start:0;top:0;bottom:0;border-radius:5px;background:var(--bc,var(--brand));min-width:3px}
+  .cbar>u{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink2);opacity:.5;border-radius:2px}
 
   .mets{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   @media(min-width:600px){.mets{grid-template-columns:repeat(4,1fr)}}
@@ -131,16 +139,18 @@
     <div class="hactions"><span class="fake">נתונים פיקטיביים</span><button type="button" id="explainBtn" class="explbtn">הסברים</button></div>
   </header>
 
-  <div class="vtog" id="vtog">
-    <button type="button" data-view="agents" class="on">ניתוח סוכנים</button>
-    <button type="button" data-view="branches">ניתוח סניפים</button>
-  </div>
+  <div class="topbar">
+    <div class="vtog" id="vtog">
+      <button type="button" data-view="agents" class="on">ניתוח סוכנים</button>
+      <button type="button" data-view="branches">ניתוח סניפים</button>
+    </div>
 
-  <div class="tog" id="tog">
-    <button type="button" data-m="total" class="on">מכירות</button>
-    <button type="button" data-m="basic">מכירות לשעה</button>
-    <button type="button" data-m="avgdeal">עסקה ממוצעת</button>
-    <button type="button" data-m="close">אחוז סגירה</button>
+    <div class="tog" id="tog">
+      <button type="button" data-m="total" class="on">מכירות</button>
+      <button type="button" data-m="basic">מכירות לשעה</button>
+      <button type="button" data-m="avgdeal">עסקה ממוצעת</button>
+      <button type="button" data-m="close">אחוז סגירה</button>
+    </div>
   </div>
 
   <div class="explain" id="explBox" style="display:none"><div class="insight" id="insight"></div></div>
@@ -199,10 +209,34 @@
   ];
 
   function calc(a){
-    return {total:a.sales, basic:a.sales/a.hours, avgdeal:a.sales/a.customers, close:a.customers/a.visitors*100, revvis:a.sales/a.visitors};
+    return {total:a.sales, basic:a.hours?a.sales/a.hours:0, avgdeal:a.customers?a.sales/a.customers:0, close:a.visitors?a.customers/a.visitors*100:0};
   }
   function money(v){return Math.round(v).toLocaleString('en-US');}
   function shekel(v){return '₪'+money(v);}
+  // short money for the collapsed chips/headline totals; deep panel keeps full precision
+  function shekelShort(v){
+    var n=Math.round(v);
+    if(n>=1000000) return '₪'+(Math.round(n/10000)/100)+' מ׳';
+    if(n>=10000)   return '₪'+Math.round(n/1000)+' אלף';
+    return '₪'+n.toLocaleString('en-US');
+  }
+  // weighted branch reference per metric — identical definition to the branches view (was mean-of-ratios)
+  function branchRef(agents,key){
+    var s=0,h=0,c=0,v=0;
+    agents.forEach(function(a){s+=a.sales;h+=a.hours;c+=a.customers;v+=a.visitors;});
+    if(key==='basic')   return h?s/h:0;
+    if(key==='avgdeal') return c?s/c:0;
+    if(key==='close')   return v?c/v*100:0;
+    return agents.length?s/agents.length:0;
+  }
+  // 3-state standing vs the branch reference (arrow keeps meaning without color)
+  function vsBand(value,ref){
+    var r=ref?Math.round((value/ref-1)*100):0, cls;
+    if(r>=10) cls='up'; else if(r>-10) cls='mid'; else if(r>=-25) cls='warn'; else cls='bad';
+    var arrow=r>0?'▲':(r<0?'▼':'·');
+    var txt=r===0?'בדיוק בממוצע':(arrow+' '+(r>0?'+':'')+r+'% מול הסניף');
+    return {cls:cls,txt:txt};
+  }
 
   var META={
     total:{fmt:function(m){return shekel(m.total);}, val:function(m){return m.total;},
@@ -247,7 +281,7 @@
       ['הנחות בכסף', shekel(a.sales*a.disc/(100-a.disc))],
       ['מכירה נלווית', a.attach+'%'],
       ['ביטולים', a.cancel+'%'],
-      ['חדש · חוזר', a.newpct+' · '+(100-a.newpct)]
+      ['חדש · חוזר', a.newpct+'% · '+(100-a.newpct)+'%']
     ].map(function(s){return '<div class="dstat"><span>'+s[0]+'</span><b>'+s[1]+'</b></div>';}).join('');
     var bars=a.mix.map(function(m){
       return '<div class="mixrow"><span class="mixl">'+m.c+'</span><span class="mixbar"><i style="width:'+m.p+'%"></i></span><span class="mixp">'+m.p+'%</span></div>';
@@ -268,9 +302,10 @@
   }
   function renderBranches(){
     var rows=BRANCHES.map(computeBranch).sort(function(x,y){return y.sales-x.sales;});
+    var mxs=rows[0]?rows[0].sales:1;
     report.innerHTML=rows.map(function(r,i){
       var stats=[
-        ['מכירות', shekel(r.sales)],
+        ['מכירות', shekelShort(r.sales)],
         ['מכירות לשעה', shekel(r.salesPerHour)+' לשעה'],
         ['עסקה ממוצעת', shekel(r.avgDeal)],
         ['רווחיות', Math.round(r.profitPct)+'%'],
@@ -279,8 +314,10 @@
       ].map(function(s){return '<div class="dstat"><span>'+s[0]+'</span><b>'+s[1]+'</b></div>';}).join('');
       var bars=r.mix.map(function(m){return '<div class="mixrow"><span class="mixl">'+m.c+'</span><span class="mixbar"><i style="width:'+m.p+'%"></i></span><span class="mixp">'+m.p+'%</span></div>';}).join('');
       var oi=BRANCHES.map(function(x){return x.name;}).indexOf(r.name), pal=BRANCH_PALETTE[(oi<0?i:oi)%BRANCH_PALETTE.length];
+      var barPct=Math.max(4,Math.min(100,r.sales/mxs*100));
       return '<div class="brcard'+(i===0?' lead':'')+'" style="--bc:'+pal.bc+';--bcw:'+pal.bcw+'">'
-        +'<div class="brhead"><b><span class="bdot" style="margin-inline-end:7px"></span>'+r.name+(i===0?'<span class="brlead-tag">המכירות הגבוהות בסבב</span>':'')+'</b><span class="bs">'+shekel(r.sales)+'</span></div>'
+        +'<div class="brhead"><b><span class="bdot" style="margin-inline-end:7px"></span>'+r.name+(i===0?'<span class="brlead-tag">המכירות הגבוהות בסבב</span>':'')+'</b><span class="bs">'+shekelShort(r.sales)+'</span></div>'
+        +'<div class="cbar" style="margin:0 0 13px"><i style="width:'+barPct+'%"></i></div>'
         +'<div class="brmets">'+stats+'</div>'
         +'<div class="mixhead">הנמכרים ביותר לפי קטגוריה</div>'+bars
         +'</div>';
@@ -297,26 +334,30 @@
     if(ib) ib.innerHTML=M.insight;
     var html='';
     BRANCHES.forEach(function(b,bi){
-      var rows=b.agents.map(function(a){return {a:a, m:calc(a,b.avgRate)};});
-      var avg=rows.reduce(function(s,r){return s+M.val(r.m);},0)/rows.length;
+      var rows=b.agents.map(function(a){return {a:a, m:calc(a)};});
+      var ref=branchRef(b.agents,active);
       rows.sort(function(x,y){return M.val(y.m)-M.val(x.m);});
+      var mx=M.val(rows[0].m)||1;
+      var refPct=Math.max(0,Math.min(100,ref/mx*100));
       var pal=BRANCH_PALETTE[bi%BRANCH_PALETTE.length];
       html+='<div class="branch" style="--bc:'+pal.bc+';--bcw:'+pal.bcw+'">'
         +'<div class="bh"><div class="bhname"><span class="bdot"></span><h2>'+b.name+'</h2><span class="bcount">'+b.agents.length+' סוכנים</span></div>'
-        +'<div class="bavg">ממוצע הסניף · <b>'+M.fmt({total:avg,basic:avg,avgdeal:avg,close:avg})+'</b></div></div><div class="rows">';
+        +'<div class="bavg">ממוצע הסניף · <b>'+M.fmt({total:ref,basic:ref,avgdeal:ref,close:ref})+'</b></div></div><div class="rows">';
       rows.forEach(function(r,i){
         var d=r.m, a=r.a;
-        var vsp=(M.val(d)/avg-1)*100, vs=(vsp>=0?'up':'dn');
-        html+='<div class="agent'+(i===0?' lead':'')+(openSet[a.name]?' open':'')+'">'
+        var band=vsBand(M.val(d),ref);
+        var barPct=Math.max(3,Math.min(100,M.val(d)/mx*100));
+        html+='<div class="agent'+(i===0?' lead':'')+(band.cls==='bad'?' attn':'')+(openSet[a.name]?' open':'')+'">'
           +'<button type="button" class="atop" data-fold data-name="'+a.name+'">'
           +'<span class="rank">'+(i+1)+'</span>'
-          +'<span class="who"><b>'+a.name+'</b><span>'+a.hours+' שעות · '+shekel(a.sales)+' מכירות</span></span>'
-          +'<span class="vsavg '+vs+'">'+(vsp>=0?'+':'')+Math.round(vsp)+'% מול הסניף</span>'
+          +'<span class="who"><b>'+a.name+'</b><span>'+a.hours+' שעות · '+shekelShort(a.sales)+' מכירות</span></span>'
+          +'<span class="vsavg '+band.cls+'">'+band.txt+'</span>'
           +'<span class="chev">⌄</span></button>'
+          +'<div class="cbar"><i style="width:'+barPct+'%"></i><u style="inset-inline-start:'+refPct+'%"></u></div>'
           +'<div class="mets">'
-          +met('total','מכירות', shekel(d.total), '')
-          +met('basic','מכירות לשעה', shekel(d.basic), '')
-          +met('avgdeal','עסקה ממוצעת', shekel(d.avgdeal), '')
+          +met('total','מכירות', shekelShort(d.total), '')
+          +met('basic','מכירות לשעה', shekelShort(d.basic), '')
+          +met('avgdeal','עסקה ממוצעת', shekelShort(d.avgdeal), '')
           +met('close','אחוז סגירה', (Math.round(d.close*10)/10)+'%', '')
           +'</div>'
           +'<div class="deep">'+deepHtml(a)+'</div>'
