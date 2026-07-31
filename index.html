@@ -220,6 +220,9 @@
   .cbtog button.on{background:var(--bd);border-color:var(--bd);color:#fff;font-weight:600}
   .cbg{font-size:11px;color:var(--tx2);margin:2px 0 10px;line-height:1.55}
   .cbg b{color:var(--tx);font-weight:700;font-variant-numeric:tabular-nums;unicode-bidi:plaintext}
+  .cbdev{text-align:center;padding:52px 20px;color:var(--tx2)}
+  .cbdev b{display:block;font-size:23px;font-weight:800;color:var(--tx);margin-bottom:7px}
+  .cbdev span{font-size:13px}
   .abadge{display:none;align-items:center;justify-content:center;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--dfg);color:#fff;font-size:10px;font-weight:700;margin-inline-start:5px}
   #alertsheet{position:fixed;right:0;left:0;bottom:0;z-index:121;background:var(--bg);border-radius:18px 18px 0 0;border:1px solid var(--line);border-bottom:0;box-shadow:0 -12px 40px rgba(0,0,0,.25);padding:14px 16px calc(18px + env(safe-area-inset-bottom));display:none;max-height:82vh;overflow-y:auto}
   @media (min-width:640px){#alertsheet{left:50%;right:auto;transform:translateX(50%);width:470px;bottom:auto;top:10vh;border-radius:18px;border-bottom:1px solid var(--line)}}
@@ -1129,6 +1132,7 @@
   var cannibMode='mkt';
   function cbP(v){v=+v||0;return (v>=0?'+':'')+Math.round(v)+' אחוז';}
   function renderCannib(agg){
+    if(!(META&&META.owner)||(agg&&agg.dev)){stage.innerHTML='<div class="cbdev"><b>בפיתוח</b><span>התכונה בבנייה ותיפתח בקרוב</span></div>';return;}
     var d=agg||[];
     if(!d.length){stage.innerHTML='<div class="empty">אין נתונים לניתוח.</div>';return;}
     var mode=cannibMode;

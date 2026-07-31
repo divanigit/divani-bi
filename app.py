@@ -43,6 +43,7 @@ DASH_PASS_ADMIN = os.environ.get("DASH_PASS_ADMIN", "")  # Doron's personal pass
 DASH_PASS_ASK2 = os.environ.get("DASH_PASS_ASK2", "")  # Haim: ask-enabled personal password
 DASH_PASS_DOV = os.environ.get("DASH_PASS_DOV", "")  # Dov (operations mgr): own credential, regular view access
 DASH_PASS_SHARON = os.environ.get("DASH_PASS_SHARON", "")  # Sharon: own credential, regular view access
+DASH_PASS_ITAMAR = os.environ.get("DASH_PASS_ITAMAR", "")  # Itamar: own credential, regular view access
 SB_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SB_KEY = os.environ.get("SUPABASE_SECRET_KEY", "")
 PRI_USER = os.environ.get("PRI_USER", "")
@@ -117,7 +118,7 @@ def _match(p: str, expected: str) -> bool:
 def _pass_ok(p: str) -> bool:
     return (_match(p, DASH_PASS) or _match(p, DASH_PASS_ADMIN)
             or _match(p, DASH_PASS_ASK2) or _match(p, DASH_PASS_DOV)
-            or _match(p, DASH_PASS_SHARON))
+            or _match(p, DASH_PASS_SHARON) or _match(p, DASH_PASS_ITAMAR))
 
 
 def _who(p: str) -> str:
@@ -130,6 +131,8 @@ def _who(p: str) -> str:
         return "דב"
     if _match(p, DASH_PASS_SHARON):
         return "שרון"
+    if _match(p, DASH_PASS_ITAMAR):
+        return "איתמר"
     if _match(p, DASH_PASS):
         return "משותף"
     return "?"
@@ -630,7 +633,8 @@ def api_meta(request: Request):
                          "last_rc": _state["last_rc"],
                          "refresh_minutes": REFRESH_MINUTES,
                          "line_span_days": MAX_LINE_SPAN_DAYS,
-                         "admin": _can_ask(request)})
+                         "admin": _can_ask(request),
+                         "owner": _is_admin(request)})
 
 
 @app.get("/api/range")
@@ -684,6 +688,8 @@ def api_panel(request: Request, name: str = "", d_from: str = "", d_to: str = ""
     if not spec:
         return JSONResponse({"error": "bad panel"}, status_code=400)
     rpc, needs_dates, dims = spec
+    if name == "contrib" and not _is_admin(request):
+        return JSONResponse({"dev": True})  # owner-only feature; others get "בפיתוח"
     params = {}
     if needs_dates:
         f, t = _parse_date(d_from), _parse_date(d_to)
