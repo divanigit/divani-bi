@@ -532,6 +532,22 @@ async def login_post(request: Request):
     return resp
 
 
+@app.get("/agent-report")
+def agent_report(request: Request):
+    # OWNER-ONLY live preview of the agent-performance methodology (demo data for now)
+    if not _is_admin(request):
+        return RedirectResponse("/login", status_code=303)
+    try:
+        with open(os.path.join(HERE, "agent_report_demo.html"), encoding="utf-8") as f:
+            body = f.read()
+    except Exception:
+        return HTMLResponse("<div dir='rtl' style='font-family:sans-serif;padding:40px'>הדמו לא נמצא.</div>",
+                            status_code=404)
+    head = ('<!DOCTYPE html><meta charset="utf-8">'
+            '<meta name="viewport" content="width=device-width,initial-scale=1">\n')
+    return HTMLResponse(head + body)
+
+
 @app.get("/logout")
 def logout():
     resp = RedirectResponse("/login", status_code=303)

@@ -1,0 +1,272 @@
+<title>דוח ביצועי סוכנים — דמו מתודולוגיה (נתונים פיקטיביים)</title>
+<style>
+  :root{
+    --paper:#FBFCFB; --panel:#FFFFFF; --panel2:#F4F8F6;
+    --ink:#12201B; --ink2:#4A5A52; --ink3:#7F8D86;
+    --line:#E5EBE7; --line2:#D3DBD6;
+    --brand:#0A7D57; --brand2:#0C9C6E; --brandw:rgba(12,156,110,.10);
+    --good:#0C9C6E; --goodw:rgba(12,156,110,.12);
+    --warn:#B0791F; --warnw:rgba(176,121,31,.13);
+    --bad:#B23F38; --badw:rgba(178,63,56,.10);
+    --demo:#8A5A00; --demobg:#FFF4DA; --demobd:#F0DBA0;
+    --shadow:0 1px 2px rgba(18,32,27,.04),0 8px 22px rgba(18,32,27,.05);
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --paper:#0E1512; --panel:#161F1B; --panel2:#1B2621;
+    --ink:#E8EFEA; --ink2:#A5B3AB; --ink3:#6C7A72;
+    --line:#26302B; --line2:#33413A;
+    --brand:#2FBF8F; --brand2:#35C795; --brandw:rgba(47,191,143,.13);
+    --good:#35C795; --goodw:rgba(47,191,143,.14);
+    --warn:#E0B25E; --warnw:rgba(224,178,94,.14);
+    --bad:#E28A83; --badw:rgba(226,138,131,.13);
+    --demo:#E6C878; --demobg:#2A2411; --demobd:#4A3E1C;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 26px rgba(0,0,0,.28);
+  }}
+  :root[data-theme="light"]{--paper:#FBFCFB;--panel:#FFFFFF;--panel2:#F4F8F6;--ink:#12201B;--ink2:#4A5A52;--ink3:#7F8D86;--line:#E5EBE7;--line2:#D3DBD6;--brand:#0A7D57;--brand2:#0C9C6E;--brandw:rgba(12,156,110,.10);--good:#0C9C6E;--goodw:rgba(12,156,110,.12);--warn:#B0791F;--warnw:rgba(176,121,31,.13);--bad:#B23F38;--badw:rgba(178,63,56,.10);--demo:#8A5A00;--demobg:#FFF4DA;--demobd:#F0DBA0;--shadow:0 1px 2px rgba(18,32,27,.04),0 8px 22px rgba(18,32,27,.05);}
+  :root[data-theme="dark"]{--paper:#0E1512;--panel:#161F1B;--panel2:#1B2621;--ink:#E8EFEA;--ink2:#A5B3AB;--ink3:#6C7A72;--line:#26302B;--line2:#33413A;--brand:#2FBF8F;--brand2:#35C795;--brandw:rgba(47,191,143,.13);--good:#35C795;--goodw:rgba(47,191,143,.14);--warn:#E0B25E;--warnw:rgba(224,178,94,.14);--bad:#E28A83;--badw:rgba(226,138,131,.13);--demo:#E6C878;--demobg:#2A2411;--demobd:#4A3E1C;--shadow:0 1px 2px rgba(0,0,0,.3),0 10px 26px rgba(0,0,0,.28);}
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);direction:rtl;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:760px;margin:0 auto;padding:18px 16px 60px}
+  .n{font-variant-numeric:tabular-nums;unicode-bidi:plaintext}
+
+  .mast{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:14px}
+  .brand .eyebrow{font-size:.68rem;letter-spacing:.14em;color:var(--brand2);font-weight:700;text-transform:uppercase}
+  .brand .word{font-size:.98rem;font-weight:800;letter-spacing:.32em;direction:ltr}
+  .mast .meta{font-size:.7rem;color:var(--ink3);text-align:left;line-height:1.5}
+  .hactions{display:flex;align-items:center;gap:10px}
+  .fake{font-size:.66rem;color:var(--ink3);white-space:nowrap}
+  .explbtn{font-family:inherit;font-size:12px;font-weight:600;border:1px solid var(--line2);background:var(--panel);color:var(--ink2);padding:8px 14px;min-height:40px;border-radius:999px;cursor:pointer;white-space:nowrap}
+  .explbtn:hover{border-color:var(--brand2)}
+  .explbtn.on{background:var(--brandw);border-color:var(--brand2);color:var(--brand2)}
+  .explain{margin:2px 0 6px}
+
+  .demoban{display:flex;gap:9px;align-items:center;background:var(--demobg);border:1px solid var(--demobd);color:var(--demo);
+    border-radius:12px;padding:10px 13px;font-size:.82rem;font-weight:600;margin:0 0 16px}
+  .demoban b{font-weight:800}
+
+  h1{font-size:1.5rem;font-weight:800;letter-spacing:-.01em;margin:0 0 6px;text-wrap:balance}
+  .lead{font-size:.92rem;color:var(--ink2);margin:0 0 16px}
+  .lead b{color:var(--ink)}
+
+  .tog{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 6px}
+  .tog button{font-family:inherit;font-size:13px;font-weight:600;border:1px solid var(--line2);background:var(--panel);color:var(--ink2);
+    padding:9px 16px;min-height:42px;border-radius:999px;cursor:pointer;transition:all .15s ease}
+  .tog button:hover{border-color:var(--brand2)}
+  .tog button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+  .insight{font-size:.83rem;color:var(--ink2);background:var(--panel2);border-radius:10px;padding:10px 13px;margin:8px 0 20px;line-height:1.55}
+  .insight b{color:var(--ink)}
+
+  .branch{margin:0 0 22px}
+  .bh{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:0 0 11px;padding:0 2px}
+  .bh h2{font-size:1.08rem;font-weight:800;margin:0}
+  .bh .bavg{font-size:.74rem;color:var(--ink3)}
+  .bh .bavg b{color:var(--ink2);font-weight:700}
+
+  .rows{display:flex;flex-direction:column;gap:9px}
+  .agent{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;box-shadow:var(--shadow)}
+  .atop{display:flex;align-items:center;gap:11px;width:100%;padding:0 0 10px;margin:0;background:none;border:none;cursor:pointer;font-family:inherit;color:inherit;text-align:right}
+  .chev{flex:none;color:var(--ink3);font-size:1.15rem;line-height:1;transition:transform .2s ease}
+  .agent.open .chev{transform:rotate(180deg)}
+  .rank{flex:none;width:26px;height:26px;border-radius:50%;background:var(--panel2);color:var(--ink2);
+    display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:800}
+  .agent.lead .rank{background:var(--brand);color:#fff}
+  .who{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+  .who b{font-size:1rem;font-weight:700;display:block}
+  .who span{font-size:.72rem;color:var(--ink3)}
+  .vsavg{flex:none;font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:7px}
+  .vsavg.up{background:var(--goodw);color:var(--good)} .vsavg.dn{background:var(--badw);color:var(--bad)}
+
+  .mets{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .met{background:var(--panel2);border-radius:10px;padding:9px 10px;text-align:center;border:1.5px solid transparent}
+  .met.act{border-color:var(--brand2);background:var(--brandw)}
+  .met .lbl{font-size:.66rem;color:var(--ink3);margin-bottom:3px;line-height:1.25}
+  .met .val{font-size:1.05rem;font-weight:800}
+  .met .val.good{color:var(--good)} .met .val.bad{color:var(--bad)}
+  .deep{display:none;margin-top:11px;padding-top:12px;border-top:1px solid var(--line)}
+  .agent.open .deep{display:block}
+  .ptags{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+  .ptag{font-size:.7rem;font-weight:700;padding:4px 11px;border-radius:999px}
+  .ptag.good{background:var(--goodw);color:var(--good)}
+  .ptag.warn{background:var(--warnw);color:var(--warn)}
+  .ptag.neutral{background:var(--panel2);color:var(--ink2)}
+  .deepgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:8px;margin-bottom:13px}
+  .dstat{background:var(--panel2);border-radius:9px;padding:8px 10px;text-align:center}
+  .dstat span{display:block;font-size:.64rem;color:var(--ink3);margin-bottom:2px}
+  .dstat b{font-size:.98rem;font-weight:800;unicode-bidi:plaintext}
+  .mixhead{font-size:.72rem;color:var(--ink3);font-weight:700;margin:0 0 8px}
+  .mixrow{display:flex;align-items:center;gap:9px;margin-bottom:6px}
+  .mixl{flex:none;width:78px;font-size:.78rem;color:var(--ink2)}
+  .mixbar{flex:1;height:8px;background:var(--panel2);border-radius:99px;overflow:hidden}
+  .mixbar i{display:block;height:100%;background:var(--brand2);border-radius:99px}
+  .mixp{flex:none;width:54px;text-align:left;font-size:.72rem;color:var(--ink3);font-variant-numeric:tabular-nums}
+
+  .how{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 16px;margin-top:26px;box-shadow:var(--shadow)}
+  .how h3{font-size:.95rem;font-weight:800;margin:0 0 12px}
+  .how dl{margin:0;display:flex;flex-direction:column;gap:11px}
+  .how dt{font-size:.86rem;font-weight:700;color:var(--ink)}
+  .how dd{margin:2px 0 0;font-size:.83rem;color:var(--ink2);line-height:1.55}
+  .how .pin{color:var(--brand2);font-weight:700}
+  .foot{margin-top:20px;font-size:.72rem;color:var(--ink3);line-height:1.6;border-top:1px solid var(--line);padding-top:14px}
+</style>
+
+<div class="wrap">
+  <header class="mast">
+    <div class="brand"><span class="eyebrow">ביצועי סוכנים</span><span class="word">VITORIO&nbsp;DIVANI</span></div>
+    <div class="hactions"><span class="fake">נתונים פיקטיביים</span><button type="button" id="explainBtn" class="explbtn">הסברים</button></div>
+  </header>
+
+  <div class="tog" id="tog">
+    <button type="button" data-m="basic" class="on">מכירות לשעה</button>
+    <button type="button" data-m="deep">מדד עומק</button>
+    <button type="button" data-m="conv">אחוז סגירה</button>
+  </div>
+
+  <div class="explain" id="explBox" style="display:none"><div class="insight" id="insight"></div></div>
+
+  <div id="report"></div>
+
+  <div class="how" id="how" style="display:none">
+    <h3>איך כל מדד מחושב</h3>
+    <dl>
+      <dt>מכירות לשעה — בסיסי</dt>
+      <dd>מחזור המכירות של הסוכן בתקופה, לחלק לשעות העבודה שלו. פשוט וישיר, אבל מיטיב עם מי שעובד במשמרות החזקות.</dd>
+      <dt>מדד עומק — מנורמל למשמרות</dt>
+      <dd>מכירות לשעה בפועל, לחלק לצפי לפי <span class="pin">פוטנטיות המשמרות</span> שהסוכן עבד בסניף שלו. <b>מעל אחד</b> = מוכר יותר ממה שהמשמרות שלו מניבות בדרך כלל.</dd>
+      <dt>אחוז סגירה — מנורמל לתנועה</dt>
+      <dd>מחזור המכירות של הסוכן, לחלק למספר הנכנסים לסניף במשמרות שלו. מנטרל את כמות הקהל ומודד את הכישרון עצמו.</dd>
+      <dt>פאנל עומק — לחיצה על סוכן</dt>
+      <dd>פותח שישה מדדים: לקוחות, עסקה ממוצעת, רווחיות, מכירה נלווית, ביטולים, וחדש מול חוזר — ותמהיל מוצרים בפסים, כדי לראות במה כל סוכן חזק: ספות, פינות אוכל או מזרנים.</dd>
+      <dt>תעודת זהות — התגיות</dt>
+      <dd>נוצרות אוטומטית מהנתונים לפי ספים: עסקה גדולה ומעט לקוחות = <b>סוגר פרימיום</b>, עסקה קטנה והרבה לקוחות = <b>מכונת נפח</b>; קטגוריה מובילה מעל ארבעים וחמישה אחוז = <b>מתמחה</b>; רווחיות גבוהה מול <b>מנדב הנחות</b>; מכירה נלווית גבוהה = <b>אלוף נלווה</b>; ביטולים גבוהים = דגל אזהרה. זה הופך את הדוח מלוח תוצאות לכלי ניהול.</dd>
+    </dl>
+  </div>
+</div>
+
+<script>
+  var BRANCHES=[
+    {name:"סניף חוף התכלת", avgRate:1800, agents:[
+      {name:"בוב ספוגי",     hours:160, sales:336000, potency:1.25, visitors:4200, customers:140, margin:32, attach:30, cancel:6, newpct:70,
+        mix:[{c:"ספות",p:55},{c:"פינות אוכל",p:20},{c:"מזרנים",p:15},{c:"אחר",p:10}]},
+      {name:"חמוטל טורנדו",  hours:150, sales:288000, potency:0.80, visitors:2400, customers:72, margin:41, attach:48, cancel:3, newpct:60,
+        mix:[{c:"פינות אוכל",p:50},{c:"ספות",p:20},{c:"מזרנים",p:20},{c:"אחר",p:10}]},
+      {name:"דוריטו קריספי", hours:140, sales:210000, potency:0.95, visitors:3000, customers:100, margin:26, attach:22, cancel:11, newpct:55,
+        mix:[{c:"מזרנים",p:40},{c:"ספות",p:30},{c:"פינות אוכל",p:20},{c:"אחר",p:10}]}
+    ]},
+    {name:"סניף קניון הבננות", avgRate:1500, agents:[
+      {name:"ג׳ק ספרלו",       hours:170, sales:323000, potency:1.25, visitors:4250, customers:134, margin:30, attach:33, cancel:7, newpct:68,
+        mix:[{c:"ספות",p:50},{c:"פינות אוכל",p:25},{c:"מזרנים",p:15},{c:"אחר",p:10}]},
+      {name:"פרופסור צימוקי",  hours:120, sales:180000, potency:0.78, visitors:1800, customers:55, margin:43, attach:52, cancel:2, newpct:58,
+        mix:[{c:"פינות אוכל",p:55},{c:"מזרנים",p:20},{c:"ספות",p:15},{c:"אחר",p:10}]},
+      {name:"סבתא רוזלינדה",   hours:100, sales:130000, potency:1.00, visitors:2000, customers:68, margin:27, attach:25, cancel:9, newpct:62,
+        mix:[{c:"מזרנים",p:45},{c:"ספות",p:25},{c:"פינות אוכל",p:20},{c:"אחר",p:10}]}
+    ]}
+  ];
+
+  function calc(a,avgRate){
+    return {basic:a.sales/a.hours, deep:(a.sales/a.hours)/(avgRate*a.potency), conv:a.sales/a.visitors};
+  }
+  function money(v){return Math.round(v).toLocaleString('en-US');}
+  function shekel(v){return '₪'+money(v);}
+
+  var META={
+    basic:{fmt:function(m){return shekel(m.basic)+' לשעה';}, val:function(m){return m.basic;},
+      insight:'<b>מכירות לשעה גולמי.</b> בכל סניף מי שמוכר הכי הרבה לשעה עולה לראש — אבל שימו לב, הם עובדים במשמרות החזקות. עברו ל<b>מדד עומק</b> לראות מה קורה כשמנרמלים.'},
+    deep:{fmt:function(m){return 'מדד '+m.deep.toFixed(2);}, val:function(m){return m.deep;},
+      insight:'<b>הדירוג התהפך.</b> אחרי נרמול לפי חוזק המשמרות, מי שתקוע במשמרות חלשות עולה לראש, והכוכב לכאורה מתברר כמי שרק רכב על משמרות טובות. מעל אחד = מנצח את המשמרות שלו.'},
+    conv:{fmt:function(m){return shekel(m.conv)+' לנכנס';}, val:function(m){return m.conv;},
+      insight:'<b>לפי תנועה — הכישרון האמיתי.</b> מחזור לכל אדם שנכנס מנטרל את כמות הקהל ומראה מי סוגר הכי טוב את מי שהגיע.'}
+  };
+
+  var active='basic', showExplain=false, openSet={};
+  var report=document.getElementById('report');
+  var explainBtn=document.getElementById('explainBtn');
+
+  function met(key,lbl,val,cls){
+    return '<div class="met'+(key===active?' act':'')+'"><div class="lbl">'+lbl+'</div><div class="val '+cls+'">'+val+'</div></div>';
+  }
+  // "תעודת זהות" — auto-computed profile tags from thresholds (the model)
+  function profile(a){
+    var out=[], avgDeal=a.sales/a.customers;
+    if(avgDeal>=3200 && a.customers<=90) out.push({t:'סוגר פרימיום',k:'good'});
+    else if(avgDeal<=2500 && a.customers>=100) out.push({t:'מכונת נפח',k:'neutral'});
+    else out.push({t:'מאוזן',k:'neutral'});
+    var top=a.mix.slice().sort(function(x,y){return y.p-x.p;})[0];
+    if(top.p>=45 && top.c!=='אחר') out.push({t:'מתמחה ב'+top.c,k:'neutral'});
+    if(a.margin>=38) out.push({t:'רווחיות גבוהה',k:'good'});
+    else if(a.margin<=28) out.push({t:'מנדב הנחות',k:'warn'});
+    if(a.attach>=45) out.push({t:'אלוף מכירה נלווית',k:'good'});
+    if(a.cancel>=10) out.push({t:'ביטולים גבוהים',k:'warn'});
+    return out;
+  }
+  function deepHtml(a){
+    var tags=profile(a).map(function(p){return '<span class="ptag '+p.k+'">'+p.t+'</span>';}).join('');
+    var stats=[
+      ['לקוחות', a.customers],
+      ['עסקה ממוצעת', shekel(a.sales/a.customers)],
+      ['רווחיות', a.margin+' אחוז'],
+      ['מכירה נלווית', a.attach+' אחוז'],
+      ['ביטולים', a.cancel+' אחוז'],
+      ['חדש · חוזר', a.newpct+' · '+(100-a.newpct)]
+    ].map(function(s){return '<div class="dstat"><span>'+s[0]+'</span><b>'+s[1]+'</b></div>';}).join('');
+    var bars=a.mix.map(function(m){
+      return '<div class="mixrow"><span class="mixl">'+m.c+'</span><span class="mixbar"><i style="width:'+m.p+'%"></i></span><span class="mixp">'+m.p+' אחוז</span></div>';
+    }).join('');
+    return '<div class="ptags">'+tags+'</div>'
+      +'<div class="deepgrid">'+stats+'</div>'
+      +'<div class="mixhead">תמהיל מוצרים</div>'+bars;
+  }
+  function render(){
+    var M=META[active];
+    var ib=document.getElementById('insight'); if(ib) ib.innerHTML=M.insight;
+    var html='';
+    BRANCHES.forEach(function(b){
+      var rows=b.agents.map(function(a){return {a:a, m:calc(a,b.avgRate)};});
+      var avg=rows.reduce(function(s,r){return s+M.val(r.m);},0)/rows.length;
+      rows.sort(function(x,y){return M.val(y.m)-M.val(x.m);});
+      html+='<div class="branch"><div class="bh"><h2>'+b.name+'</h2>'
+        +'<div class="bavg">ממוצע הסניף · <b>'+M.fmt({basic:avg,deep:avg,conv:avg})+'</b></div></div><div class="rows">';
+      rows.forEach(function(r,i){
+        var d=r.m, a=r.a;
+        var vsp=(M.val(d)/avg-1)*100, vs=(vsp>=0?'up':'dn'), pot=Math.round(a.potency*100);
+        html+='<div class="agent'+(i===0?' lead':'')+(openSet[a.name]?' open':'')+'">'
+          +'<button type="button" class="atop" data-fold data-name="'+a.name+'">'
+          +'<span class="rank">'+(i+1)+'</span>'
+          +'<span class="who"><b>'+a.name+'</b><span>'+a.hours+' שעות · '+shekel(a.sales)+' מכירות · פוטנטיות '+pot+' אחוז</span></span>'
+          +'<span class="vsavg '+vs+'">'+(vsp>=0?'+':'')+Math.round(vsp)+' אחוז מול הסניף</span>'
+          +'<span class="chev">⌄</span></button>'
+          +'<div class="mets">'
+          +met('basic','מכירות לשעה', shekel(d.basic), '')
+          +met('deep','מדד עומק', d.deep.toFixed(2), d.deep>=1?'good':'bad')
+          +met('conv','סגירה, לנכנס', shekel(d.conv), '')
+          +'</div>'
+          +'<div class="deep">'+deepHtml(a)+'</div>'
+          +'</div>';
+      });
+      html+='</div></div>';
+    });
+    report.innerHTML=html;
+  }
+
+  document.getElementById('tog').addEventListener('click',function(e){
+    var btn=e.target.closest('[data-m]'); if(!btn)return;
+    active=btn.getAttribute('data-m');
+    [].forEach.call(this.querySelectorAll('button'),function(b){b.classList.toggle('on',b.getAttribute('data-m')===active);});
+    render();
+  });
+  report.addEventListener('click',function(e){
+    var t=e.target.closest('[data-fold]'); if(!t)return;
+    var name=t.getAttribute('data-name');
+    openSet[name]=!openSet[name];
+    t.parentNode.classList.toggle('open',!!openSet[name]);
+  });
+  explainBtn.addEventListener('click',function(){
+    showExplain=!showExplain;
+    document.getElementById('explBox').style.display=showExplain?'':'none';
+    document.getElementById('how').style.display=showExplain?'':'none';
+    explainBtn.classList.toggle('on',showExplain);
+  });
+
+  render();
+</script>
