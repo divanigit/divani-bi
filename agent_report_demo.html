@@ -135,7 +135,7 @@
   <div class="tog" id="tog">
     <button type="button" data-m="basic" class="on">מכירות לשעה</button>
     <button type="button" data-m="deep">מדד עומק</button>
-    <button type="button" data-m="conv">אחוז סגירה</button>
+    <button type="button" data-m="conv">מכירות לנכנס</button>
   </div>
 
   <div class="explain" id="explBox" style="display:none"><div class="insight" id="insight"></div></div>
@@ -149,8 +149,8 @@
       <dd>מחזור המכירות של הסוכן בתקופה, לחלק לשעות העבודה שלו. פשוט וישיר, אבל מיטיב עם מי שעובד במשמרות החזקות.</dd>
       <dt>מדד עומק — מנורמל למשמרות</dt>
       <dd>מכירות לשעה בפועל, לחלק לצפי לפי <span class="pin">פוטנטיות המשמרות</span> שהסוכן עבד בסניף שלו. <b>מעל אחד</b> = מוכר יותר ממה שהמשמרות שלו מניבות בדרך כלל.</dd>
-      <dt>אחוז סגירה — מנורמל לתנועה</dt>
-      <dd>מחזור המכירות של הסוכן, לחלק למספר הנכנסים לסניף במשמרות שלו. מנטרל את כמות הקהל ומודד את הכישרון עצמו.</dd>
+      <dt>מכירות לנכנס — לפי תנועה</dt>
+      <dd>סך מכירות הסוכן חלקי מספר האנשים שנכנסו לסניף במשמרות שלו. הסכום נמוך כי הוא מפוזר על כל הנכנסים, גם מי שרק הסתכל ולא קנה. מודד עד כמה הסוכן הופך תנועה לכסף, בנטרול כמות הקהל.</dd>
       <dt>פאנל עומק — לחיצה על סוכן</dt>
       <dd>פותח שמונה מדדים: לקוחות, עסקה ממוצעת, רווחיות, שיעור הנחה, הנחות בכסף, מכירה נלווית, ביטולים, וחדש מול חוזר — ותמהיל מוצרים בפסים, כדי לראות במה כל סוכן חזק: ספות, פינות אוכל או מזרנים. שיעור ההנחה הוא סך ההנחות שנתן חלקי סך מכירותיו, לא ממוצע ללקוח.</dd>
       <dt>תעודת זהות — התגיות</dt>
@@ -193,7 +193,7 @@
     deep:{fmt:function(m){return 'מדד '+m.deep.toFixed(2);}, val:function(m){return m.deep;},
       insight:'<b>הדירוג התהפך.</b> אחרי נרמול לפי חוזק המשמרות, מי שתקוע במשמרות חלשות עולה לראש, והכוכב לכאורה מתברר כמי שרק רכב על משמרות טובות. מעל אחד = מנצח את המשמרות שלו.'},
     conv:{fmt:function(m){return shekel(m.conv)+' לנכנס';}, val:function(m){return m.conv;},
-      insight:'<b>לפי תנועה — הכישרון האמיתי.</b> מחזור לכל אדם שנכנס מנטרל את כמות הקהל ומראה מי סוגר הכי טוב את מי שהגיע.'}
+      insight:'<b>מכירות לכל נכנס לסניף.</b> סך המכירות חלקי מספר האנשים שנכנסו — כמה שקל מניב בממוצע כל מבקר, קונה או לא. הסכום נמוך כי הוא מפוזר על כל הקהל; מודד מי הכי טוב בלהפוך תנועה לכסף.'}
   };
 
   var active='basic', view='agents', showExplain=false, openSet={};
@@ -251,7 +251,7 @@
     report.innerHTML=rows.map(function(r,i){
       var stats=[
         ['מכירות', shekel(r.sales)],
-        ['המרה, לנכנס', shekel(r.conv)],
+        ['מכירות לנכנס', shekel(r.conv)],
         ['עסקה ממוצעת', shekel(r.avgDeal)],
         ['רווחיות', Math.round(r.profitPct)+' אחוז'],
         ['שיעור הנחה', Math.round(r.discPct)+' אחוז'],
@@ -269,7 +269,7 @@
     document.getElementById('tog').style.display = view==='branches' ? 'none' : '';
     var ib=document.getElementById('insight');
     if(view==='branches'){
-      if(ib) ib.innerHTML='<b>ניתוח סניפים.</b> הסניפים מדורגים לפי המרה — כמה שקל מכירות על כל אדם שנכנס. לכל סניף גם הנמכרים ביותר לפי קטגוריה.';
+      if(ib) ib.innerHTML='<b>ניתוח סניפים.</b> הסניפים מדורגים לפי מכירות לנכנס — כמה שקל מכירות מניב בממוצע כל אדם שנכנס. לכל סניף גם הנמכרים ביותר לפי קטגוריה.';
       renderBranches(); return;
     }
     var M=META[active];
@@ -293,7 +293,7 @@
           +'<div class="mets">'
           +met('basic','מכירות לשעה', shekel(d.basic), '')
           +met('deep','מדד עומק', d.deep.toFixed(2), d.deep>=1?'good':'bad')
-          +met('conv','סגירה, לנכנס', shekel(d.conv), '')
+          +met('conv','מכירות לנכנס', shekel(d.conv), '')
           +'</div>'
           +'<div class="deep">'+deepHtml(a)+'</div>'
           +'</div>';
