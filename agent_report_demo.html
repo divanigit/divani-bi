@@ -137,7 +137,7 @@
       <dt>אחוז סגירה — מנורמל לתנועה</dt>
       <dd>מחזור המכירות של הסוכן, לחלק למספר הנכנסים לסניף במשמרות שלו. מנטרל את כמות הקהל ומודד את הכישרון עצמו.</dd>
       <dt>פאנל עומק — לחיצה על סוכן</dt>
-      <dd>פותח שישה מדדים: לקוחות, עסקה ממוצעת, רווחיות, מכירה נלווית, ביטולים, וחדש מול חוזר — ותמהיל מוצרים בפסים, כדי לראות במה כל סוכן חזק: ספות, פינות אוכל או מזרנים.</dd>
+      <dd>פותח שמונה מדדים: לקוחות, עסקה ממוצעת, רווחיות, הנחה ממוצעת, הנחות בכסף, מכירה נלווית, ביטולים, וחדש מול חוזר — ותמהיל מוצרים בפסים, כדי לראות במה כל סוכן חזק: ספות, פינות אוכל או מזרנים.</dd>
       <dt>תעודת זהות — התגיות</dt>
       <dd>נוצרות אוטומטית מהנתונים לפי ספים: עסקה גדולה ומעט לקוחות = <b>סוגר פרימיום</b>, עסקה קטנה והרבה לקוחות = <b>מכונת נפח</b>; קטגוריה מובילה מעל ארבעים וחמישה אחוז = <b>מתמחה</b>; רווחיות גבוהה מול <b>מנדב הנחות</b>; מכירה נלווית גבוהה = <b>אלוף נלווה</b>; ביטולים גבוהים = דגל אזהרה. זה הופך את הדוח מלוח תוצאות לכלי ניהול.</dd>
     </dl>
@@ -146,20 +146,20 @@
 
 <script>
   var BRANCHES=[
-    {name:"סניף חוף התכלת", avgRate:1800, agents:[
-      {name:"בוב ספוגי",     hours:160, sales:336000, potency:1.25, visitors:4200, customers:140, margin:32, attach:30, cancel:6, newpct:70,
+    {name:"נתניה", avgRate:1800, agents:[
+      {name:"ג'יימס ווטסון",  hours:160, sales:336000, potency:1.25, visitors:4200, customers:140, margin:32, attach:30, cancel:6, newpct:70, disc:12,
         mix:[{c:"ספות",p:55},{c:"פינות אוכל",p:20},{c:"מזרנים",p:15},{c:"אחר",p:10}]},
-      {name:"חמוטל טורנדו",  hours:150, sales:288000, potency:0.80, visitors:2400, customers:72, margin:41, attach:48, cancel:3, newpct:60,
+      {name:"ג'סיקה מילר",    hours:150, sales:288000, potency:0.80, visitors:2400, customers:72, margin:41, attach:48, cancel:3, newpct:60, disc:5,
         mix:[{c:"פינות אוכל",p:50},{c:"ספות",p:20},{c:"מזרנים",p:20},{c:"אחר",p:10}]},
-      {name:"דוריטו קריספי", hours:140, sales:210000, potency:0.95, visitors:3000, customers:100, margin:26, attach:22, cancel:11, newpct:55,
+      {name:"מייקל בראון",    hours:140, sales:210000, potency:0.95, visitors:3000, customers:100, margin:26, attach:22, cancel:11, newpct:55, disc:22,
         mix:[{c:"מזרנים",p:40},{c:"ספות",p:30},{c:"פינות אוכל",p:20},{c:"אחר",p:10}]}
     ]},
-    {name:"סניף קניון הבננות", avgRate:1500, agents:[
-      {name:"ג׳ק ספרלו",       hours:170, sales:323000, potency:1.25, visitors:4250, customers:134, margin:30, attach:33, cancel:7, newpct:68,
+    {name:"ראשון לציון", avgRate:1500, agents:[
+      {name:"דיוויד קלארק",   hours:170, sales:323000, potency:1.25, visitors:4250, customers:134, margin:30, attach:33, cancel:7, newpct:68, disc:13,
         mix:[{c:"ספות",p:50},{c:"פינות אוכל",p:25},{c:"מזרנים",p:15},{c:"אחר",p:10}]},
-      {name:"פרופסור צימוקי",  hours:120, sales:180000, potency:0.78, visitors:1800, customers:55, margin:43, attach:52, cancel:2, newpct:58,
+      {name:"אמילי טיילור",   hours:120, sales:180000, potency:0.78, visitors:1800, customers:55, margin:43, attach:52, cancel:2, newpct:58, disc:4,
         mix:[{c:"פינות אוכל",p:55},{c:"מזרנים",p:20},{c:"ספות",p:15},{c:"אחר",p:10}]},
-      {name:"סבתא רוזלינדה",   hours:100, sales:130000, potency:1.00, visitors:2000, customers:68, margin:27, attach:25, cancel:9, newpct:62,
+      {name:"רוברט ג'ונסון",  hours:100, sales:130000, potency:1.00, visitors:2000, customers:68, margin:27, attach:25, cancel:9, newpct:62, disc:19,
         mix:[{c:"מזרנים",p:45},{c:"ספות",p:25},{c:"פינות אוכל",p:20},{c:"אחר",p:10}]}
     ]}
   ];
@@ -195,7 +195,7 @@
     var top=a.mix.slice().sort(function(x,y){return y.p-x.p;})[0];
     if(top.p>=45 && top.c!=='אחר') out.push({t:'מתמחה ב'+top.c,k:'neutral'});
     if(a.margin>=38) out.push({t:'רווחיות גבוהה',k:'good'});
-    else if(a.margin<=28) out.push({t:'מנדב הנחות',k:'warn'});
+    if(a.disc>=18) out.push({t:'מנדב הנחות',k:'warn'});
     if(a.attach>=45) out.push({t:'אלוף מכירה נלווית',k:'good'});
     if(a.cancel>=10) out.push({t:'ביטולים גבוהים',k:'warn'});
     return out;
@@ -206,6 +206,8 @@
       ['לקוחות', a.customers],
       ['עסקה ממוצעת', shekel(a.sales/a.customers)],
       ['רווחיות', a.margin+' אחוז'],
+      ['הנחה ממוצעת', a.disc+' אחוז'],
+      ['הנחות בכסף', shekel(a.sales*a.disc/(100-a.disc))],
       ['מכירה נלווית', a.attach+' אחוז'],
       ['ביטולים', a.cancel+' אחוז'],
       ['חדש · חוזר', a.newpct+' · '+(100-a.newpct)]
