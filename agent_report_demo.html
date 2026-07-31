@@ -31,7 +31,7 @@
   .wrap{max-width:760px;margin:0 auto;padding:18px 16px 60px}
   .n{font-variant-numeric:tabular-nums;unicode-bidi:plaintext}
 
-  .mast{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:14px}
+  .mast{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:10px 12px;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:14px}
   .brand .eyebrow{font-size:.68rem;letter-spacing:.14em;color:var(--brand2);font-weight:700;text-transform:uppercase}
   .brand .word{font-size:.98rem;font-weight:800;letter-spacing:.32em;direction:ltr}
   .mast .meta{font-size:.7rem;color:var(--ink3);text-align:left;line-height:1.5}
@@ -88,7 +88,8 @@
   .vsavg{flex:none;font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:7px}
   .vsavg.up{background:var(--goodw);color:var(--good)} .vsavg.dn{background:var(--badw);color:var(--bad)}
 
-  .mets{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .mets{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  @media(min-width:600px){.mets{grid-template-columns:repeat(4,1fr)}}
   .met{background:var(--panel2);border-radius:10px;padding:9px 10px;text-align:center;border:1.5px solid transparent}
   .met.act{border-color:var(--brand2);background:var(--brandw)}
   .met .lbl{font-size:.66rem;color:var(--ink3);margin-bottom:3px;line-height:1.25}
@@ -136,6 +137,7 @@
     <button type="button" data-m="total" class="on">מכירות</button>
     <button type="button" data-m="basic">מכירות לשעה</button>
     <button type="button" data-m="avgdeal">עסקה ממוצעת</button>
+    <button type="button" data-m="close">אחוז סגירה</button>
   </div>
 
   <div class="explain" id="explBox" style="display:none"><div class="insight" id="insight"></div></div>
@@ -152,9 +154,9 @@
       <dt>עסקה ממוצעת</dt>
       <dd>סך המכירות חלקי מספר הלקוחות שקנו — כמה ₪ בעסקה טיפוסית. מספר מוחשי בגובה קבלה, שהחליף את ₪80 לנכנס המעורפל.</dd>
       <dt>אחוז סגירה</dt>
-      <dd>מתוך כל מי שנכנס לסניף, כמה קנו בפועל. בדמו כמעט זהה לכולם, בין 3.0% ל-3.4%, ולכן יושב בפאנל העומק לאבחון ולא ככותרת דירוג.</dd>
+      <dd>מתוך כל מי שנכנס לסניף, כמה אחוז קנו בפועל — מכל 100 שנכנסו, כך קנו. זה מדד ההמרה הברור: הוא מודד את איכות הסגירה בלי קשר לכמות הקהל שהגיע. סוכן שמקבל הרבה קהל וסוגר מעט = נורת אזהרה. קיים גם ברמת הסוכן וגם ברמת הסניף.</dd>
       <dt>פאנל עומק — לחיצה על סוכן</dt>
-      <dd>פותח מדדי עומק: לקוחות, נכנסים, אחוז סגירה ומכירות לנכנס (למי שרוצה לצלול פנימה), רווחיות, שיעור הנחה, הנחות בכסף, מכירה נלווית, ביטולים, וחדש מול חוזר — ותמהיל מוצרים בפסים, כדי לראות במה כל סוכן חזק: ספות, פינות אוכל או מזרנים. שיעור ההנחה הוא סך ההנחות שנתן חלקי סך מכירותיו, לא ממוצע ללקוח.</dd>
+      <dd>פותח מדדי עומק: לקוחות, נכנסים, מכירות לנכנס (למי שרוצה לצלול פנימה), רווחיות, שיעור הנחה, הנחות בכסף, מכירה נלווית, ביטולים, וחדש מול חוזר — ותמהיל מוצרים בפסים, כדי לראות במה כל סוכן חזק: ספות, פינות אוכל או מזרנים. שיעור ההנחה הוא סך ההנחות שנתן חלקי סך מכירותיו, לא ממוצע ללקוח.</dd>
       <dt>תעודת זהות — התגיות</dt>
       <dd>נוצרות אוטומטית מהנתונים לפי ספים: עסקה גדולה ומעט לקוחות = <b>סוגר פרימיום</b>, עסקה קטנה והרבה לקוחות = <b>מכונת נפח</b>; קטגוריה מובילה מעל 45% = <b>מתמחה</b>; רווחיות גבוהה מול <b>מנדב הנחות</b>; מכירה נלווית גבוהה = <b>אלוף נלווה</b>; ביטולים גבוהים = דגל אזהרה. זה הופך את הדוח מלוח תוצאות לכלי ניהול.</dd>
       <dt>ניתוח סניפים</dt>
@@ -166,19 +168,19 @@
 <script>
   var BRANCHES=[
     {name:"נתניה", avgRate:1800, agents:[
-      {name:"ג'יימס ווטסון",  hours:160, sales:336000, potency:1.25, visitors:4200, customers:140, margin:32, attach:30, cancel:6, newpct:70, disc:12,
+      {name:"ג'יימס ווטסון",  hours:160, sales:336000, potency:1.25, visitors:2800, customers:140, margin:32, attach:30, cancel:6, newpct:70, disc:12,
         mix:[{c:"ספות",p:55},{c:"פינות אוכל",p:20},{c:"מזרנים",p:15},{c:"אחר",p:10}]},
       {name:"ג'סיקה מילר",    hours:150, sales:288000, potency:0.80, visitors:2400, customers:72, margin:41, attach:48, cancel:3, newpct:60, disc:5,
         mix:[{c:"פינות אוכל",p:50},{c:"ספות",p:20},{c:"מזרנים",p:20},{c:"אחר",p:10}]},
-      {name:"מייקל בראון",    hours:140, sales:210000, potency:0.95, visitors:3000, customers:100, margin:26, attach:22, cancel:11, newpct:55, disc:22,
+      {name:"מייקל בראון",    hours:140, sales:210000, potency:0.95, visitors:5000, customers:100, margin:26, attach:22, cancel:11, newpct:55, disc:22,
         mix:[{c:"מזרנים",p:40},{c:"ספות",p:30},{c:"פינות אוכל",p:20},{c:"אחר",p:10}]}
     ]},
     {name:"ראשון לציון", avgRate:1500, agents:[
-      {name:"דיוויד קלארק",   hours:170, sales:323000, potency:1.25, visitors:4250, customers:134, margin:30, attach:33, cancel:7, newpct:68, disc:13,
+      {name:"דיוויד קלארק",   hours:170, sales:323000, potency:1.25, visitors:3350, customers:134, margin:30, attach:33, cancel:7, newpct:68, disc:13,
         mix:[{c:"ספות",p:50},{c:"פינות אוכל",p:25},{c:"מזרנים",p:15},{c:"אחר",p:10}]},
-      {name:"אמילי טיילור",   hours:120, sales:180000, potency:0.78, visitors:1800, customers:55, margin:43, attach:52, cancel:2, newpct:58, disc:4,
+      {name:"אמילי טיילור",   hours:120, sales:180000, potency:0.78, visitors:1570, customers:55, margin:43, attach:52, cancel:2, newpct:58, disc:4,
         mix:[{c:"פינות אוכל",p:55},{c:"מזרנים",p:20},{c:"ספות",p:15},{c:"אחר",p:10}]},
-      {name:"רוברט ג'ונסון",  hours:100, sales:130000, potency:1.00, visitors:2000, customers:68, margin:27, attach:25, cancel:9, newpct:62, disc:19,
+      {name:"רוברט ג'ונסון",  hours:100, sales:130000, potency:1.00, visitors:2720, customers:68, margin:27, attach:25, cancel:9, newpct:62, disc:19,
         mix:[{c:"מזרנים",p:45},{c:"ספות",p:25},{c:"פינות אוכל",p:20},{c:"אחר",p:10}]}
     ]}
   ];
@@ -195,7 +197,9 @@
     basic:{fmt:function(m){return shekel(m.basic)+' לשעה';}, val:function(m){return m.basic;},
       insight:'<b>מכירות לשעת עבודה.</b> סך המכירות חלקי שעות העבודה. הוגן להשוואה בין מי שעובד מלא למי שעובד חלקית.'},
     avgdeal:{fmt:function(m){return shekel(m.avgdeal);}, val:function(m){return m.avgdeal;},
-      insight:'<b>עסקה ממוצעת.</b> סך המכירות חלקי מספר הלקוחות שקנו — כמה ₪ בעסקה טיפוסית. מספר מוחשי בגובה קבלה, במקום ₪80 לנכנס המעורפל. עסקה גדולה = סוגר פרימיום, עסקה קטנה = מוכר בזול או בנפח.'}
+      insight:'<b>עסקה ממוצעת.</b> סך המכירות חלקי מספר הלקוחות שקנו — כמה ₪ בעסקה טיפוסית. מספר מוחשי בגובה קבלה, במקום ₪80 לנכנס המעורפל. עסקה גדולה = סוגר פרימיום, עסקה קטנה = מוכר בזול או בנפח.'},
+    close:{fmt:function(m){return (Math.round(m.close*10)/10)+'%';}, val:function(m){return m.close;},
+      insight:'<b>אחוז סגירה.</b> מתוך כל מי שנכנס לסניף, כמה אחוז קנו בפועל — מכל 100 שנכנסו, כך קנו. מדד ההמרה הברור: איכות הסגירה בלי קשר לכמות הקהל. הרבה קהל ומעט סגירות = נורת אזהרה.'}
   };
 
   var active='total', view='agents', showExplain=false, openSet={};
@@ -224,7 +228,6 @@
     var stats=[
       ['לקוחות', a.customers],
       ['נכנסים', a.visitors.toLocaleString('en-US')],
-      ['אחוז סגירה', (Math.round(a.customers/a.visitors*1000)/10)+'%'],
       ['מכירות לנכנס', shekel(a.sales/a.visitors)],
       ['רווחיות', a.margin+'%'],
       ['שיעור הנחה', a.disc+'%'],
@@ -284,7 +287,7 @@
       var avg=rows.reduce(function(s,r){return s+M.val(r.m);},0)/rows.length;
       rows.sort(function(x,y){return M.val(y.m)-M.val(x.m);});
       html+='<div class="branch"><div class="bh"><h2>'+b.name+'</h2>'
-        +'<div class="bavg">ממוצע הסניף · <b>'+M.fmt({total:avg,basic:avg,avgdeal:avg})+'</b></div></div><div class="rows">';
+        +'<div class="bavg">ממוצע הסניף · <b>'+M.fmt({total:avg,basic:avg,avgdeal:avg,close:avg})+'</b></div></div><div class="rows">';
       rows.forEach(function(r,i){
         var d=r.m, a=r.a;
         var vsp=(M.val(d)/avg-1)*100, vs=(vsp>=0?'up':'dn');
@@ -298,6 +301,7 @@
           +met('total','מכירות', shekel(d.total), '')
           +met('basic','מכירות לשעה', shekel(d.basic), '')
           +met('avgdeal','עסקה ממוצעת', shekel(d.avgdeal), '')
+          +met('close','אחוז סגירה', (Math.round(d.close*10)/10)+'%', '')
           +'</div>'
           +'<div class="deep">'+deepHtml(a)+'</div>'
           +'</div>';
