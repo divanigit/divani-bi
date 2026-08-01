@@ -181,20 +181,42 @@
 
 <script>
   var BRANCHES=[
-    {name:"נתניה", avgRate:1800, agents:[
-      {name:"ג'יימס ווטסון",  hours:160, sales:336000, potency:1.25, visitors:2800, customers:140, margin:32, attach:30, cancel:6, newpct:70, disc:12,
+    {name:"נתניה", agents:[
+      {name:"עדן",  hours:165, sales:340000, visitors:2900, customers:142, margin:33, attach:35, cancel:5, newpct:68, disc:11,
         mix:[{c:"ספות",p:55},{c:"פינות אוכל",p:20},{c:"מזרנים",p:15},{c:"אחר",p:10}]},
-      {name:"ג'סיקה מילר",    hours:150, sales:288000, potency:0.80, visitors:2400, customers:72, margin:41, attach:48, cancel:3, newpct:60, disc:5,
-        mix:[{c:"פינות אוכל",p:50},{c:"ספות",p:20},{c:"מזרנים",p:20},{c:"אחר",p:10}]},
-      {name:"מייקל בראון",    hours:140, sales:210000, potency:0.95, visitors:5000, customers:100, margin:26, attach:22, cancel:11, newpct:55, disc:22,
-        mix:[{c:"מזרנים",p:40},{c:"ספות",p:30},{c:"פינות אוכל",p:20},{c:"אחר",p:10}]}
+      {name:"עידן", hours:150, sales:300000, visitors:2500, customers:74, margin:42, attach:50, cancel:3, newpct:60, disc:5,
+        mix:[{c:"פינות אוכל",p:52},{c:"ספות",p:20},{c:"מזרנים",p:18},{c:"אחר",p:10}]},
+      {name:"טל",   hours:140, sales:205000, visitors:4600, customers:102, margin:27, attach:24, cancel:10, newpct:55, disc:20,
+        mix:[{c:"מזרנים",p:42},{c:"ספות",p:30},{c:"פינות אוכל",p:18},{c:"אחר",p:10}]}
     ]},
-    {name:"ראשון לציון", avgRate:1500, agents:[
-      {name:"דיוויד קלארק",   hours:170, sales:323000, potency:1.25, visitors:3350, customers:134, margin:30, attach:33, cancel:7, newpct:68, disc:13,
+    {name:"ירושלים", agents:[
+      {name:"כרמל",  hours:160, sales:315000, visitors:3000, customers:120, margin:36, attach:44, cancel:6, newpct:66, disc:9,
         mix:[{c:"ספות",p:50},{c:"פינות אוכל",p:25},{c:"מזרנים",p:15},{c:"אחר",p:10}]},
-      {name:"אמילי טיילור",   hours:120, sales:180000, potency:0.78, visitors:1570, customers:55, margin:43, attach:52, cancel:2, newpct:58, disc:4,
+      {name:"דניאל", hours:145, sales:255000, visitors:2400, customers:68, margin:40, attach:47, cancel:4, newpct:62, disc:6,
         mix:[{c:"פינות אוכל",p:55},{c:"מזרנים",p:20},{c:"ספות",p:15},{c:"אחר",p:10}]},
-      {name:"רוברט ג'ונסון",  hours:100, sales:130000, potency:1.00, visitors:2720, customers:68, margin:27, attach:25, cancel:9, newpct:62, disc:19,
+      {name:"מקסים", hours:130, sales:180000, visitors:3600, customers:105, margin:28, attach:22, cancel:9, newpct:58, disc:18,
+        mix:[{c:"מזרנים",p:45},{c:"ספות",p:25},{c:"פינות אוכל",p:20},{c:"אחר",p:10}]}
+    ]},
+    {name:"בית שמש", agents:[
+      {name:"מלכה", hours:150, sales:230000, visitors:2600, customers:96, margin:34, attach:38, cancel:5, newpct:64, disc:10,
+        mix:[{c:"ספות",p:48},{c:"פינות אוכל",p:24},{c:"מזרנים",p:18},{c:"אחר",p:10}]},
+      {name:"יעל",  hours:120, sales:165000, visitors:1700, customers:58, margin:39, attach:46, cancel:3, newpct:60, disc:7,
+        mix:[{c:"פינות אוכל",p:52},{c:"מזרנים",p:20},{c:"ספות",p:18},{c:"אחר",p:10}]}
+    ]},
+    {name:"חיפה", agents:[
+      {name:"שרון",  hours:170, sales:325000, visitors:3300, customers:130, margin:31, attach:33, cancel:7, newpct:67, disc:12,
+        mix:[{c:"ספות",p:52},{c:"פינות אוכל",p:23},{c:"מזרנים",p:15},{c:"אחר",p:10}]},
+      {name:"יעל",   hours:125, sales:195000, visitors:1800, customers:60, margin:43, attach:52, cancel:2, newpct:58, disc:4,
+        mix:[{c:"פינות אוכל",p:55},{c:"מזרנים",p:20},{c:"ספות",p:15},{c:"אחר",p:10}]},
+      {name:"דניאל", hours:110, sales:140000, visitors:2500, customers:70, margin:27, attach:25, cancel:9, newpct:62, disc:19,
+        mix:[{c:"מזרנים",p:45},{c:"ספות",p:25},{c:"פינות אוכל",p:20},{c:"אחר",p:10}]}
+    ]},
+    {name:"ראשון לציון", agents:[
+      {name:"לין",   hours:168, sales:330000, visitors:3100, customers:138, margin:32, attach:34, cancel:6, newpct:69, disc:11,
+        mix:[{c:"ספות",p:54},{c:"פינות אוכל",p:21},{c:"מזרנים",p:15},{c:"אחר",p:10}]},
+      {name:"עמית",  hours:148, sales:285000, visitors:2450, customers:72, margin:41, attach:49, cancel:3, newpct:61, disc:5,
+        mix:[{c:"פינות אוכל",p:53},{c:"ספות",p:20},{c:"מזרנים",p:17},{c:"אחר",p:10}]},
+      {name:"איתמר", hours:125, sales:175000, visitors:3800, customers:100, margin:26, attach:23, cancel:11, newpct:56, disc:21,
         mix:[{c:"מזרנים",p:45},{c:"ספות",p:25},{c:"פינות אוכל",p:20},{c:"אחר",p:10}]}
     ]}
   ];
@@ -346,8 +368,9 @@
         var ro=refOthers(b.agents,a,active);
         var band=ro==null?{cls:'mid',txt:'יחיד בסניף'}:vsBand(M.val(d),ro);
         var barPct=Math.max(3,Math.min(100,M.val(d)/mx*100));
-        html+='<div class="agent'+(i===0?' lead':'')+(band.cls==='bad'?' attn':'')+(openSet[a.name]?' open':'')+'">'
-          +'<button type="button" class="atop" data-fold data-name="'+a.name+'">'
+        var key=b.name+'|'+a.name;
+        html+='<div class="agent'+(i===0?' lead':'')+(band.cls==='bad'?' attn':'')+(openSet[key]?' open':'')+'">'
+          +'<button type="button" class="atop" data-fold data-name="'+key+'">'
           +'<span class="rank">'+(i+1)+'</span>'
           +'<span class="who"><b>'+a.name+'</b><span>'+a.hours+' שעות · '+shekelShort(a.sales)+' מכירות</span></span>'
           +'<span class="vsavg '+band.cls+'">'+band.txt+'</span>'
