@@ -534,8 +534,8 @@ async def login_post(request: Request):
 
 @app.get("/agent-report")
 def agent_report(request: Request):
-    # OWNER-ONLY live preview of the agent-performance methodology (demo data for now)
-    if not _is_admin(request):
+    # In-development preview of the agent-performance methodology (demo data) — open to all logged-in users
+    if not _logged_in(request):
         return RedirectResponse("/login", status_code=303)
     try:
         with open(os.path.join(HERE, "agent_report_demo.html"), encoding="utf-8") as f:

@@ -270,6 +270,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     <button type="button" data-v="collect" aria-pressed="false">מקדמות</button>
     <button type="button" data-v="dim" aria-pressed="false">פילוח</button>
     <button type="button" data-v="ins" aria-pressed="false">תובנות</button>
+    <button type="button" id="nrepbtn" aria-pressed="false" title="ביצועי נציגים — ממשק בפיתוח">ביצועי נציגים</button>
   </div>
   <div class="dimbar" id="insbar" style="display:none" role="group" aria-label="בחירת תובנה">
     <button type="button" class="chip on" data-p="pareto" aria-pressed="true">פארטו</button>
@@ -1497,6 +1498,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   function askClose(){askSheet.classList.remove('on');askOvl.classList.remove('on');}
   document.getElementById('askbtn').addEventListener('click',askOpen);
   (function(){var v=document.getElementById('viewasbtn');if(v)v.addEventListener('click',function(){previewUser=!previewUser;applyOwnerUI();apply();});})();
+  (function(){var n=document.getElementById('nrepbtn');if(n)n.addEventListener('click',function(){location.href='/agent-report';});})();
 
   /* ---- התראות (alerts layer — v1: transfers with an אסמכתא but no receipt yet) ---- */
   var ALERT_DAYS=3;
