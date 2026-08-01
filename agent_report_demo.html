@@ -1,4 +1,4 @@
-<title>דוח ביצועי סוכנים — דמו מתודולוגיה (נתונים פיקטיביים)</title>
+<title>דוח ביצועי נציגים — דמו מתודולוגיה (נתונים פיקטיביים)</title>
 <style>
   :root{
     --paper:#FBFCFB; --panel:#FFFFFF; --panel2:#F4F8F6;
@@ -99,8 +99,7 @@
   .cbar>i{position:absolute;inset-inline-start:0;top:0;bottom:0;border-radius:5px;background:var(--bc,var(--brand));min-width:3px}
   .cbar>u{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink2);opacity:.5;border-radius:2px}
 
-  .mets{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-  @media(min-width:600px){.mets{grid-template-columns:repeat(4,1fr)}}
+  .mets{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
   .met{background:var(--panel2);border-radius:10px;padding:9px 10px;text-align:center;border:1.5px solid transparent}
   .met.act{border-color:var(--brand2);background:var(--brandw)}
   .met .lbl{font-size:.66rem;color:var(--ink3);margin-bottom:3px;line-height:1.25}
@@ -135,13 +134,13 @@
 
 <div class="wrap">
   <header class="mast">
-    <div class="brand"><span class="eyebrow">ביצועי סוכנים</span><span class="word">VITORIO&nbsp;DIVANI</span></div>
+    <div class="brand"><span class="eyebrow">ביצועי נציגים</span><span class="word">VITORIO&nbsp;DIVANI</span></div>
     <div class="hactions"><span class="fake">נתונים פיקטיביים</span><button type="button" id="explainBtn" class="explbtn">הסברים</button></div>
   </header>
 
   <div class="topbar">
     <div class="vtog" id="vtog">
-      <button type="button" data-view="agents" class="on">ניתוח סוכנים</button>
+      <button type="button" data-view="agents" class="on">ניתוח נציגים</button>
       <button type="button" data-view="branches">ניתוח סניפים</button>
     </div>
 
@@ -149,7 +148,6 @@
       <button type="button" data-m="total" class="on">מכירות</button>
       <button type="button" data-m="basic">מכירות לשעה</button>
       <button type="button" data-m="avgdeal">עסקה ממוצעת</button>
-      <button type="button" data-m="close">אחוז סגירה</button>
     </div>
   </div>
 
@@ -161,19 +159,21 @@
     <h3>איך כל מדד מחושב</h3>
     <dl>
       <dt>מכירות</dt>
-      <dd>סך המכירות של הסוכן בתקופה. הכי פשוט — מי מכר הכי הרבה כסף.</dd>
+      <dd>סך המכירות של הנציג בתקופה. הכי פשוט — מי מכר הכי הרבה כסף.</dd>
       <dt>מכירות לשעה</dt>
       <dd>סך המכירות חלקי שעות העבודה. הוגן להשוואה בין מי שעובד מלא למי שעובד חלקית.</dd>
       <dt>עסקה ממוצעת</dt>
       <dd>סך המכירות חלקי מספר הלקוחות שקנו — כמה ₪ בעסקה טיפוסית. מספר מוחשי בגובה קבלה, שהחליף את ₪80 לנכנס המעורפל.</dd>
-      <dt>אחוז סגירה</dt>
-      <dd>מתוך כל מי שנכנס לסניף, כמה אחוז קנו בפועל — מכל 100 שנכנסו, כך קנו. זה מדד ההמרה הברור: הוא מודד את איכות הסגירה בלי קשר לכמות הקהל שהגיע. סוכן שמקבל הרבה קהל וסוגר מעט = נורת אזהרה. קיים גם ברמת הסוכן וגם ברמת הסניף.</dd>
-      <dt>פאנל עומק — לחיצה על סוכן</dt>
-      <dd>פותח מדדי עומק: לקוחות, נכנסים, מכירות לנכנס (למי שרוצה לצלול פנימה), רווחיות, שיעור הנחה, הנחות בכסף, מכירה נלווית, ביטולים, וחדש מול חוזר — ותמהיל מוצרים בפסים, כדי לראות במה כל סוכן חזק: ספות, פינות אוכל או מזרנים. שיעור ההנחה הוא סך ההנחות שנתן חלקי סך מכירותיו, לא ממוצע ללקוח.</dd>
+      <dt>מעל / מתחת לממוצע</dt>
+      <dd>התג ליד כל נציג משווה אותו לממוצע הנציגים בסניף שלו, על המדד שמוצג כרגע. לדוגמה במדד מכירות, "21% מעל הממוצע" = הנציג מכר עשרים ואחד אחוז יותר מהנציג הממוצע בסניף. ירוק = מעל, אפור = בערך בממוצע, כתום ואדום = מתחת ודורש תשומת לב. הפס מתחת לשם מראה את אותו פער ויזואלית.</dd>
+      <dt>אחוז סגירה — רק ברמת הסניף</dt>
+      <dd>מתוך כל מי שנכנס לסניף, כמה אחוז קנו — מכל 100 שנכנסו, כך קנו. זה מדד של הסניף בלבד, לא של הנציג הבודד: ה"נכנסים" הם קהל של כל הסניף, ואי אפשר לדעת בכמה מהם טיפל כל נציג, כי כולם חולקים את אותו קהל. לכן אחוז סגירה, נכנסים ומכירות לנכנס מופיעים רק בניתוח הסניפים.</dd>
+      <dt>פאנל עומק — לחיצה על נציג</dt>
+      <dd>פותח מדדי עומק של הנציג: לקוחות (כמה עסקאות סגר), רווחיות, שיעור הנחה, הנחות בכסף, מכירה נלווית, ביטולים, וחדש מול חוזר — ותמהיל מוצרים בפסים, כדי לראות במה כל נציג חזק: ספות, פינות אוכל או מזרנים. שיעור ההנחה הוא סך ההנחות שנתן חלקי סך מכירותיו, לא ממוצע ללקוח. <b>מכירה נלווית</b> = מתוך העסקאות שסגר, בכמה אחוז הוסיף מוצר משלים לצד המוצר הראשי (למשל שטיח או כרית לצד ספה, מגן למזרן) — מדד למיומנות הגדלת סל הקנייה, וניתן לאימון.</dd>
       <dt>תעודת זהות — התגיות</dt>
       <dd>נוצרות אוטומטית מהנתונים לפי ספים: עסקה גדולה ומעט לקוחות = <b>סוגר פרימיום</b>, עסקה קטנה והרבה לקוחות = <b>מכונת נפח</b>; קטגוריה מובילה מעל 45% = <b>מתמחה</b>; רווחיות גבוהה מול <b>מנדב הנחות</b>; מכירה נלווית גבוהה = <b>אלוף נלווה</b>; ביטולים גבוהים = דגל אזהרה. זה הופך את הדוח מלוח תוצאות לכלי ניהול.</dd>
       <dt>ניתוח סניפים</dt>
-      <dd>מעבר בין ניתוח סוכנים לסניפים בראש העמוד. הסניפים מדורגים לפי סך מכירות — הכסף שבאמת נכנס. לכל סניף מוצגים מכירות, מכירות לשעה, עסקה ממוצעת, רווחיות ואחוז סגירה, ותמהיל הקטגוריות הנמכרות ביותר, כדי לראות במה כל סניף חזק ואיפה ההזדמנות.</dd>
+      <dd>מעבר בין ניתוח נציגים לסניפים בראש העמוד. הסניפים מדורגים לפי סך מכירות — הכסף שבאמת נכנס. לכל סניף מוצגים מכירות, מכירות לשעה, עסקה ממוצעת, רווחיות, אחוז סגירה ונכנסים, ותמהיל הקטגוריות הנמכרות ביותר. מדדי התנועה — אחוז סגירה, נכנסים ומכירות לנכנס — חיים כאן ולא ברמת הנציג, כי התנועה שייכת לסניף.</dd>
     </dl>
   </div>
 </div>
@@ -234,19 +234,17 @@
     var r=ref?Math.round((value/ref-1)*100):0, cls;
     if(r>=10) cls='up'; else if(r>-10) cls='mid'; else if(r>=-25) cls='warn'; else cls='bad';
     var arrow=r>0?'▲':(r<0?'▼':'·');
-    var txt=r===0?'בדיוק בממוצע':(arrow+' '+(r>0?'+':'')+r+'% מול הסניף');
+    var txt=r===0?'בדיוק בממוצע':(arrow+' '+Math.abs(r)+'% '+(r>0?'מעל הממוצע':'מתחת לממוצע'));
     return {cls:cls,txt:txt};
   }
 
   var META={
     total:{fmt:function(m){return shekel(m.total);}, val:function(m){return m.total;},
-      insight:'<b>סך המכירות של כל סוכן בתקופה.</b> המדד הכי פשוט — מי מכר הכי הרבה כסף. מי שעובד יותר שעות ימכור יותר, ולכן יש גם מכירות לשעה.'},
+      insight:'<b>סך המכירות של כל נציג בתקופה.</b> המדד הכי פשוט — מי מכר הכי הרבה כסף. מי שעובד יותר שעות ימכור יותר, ולכן יש גם מכירות לשעה.'},
     basic:{fmt:function(m){return shekel(m.basic)+' לשעה';}, val:function(m){return m.basic;},
       insight:'<b>מכירות לשעת עבודה.</b> סך המכירות חלקי שעות העבודה. הוגן להשוואה בין מי שעובד מלא למי שעובד חלקית.'},
     avgdeal:{fmt:function(m){return shekel(m.avgdeal);}, val:function(m){return m.avgdeal;},
-      insight:'<b>עסקה ממוצעת.</b> סך המכירות חלקי מספר הלקוחות שקנו — כמה ₪ בעסקה טיפוסית. מספר מוחשי בגובה קבלה, במקום ₪80 לנכנס המעורפל. עסקה גדולה = סוגר פרימיום, עסקה קטנה = מוכר בזול או בנפח.'},
-    close:{fmt:function(m){return (Math.round(m.close*10)/10)+'%';}, val:function(m){return m.close;},
-      insight:'<b>אחוז סגירה.</b> מתוך כל מי שנכנס לסניף, כמה אחוז קנו בפועל — מכל 100 שנכנסו, כך קנו. מדד ההמרה הברור: איכות הסגירה בלי קשר לכמות הקהל. הרבה קהל ומעט סגירות = נורת אזהרה.'}
+      insight:'<b>עסקה ממוצעת.</b> סך המכירות חלקי מספר הלקוחות שקנו — כמה ₪ בעסקה טיפוסית. מספר מוחשי בגובה קבלה. עסקה גדולה = סוגר פרימיום, עסקה קטנה = מוכר בזול או בנפח.'}
   };
 
   var active='total', view='agents', showExplain=false, openSet={};
@@ -274,8 +272,6 @@
     var tags=profile(a).map(function(p){return '<span class="ptag '+p.k+'">'+p.t+'</span>';}).join('');
     var stats=[
       ['לקוחות', a.customers],
-      ['נכנסים', a.visitors.toLocaleString('en-US')],
-      ['מכירות לנכנס', shekel(a.sales/a.visitors)],
       ['רווחיות', a.margin+'%'],
       ['שיעור הנחה', a.disc+'%'],
       ['הנחות בכסף', shekel(a.sales*a.disc/(100-a.disc))],
@@ -341,8 +337,8 @@
       var refPct=Math.max(0,Math.min(100,ref/mx*100));
       var pal=BRANCH_PALETTE[bi%BRANCH_PALETTE.length];
       html+='<div class="branch" style="--bc:'+pal.bc+';--bcw:'+pal.bcw+'">'
-        +'<div class="bh"><div class="bhname"><span class="bdot"></span><h2>'+b.name+'</h2><span class="bcount">'+b.agents.length+' סוכנים</span></div>'
-        +'<div class="bavg">ממוצע הסניף · <b>'+M.fmt({total:ref,basic:ref,avgdeal:ref,close:ref})+'</b></div></div><div class="rows">';
+        +'<div class="bh"><div class="bhname"><span class="bdot"></span><h2>'+b.name+'</h2><span class="bcount">'+b.agents.length+' נציגים</span></div>'
+        +'<div class="bavg">ממוצע הנציגים · <b>'+M.fmt({total:ref,basic:ref,avgdeal:ref})+'</b></div></div><div class="rows">';
       rows.forEach(function(r,i){
         var d=r.m, a=r.a;
         var band=vsBand(M.val(d),ref);
@@ -358,7 +354,6 @@
           +met('total','מכירות', shekelShort(d.total), '')
           +met('basic','מכירות לשעה', shekelShort(d.basic), '')
           +met('avgdeal','עסקה ממוצעת', shekelShort(d.avgdeal), '')
-          +met('close','אחוז סגירה', (Math.round(d.close*10)/10)+'%', '')
           +'</div>'
           +'<div class="deep">'+deepHtml(a)+'</div>'
           +'</div>';
