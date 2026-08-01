@@ -41,6 +41,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .selbtn svg{width:16px;height:16px;color:var(--bd);flex:none}
   .selbtn .car{width:12px;height:12px;color:var(--tx3)}
   .rfr{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:8px 12px;border:1px solid var(--line2);border-radius:12px;background:var(--bg);color:var(--tx2);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer}
+  #viewasbtn.on{background:var(--wbg);color:var(--wfg);border-color:var(--wfg);font-weight:700}
   .rfr svg{width:14px;height:14px}
   .rfr:disabled{opacity:.45;cursor:default}
   .built{font-size:11.5px;color:var(--tx3)}
@@ -297,6 +298,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg>
       שאלה חופשית
     </button>
+    <button type="button" class="rfr" id="viewasbtn" title="תצוגה כמו שאר המשתמשים" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+      <span class="vlbl">תצוגה כמו כולם</span>
+    </button>
     <button type="button" class="rfr" id="rfr" title="רענון נתונים מפריוריטי עכשיו">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
       רענן עכשיו
@@ -379,7 +384,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
 
 <script>
 (function(){
-  var META=null, TARGET=50, view='agents', dimKind='fam', dimMeasure='s';
+  var META=null, TARGET=50, view='agents', dimKind='fam', dimMeasure='s', previewUser=false;
   var dimPath={grp:null,fam:null,model:null}, dimSeg=null, dimSort=null, insParetoN=25;
   var DIMH={fam:'קטגוריות',part:'מוצרים',city:'ערים',sector:'מגזר',source:'מקור הגעה'};
   var SECN={'חילו.':'חילוני','חר.':'חרדי','ד.לא.':'דתי לאומי','רוס':'דובר רוסית','ע.ר':'המגזר הערבי','אחר':'אחר','לקוח מרחוק':'לקוח מרחוק','הזמנת שרות':'הזמנת שירות'};
@@ -1147,7 +1152,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   var cannibMode='mkt';
   function cbP(v){v=+v||0;return (v>=0?'+':'')+Math.round(v)+' אחוז';}
   function renderCannib(agg){
-    if(!(META&&META.owner)||(agg&&agg.dev)){stage.innerHTML='<div class="cbdev"><b>בפיתוח</b><span>התכונה בבנייה ותיפתח בקרוב</span></div>';return;}
+    if(!(META&&META.owner&&!previewUser)||(agg&&agg.dev)){stage.innerHTML='<div class="cbdev"><b>בפיתוח</b><span>התכונה בבנייה ותיפתח בקרוב</span></div>';return;}
     var d=agg||[];
     if(!d.length){stage.innerHTML='<div class="empty">אין נתונים לניתוח.</div>';return;}
     var mode=cannibMode;
@@ -1488,6 +1493,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   function askOpen(){askSheet.classList.add('on');askOvl.classList.add('on');setTimeout(function(){document.getElementById('askq').focus();},50);}
   function askClose(){askSheet.classList.remove('on');askOvl.classList.remove('on');}
   document.getElementById('askbtn').addEventListener('click',askOpen);
+  (function(){var v=document.getElementById('viewasbtn');if(v)v.addEventListener('click',function(){previewUser=!previewUser;applyOwnerUI();apply();});})();
 
   /* ---- התראות (alerts layer — v1: transfers with an אסמכתא but no receipt yet) ---- */
   var ALERT_DAYS=3;
@@ -1592,13 +1598,24 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   stage.addEventListener('keydown',function(e){if((e.key==='Enter'||e.key===' ')&&e.target.hasAttribute&&e.target.hasAttribute('data-t')){e.preventDefault();var id=e.target.getAttribute('data-t');eT[id]=!eT[id];renderStage(ROOT());}});
 
   /* ---- boot ---- */
+  function applyOwnerUI(){
+    var canAsk=!!(META&&META.admin)&&!previewUser;
+    var ab=document.getElementById('askbtn'); if(ab)ab.style.display=canAsk?'':'none';
+    var vb=document.getElementById('viewasbtn'); if(!vb)return;
+    if(META&&META.owner){
+      vb.style.display='';
+      vb.classList.toggle('on',previewUser);
+      var l=vb.querySelector('.vlbl'); if(l)l.textContent=previewUser?'חזרה לתצוגת בעלים':'תצוגה כמו כולם';
+      vb.title=previewUser?'חזרה לתצוגת בעלים':'תצוגה כמו שאר המשתמשים';
+    } else vb.style.display='none';
+  }
   function boot(){
     fetch('/api/meta',{cache:'no-store'})
       .then(function(r){if(r.status===401){location.href='/login';throw 0;}if(!r.ok)throw new Error('http '+r.status);return r.json();})
       .then(function(m){
         META=m;
         if(!META.min){stage.innerHTML='<div class="empty">המסד עדיין מתמלא בנתונים — נסה שוב בעוד כמה דקות.</div>';return;}
-        if(!META.admin)document.getElementById('askbtn').style.display='none';
+        applyOwnerUI();
         var ms=document.getElementById('msel'),ys=document.getElementById('ysel'),yo=document.getElementById('yosel');
         ms.innerHTML=MONTHS.map(function(n,i){return '<option value="'+(i+1)+'">'+n+'</option>';}).join('');
         var y0=parseInt(META.min.slice(0,4),10),y1=parseInt(META.max.slice(0,4),10),o='';
