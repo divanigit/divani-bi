@@ -164,8 +164,8 @@
       <dd>סך המכירות חלקי שעות העבודה. הוגן להשוואה בין מי שעובד מלא למי שעובד חלקית.</dd>
       <dt>עסקה ממוצעת</dt>
       <dd>סך המכירות חלקי מספר הלקוחות שקנו — כמה ₪ בעסקה טיפוסית. מספר מוחשי בגובה קבלה, שהחליף את ₪80 לנכנס המעורפל.</dd>
-      <dt>מעל / מתחת לממוצע</dt>
-      <dd>התג ליד כל נציג משווה אותו לממוצע הנציגים בסניף שלו, על המדד שמוצג כרגע. לדוגמה במדד מכירות, "21% מעל הממוצע" = הנציג מכר עשרים ואחד אחוז יותר מהנציג הממוצע בסניף. ירוק = מעל, אפור = בערך בממוצע, כתום ואדום = מתחת ודורש תשומת לב. הפס מתחת לשם מראה את אותו פער ויזואלית.</dd>
+      <dt>מעל / מתחת לשאר</dt>
+      <dd>התג ליד כל נציג משווה אותו לממוצע שאר הנציגים בסניף — בלי הנציג עצמו — על המדד שמוצג. לדוגמה במדד מכירות, "35% מעל השאר" = הנציג מכר שלושים וחמישה אחוז יותר מהממוצע של שאר הנציגים. משווים בלי הנציג עצמו כי אחרת הוא מושך את הממוצע לכיוונו והתמונה מתעוותת, במיוחד כשיש מעט נציגים. ירוק = מעל, אפור = בערך כמו השאר, כתום ואדום = מתחת ודורש תשומת לב. הפס מתחת לשם מראה את גובה מכירותיו ביחס לנציג המוביל בסניף.</dd>
       <dt>אחוז סגירה — רק ברמת הסניף</dt>
       <dd>מתוך כל מי שנכנס לסניף, כמה אחוז קנו — מכל 100 שנכנסו, כך קנו. זה מדד של הסניף בלבד, לא של הנציג הבודד: ה"נכנסים" הם קהל של כל הסניף, ואי אפשר לדעת בכמה מהם טיפל כל נציג, כי כולם חולקים את אותו קהל. לכן אחוז סגירה, נכנסים ומכירות לנכנס מופיעים רק בניתוח הסניפים.</dd>
       <dt>פאנל עומק — לחיצה על נציג</dt>
@@ -220,21 +220,23 @@
     if(n>=10000)   return '₪'+Math.round(n/1000)+' אלף';
     return '₪'+n.toLocaleString('en-US');
   }
-  // weighted branch reference per metric — identical definition to the branches view (was mean-of-ratios)
-  function branchRef(agents,key){
-    var s=0,h=0,c=0,v=0;
-    agents.forEach(function(a){s+=a.sales;h+=a.hours;c+=a.customers;v+=a.visitors;});
+  // leave-one-out reference: the OTHER reps' pooled value for this metric.
+  // Excluding the rep himself is statistically cleaner — otherwise he pulls the average toward himself
+  // and the gap is understated (worst with few reps, where each is a big share of the mean).
+  function refOthers(agents,self,key){
+    var s=0,h=0,c=0,n=0;
+    agents.forEach(function(a){ if(a===self) return; s+=a.sales;h+=a.hours;c+=a.customers;n++; });
+    if(n===0) return null;
     if(key==='basic')   return h?s/h:0;
     if(key==='avgdeal') return c?s/c:0;
-    if(key==='close')   return v?c/v*100:0;
-    return agents.length?s/agents.length:0;
+    return s/n;
   }
   // 3-state standing vs the branch reference (arrow keeps meaning without color)
   function vsBand(value,ref){
     var r=ref?Math.round((value/ref-1)*100):0, cls;
     if(r>=10) cls='up'; else if(r>-10) cls='mid'; else if(r>=-25) cls='warn'; else cls='bad';
     var arrow=r>0?'▲':(r<0?'▼':'·');
-    var txt=r===0?'בדיוק בממוצע':(arrow+' '+Math.abs(r)+'% '+(r>0?'מעל הממוצע':'מתחת לממוצע'));
+    var txt=r===0?'בדיוק כמו השאר':(arrow+' '+Math.abs(r)+'% '+(r>0?'מעל השאר':'מתחת לשאר'));
     return {cls:cls,txt:txt};
   }
 
@@ -312,7 +314,7 @@
       var oi=BRANCHES.map(function(x){return x.name;}).indexOf(r.name), pal=BRANCH_PALETTE[(oi<0?i:oi)%BRANCH_PALETTE.length];
       var barPct=Math.max(4,Math.min(100,r.sales/mxs*100));
       return '<div class="brcard'+(i===0?' lead':'')+'" style="--bc:'+pal.bc+';--bcw:'+pal.bcw+'">'
-        +'<div class="brhead"><b><span class="bdot" style="margin-inline-end:7px"></span>'+r.name+(i===0?'<span class="brlead-tag">המכירות הגבוהות בסבב</span>':'')+'</b><span class="bs">'+shekelShort(r.sales)+'</span></div>'
+        +'<div class="brhead"><b><span class="bdot" style="margin-inline-end:7px"></span>'+r.name+(i===0?'<span class="brlead-tag">הכי הרבה מכירות</span>':'')+'</b><span class="bs">'+shekelShort(r.sales)+'</span></div>'
         +'<div class="cbar" style="margin:0 0 13px"><i style="width:'+barPct+'%"></i></div>'
         +'<div class="brmets">'+stats+'</div>'
         +'<div class="mixhead">הנמכרים ביותר לפי קטגוריה</div>'+bars
@@ -331,17 +333,17 @@
     var html='';
     BRANCHES.forEach(function(b,bi){
       var rows=b.agents.map(function(a){return {a:a, m:calc(a)};});
-      var ref=branchRef(b.agents,active);
+      var btot=b.agents.reduce(function(s,a){return s+a.sales;},0);
       rows.sort(function(x,y){return M.val(y.m)-M.val(x.m);});
       var mx=M.val(rows[0].m)||1;
-      var refPct=Math.max(0,Math.min(100,ref/mx*100));
       var pal=BRANCH_PALETTE[bi%BRANCH_PALETTE.length];
       html+='<div class="branch" style="--bc:'+pal.bc+';--bcw:'+pal.bcw+'">'
         +'<div class="bh"><div class="bhname"><span class="bdot"></span><h2>'+b.name+'</h2><span class="bcount">'+b.agents.length+' נציגים</span></div>'
-        +'<div class="bavg">ממוצע הנציגים · <b>'+M.fmt({total:ref,basic:ref,avgdeal:ref})+'</b></div></div><div class="rows">';
+        +'<div class="bavg">סך הסניף · <b>'+shekelShort(btot)+'</b></div></div><div class="rows">';
       rows.forEach(function(r,i){
         var d=r.m, a=r.a;
-        var band=vsBand(M.val(d),ref);
+        var ro=refOthers(b.agents,a,active);
+        var band=ro==null?{cls:'mid',txt:'יחיד בסניף'}:vsBand(M.val(d),ro);
         var barPct=Math.max(3,Math.min(100,M.val(d)/mx*100));
         html+='<div class="agent'+(i===0?' lead':'')+(band.cls==='bad'?' attn':'')+(openSet[a.name]?' open':'')+'">'
           +'<button type="button" class="atop" data-fold data-name="'+a.name+'">'
@@ -349,7 +351,7 @@
           +'<span class="who"><b>'+a.name+'</b><span>'+a.hours+' שעות · '+shekelShort(a.sales)+' מכירות</span></span>'
           +'<span class="vsavg '+band.cls+'">'+band.txt+'</span>'
           +'<span class="chev">⌄</span></button>'
-          +'<div class="cbar"><i style="width:'+barPct+'%"></i><u style="inset-inline-start:'+refPct+'%"></u></div>'
+          +'<div class="cbar"><i style="width:'+barPct+'%"></i></div>'
           +'<div class="mets">'
           +met('total','מכירות', shekelShort(d.total), '')
           +met('basic','מכירות לשעה', shekelShort(d.basic), '')
