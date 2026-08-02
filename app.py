@@ -550,9 +550,8 @@ def agent_report(request: Request):
 
 @app.get("/nav-preview")
 def nav_preview(request: Request):
-    # temporary: 4 candidate navigation designs for the owner to try and choose
-    if not _logged_in(request):
-        return RedirectResponse("/login", status_code=303)
+    # temporary: 4 candidate navigation designs for the owner to try and choose.
+    # PUBLIC on purpose — dummy data only, no real numbers, so no login is needed to open the link.
     try:
         with open(os.path.join(HERE, "nav_preview.html"), encoding="utf-8") as f:
             return HTMLResponse(f.read())
