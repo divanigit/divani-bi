@@ -1220,12 +1220,13 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
 
   /* ---- סל מכירות ממוצע ללקוח — כל הנציגים ברצף, המעצבת שורה נפרדת ---- */
   function renderBasketsMeta(){
-    var agg=cache.agg||[];
+    var agg=cache.agg, n=(agg&&agg.length)?agg.length:0;
     document.getElementById('kpis').innerHTML='';
-    document.getElementById('sellbl').textContent=rangeLbl(state.from,state.to)+' · '+agg.length+' נציגים';
+    document.getElementById('sellbl').textContent=rangeLbl(state.from,state.to)+(n?(' · '+n+' נציגים'):'');
     document.getElementById('builtlbl').textContent=META.last_sync?('עודכן '+META.last_sync):'';
   }
   function renderBaskets(agg){
+    if(!(META&&META.owner&&!previewUser)||(agg&&agg.dev)){stage.innerHTML='<div class="cbdev"><b>בפיתוח</b><span>התכונה בבנייה ותיפתח בקרוב</span></div>';return;}
     agg=agg||[];
     if(!agg.length){stage.innerHTML='<div class="empty">אין מכירות בתקופה שנבחרה.</div>';return;}
     var repSales=0,repCust=0,maxRep=1;
