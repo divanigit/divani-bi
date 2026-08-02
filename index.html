@@ -237,6 +237,23 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .bsv{text-align:left;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--tx2);font-size:11.5px}
   .bsv b{color:var(--tx)}
   .bsv i{color:var(--tx3);font-style:normal;font-size:10px;margin-inline-start:5px}
+  .bknote{display:flex;gap:8px;background:var(--wbg);border:1px solid var(--wfg);color:var(--wfg);border-radius:10px;padding:9px 11px;font-size:12px;line-height:1.55;margin:0 0 13px}
+  .bknote svg{width:16px;height:16px;flex:none;margin-top:1px;stroke:var(--wfg)}
+  .bkref{font-size:12px;color:var(--tx2);margin:0 0 6px}
+  .bkref b{color:var(--tx)}
+  .bkrow{display:flex;align-items:center;gap:10px;padding:9px 4px}
+  .bkrow+.bkrow{border-top:1px solid var(--line)}
+  .bkr{width:20px;text-align:center;color:var(--tx3);font-size:11px;flex:none;font-variant-numeric:tabular-nums}
+  .bkmid{flex:1;min-width:0}
+  .bkname{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--tx);font-weight:500;margin-bottom:5px}
+  .bkname .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bkbar{height:6px;background:var(--line);border-radius:4px;overflow:hidden}
+  .bkbar i{display:block;height:100%;background:var(--bd);border-radius:4px;min-width:2px}
+  .bkval{flex:none;text-align:left;white-space:nowrap}
+  .bkval b{font-size:14px;color:var(--tx);font-variant-numeric:tabular-nums}
+  .bkval i{display:block;font-style:normal;font-size:10.5px;color:var(--tx3)}
+  .bkrow.dsg{background:var(--accentSoft);border-radius:10px;padding:10px 9px}
+  .dz{font-size:10px;font-weight:700;color:var(--okfg);border:1px solid var(--okfg);border-radius:999px;padding:1px 7px;font-style:normal;flex:none;white-space:nowrap}
   .cchart{width:100%;height:auto;display:block;background:var(--surface);border-radius:12px;margin:0 0 9px}
   .cgl{font-size:9px;fill:var(--tx3)}.cxl{font-size:8.5px;fill:var(--tx3)}.cmk{font-size:9px;fill:var(--tx);font-weight:600}
   .cleg{display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:center;font-size:12px;color:var(--tx2);margin:0 0 12px}
@@ -312,6 +329,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         <div class="navgroup"><svg class="gico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l3.5-3.5 3 3L21 7"/></svg><span>מכירות</span></div>
         <button type="button" data-v="agents" class="on" aria-pressed="true"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1"/><circle cx="9" cy="7.5" r="3.2"/><path d="M22 19v-1a4 4 0 0 0-3-3.87"/><path d="M16 3.3a4 4 0 0 1 0 7.4"/></svg><span class="rlbl">סוכנים</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="branches" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.6-4.4A1 1 0 0 1 5.5 4h13a1 1 0 0 1 .9.6L21 9"/><path d="M4.5 9v9a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V9"/><path d="M3 9h18"/><path d="M9.5 20v-5h5v5"/></svg><span class="rlbl">סניפים</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
+        <button type="button" data-v="baskets" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1.2 11.2a1 1 0 0 1-1 .8H7.2a1 1 0 0 1-1-.8L5 8z"/><path d="M8.5 8V6.2a3.5 3.5 0 0 1 7 0V8"/><path d="M9.5 12v4"/><path d="M14.5 12v4"/></svg><span class="rlbl">סל ממוצע ללקוח</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <div class="navgroup"><svg class="gico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="8.5" r="5.3"/><path d="M13.8 6.1a5.3 5.3 0 1 1 0 10.6"/></svg><span>כספים ושירות</span></div>
         <button type="button" data-v="cash" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2.4"/><circle cx="12" cy="12" r="2.6"/><path d="M6 12h.02M18 12h.02"/></svg><span class="rlbl">מזומן</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="collect" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.8" y="6" width="18.4" height="13" rx="2.4"/><path d="M3 10.5h18.2"/><circle cx="17" cy="14.6" r="1.35"/></svg><span class="rlbl">מקדמות</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
@@ -490,6 +508,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(view==='service')return state.from+'|'+state.to+'|S';
     if(view==='collect')return state.from+'|'+state.to+'|P';
     if(view==='branchsrc')return state.from+'|'+state.to+'|BS';
+    if(view==='baskets')return state.from+'|'+state.to+'|BK';
     if(view==='cannib')return 'CN';
     if(view==='dim'){
       if(dimKind==='fam')return state.from+'|'+state.to+'|T|'+(dimPath.grp||'')+'|'+(dimPath.fam||'')+'|'+(dimPath.model||'');
@@ -529,6 +548,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var url=view==='cash'?('/api/cash?d_from='+state.from+'&d_to='+state.to)
            :view==='collect'?('/api/collect?d_from='+state.from+'&d_to='+state.to)
            :view==='branchsrc'?('/api/branchsrc?d_from='+state.from+'&d_to='+state.to)
+           :view==='baskets'?('/api/baskets?d_from='+state.from+'&d_to='+state.to)
            :view==='cannib'?('/api/panel?name=contrib')
            :view==='dim'?(function(){
               if(dimKind==='fam')return '/api/tree?d_from='+state.from+'&d_to='+state.to+(dimPath.grp?'&grp='+encodeURIComponent(dimPath.grp):'')+(dimPath.fam?'&fam='+encodeURIComponent(dimPath.fam):'')+(dimPath.model?'&model='+encodeURIComponent(dimPath.model):'');
@@ -1198,6 +1218,34 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     stage.innerHTML=pills+head+'<div class="bswrap">'+rows+'</div>';
   }
 
+  /* ---- סל מכירות ממוצע ללקוח — כל הנציגים ברצף, המעצבת שורה נפרדת ---- */
+  function renderBasketsMeta(){
+    var agg=cache.agg||[];
+    document.getElementById('kpis').innerHTML='';
+    document.getElementById('sellbl').textContent=rangeLbl(state.from,state.to)+' · '+agg.length+' נציגים';
+    document.getElementById('builtlbl').textContent=META.last_sync?('עודכן '+META.last_sync):'';
+  }
+  function renderBaskets(agg){
+    agg=agg||[];
+    if(!agg.length){stage.innerHTML='<div class="empty">אין מכירות בתקופה שנבחרה.</div>';return;}
+    var repSales=0,repCust=0,maxRep=1;
+    for(var i=0;i<agg.length;i++){var a=agg[i];if(!a.designer){repSales+=a.sales;repCust+=a.customers;if(a.avg_cust>maxRep)maxRep=a.avg_cust;}}
+    var netAvg=repCust?Math.round(repSales/repCust):0;
+    var note='<div class="bknote"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>'
+      +'<span>לא כל מכירות המעצבת מתויגות ככאלה. חלק ממכירות העיצוב נרשמות תחת הנציג שסגר (למשל הזמנה של יעל סבג מ־2 באוגוסט בכ־₪13,500). לכן נתוני "מעצבת" כאן הם רף תחתון בלבד.</span></div>';
+    var ref='<div class="bkref">ממוצע הרשת ללקוח, בלי המעצבת: <b>'+ils(netAvg)+'</b></div>';
+    var rows='';
+    for(var i=0;i<agg.length;i++){var a=agg[i];
+      var w=Math.max(2,Math.min(100,100*a.avg_cust/maxRep));
+      var badge=a.designer?'<span class="dz">עיצוב</span>':'';
+      rows+='<div class="bkrow'+(a.designer?' dsg':'')+'">'
+        +'<span class="bkr">'+(i+1)+'</span>'
+        +'<span class="bkmid"><span class="bkname"><span class="nm">'+esc(a.agent)+'</span>'+badge+'</span>'
+          +'<span class="bkbar"><i style="width:'+w.toFixed(1)+'%"></i></span></span>'
+        +'<span class="bkval"><b>'+ils(a.avg_cust)+'</b><i>'+a.customers+' לק׳</i></span></div>';}
+    stage.innerHTML=note+ref+'<div class="bswrap">'+rows+'</div>';
+  }
+
   /* ---- כדאיות סניף — תרומה נטו מנוכת צמיחת שוק (diff-in-diff) ---- */
   function renderCannibMeta(){
     document.getElementById('kpis').innerHTML='';
@@ -1309,6 +1357,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   function renderAll(){
     if(view==='ins'){renderInsMeta();renderInsStage();return;}
     if(view==='branchsrc'){renderBranchSrcMeta();renderBranchSrc(cache.agg);return;}
+    if(view==='baskets'){renderBasketsMeta();renderBaskets(cache.agg);return;}
     if(view==='cannib'){renderCannibMeta();renderCannib(cache.agg);return;}
     var R=ROOT();if(view==='cash'){renderCashKpis(R);}else if(view==='collect'){renderCollectKpis(R);}else if(view==='dim'){renderDimKpis(R);}else{renderKpis(R);}renderMeta(R);renderStage(R);}
 
@@ -1439,7 +1488,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   function setView(v){
     if(view===v)return;
     view=v;
-    var H1={agents:'ביצועי סוכנים',branches:'מכירות לפי סניפים',cash:'תקבולים במזומן',service:'פעילות שירות',collect:'מקדמות והנחות',dim:'פילוח מכירות',branchsrc:'מקורות הגעה לסניף',cannib:'קניבליזציה — תמהיל ערוצים',ins:'תובנות'};
+    var H1={agents:'ביצועי סוכנים',branches:'מכירות לפי סניפים',cash:'תקבולים במזומן',service:'פעילות שירות',collect:'מקדמות והנחות',dim:'פילוח מכירות',branchsrc:'מקורות הגעה לסניף',baskets:'סל מכירות ממוצע ללקוח',cannib:'קניבליזציה — תמהיל ערוצים',ins:'תובנות'};
     document.getElementById('h1t').textContent=H1[v]||H1.agents;
     var bs=document.querySelectorAll('#seg button');
     for(var i=0;i<bs.length;i++){var on=bs[i].getAttribute('data-v')===v;bs[i].classList.toggle('on',on);bs[i].setAttribute('aria-pressed',on?'true':'false');}
