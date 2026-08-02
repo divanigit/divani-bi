@@ -548,6 +548,19 @@ def agent_report(request: Request):
     return HTMLResponse(head + body)
 
 
+@app.get("/nav-preview")
+def nav_preview(request: Request):
+    # temporary: 4 candidate navigation designs for the owner to try and choose
+    if not _logged_in(request):
+        return RedirectResponse("/login", status_code=303)
+    try:
+        with open(os.path.join(HERE, "nav_preview.html"), encoding="utf-8") as f:
+            return HTMLResponse(f.read())
+    except Exception:
+        return HTMLResponse("<div dir='rtl' style='font-family:sans-serif;padding:40px'>הדף לא נמצא.</div>",
+                            status_code=404)
+
+
 @app.get("/logout")
 def logout():
     resp = RedirectResponse("/login", status_code=303)
