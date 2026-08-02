@@ -1747,6 +1747,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         [d1,d2,od].forEach(function(el){el.min=META.min;el.max=META.max;});
         document.getElementById('cover').textContent='יש נתונים מ־'+heDate(META.min)+' עד '+heDate(META.max)+'.';
         setPreset('today');
+        try{var _qv=new URLSearchParams(location.search).get('v');if(_qv&&document.querySelector('#seg [data-v="'+_qv+'"]'))setView(_qv);}catch(e){}
       })
       .catch(function(e){if(e!==0){stage.innerHTML='<div class="empty">שגיאה בטעינה. רענן את הדף.</div>';}});
   }
