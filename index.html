@@ -64,7 +64,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .seg button.on .rchk{opacity:1}
   .seg button.on::before{content:"";position:absolute;right:0;top:50%;transform:translateY(-50%);width:3.5px;height:24px;border-radius:0 4px 4px 0;background:var(--bd)}
   .navgroup.sep{margin-top:8px;padding-top:14px;border-top:1px solid var(--line)}
-  .navgroup{font-size:11.5px;font-weight:700;color:var(--tx3);letter-spacing:.05em;padding:12px 14px 4px}
+  .navgroup{display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;color:var(--tx3);letter-spacing:.05em;padding:12px 14px 4px}
+  .navgroup .gico{width:15px;height:15px;flex:none}
+  .navdiv{height:1px;background:var(--line);margin:8px 14px}
   .navext{color:var(--bd)}
   body.navlock{overflow:hidden}
   .notice{font-size:12px;color:var(--wfg);margin:6px 2px 0;display:none}
@@ -307,19 +309,19 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         <button type="button" id="navclose" class="navclose" aria-label="סגירה"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg></button>
       </div>
       <div class="seg" id="seg" role="group" aria-label="סוג דוח">
-        <div class="navgroup">מכירות</div>
+        <div class="navgroup"><svg class="gico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l3.5-3.5 3 3L21 7"/></svg><span>מכירות</span></div>
         <button type="button" data-v="agents" class="on" aria-pressed="true"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1"/><circle cx="9" cy="7.5" r="3.2"/><path d="M22 19v-1a4 4 0 0 0-3-3.87"/><path d="M16 3.3a4 4 0 0 1 0 7.4"/></svg><span class="rlbl">סוכנים</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="branches" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.6-4.4A1 1 0 0 1 5.5 4h13a1 1 0 0 1 .9.6L21 9"/><path d="M4.5 9v9a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V9"/><path d="M3 9h18"/><path d="M9.5 20v-5h5v5"/></svg><span class="rlbl">סניפים</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
-        <div class="navgroup">תפעול</div>
-        <button type="button" data-v="branchsrc" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3.5h3.5a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H15"/><path d="M10 16.5l4.5-4.5L10 7.5"/><path d="M14.5 12H3.5"/></svg><span class="rlbl">מקורות הגעה</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
+        <div class="navgroup"><svg class="gico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="8.5" r="5.3"/><path d="M13.8 6.1a5.3 5.3 0 1 1 0 10.6"/></svg><span>כספים ושירות</span></div>
         <button type="button" data-v="cash" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2.4"/><circle cx="12" cy="12" r="2.6"/><path d="M6 12h.02M18 12h.02"/></svg><span class="rlbl">מזומן</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
-        <button type="button" data-v="service" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13.5v-1.5a8 8 0 0 1 16 0v1.5"/><rect x="2.5" y="13" width="4" height="6" rx="1.8"/><rect x="17.5" y="13" width="4" height="6" rx="1.8"/><path d="M20 19v.5a3 3 0 0 1-3 3H13"/></svg><span class="rlbl">שירות</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="collect" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.8" y="6" width="18.4" height="13" rx="2.4"/><path d="M3 10.5h18.2"/><circle cx="17" cy="14.6" r="1.35"/></svg><span class="rlbl">מקדמות</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
-        <div class="navgroup">ניתוח</div>
+        <button type="button" data-v="service" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13.5v-1.5a8 8 0 0 1 16 0v1.5"/><rect x="2.5" y="13" width="4" height="6" rx="1.8"/><rect x="17.5" y="13" width="4" height="6" rx="1.8"/><path d="M20 19v.5a3 3 0 0 1-3 3H13"/></svg><span class="rlbl">שירות</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
+        <div class="navgroup"><svg class="gico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M8 17v-5"/><path d="M13 17V8"/><path d="M18 17v-8"/></svg><span>אנליטיקה</span></div>
+        <button type="button" data-v="branchsrc" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3.5h3.5a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H15"/><path d="M10 16.5l4.5-4.5L10 7.5"/><path d="M14.5 12H3.5"/></svg><span class="rlbl">מקורות הגעה</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="dim" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12V3.2A8.8 8.8 0 1 0 20.8 12H12z"/><path d="M14.5 3.9A8.8 8.8 0 0 1 20.1 9.5H14.5z"/></svg><span class="rlbl">פילוח</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="ins" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 18.5h5"/><path d="M10.5 21.5h3"/><path d="M12 2.8a6 6 0 0 0-3.9 10.5c.75.7 1.1 1.5 1.15 2.5h5.5c.05-1 .4-1.8 1.15-2.5A6 6 0 0 0 12 2.8z"/></svg><span class="rlbl">תובנות</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
-        <div class="navgroup sep">דוח נפרד</div>
-        <button type="button" id="nrepbtn" class="navext" aria-pressed="false" title="ניתוח נציגים וסניפים — ממשק בפיתוח"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 3.5v17h17"/><path d="M7 14.5l4-4 3 3 5.2-6"/></svg><span class="rlbl">ביצועי נציגים וסניפים</span><svg class="rext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 16L16 8"/><path d="M9 8h7v7"/></svg></button>
+        <div class="navdiv"></div>
+        <button type="button" id="nrepbtn" class="navext" aria-pressed="false" title="ניתוח ביצועי נציגים וסניפים — ממשק בפיתוח"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 3.5v17h17"/><path d="M7 14.5l4-4 3 3 5.2-6"/></svg><span class="rlbl">ניתוח ביצועי נציגים וסניפים</span><svg class="rext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 16L16 8"/><path d="M9 8h7v7"/></svg></button>
       </div>
     </div>
   </div>
@@ -353,9 +355,8 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg>
       שאלה חופשית
     </button>
-    <button type="button" class="rfr" id="viewasbtn" title="תצוגה כמו שאר המשתמשים" style="display:none">
+    <button type="button" class="rfr" id="viewasbtn" title="צפה כמו שאר המשתמשים (לחזרה — הקש על הלוגו)" style="display:none;padding:8px 11px">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
-      <span class="vlbl">תצוגה כמו כולם</span>
     </button>
     <button type="button" class="rfr" id="rfr" title="רענון נתונים מפריוריטי עכשיו">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
@@ -1558,7 +1559,8 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   function askOpen(){askSheet.classList.add('on');askOvl.classList.add('on');setTimeout(function(){document.getElementById('askq').focus();},50);}
   function askClose(){askSheet.classList.remove('on');askOvl.classList.remove('on');}
   document.getElementById('askbtn').addEventListener('click',askOpen);
-  (function(){var v=document.getElementById('viewasbtn');if(v)v.addEventListener('click',function(){previewUser=!previewUser;applyOwnerUI();apply();});})();
+  (function(){var v=document.getElementById('viewasbtn');if(v)v.addEventListener('click',function(){previewUser=true;applyOwnerUI();apply();});
+    var lg=document.querySelector('.logo');if(lg)lg.addEventListener('click',function(){if(META&&META.owner&&previewUser){previewUser=false;applyOwnerUI();apply();}});})();
   (function(){var n=document.getElementById('nrepbtn');if(n)n.addEventListener('click',function(){location.href='/agent-report';});})();
 
   /* ---- התראות (alerts layer — v1: transfers with an אסמכתא but no receipt yet) ---- */
@@ -1665,15 +1667,12 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
 
   /* ---- boot ---- */
   function applyOwnerUI(){
-    var canAsk=!!(META&&META.admin)&&!previewUser;
-    var ab=document.getElementById('askbtn'); if(ab)ab.style.display=canAsk?'':'none';
-    var vb=document.getElementById('viewasbtn'); if(!vb)return;
-    if(META&&META.owner){
-      vb.style.display='';
-      vb.classList.toggle('on',previewUser);
-      var l=vb.querySelector('.vlbl'); if(l)l.textContent=previewUser?'חזרה לתצוגת בעלים':'תצוגה כמו כולם';
-      vb.title=previewUser?'חזרה לתצוגת בעלים':'תצוגה כמו שאר המשתמשים';
-    } else vb.style.display='none';
+    var owner=!!(META&&META.owner), prev=owner&&previewUser;
+    var ab=document.getElementById('askbtn'); if(ab)ab.style.display=(!!(META&&META.admin)&&!prev)?'':'none';
+    // the owner-only "view as user" button is hidden WHILE previewing, so a user-view screenshot looks exactly like a regular user
+    var vb=document.getElementById('viewasbtn'); if(vb)vb.style.display=(owner&&!prev)?'':'none';
+    // the only way back from preview is a discreet tap on the logo — nothing on screen reveals preview mode
+    var lg=document.querySelector('.logo'); if(lg){lg.style.cursor=prev?'pointer':'';lg.title=prev?'חזרה לתצוגת בעלים':'';}
   }
   function boot(){
     fetch('/api/meta',{cache:'no-store'})
