@@ -102,9 +102,10 @@
   .vsavg.warn{background:transparent;border:1px solid var(--warn);color:var(--warn)}
   .vsavg.bad{background:transparent;border:1px solid var(--bad);color:var(--bad)}
   .agent.attn{border-color:var(--bad)}
-  .dtbar{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}
-  .dtbar button{font-family:inherit;font-size:12.5px;font-weight:600;border:1px solid var(--line2);background:var(--panel);color:var(--ink2);padding:7px 13px;min-height:38px;border-radius:999px;cursor:pointer}
-  .dtbar button.on{background:var(--brandw);border-color:var(--brand2);color:var(--brand)}
+  .dtbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+  .dtbar .dtl{font-size:12.5px;color:var(--ink3);font-weight:700}
+  .dtbar input[type=date]{font-family:inherit;font-size:13px;border:1px solid var(--line2);background:var(--panel);color:var(--ink);padding:7px 10px;border-radius:9px;min-height:38px}
+  .dtbar #dtgo{font-family:inherit;font-size:12.5px;font-weight:700;border:1px solid var(--brand2);background:var(--brandw);color:var(--brand);padding:7px 18px;min-height:38px;border-radius:999px;cursor:pointer}
   .hamb{flex:none;background:var(--panel);border:1px solid var(--line2);border-radius:10px;width:42px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink)}
   .hamb svg{width:20px;height:20px}
   .navov{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .26s ease}
@@ -490,35 +491,29 @@
         mix:(r.mix&&r.mix.length?r.mix:[{c:'אחר',p:100}]) }); }) }; });
   }
   function devBox(msg){ report.innerHTML='<div class="cbdev"><b>בפיתוח</b><span>'+(msg||'הדוח נפתח בקרוב')+'</span></div>'; }
-  var META_INFO={}, CUR_PRESET='y12';
-  var DT=[['month','החודש'],['q3','שלושה חודשים'],['ytd','מתחילת השנה'],['y12','שנה אחורה'],['all','הכל']];
+  var META_INFO={}, CUR_FROM='', CUR_TO='';
   function paintDtbar(){var el=document.getElementById('dtbar'); if(!el)return;
-    el.innerHTML=DT.map(function(p){return '<button type="button" data-r="'+p[0]+'" class="'+(p[0]===CUR_PRESET?'on':'')+'">'+p[1]+'</button>';}).join('');}
-  function rangeFor(id){var m=META_INFO, to=m.max||m.today||iso(new Date()), d=new Date(to+'T12:00:00'), f;
-    if(id==='month'){f=to.slice(0,8)+'01';}
-    else if(id==='q3'){d.setMonth(d.getMonth()-3);f=iso(d);}
-    else if(id==='ytd'){f=to.slice(0,4)+'-01-01';}
-    else if(id==='all'){f=m.min||'2014-12-25';}
-    else{id='y12';d.setFullYear(d.getFullYear()-1);f=iso(d);}
-    if(m.min&&f<m.min)f=m.min; return [id,f,to];}
-  function loadRange(from,to){
+    el.innerHTML='<span class="dtl">מ־</span><input type="date" id="dtf" value="'+CUR_FROM+'" min="'+(META_INFO.min||'')+'" max="'+(META_INFO.max||'')+'">'
+      +'<span class="dtl">עד</span><input type="date" id="dtt" value="'+CUR_TO+'" min="'+(META_INFO.min||'')+'" max="'+(META_INFO.max||'')+'">'
+      +'<button type="button" id="dtgo">הצג</button>';}
+  function loadRange(from,to){ CUR_FROM=from; CUR_TO=to; paintDtbar();
     fetch('/api/agentreport?d_from='+from+'&d_to='+to,{cache:'no-store'}).then(function(r){return r.ok?r.json():{};}).then(function(dd){
       dd=dd||{};
       if(dd.dev){ devBox('הדוח נפתח בקרוב'); return; }
       if(!dd.branches||!dd.branches.length){ report.innerHTML='<div class="empty">אין נתונים בתקופה.</div>'; return; }
       BRANCHES=buildBranches(dd.branches); BASKETS=dd.baskets||[]; render();
-    }).catch(function(){ devBox('שגיאה בטעינה'); });
-    paintDtbar();}
+    }).catch(function(){ devBox('שגיאה בטעינה'); });}
   function boot(){
     fetch('/api/meta',{cache:'no-store'}).then(function(r){return r.ok?r.json():{};}).then(function(m){
       m=m||{}; META_INFO=m;
       var vt=document.getElementById('vtog'), tg=document.getElementById('tog'), db=document.getElementById('dtbar');
       if(!m.owner){ if(explainBtn)explainBtn.style.display='none'; if(vt)vt.style.display='none'; if(tg)tg.style.display='none'; if(db)db.style.display='none'; devBox('הדוח נפתח בקרוב'); return; }
       if(explainBtn)explainBtn.style.display='';
-      var r=rangeFor('y12'); CUR_PRESET=r[0]; loadRange(r[1],r[2]);
+      var to=m.max||m.today||iso(new Date()); var d=new Date(to+'T12:00:00'); d.setFullYear(d.getFullYear()-1); var from=iso(d); if(m.min&&from<m.min)from=m.min;
+      loadRange(from,to);
     }).catch(function(){ devBox('שגיאה בטעינה'); });
   }
-  (function(){var el=document.getElementById('dtbar'); if(el) el.addEventListener('click',function(e){var b=e.target.closest('[data-r]'); if(!b)return; var r=rangeFor(b.getAttribute('data-r')); CUR_PRESET=r[0]; loadRange(r[1],r[2]);});})();
+  (function(){var el=document.getElementById('dtbar'); if(el) el.addEventListener('click',function(e){ if(e.target&&e.target.id==='dtgo'){ var f=(document.getElementById('dtf')||{}).value, t=(document.getElementById('dtt')||{}).value; if(f&&t){ if(f>t){var x=f;f=t;t=x;} loadRange(f,t);} } });})();
   var BASKETS=[];
   (function(){var ov=document.getElementById('navov'),tr=document.getElementById('navtrig'),x=document.getElementById('navx');
     if(!ov)return; function op(){ov.classList.add('open');document.body.classList.add('navlock');} function cl(){ov.classList.remove('open');document.body.classList.remove('navlock');}
