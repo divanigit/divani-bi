@@ -225,6 +225,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .bspills{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 12px}
   .bspills button{font-family:inherit;font-size:13px;border:1px solid var(--line2);background:var(--surface);color:var(--tx2);padding:8px 14px;min-height:40px;border-radius:999px;cursor:pointer;white-space:nowrap}
   .bspills button.on{background:var(--accentSoft);border-color:var(--bd);color:var(--okfg);font-weight:600}
+  .bstog{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 10px}
+  .bstog button{font-family:inherit;font-size:12.5px;min-height:38px;padding:8px 13px;border-radius:999px;border:1px solid var(--line2);background:var(--surface);color:var(--tx2);cursor:pointer}
+  .bstog button.on{background:var(--accentSoft);border-color:var(--bd);color:var(--okfg);font-weight:600}
+  .bstn{font-size:12px;color:var(--tx3);margin-inline-start:auto}
   .bsh{font-size:13px;color:var(--tx2);margin:0 0 11px}
   .bsh b{color:var(--tx);font-size:15.5px}
   .bswrap{border:1px solid var(--line);border-radius:14px;background:var(--bg);overflow:hidden}
@@ -1207,21 +1211,57 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     document.getElementById('sellbl').textContent=rangeLbl(state.from,state.to)+' · '+totO+' הזמנות';
     document.getElementById('builtlbl').textContent=META.last_sync?('עודכן '+META.last_sync):'';
   }
+  var bsPhoneSep=false;   // false = phone counted inside its branch · true = phone is its own branch
+  function bsRows(agg){
+    // build the display list from one payload, either way round
+    var out=[];
+    for(var i=0;i<agg.length;i++){
+      var a=agg[i], cities=[];
+      for(var j=0;j<(a.cities||[]).length;j++){
+        var c=a.cities[j];
+        var sv=bsPhoneSep?(c.s-(c.ps||0)):c.s, ov=bsPhoneSep?(c.o-(c.po||0)):c.o;
+        if(sv>0||ov>0) cities.push({c:c.c,s:sv,o:ov});
+      }
+      cities.sort(function(x,y){return y.s-x.s;});
+      var tot=bsPhoneSep?(a.total-(a.ptotal||0)):a.total;
+      var ord=bsPhoneSep?(a.orders-(a.porders||0)):a.orders;
+      if(tot>0||ord>0) out.push({store:a.store,total:tot,orders:ord,cities:cities});
+    }
+    if(bsPhoneSep){
+      // gather every branch's phone sales into one synthetic "טלפוני" branch
+      var m={},pt=0,po=0;
+      for(var i=0;i<agg.length;i++){ var a=agg[i];
+        for(var j=0;j<(a.cities||[]).length;j++){ var c=a.cities[j];
+          if(c.ps>0||c.po>0){ if(!m[c.c])m[c.c]={c:c.c,s:0,o:0}; m[c.c].s+=c.ps||0; m[c.c].o+=c.po||0; } }
+        pt+=a.ptotal||0; po+=a.porders||0; }
+      var pc=[]; for(var k in m) if(m.hasOwnProperty(k)) pc.push(m[k]);
+      pc.sort(function(x,y){return y.s-x.s;});
+      if(pt>0) out.push({store:'טלפוני',total:pt,orders:po,cities:pc});
+    }
+    out.sort(function(x,y){return y.total-x.total;});
+    return out;
+  }
   function renderBranchSrc(agg){
     agg=agg||[];
     if(!agg.length){stage.innerHTML='<div class="empty">אין מכירות בחנות פיזית לתקופה שנבחרה.</div>';return;}
-    if(branchSel>=agg.length)branchSel=0;
+    var rowsData=bsRows(agg);
+    if(branchSel>=rowsData.length)branchSel=0;
+    var phTot=0; for(var i=0;i<agg.length;i++) phTot+=(agg[i].ptotal||0);
+    var toggle='<div class="bstog">'
+      +'<button type="button" class="'+(bsPhoneSep?'':'on')+'" data-bsp="0">טלפוני בתוך הסניף</button>'
+      +'<button type="button" class="'+(bsPhoneSep?'on':'')+'" data-bsp="1">טלפוני בנפרד</button>'
+      +'<span class="bstn">'+ils(phTot)+' מכירות טלפוניות</span></div>';
     var pills='<div class="bspills">';
-    for(var i=0;i<agg.length;i++){pills+='<button type="button" class="'+(i===branchSel?'on':'')+'" data-bs="'+i+'">'+esc(agg[i].store)+'</button>';}
+    for(var i=0;i<rowsData.length;i++){pills+='<button type="button" class="'+(i===branchSel?'on':'')+'" data-bs="'+i+'">'+esc(rowsData[i].store)+'</button>';}
     pills+='</div>';
-    var s=agg[branchSel],cities=s.cities||[],tot=s.total||0;
+    var s=rowsData[branchSel],cities=s.cities||[],tot=s.total||0;
     var head='<div class="bsh"><b>'+esc(s.store)+'</b> · '+ils(tot)+' · '+s.orders+' הזמנות · '+cities.length+' ערים</div>';
     var max=cities.length?cities[0].s:1,rows='';
     for(var i=0;i<cities.length;i++){var c=cities[i],pc=tot?(100*c.s/tot):0,w=Math.max(2,100*c.s/max);
       rows+='<div class="bsrow"><span class="bsr">'+(i+1)+'</span><span class="bscn">'+esc(c.c)+'</span>'
         +'<span class="bsmini"><span class="mf" style="width:'+w.toFixed(1)+'%"></span></span>'
         +'<span class="bsv"><b>'+pc.toFixed(1)+'%</b> '+ils(c.s)+' <i>'+c.o+' הז׳</i></span></div>';}
-    stage.innerHTML=pills+head+'<div class="bswrap">'+rows+'</div>';
+    stage.innerHTML=toggle+pills+head+'<div class="bswrap">'+rows+'</div>';
   }
 
   /* ---- סל מכירות ממוצע ללקוח — כל הנציגים ברצף, המעצבת שורה נפרדת ---- */
@@ -1718,7 +1758,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   });
 
   stage.addEventListener('click',function(e){var t=e.target.closest('[data-t]');if(t){var id=t.getAttribute('data-t');eT[id]=!eT[id];renderStage(ROOT());}});
-  stage.addEventListener('click',function(e){var b=e.target.closest('[data-bs]');if(b){branchSel=parseInt(b.getAttribute('data-bs'),10);renderBranchSrc(cache.agg);}});
+  stage.addEventListener('click',function(e){var t=e.target.closest('[data-bsp]');if(t){bsPhoneSep=(t.getAttribute('data-bsp')==='1');branchSel=0;renderBranchSrc(cache.agg);return;}var b=e.target.closest('[data-bs]');if(b){branchSel=parseInt(b.getAttribute('data-bs'),10);renderBranchSrc(cache.agg);}});
   stage.addEventListener('click',function(e){var b=e.target.closest('[data-cbmode]');if(b){cannibMode=b.getAttribute('data-cbmode');renderCannib(cache.agg);}});
   stage.addEventListener('keydown',function(e){if((e.key==='Enter'||e.key===' ')&&e.target.hasAttribute&&e.target.hasAttribute('data-t')){e.preventDefault();var id=e.target.getAttribute('data-t');eT[id]=!eT[id];renderStage(ROOT());}});
 
