@@ -366,6 +366,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     <button type="button" class="chip" data-p="alerts" aria-pressed="false">התראות</button>
     <button type="button" class="chip" data-p="selfcheck" aria-pressed="false">תקינות</button>
   </div>
+  <div class="dimbar" id="phbar" style="display:none" role="group" aria-label="טיפול בערוץ הטלפוני">
+    <button type="button" class="chip on" data-ph="0" aria-pressed="true">טלפוני בתוך הסניף</button>
+    <button type="button" class="chip" data-ph="1" aria-pressed="false">טלפוני בנפרד</button>
+  </div>
   <div class="dimbar" id="dimbar" style="display:none" role="group" aria-label="בחירת פילוח">
     <button type="button" class="chip on" data-d="fam" aria-pressed="true">קטגוריות</button>
     <button type="button" class="chip" data-d="part" aria-pressed="false">מוצרים</button>
@@ -478,6 +482,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   var INSH={pareto:'פארטו מוצרים',contrib:'קניבליזציה — כדאיות סניפים',trend:'מגמות פלחים',cmp:'השוואה מול אשתקד',newret:'לקוח חדש מול חוזר',basket:'סל ממוצע',pairs:'צמדי מוצרים',geo:'חדירה גאוגרפית',roi:'ערוצי שיווק',alerts:'התראות חכמות',selfcheck:'תקינות נתונים'};
   var PAL=['#0d9668','#3a6fc4','#b0791f','#8a5bc4'];
   function trendRange(){var t=(META&&META.today)||iso(new Date());var e=new Date(t.slice(0,7)+'-01T12:00:00');e.setDate(0);var d=new Date(e.getFullYear(),e.getMonth()-11,1,12);return [iso(d),iso(e)];}
+  var brPhoneSep=false;   // false = phone counted inside its branch · true = phone shown separately
   var BRN={'':'ללא שיוך סניף','PHONE':'טלפוני','101':'נתניה','102':'ראשל"צ','103':'אתר דיוואני','104':'מוקד משרדים','105':'חיפה','106':'ירושלים','107':'בית שמש'};
   function brName(b){var k=(b==null?'':String(b));return BRN[k]||k;}
   var eT={}, stage=document.getElementById('stage');
@@ -622,7 +627,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var multi=state.from!==state.to;
     var brs={}, custSet={}, orderCount=rows.length, posTotal=0;
     rows.forEach(function(r){
-      var bn=brName(r.b), bk='b_'+bn, an=r.a||'ללא סוכן', ak='a_'+an, ck='c_'+r.cn;
+      var bn=brName((brPhoneSep&&r.ph)?'PHONE':r.b), bk='b_'+bn, an=r.a||'ללא סוכן', ak='a_'+an, ck='c_'+r.cn;
       var br=brs[bk]||(brs[bk]={n:bn,custIds:{},ag:{}});
       br.custIds[ck]=1; custSet[ck]=1;
       var ag=br.ag[ak]||(br.ag[ak]={n:an,s:0,profit:0,cu:{}});
@@ -653,9 +658,23 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   }
 
   function buildAggBr(agg){
-    var kids=(agg.branches||[]).map(function(g){
-      return {n:brName(g.b),s:g.s||0,profit:g.p||0,pm:(g.s>0)?100*g.p/g.s:null,c:g.c||0,k:null};
-    });
+    var src=(agg.branches||[]), kids=[];
+    if(brPhoneSep){
+      var pS=0,pP=0,pC=0;
+      src.forEach(function(g){
+        var ps=g.ps||0, pn=g.pn||0;
+        pS+=ps; pP+=0; pC+=pn;
+        var s2=(g.s||0)-ps;
+        if(s2!==0||((g.n||0)-pn)>0) kids.push({n:brName(g.b),s:s2,profit:g.p||0,
+          pm:(s2>0)?100*(g.p||0)/s2:null,c:g.c||0,k:null});
+      });
+      if(pS!==0) kids.push({n:brName('PHONE'),s:pS,profit:pP,pm:null,c:pC,k:null});
+      kids.sort(function(a,b){return b.s-a.s;});
+    } else {
+      kids=src.map(function(g){
+        return {n:brName(g.b),s:g.s||0,profit:g.p||0,pm:(g.s>0)?100*g.p/g.s:null,c:g.c||0,k:null};
+      });
+    }
     var ts=0,tp=0,pos=0;kids.forEach(function(a){ts+=a.s;tp+=a.profit;if(a.s>0)pos+=a.s;});
     if(typeof agg.pos==='number')pos=agg.pos;
     var tc=agg.customers||0;
@@ -1541,10 +1560,18 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var bs=document.querySelectorAll('#seg button');
     for(var i=0;i<bs.length;i++){var on=bs[i].getAttribute('data-v')===v;bs[i].classList.toggle('on',on);bs[i].setAttribute('aria-pressed',on?'true':'false');}
     document.getElementById('dimbar').style.display=(v==='dim')?'flex':'none';
+    document.getElementById('phbar').style.display=(v==='branches')?'flex':'none';
     document.getElementById('insbar').style.display=(v==='ins')?'flex':'none';
     if(v!=='ins'){var sb3=document.getElementById('selbtn');sb3.style.opacity='';sb3.style.pointerEvents='';sb3.title='';}
     if(META&&state.from)apply();
   }
+  document.getElementById('phbar').addEventListener('click',function(e){
+    var b=e.target.closest('[data-ph]'); if(!b)return;
+    brPhoneSep=(b.getAttribute('data-ph')==='1');
+    var bs=this.querySelectorAll('button');
+    for(var i=0;i<bs.length;i++){var on=bs[i]===b;bs[i].classList.toggle('on',on);bs[i].setAttribute('aria-pressed',on?'true':'false');}
+    renderAll();
+  });
   document.getElementById('seg').addEventListener('click',function(e){
     var b=e.target.closest('[data-v]');if(b)setView(b.getAttribute('data-v'));
   });
