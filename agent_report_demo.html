@@ -347,7 +347,7 @@
       ['שיעור הנחה', a.disc+'%'],
       ['הנחות בכסף', shekel(a.sales*a.disc/(100-a.disc))],
       ['Up Sell', a.attach+'%', true],
-      ['ביטולים', a.cancel+'%', true],
+      ['ביטולים', a.cancel+'% · '+(a.cxl||0)+' עסקאות'],
       ['חדש · חוזר', a.newpct+'% · '+(100-a.newpct)+'%']
     ].map(function(s){return '<div class="dstat'+(s[2]?' est':'')+'"><span>'+s[0]+'</span><b>'+s[1]+'</b></div>';}).join('');
     var bars=a.mix.map(function(m){
@@ -358,14 +358,14 @@
       +'<div class="mixhead">תמהיל מוצרים</div>'+bars;
   }
   function computeBranch(b){
-    var s=0,v=0,c=0,p=0,h=0,dils=0,dw=0,cats={};
+    var s=0,v=0,c=0,p=0,h=0,dils=0,dw=0,oo=0,xx=0,cats={};
     b.agents.forEach(function(a){
-      s+=a.sales; v+=a.visitors; c+=a.customers; h+=a.hours; p+=a.sales*a.margin/100;
+      s+=a.sales; v+=a.visitors; c+=a.customers; h+=a.hours; oo+=a.orders||0; xx+=a.cxl||0; p+=a.sales*a.margin/100;
       dils+=a.sales*a.disc/(100-a.disc); dw+=a.sales*a.disc;
       a.mix.forEach(function(m){cats[m.c]=(cats[m.c]||0)+a.sales*m.p/100;});
     });
     var mix=Object.keys(cats).map(function(k){return {c:k,p:Math.round(cats[k]/s*100)};}).sort(function(x,y){return y.p-x.p;});
-    return {name:b.name, sales:s, visitors:v, customers:c, hours:h, conv:s/v, avgDeal:s/c, salesPerHour:s/h, closePct:c/v*100, profitPct:p/s*100, discPct:dw/s, discIls:dils, mix:mix};
+    return {name:b.name, sales:s, visitors:v, customers:c, hours:h, cxl:xx, cancelPct:(xx+oo)?xx/(xx+oo)*100:0, conv:s/v, avgDeal:s/c, salesPerHour:s/h, closePct:c/v*100, profitPct:p/s*100, discPct:dw/s, discIls:dils, mix:mix};
   }
   function renderBranches(){
     var rows=BRANCHES.map(computeBranch).sort(function(x,y){return y.sales-x.sales;});
@@ -376,6 +376,7 @@
         ['מכירות לשעה', shekel(r.salesPerHour)+' לשעה', true],
         ['עסקה ממוצעת', shekel(r.avgDeal)],
         ['רווחיות', Math.round(r.profitPct)+'%'],
+        ['ביטולים', (Math.round(r.cancelPct*10)/10)+'% · '+r.cxl],
         ['יחס המרה', (Math.round(r.closePct*10)/10)+'%', true],
         ['נכנסים', r.visitors.toLocaleString('en-US'), true]
       ].map(function(s){return '<div class="dstat'+(s[2]?' est':'')+'"><span>'+s[0]+'</span><b>'+s[1]+'</b></div>';}).join('');
@@ -481,13 +482,12 @@
     a.hours    = Math.max(1, Math.round(a.orders*2.5));
     a.visitors = Math.max(a.customers, Math.round(a.customers*4));
     a.attach   = Math.max(10, Math.min(55, Math.round(28+(a.avg_ord-3500)/120)));
-    a.cancel   = Math.max(2, Math.min(12, Math.round(3+(a.disc||0)/3)));
     return a;
   }
   function buildBranches(api){
     return (api||[]).map(function(b){ return { name:b.name, agents:(b.reps||[]).map(function(r){
       return estFields({ name:r.name, sales:r.sales, orders:r.orders, customers:r.customers,
-        avg_ord:r.avg_ord, margin:r.margin, disc:r.disc||0, newpct:r.newpct||0,
+        avg_ord:r.avg_ord, margin:r.margin, disc:r.disc||0, newpct:r.newpct||0, cancel:r.cancel||0, cxl:r.cxl||0,
         mix:(r.mix&&r.mix.length?r.mix:[{c:'אחר',p:100}]) }); }) }; });
   }
   function devBox(msg){ report.innerHTML='<div class="cbdev"><b>בפיתוח</b><span>'+(msg||'הדוח נפתח בקרוב')+'</span></div>'; }
