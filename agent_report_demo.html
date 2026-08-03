@@ -332,7 +332,9 @@
   ];
 
   function calc(a){
-    return {total:a.sales, basic:(a.sphReal!=null?a.sphReal:(a.hours?a.sales/a.hours:0)), avgdeal:a.customers?a.sales/a.customers:0, close:a.visitors?a.customers/a.visitors*100:0};
+    // basic is NULL when we have no measured hours — an unmeasured rep must not be ranked
+    // against measured ones on a number we invented.
+    return {total:a.sales, basic:(a.sphReal!=null?a.sphReal:null), avgdeal:a.customers?a.sales/a.customers:0, close:a.visitors?a.customers/a.visitors*100:0};
   }
   function money(v){return Math.round(v).toLocaleString('en-US');}
   function shekel(v){return '₪'+money(v);}
@@ -348,7 +350,9 @@
   // and the gap is understated (worst with few reps, where each is a big share of the mean).
   function refOthers(agents,self,key){
     var s=0,h=0,c=0,n=0;
-    agents.forEach(function(a){ if(a===self) return; s+=a.sales;h+=a.hours;c+=a.customers;n++; });
+    agents.forEach(function(a){ if(a===self) return;
+      if(key==='basic' && a.sphReal==null) return;   // unmeasured hours never set the bar
+      s+=a.sales;h+=a.hours;c+=a.customers;n++; });
     if(n===0) return null;
     if(key==='basic')   return h?s/h:0;
     if(key==='avgdeal') return c?s/c:0;
@@ -411,23 +415,22 @@
       +'<div class="deepgrid">'+stats+'</div>'
       +'<div class="mixhead">תמהיל מוצרים</div>'+bars;
   }
+  // The BRANCH is the store, not the sum of the reps filed under it (Doron 4.8.26):
+  // a sale counts for the branch where it was made, and hours count where they were clocked.
+  // The server computes all of this; here we only decide real-vs-estimate.
   function computeBranch(b){
-    var s=0,v=0,c=0,p=0,h=0,hE=0,dils=0,dw=0,oo=0,xx=0,cats={};
-    b.agents.forEach(function(a){
-      s+=a.sales; v+=a.visitors; c+=a.customers; h+=a.hours; hE+=a.hoursEst||0; oo+=a.orders||0; xx+=a.cxl||0; p+=a.sales*a.margin/100;
-      dils+=a.sales*a.disc/(100-a.disc); dw+=a.sales*a.disc;
-      a.mix.forEach(function(m){cats[m.c]=(cats[m.c]||0)+a.sales*m.p/100;});
-    });
-    var mix=Object.keys(cats).map(function(k){return {c:k,p:Math.round(cats[k]/s*100)};}).sort(function(x,y){return y.p-x.p;});
-    var _ffr=(b.footfall||0)>0,_vis=_ffr?b.footfall:v;
-    var _sphR=(b.sph!=null),_convR=(b.conv!=null);
-    return {name:b.name, sales:s, visitors:_vis, ffReal:_ffr, customers:c, buyers:b.buyers||0,
-      hours:(_sphR?b.hours:h), cxl:xx, cancelPct:(xx+oo)?xx/(xx+oo)*100:0,
-      avgDeal:s/c, profitPct:p/s*100, discPct:dw/s, discIls:dils, mix:mix,
-      // when the branch has no measured coverage, estimate from ESTIMATED hours for every rep —
-      // never mix real hours of some reps with sales of all (that produced absurd numbers)
-      salesPerHour:(_sphR?+b.sph:(hE?s/hE:0)), sphReal:_sphR, hcov:(b.hcov==null?null:+b.hcov),
-      closePct:(_convR?+b.conv:(_vis?c/_vis*100:0)), convReal:_convR};
+    var estH=0, estS=0;
+    (b.agents||[]).forEach(function(a){ estH+=a.hoursEst||0; estS+=a.sales||0; });
+    var sphR=(b.sph!=null), convR=(b.conv!=null), ffR=(b.footfall||0)>0;
+    return {name:b.name, sales:b.sales||0, orders:b.orders||0, buyers:b.buyers||0,
+      customers:b.buyers||0, nreps:b.nreps||0,
+      visitors:(ffR?b.footfall:Math.max(b.buyers||0,Math.round((b.buyers||0)*4))), ffReal:ffR,
+      hours:(b.hours||0), hcov:(b.hcov==null?null:+b.hcov),
+      salesPerHour:(sphR?+b.sph:(estH?estS/estH:0)), sphReal:sphR,
+      closePct:(convR?+b.conv:0), convReal:convR,
+      avgDeal:(b.avg_cust||0), profitPct:(b.margin||0), discPct:(b.disc||0),
+      cxl:(b.cxl||0), cancelPct:(b.cancel==null?0:+b.cancel),
+      mix:(b.mix&&b.mix.length?b.mix:[])};
   }
   function renderBranches(){
     var rows=BRANCHES.map(computeBranch).sort(function(x,y){return y.sales-x.sales;});
@@ -435,12 +438,12 @@
     report.innerHTML=rows.map(function(r,i){
       var stats=[
         ['מכירות', shekelShort(r.sales)],
-        ['מכירות לשעה', shekel(Math.round(r.salesPerHour))+' לשעה', !r.sphReal],
+        ['מכירות לשעה', (r.sphReal?shekel(Math.round(r.salesPerHour))+' לשעה':(r.salesPerHour?shekel(Math.round(r.salesPerHour))+' לשעה':'—')), !r.sphReal],
         ['עסקה ממוצעת', shekel(r.avgDeal)],
         ['רווחיות', Math.round(r.profitPct)+'%'],
         ['ביטולים', (Math.round(r.cancelPct*10)/10)+'% · '+r.cxl],
-        ['יחס המרה', (Math.round(r.closePct*10)/10)+'%', !r.convReal],
-        ['נכנסים', r.visitors.toLocaleString('en-US'), !r.ffReal]
+        ['יחס המרה', (r.convReal?(Math.round(r.closePct*10)/10)+'%':'—'), !r.convReal],
+        ['נכנסים', (r.ffReal?r.visitors.toLocaleString('en-US'):'—'), !r.ffReal]
       ].map(function(s){return '<div class="dstat'+(s[2]?' est':'')+'"><span>'+s[0]+'</span><b>'+s[1]+'</b></div>';}).join('');
       var bars=r.mix.map(function(m){return '<div class="mixrow"><span class="mixl">'+m.c+'</span><span class="mixbar"><i style="width:'+m.p+'%"></i></span><span class="mixp">'+m.p+'%</span></div>';}).join('');
       var oi=BRANCHES.map(function(x){return x.name;}).indexOf(r.name), pal=BRANCH_PALETTE[(oi<0?i:oi)%BRANCH_PALETTE.length];
@@ -485,7 +488,9 @@
     BRANCHES.forEach(function(b,bi){
       var rows=b.agents.map(function(a){return {a:a, m:calc(a)};});
       var btot=b.agents.reduce(function(s,a){return s+a.sales;},0);
-      rows.sort(function(x,y){return M.val(y.m)-M.val(x.m);});
+      rows.sort(function(x,y){var a=M.val(x.m),b=M.val(y.m);
+        if(a==null&&b==null)return y.a.sales-x.a.sales;
+        if(a==null)return 1; if(b==null)return -1; return b-a;});
       var mx=M.val(rows[0].m)||1;
       var pal=BRANCH_PALETTE[bi%BRANCH_PALETTE.length];
       html+='<div class="branch" style="--bc:'+pal.bc+';--bcw:'+pal.bcw+'">'
@@ -493,20 +498,21 @@
         +'<div class="bavg">סך הסניף · <b>'+shekelShort(btot)+'</b></div></div><div class="rows">';
       rows.forEach(function(r,i){
         var d=r.m, a=r.a;
-        var ro=refOthers(b.agents,a,active);
-        var band=ro==null?{cls:'mid',txt:'יחיד בסניף'}:vsBand(M.val(d),ro);
-        var barPct=Math.max(3,Math.min(100,M.val(d)/mx*100));
+        var val=M.val(d), has=(val!=null);
+        var ro=has?refOthers(b.agents,a,active):null;
+        var band=!has?{cls:'mid',txt:'אין נתוני שעות'}:(ro==null?{cls:'mid',txt:'יחיד בסניף'}:vsBand(val,ro));
+        var barPct=has?Math.max(3,Math.min(100,val/mx*100)):0;
         var key=b.name+'|'+a.name;
         html+='<div class="agent'+(i===0?' lead':'')+(band.cls==='bad'?' attn':'')+(openSet[key]?' open':'')+'">'
           +'<button type="button" class="atop" data-fold data-name="'+key+'">'
           +'<span class="rank">'+(i+1)+'</span>'
-          +'<span class="who"><b>'+a.name+'</b><span>'+(a.sphReal!=null?a.hours+' שעות · ':'')+shekelShort(a.sales)+' מכירות</span></span>'
+          +'<span class="who"><b>'+a.name+'</b><span>'+(a.sphReal!=null?a.hours+' שעות · '+shekelShort(a.csales!=null?a.csales:a.sales)+' מכירות בימים שעבד':shekelShort(a.sales)+' מכירות')+'</span></span>'
           +'<span class="vsavg '+band.cls+'">'+band.txt+'</span>'
           +'<span class="chev">⌄</span></button>'
           +'<div class="cbar"><i style="width:'+barPct+'%"></i></div>'
           +'<div class="mets">'
           +met('total','מכירות', shekelShort(d.total), '')
-          +met('basic','מכירות לשעה', shekelShort(d.basic), (a.sphReal!=null?'':'est'))
+          +met('basic','מכירות לשעה', (d.basic==null?'—':shekelShort(d.basic)), (a.sphReal!=null?'':'est'))
           +met('avgdeal','עסקה ממוצעת', shekelShort(d.avgdeal), '')
           +'</div>'
           +'<div class="deep">'+deepHtml(a)+'</div>'
@@ -555,12 +561,14 @@
   function buildBranches(api){
     return (api||[]).map(function(b){ return { name:b.name, footfall:b.footfall||0, buyers:b.buyers||0,
       conv:(b.conv==null?null:+b.conv), sph:(b.sph==null?null:+b.sph), hours:b.hours||0,
-      hcov:(b.hcov==null?null:+b.hcov),
+      hcov:(b.hcov==null?null:+b.hcov), sales:b.sales||0, orders:b.orders||0, cxl:b.cxl||0,
+      cancel:(b.cancel==null?null:+b.cancel), margin:b.margin||0, disc:b.disc||0,
+      avg_cust:b.avg_cust||0, nreps:b.nreps||0, mix:b.mix||[],
       agents:(b.reps||[]).map(function(r){
       var real=(r.sph!=null);
       return estFields({ name:r.name, sales:r.sales, orders:r.orders, customers:r.customers,
         avg_ord:r.avg_ord, margin:r.margin, disc:r.disc||0, newpct:r.newpct||0, cancel:r.cancel||0, cxl:r.cxl||0,
-        hours:(r.hours||0), sphReal:(real?+r.sph:null),
+        hours:(r.hours||0), csales:(r.csales==null?null:+r.csales), sphReal:(real?+r.sph:null),
         mix:(r.mix&&r.mix.length?r.mix:[{c:'אחר',p:100}]) }); }) }; });
   }
   function devBox(msg){ report.innerHTML='<div class="cbdev"><b>בפיתוח</b><span>'+(msg||'הדוח נפתח בקרוב')+'</span></div>'; }
@@ -586,18 +594,21 @@
   function presetLabel(id){var p=PRESETS.filter(function(x){return x.id===id;})[0];return p?p.l:'';}
   var state={from:null,to:null,preset:null,clip:false};
   function updateSel(){var el=document.getElementById('sellbl'); if(!el||!state.from)return; el.textContent=state.preset?(presetLabel(state.preset)+' · '+rangeLbl(state.from,state.to)):rangeLbl(state.from,state.to);}
+  var RELOAD_SEQ=0;
   function loadRange(from,to){ updateSel();
+    var seq=++RELOAD_SEQ;
     fetch('/api/agentreport?d_from='+from+'&d_to='+to,{cache:'no-store'}).then(function(r){return r.ok?r.json():{};}).then(function(dd){
+      if(seq!==RELOAD_SEQ) return;      // a newer period was requested meanwhile — drop this answer
       dd=dd||{};
       // always clear state first: stale rows from another period must never survive a failed load
       if(dd.dev){ BRANCHES=[];BASKETS=[]; devBox('הדוח נפתח בקרוב'); return; }
       if(!dd.branches||!dd.branches.length){ BRANCHES=[];BASKETS=[]; report.innerHTML='<div class="empty">אין נתונים בתקופה.</div>'; return; }
       BRANCHES=buildBranches(dd.branches); BASKETS=dd.baskets||[]; render();
-    }).catch(function(){ BRANCHES=[];BASKETS=[]; devBox('שגיאה בטעינה'); });}
+    }).catch(function(){ if(seq!==RELOAD_SEQ) return; BRANCHES=[];BASKETS=[]; devBox('שגיאה בטעינה'); });}
   function apply(){ renderChips(); loadRange(state.from,state.to); }
   function setRange(f,t,preset){
     if(f>t){var x=f;f=t;t=x;}
-    if(t<META_INFO.min||f>META_INFO.max){ state.from=f;state.to=t;state.preset=preset||null; updateSel(); renderChips(); report.innerHTML='<div class="empty">אין נתונים בתקופה שבחרת.<br>יש נתונים מ־'+heDate(META_INFO.min)+' עד '+heDate(META_INFO.max)+'.</div>'; return; }
+    if(t<META_INFO.min||f>META_INFO.max){ BRANCHES=[];BASKETS=[]; RELOAD_SEQ++; state.from=f;state.to=t;state.preset=preset||null; updateSel(); renderChips(); report.innerHTML='<div class="empty">אין נתונים בתקופה שבחרת.<br>יש נתונים מ־'+heDate(META_INFO.min)+' עד '+heDate(META_INFO.max)+'.</div>'; return; }
     var cf=clampD(f),ct=clampD(t); state.clip=(cf!==f||ct!==t); state.from=cf;state.to=ct;state.preset=preset||null; apply();
   }
   function setPreset(id){var p=PRESETS.filter(function(x){return x.id===id;})[0];if(!p)return;var r=p.f();setRange(r[0],r[1],id);closeSheet();}
