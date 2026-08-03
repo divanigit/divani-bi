@@ -274,7 +274,7 @@
     <div class="ngrp">אנליטיקה</div><a href="/?v=branchsrc">מקורות הגעה</a><a href="/?v=dim">פילוח מכירות</a><a href="/?v=ins">תובנות</a><span class="cur">ניתוח ביצועי נציגים וסניפים</span>
   </div></div>
 
-  <div class="demoban"><b>ממשק בפיתוח</b><span>מדדים באפור הם אומדן מחובר למספרים אמיתיים, לא נמדדו</span><a class="banback" href="https://divani-bi.onrender.com/">חזרה ללוח הראשי ←</a></div>
+  <div class="demoban"><b>שימו לב</b><span>מדדים באפור הם אומדן מחובר למספרים אמיתיים, לא נמדדו</span><a class="banback" href="https://divani-bi.onrender.com/">חזרה ללוח הראשי ←</a></div>
 
   <div class="topbar">
     <h1 class="ptitle">ניתוח ביצועי נציגים וסניפים</h1>
@@ -379,7 +379,7 @@
       insight:'<b>עסקה ממוצעת.</b> סך המכירות חלקי מספר הלקוחות שקנו — כמה ₪ בעסקה טיפוסית. מספר מוחשי בגובה קבלה. עסקה גדולה = מוכר יקר, עסקה קטנה = מוכר זול ובכמות.'}
   };
 
-  var active='total', view='agents', showExplain=false, openSet={};
+  var active='total', view='agents', showExplain=false, openSet={}, OWNER_VIEW=false;
   var report=document.getElementById('report');
   var explainBtn=document.getElementById('explainBtn');
 
@@ -460,7 +460,7 @@
     }).join('');
   }
   function renderBasketsTab(){
-    var agg=BASKETS||[]; var ib=document.getElementById('insight');
+    var agg=BASKETS||[]; var ib=OWNER_VIEW?document.getElementById('insight'):null;
     if(ib) ib.innerHTML='<b>סל ממוצע חוצה סניפים.</b> כל הנציגים מכל הסניפים ברצף, לפי סל המכירות הממוצע ללקוח. המעצבת נכללת כשורה רגילה.';
     if(!agg.length){report.innerHTML='<div class="empty">אין נתונים בתקופה.</div>';return;}
     var mx=1,rs=0,rc=0; agg.forEach(function(a){if(!a.designer){rs+=a.sales;rc+=a.customers;if(a.avg_cust>mx)mx=a.avg_cust;}});
@@ -476,7 +476,8 @@
   }
   function render(){
     document.getElementById('tog').style.display = view!=='agents' ? 'none' : '';
-    var ib=document.getElementById('insight');
+    // OWNER ONLY: the insight strip is part of the explanations
+    var ib=OWNER_VIEW?document.getElementById('insight'):null;
     // no data loaded for this period — say so on every tab instead of drawing something
     if(!BRANCHES.length && !(BASKETS&&BASKETS.length)){
       report.innerHTML='<div class="empty">אין נתונים בתקופה.</div>'; return; }
@@ -689,6 +690,7 @@
     fetch('/api/meta',{cache:'no-store'}).then(function(r){return r.ok?r.json():{};}).then(function(m){
       m=m||{}; META_INFO=m;
       var isOwner = !!m.owner && !prevGet();
+      OWNER_VIEW = isOwner;
       var vb=document.getElementById('viewasbtn');
       if(vb && m.owner){                       // the eye belongs to the owner in both states,
         vb.style.display='';                   // otherwise there is no way back from preview
@@ -698,12 +700,13 @@
                              : 'צפה כמו שאר המשתמשים';
         vb.addEventListener('click',function(){ prevSet(!prevGet()); location.reload(); });
       }
-      var vt=document.getElementById('vtog'), tg=document.getElementById('tog'), sbar=document.getElementById('selbar');
-      if(!isOwner){ if(explainBtn)explainBtn.style.display='none';
-        ['vtog','tog','selbar','explBox','how','insight'].forEach(function(id){
+      // The report itself is open to every logged-in user (Doron 4.8.26).
+      // The explanations remain owner-only, and are hard-hidden for everyone else.
+      if(!isOwner){
+        if(explainBtn)explainBtn.style.display='none';
+        ['explBox','how','insight'].forEach(function(id){
           var el=document.getElementById(id); if(el)el.style.display='none'; });
-        devBox('הדוח נפתח בקרוב'); return; }
-      if(explainBtn)explainBtn.style.display='';
+      } else if(explainBtn){ explainBtn.style.display=''; }
       var ms=document.getElementById('msel'),ys=document.getElementById('ysel'),yo=document.getElementById('yosel');
       if(ms)ms.innerHTML=MONTHS.map(function(n,i){return '<option value="'+(i+1)+'">'+n+'</option>';}).join('');
       if(m.min&&m.max){var y0=parseInt(m.min.slice(0,4),10),y1=parseInt(m.max.slice(0,4),10),o='';for(var y=y1;y>=y0;y--)o+='<option value="'+y+'">'+y+'</option>';if(ys)ys.innerHTML=o;if(yo)yo.innerHTML=o;
