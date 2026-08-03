@@ -102,7 +102,10 @@
   .vsavg.warn{background:transparent;border:1px solid var(--warn);color:var(--warn)}
   .vsavg.bad{background:transparent;border:1px solid var(--bad);color:var(--bad)}
   .agent.attn{border-color:var(--bad)}
-  .dtbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+  .dtbar{display:flex;flex-direction:column;gap:9px;margin:0 0 14px}
+  .dtpre{display:flex;gap:6px;flex-wrap:wrap}
+  .dtpre button{font-family:inherit;font-size:12.5px;font-weight:600;border:1px solid var(--line2);background:var(--panel);color:var(--ink2);padding:7px 13px;min-height:38px;border-radius:999px;cursor:pointer}
+  .dtcus{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .dtbar .dtl{font-size:12.5px;color:var(--ink3);font-weight:700}
   .dtbar input[type=date]{font-family:inherit;font-size:13px;border:1px solid var(--line2);background:var(--panel);color:var(--ink);padding:7px 10px;border-radius:9px;min-height:38px}
   .dtbar #dtgo{font-family:inherit;font-size:12.5px;font-weight:700;border:1px solid var(--brand2);background:var(--brandw);color:var(--brand);padding:7px 18px;min-height:38px;border-radius:999px;cursor:pointer}
@@ -492,10 +495,18 @@
   }
   function devBox(msg){ report.innerHTML='<div class="cbdev"><b>בפיתוח</b><span>'+(msg||'הדוח נפתח בקרוב')+'</span></div>'; }
   var META_INFO={}, CUR_FROM='', CUR_TO='';
+  var DT=[['month','החודש'],['q3','שלושה חודשים'],['ytd','מתחילת השנה'],['y12','שנה אחורה'],['all','הכל']];
+  function rangeFor(id){var m=META_INFO, to=m.max||m.today||iso(new Date()), d=new Date(to+'T12:00:00'), f;
+    if(id==='month'){f=to.slice(0,8)+'01';} else if(id==='q3'){d.setMonth(d.getMonth()-3);f=iso(d);}
+    else if(id==='ytd'){f=to.slice(0,4)+'-01-01';} else if(id==='all'){f=m.min||'2014-12-25';}
+    else{d.setFullYear(d.getFullYear()-1);f=iso(d);}
+    if(m.min&&f<m.min)f=m.min; return [f,to];}
   function paintDtbar(){var el=document.getElementById('dtbar'); if(!el)return;
-    el.innerHTML='<span class="dtl">מ־</span><input type="date" id="dtf" value="'+CUR_FROM+'" min="'+(META_INFO.min||'')+'" max="'+(META_INFO.max||'')+'">'
+    var chips=DT.map(function(p){return '<button type="button" data-r="'+p[0]+'">'+p[1]+'</button>';}).join('');
+    el.innerHTML='<div class="dtpre">'+chips+'</div>'
+      +'<div class="dtcus"><span class="dtl">מ־</span><input type="date" id="dtf" value="'+CUR_FROM+'" min="'+(META_INFO.min||'')+'" max="'+(META_INFO.max||'')+'">'
       +'<span class="dtl">עד</span><input type="date" id="dtt" value="'+CUR_TO+'" min="'+(META_INFO.min||'')+'" max="'+(META_INFO.max||'')+'">'
-      +'<button type="button" id="dtgo">הצג</button>';}
+      +'<button type="button" id="dtgo">הצג</button></div>';}
   function loadRange(from,to){ CUR_FROM=from; CUR_TO=to; paintDtbar();
     fetch('/api/agentreport?d_from='+from+'&d_to='+to,{cache:'no-store'}).then(function(r){return r.ok?r.json():{};}).then(function(dd){
       dd=dd||{};
@@ -513,7 +524,10 @@
       loadRange(from,to);
     }).catch(function(){ devBox('שגיאה בטעינה'); });
   }
-  (function(){var el=document.getElementById('dtbar'); if(el) el.addEventListener('click',function(e){ if(e.target&&e.target.id==='dtgo'){ var f=(document.getElementById('dtf')||{}).value, t=(document.getElementById('dtt')||{}).value; if(f&&t){ if(f>t){var x=f;f=t;t=x;} loadRange(f,t);} } });})();
+  (function(){var el=document.getElementById('dtbar'); if(!el)return; el.addEventListener('click',function(e){
+    var pb=e.target.closest?e.target.closest('[data-r]'):null;
+    if(pb){var r=rangeFor(pb.getAttribute('data-r')); loadRange(r[0],r[1]); return;}
+    if(e.target&&e.target.id==='dtgo'){ var f=(document.getElementById('dtf')||{}).value, t=(document.getElementById('dtt')||{}).value; if(f&&t){ if(f>t){var x=f;f=t;t=x;} loadRange(f,t);} } });})();
   var BASKETS=[];
   (function(){var ov=document.getElementById('navov'),tr=document.getElementById('navtrig'),x=document.getElementById('navx');
     if(!ov)return; function op(){ov.classList.add('open');document.body.classList.add('navlock');} function cl(){ov.classList.remove('open');document.body.classList.remove('navlock');}
