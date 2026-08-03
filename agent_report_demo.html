@@ -318,46 +318,8 @@
 </div>
 
 <script>
-  var BRANCHES=[
-    {name:"נתניה", agents:[
-      {name:"עדן",  hours:165, sales:340000, visitors:2900, customers:142, margin:33, attach:35, cancel:5, newpct:68, disc:11,
-        mix:[{c:"ספות",p:55},{c:"פינות אוכל",p:20},{c:"מזרנים",p:15},{c:"אחר",p:10}]},
-      {name:"עידן", hours:150, sales:300000, visitors:2500, customers:74, margin:42, attach:50, cancel:3, newpct:60, disc:5,
-        mix:[{c:"פינות אוכל",p:52},{c:"ספות",p:20},{c:"מזרנים",p:18},{c:"אחר",p:10}]},
-      {name:"טל",   hours:140, sales:205000, visitors:4600, customers:102, margin:27, attach:24, cancel:10, newpct:55, disc:20,
-        mix:[{c:"מזרנים",p:42},{c:"ספות",p:30},{c:"פינות אוכל",p:18},{c:"אחר",p:10}]}
-    ]},
-    {name:"ירושלים", agents:[
-      {name:"כרמל",  hours:160, sales:315000, visitors:3000, customers:120, margin:36, attach:44, cancel:6, newpct:66, disc:9,
-        mix:[{c:"ספות",p:50},{c:"פינות אוכל",p:25},{c:"מזרנים",p:15},{c:"אחר",p:10}]},
-      {name:"דניאל", hours:145, sales:255000, visitors:2400, customers:68, margin:40, attach:47, cancel:4, newpct:62, disc:6,
-        mix:[{c:"פינות אוכל",p:55},{c:"מזרנים",p:20},{c:"ספות",p:15},{c:"אחר",p:10}]},
-      {name:"מקסים", hours:130, sales:180000, visitors:3600, customers:105, margin:28, attach:22, cancel:9, newpct:58, disc:18,
-        mix:[{c:"מזרנים",p:45},{c:"ספות",p:25},{c:"פינות אוכל",p:20},{c:"אחר",p:10}]}
-    ]},
-    {name:"בית שמש", agents:[
-      {name:"מלכה", hours:150, sales:230000, visitors:2600, customers:96, margin:34, attach:38, cancel:5, newpct:64, disc:10,
-        mix:[{c:"ספות",p:48},{c:"פינות אוכל",p:24},{c:"מזרנים",p:18},{c:"אחר",p:10}]},
-      {name:"יעל",  hours:120, sales:165000, visitors:1700, customers:58, margin:39, attach:46, cancel:3, newpct:60, disc:7,
-        mix:[{c:"פינות אוכל",p:52},{c:"מזרנים",p:20},{c:"ספות",p:18},{c:"אחר",p:10}]}
-    ]},
-    {name:"חיפה", agents:[
-      {name:"שרון",  hours:170, sales:325000, visitors:3300, customers:130, margin:31, attach:33, cancel:7, newpct:67, disc:12,
-        mix:[{c:"ספות",p:52},{c:"פינות אוכל",p:23},{c:"מזרנים",p:15},{c:"אחר",p:10}]},
-      {name:"יעל",   hours:125, sales:195000, visitors:1800, customers:60, margin:43, attach:52, cancel:2, newpct:58, disc:4,
-        mix:[{c:"פינות אוכל",p:55},{c:"מזרנים",p:20},{c:"ספות",p:15},{c:"אחר",p:10}]},
-      {name:"דניאל", hours:110, sales:140000, visitors:2500, customers:70, margin:27, attach:25, cancel:9, newpct:62, disc:19,
-        mix:[{c:"מזרנים",p:45},{c:"ספות",p:25},{c:"פינות אוכל",p:20},{c:"אחר",p:10}]}
-    ]},
-    {name:"ראשון לציון", agents:[
-      {name:"לין",   hours:168, sales:330000, visitors:3100, customers:138, margin:32, attach:34, cancel:6, newpct:69, disc:11,
-        mix:[{c:"ספות",p:54},{c:"פינות אוכל",p:21},{c:"מזרנים",p:15},{c:"אחר",p:10}]},
-      {name:"עמית",  hours:148, sales:285000, visitors:2450, customers:72, margin:41, attach:49, cancel:3, newpct:61, disc:5,
-        mix:[{c:"פינות אוכל",p:53},{c:"ספות",p:20},{c:"מזרנים",p:17},{c:"אחר",p:10}]},
-      {name:"איתמר", hours:125, sales:175000, visitors:3800, customers:100, margin:26, attach:23, cancel:11, newpct:56, disc:21,
-        mix:[{c:"מזרנים",p:45},{c:"ספות",p:25},{c:"פינות אוכל",p:20},{c:"אחר",p:10}]}
-    ]}
-  ];
+  // no fabricated fallback data: BRANCHES is filled only from /api/agentreport
+  var BRANCHES=[];
 
   var BRANCH_PALETTE=[
     {bc:'#0C9C6E', bcw:'rgba(12,156,110,.12)'},
@@ -509,6 +471,9 @@
   function render(){
     document.getElementById('tog').style.display = view!=='agents' ? 'none' : '';
     var ib=document.getElementById('insight');
+    // no data loaded for this period — say so on every tab instead of drawing something
+    if(!BRANCHES.length && !(BASKETS&&BASKETS.length)){
+      report.innerHTML='<div class="empty">אין נתונים בתקופה.</div>'; return; }
     if(view==='baskets'){renderBasketsTab();return;}
     if(view==='branches'){
       if(ib) ib.innerHTML='<b>ניתוח סניפים.</b> הסניפים מדורגים לפי סך מכירות — הכסף שבאמת נכנס. מכירות לשעה מחושב משעות עבודה אמיתיות של אנשי המכירות. יחס המרה מחושב לפי זוגות — המונה סופר ראשים, וקונים מגיעים בזוג. סניף עם נתוני שעות חלקיים מוצג באפור.';
@@ -624,10 +589,11 @@
   function loadRange(from,to){ updateSel();
     fetch('/api/agentreport?d_from='+from+'&d_to='+to,{cache:'no-store'}).then(function(r){return r.ok?r.json():{};}).then(function(dd){
       dd=dd||{};
-      if(dd.dev){ devBox('הדוח נפתח בקרוב'); return; }
-      if(!dd.branches||!dd.branches.length){ report.innerHTML='<div class="empty">אין נתונים בתקופה.</div>'; return; }
+      // always clear state first: stale rows from another period must never survive a failed load
+      if(dd.dev){ BRANCHES=[];BASKETS=[]; devBox('הדוח נפתח בקרוב'); return; }
+      if(!dd.branches||!dd.branches.length){ BRANCHES=[];BASKETS=[]; report.innerHTML='<div class="empty">אין נתונים בתקופה.</div>'; return; }
       BRANCHES=buildBranches(dd.branches); BASKETS=dd.baskets||[]; render();
-    }).catch(function(){ devBox('שגיאה בטעינה'); });}
+    }).catch(function(){ BRANCHES=[];BASKETS=[]; devBox('שגיאה בטעינה'); });}
   function apply(){ renderChips(); loadRange(state.from,state.to); }
   function setRange(f,t,preset){
     if(f>t){var x=f;f=t;t=x;}
