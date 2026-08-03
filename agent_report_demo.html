@@ -446,7 +446,7 @@
       a.mix.forEach(function(m){cats[m.c]=(cats[m.c]||0)+a.sales*m.p/100;});
     });
     var mix=Object.keys(cats).map(function(k){return {c:k,p:Math.round(cats[k]/s*100)};}).sort(function(x,y){return y.p-x.p;});
-    return {name:b.name, sales:s, visitors:v, customers:c, hours:h, cxl:xx, cancelPct:(xx+oo)?xx/(xx+oo)*100:0, conv:s/v, avgDeal:s/c, salesPerHour:s/h, closePct:c/v*100, profitPct:p/s*100, discPct:dw/s, discIls:dils, mix:mix};
+    var _ffr=(b.footfall||0)>0,_vis=_ffr?b.footfall:v; return {name:b.name, sales:s, visitors:_vis, ffReal:_ffr, customers:c, hours:h, cxl:xx, cancelPct:(xx+oo)?xx/(xx+oo)*100:0, conv:s/_vis, avgDeal:s/c, salesPerHour:s/h, closePct:c/_vis*100, profitPct:p/s*100, discPct:dw/s, discIls:dils, mix:mix};
   }
   function renderBranches(){
     var rows=BRANCHES.map(computeBranch).sort(function(x,y){return y.sales-x.sales;});
@@ -458,8 +458,8 @@
         ['עסקה ממוצעת', shekel(r.avgDeal)],
         ['רווחיות', Math.round(r.profitPct)+'%'],
         ['ביטולים', (Math.round(r.cancelPct*10)/10)+'% · '+r.cxl],
-        ['יחס המרה', (Math.round(r.closePct*10)/10)+'%', true],
-        ['נכנסים', r.visitors.toLocaleString('en-US'), true]
+        ['יחס המרה', (Math.round(r.closePct*10)/10)+'%', !r.ffReal],
+        ['נכנסים', r.visitors.toLocaleString('en-US'), !r.ffReal]
       ].map(function(s){return '<div class="dstat'+(s[2]?' est':'')+'"><span>'+s[0]+'</span><b>'+s[1]+'</b></div>';}).join('');
       var bars=r.mix.map(function(m){return '<div class="mixrow"><span class="mixl">'+m.c+'</span><span class="mixbar"><i style="width:'+m.p+'%"></i></span><span class="mixp">'+m.p+'%</span></div>';}).join('');
       var oi=BRANCHES.map(function(x){return x.name;}).indexOf(r.name), pal=BRANCH_PALETTE[(oi<0?i:oi)%BRANCH_PALETTE.length];
@@ -566,7 +566,7 @@
     return a;
   }
   function buildBranches(api){
-    return (api||[]).map(function(b){ return { name:b.name, agents:(b.reps||[]).map(function(r){
+    return (api||[]).map(function(b){ return { name:b.name, footfall:b.footfall||0, agents:(b.reps||[]).map(function(r){
       return estFields({ name:r.name, sales:r.sales, orders:r.orders, customers:r.customers,
         avg_ord:r.avg_ord, margin:r.margin, disc:r.disc||0, newpct:r.newpct||0, cancel:r.cancel||0, cxl:r.cxl||0,
         mix:(r.mix&&r.mix.length?r.mix:[{c:'אחר',p:100}]) }); }) }; });
