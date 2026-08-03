@@ -132,7 +132,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   /* ---- folded date sheet ---- */
   #ovl{position:fixed;inset:0;background:rgba(10,18,14,.45);z-index:90;display:none}
   #sheet{position:fixed;right:0;left:0;bottom:0;z-index:100;background:var(--bg);border-radius:18px 18px 0 0;border:1px solid var(--line);border-bottom:0;box-shadow:0 -12px 40px rgba(0,0,0,.25);padding:14px 16px calc(18px + env(safe-area-inset-bottom));display:none;max-height:86vh;overflow-y:auto}
-  @media (min-width:640px){#sheet{left:50%;right:auto;transform:translateX(50%);width:420px;bottom:auto;top:12vh;border-radius:18px;border-bottom:1px solid var(--line)}}
+  @media (min-width:640px){#sheet{left:50%;right:auto;transform:translateX(-50%);width:420px;bottom:auto;top:12vh;border-radius:18px;border-bottom:1px solid var(--line)}}
   #sheet.on,#ovl.on{display:block}
   .shead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
   .shead .t{font-size:15px;font-weight:500}
@@ -177,7 +177,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .calft button{font-family:inherit;font-size:13.5px;min-height:40px;padding:8px 14px;border-radius:10px;border:1px solid var(--line2);background:var(--bg);color:var(--tx2);cursor:pointer;flex:1}
   /* ---- ask sheet ---- */
   #asksheet{position:fixed;right:0;left:0;bottom:0;z-index:120;background:var(--bg);border-radius:18px 18px 0 0;border:1px solid var(--line);border-bottom:0;box-shadow:0 -12px 40px rgba(0,0,0,.25);padding:14px 16px calc(18px + env(safe-area-inset-bottom));display:none;max-height:88vh;overflow-y:auto}
-  @media (min-width:640px){#asksheet{left:50%;right:auto;transform:translateX(50%);width:520px;bottom:auto;top:8vh;border-radius:18px;border-bottom:1px solid var(--line)}}
+  @media (min-width:640px){#asksheet{left:50%;right:auto;transform:translateX(-50%);width:520px;bottom:auto;top:8vh;border-radius:18px;border-bottom:1px solid var(--line)}}
   #asksheet.on,#askovl.on{display:block}
   .askrow{display:flex;gap:8px;align-items:flex-end}
   .askrow textarea{flex:1;font-family:inherit;font-size:15px;color:var(--tx);background:var(--surface);border:1px solid var(--line2);border-radius:12px;padding:10px 12px;resize:vertical;min-height:48px}
@@ -301,7 +301,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .cbdev span{font-size:13px}
   .abadge{display:none;align-items:center;justify-content:center;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--dfg);color:#fff;font-size:10px;font-weight:700;margin-inline-start:5px}
   #alertsheet{position:fixed;right:0;left:0;bottom:0;z-index:121;background:var(--bg);border-radius:18px 18px 0 0;border:1px solid var(--line);border-bottom:0;box-shadow:0 -12px 40px rgba(0,0,0,.25);padding:14px 16px calc(18px + env(safe-area-inset-bottom));display:none;max-height:82vh;overflow-y:auto}
-  @media (min-width:640px){#alertsheet{left:50%;right:auto;transform:translateX(50%);width:470px;bottom:auto;top:10vh;border-radius:18px;border-bottom:1px solid var(--line)}}
+  @media (min-width:640px){#alertsheet{left:50%;right:auto;transform:translateX(-50%);width:470px;bottom:auto;top:10vh;border-radius:18px;border-bottom:1px solid var(--line)}}
   #alertsheet.on{display:block}
   .alintro{font-size:12px;color:var(--tx2);margin:0 0 11px;line-height:1.5}
   .alnone{font-size:13px;color:var(--tx2);text-align:center;padding:22px 6px;line-height:1.6}
