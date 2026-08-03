@@ -572,6 +572,10 @@
         mix:(r.mix&&r.mix.length?r.mix:[{c:'אחר',p:100}]) }); }) }; });
   }
   function devBox(msg){ report.innerHTML='<div class="cbdev"><b>בפיתוח</b><span>'+(msg||'הדוח נפתח בקרוב')+'</span></div>'; }
+  var PREVIEW_KEY='divani_preview_user';
+  // the owner's "view as a user" eye is set on the main dashboard and must hold on every screen
+  function prevGet(){try{return localStorage.getItem(PREVIEW_KEY)==='1';}catch(e){return false;}}
+  function prevSet(v){try{if(v)localStorage.setItem(PREVIEW_KEY,'1');else localStorage.removeItem(PREVIEW_KEY);}catch(e){}}
   var META_INFO={};
   var MONTHS=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
   function pad(n){return (n<10?'0':'')+n;}
@@ -681,8 +685,9 @@
   function boot(){
     fetch('/api/meta',{cache:'no-store'}).then(function(r){return r.ok?r.json():{};}).then(function(m){
       m=m||{}; META_INFO=m;
+      var isOwner = !!m.owner && !prevGet();
       var vt=document.getElementById('vtog'), tg=document.getElementById('tog'), sbar=document.getElementById('selbar');
-      if(!m.owner){ if(explainBtn)explainBtn.style.display='none';
+      if(!isOwner){ if(explainBtn)explainBtn.style.display='none';
         ['vtog','tog','selbar','explBox','how','insight'].forEach(function(id){
           var el=document.getElementById(id); if(el)el.style.display='none'; });
         devBox('הדוח נפתח בקרוב'); return; }
@@ -695,6 +700,18 @@
     }).catch(function(){ devBox('שגיאה בטעינה'); });
   };
   var BASKETS=[];
+  (function(){   // logo: one tap = home (as always) · two taps = release the eye
+    var a=document.querySelector('.logo a'); if(!a)return;
+    var last=0, timer=null;
+    a.addEventListener('click',function(e){
+      if(!prevGet())return;                 // not previewing → behave as a normal link
+      e.preventDefault();
+      var now=Date.now();
+      if(now-last<450){ clearTimeout(timer); last=0; prevSet(false); location.reload(); return; }
+      last=now;
+      timer=setTimeout(function(){ location.href=a.getAttribute('href')||'/'; },460);
+    });
+  })();
   (function(){var ov=document.getElementById('navov'),tr=document.getElementById('navtrig'),x=document.getElementById('navx');
     if(!ov)return; function op(){ov.classList.add('open');document.body.classList.add('navlock');} function cl(){ov.classList.remove('open');document.body.classList.remove('navlock');}
     if(tr)tr.addEventListener('click',op); if(x)x.addEventListener('click',cl);

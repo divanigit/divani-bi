@@ -472,7 +472,11 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
 
 <script>
 (function(){
-  var META=null, TARGET=50, view='agents', dimKind='fam', dimMeasure='s', previewUser=false;
+  var PREVIEW_KEY='divani_preview_user';
+  // the eye must survive moving between screens — it is released only by a double tap on the logo
+  function prevGet(){try{return localStorage.getItem(PREVIEW_KEY)==='1';}catch(e){return false;}}
+  function prevSet(v){try{if(v)localStorage.setItem(PREVIEW_KEY,'1');else localStorage.removeItem(PREVIEW_KEY);}catch(e){}}
+  var META=null, TARGET=50, view='agents', dimKind='fam', dimMeasure='s', previewUser=prevGet();
   var dimPath={grp:null,fam:null,model:null}, dimSeg=null, dimSort=null, insParetoN=25;
   var DIMH={fam:'קטגוריות',part:'מוצרים',city:'ערים',sector:'מגזר',source:'מקור הגעה'};
   var SECN={'חילו.':'חילוני','חר.':'חרדי','ד.לא.':'דתי לאומי','רוס':'דובר רוסית','ע.ר':'המגזר הערבי','אחר':'אחר','לקוח מרחוק':'לקוח מרחוק','הזמנת שרות':'הזמנת שירות'};
@@ -1683,8 +1687,18 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   function askOpen(){askSheet.classList.add('on');askOvl.classList.add('on');setTimeout(function(){document.getElementById('askq').focus();},50);}
   function askClose(){askSheet.classList.remove('on');askOvl.classList.remove('on');}
   document.getElementById('askbtn').addEventListener('click',askOpen);
-  (function(){var v=document.getElementById('viewasbtn');if(v)v.addEventListener('click',function(){previewUser=true;applyOwnerUI();apply();});
-    var lg=document.querySelector('.logo');if(lg)lg.addEventListener('click',function(){if(META&&META.owner&&previewUser){previewUser=false;applyOwnerUI();apply();}});})();
+  (function(){
+    var v=document.getElementById('viewasbtn');
+    if(v)v.addEventListener('click',function(){previewUser=true;prevSet(true);applyOwnerUI();apply();});
+    var lg=document.querySelector('.logo'); if(!lg)return;
+    var last=0;
+    lg.addEventListener('click',function(){          // double tap = release, so it can't happen by accident
+      if(!(META&&META.owner&&previewUser))return;
+      var now=Date.now();
+      if(now-last<450){ last=0; previewUser=false; prevSet(false); applyOwnerUI(); apply(); }
+      else last=now;
+    });
+  })();
   (function(){var n=document.getElementById('nrepbtn');if(n)n.addEventListener('click',function(){location.href='/agent-report';});})();
 
   /* ---- התראות (alerts layer — v1: transfers with an אסמכתא but no receipt yet) ---- */
@@ -1796,7 +1810,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     // the owner-only "view as user" button is hidden WHILE previewing, so a user-view screenshot looks exactly like a regular user
     var vb=document.getElementById('viewasbtn'); if(vb)vb.style.display=(owner&&!prev)?'':'none';
     // the only way back from preview is a discreet tap on the logo — nothing on screen reveals preview mode
-    var lg=document.querySelector('.logo'); if(lg){lg.style.cursor=prev?'pointer':'';lg.title=prev?'חזרה לתצוגת בעלים':'';}
+    var lg=document.querySelector('.logo'); if(lg){lg.style.cursor=prev?'pointer':'';lg.title=prev?'הקשה כפולה על הלוגו — חזרה לתצוגה שלי':'';}
   }
   function boot(){
     fetch('/api/meta',{cache:'no-store'})
