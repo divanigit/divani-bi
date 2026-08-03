@@ -123,8 +123,8 @@
 .selbtn svg{width:16px;height:16px;color:var(--brand);flex:none}
 .selbtn .car{width:12px;height:12px;color:var(--ink3)}
 .crumbs .chip{font-family:inherit;font-size:12px;border:1px solid var(--line2);background:var(--paper);color:var(--ink2);padding:6px 11px;min-height:36px;border-radius:999px;cursor:pointer}
-.crumbs .chip.here{background:var(--brandw);border-color:var(--brand);color:var(--okfg);font-weight:600;cursor:default}
-@media print{.seg,.dimbar,#insbar,.selbtn,.rfr,#pdfbtn,#askbtn,.hint,#pendtr .x,.sheet,.overlay,#navov,.hamb,.navnow-k{display:none !important}}
+.crumbs .chip.here{background:var(--brandw);border-color:var(--brand);color:var(--brand);font-weight:600;cursor:default}
+@media print{.seg,.dimbar,#insbar,.selbtn,.rfr,#pdfbtn,#askbtn,.hint,#sheet,#ovl,#cal,#calovl,#navov,.hamb{display:none !important}}
 /* ---- folded date sheet ---- */
   #ovl{position:fixed;inset:0;background:rgba(10,18,14,.45);z-index:90;display:none}
 #sheet{position:fixed;right:0;left:0;bottom:0;z-index:100;background:var(--paper);border-radius:18px 18px 0 0;border:1px solid var(--line);border-bottom:0;box-shadow:0 -12px 40px rgba(0,0,0,.25);padding:14px 16px calc(18px + env(safe-area-inset-bottom));display:none;max-height:86vh;overflow-y:auto}
@@ -136,7 +136,7 @@
 .sec .sl{font-size:11.5px;color:var(--ink3);margin:0 0 7px}
 .chips{display:flex;flex-wrap:wrap;gap:7px}
 .chip{font-family:inherit;font-size:13px;font-weight:500;padding:10px 14px;border-radius:22px;border:1px solid var(--line2);background:var(--paper);color:var(--ink2);cursor:pointer;min-height:42px}
-.chip.on{background:var(--brandw);border-color:var(--brand);color:var(--okfg);font-weight:600}
+.chip.on{background:var(--brandw);border-color:var(--brand);color:var(--brand);font-weight:600}
 .chip:disabled{opacity:.35;cursor:default}
 .frow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .frow label{font-size:12px;color:var(--ink3)}
@@ -170,10 +170,13 @@
 .calft{display:flex;justify-content:space-between;gap:8px;margin-top:12px}
 .calft button{font-family:inherit;font-size:13.5px;min-height:40px;padding:8px 14px;border-radius:10px;border:1px solid var(--line2);background:var(--paper);color:var(--ink2);cursor:pointer;flex:1}
 .dimbar .chip{font-family:inherit;font-size:13px;border:1px solid var(--line2);background:var(--panel);color:var(--ink2);padding:8px 12px;min-height:40px;border-radius:999px;cursor:pointer}
-.dimbar .chip.on{background:var(--brandw);border-color:var(--brand);color:var(--okfg);font-weight:600}
+.dimbar .chip.on{background:var(--brandw);border-color:var(--brand);color:var(--brand);font-weight:600}
 .subchips .chip{font-family:inherit;font-size:12px;border:1px solid var(--line2);background:var(--paper);color:var(--ink2);padding:6px 11px;min-height:36px;border-radius:999px;cursor:pointer}
-.subchips .chip.on{background:var(--brandw);border-color:var(--brand);color:var(--okfg);font-weight:600}
-  .bknet{font-size:.82rem;color:var(--ink2);margin:0 0 12px}
+.subchips .chip.on{background:var(--brandw);border-color:var(--brand);color:var(--brand);font-weight:600}
+  .cbdev{border:1px solid var(--line2);border-radius:14px;background:var(--panel);padding:26px 18px;text-align:center;color:var(--ink2)}
+.cbdev b{display:block;font-size:1.05rem;color:var(--ink);margin-bottom:6px}
+.cbdev span{font-size:.88rem}
+.bknet{font-size:.82rem;color:var(--ink2);margin:0 0 12px}
 .bknet b{color:var(--ink);font-weight:700}
 .bknote{display:flex;gap:8px;background:var(--warnw);border:1px solid var(--warn);color:var(--warn);border-radius:10px;padding:9px 11px;font-size:.78rem;line-height:1.55;margin:0 0 13px}
   .bknote svg{width:16px;height:16px;flex:none;margin-top:1px;stroke:var(--warn)}
@@ -277,7 +280,7 @@
       <button type="button" data-view="branches">ניתוח סניפים</button>
       <button type="button" data-view="baskets">סל ממוצע חוצה סניפים</button>
     </div>
-    <div class="selbar" style="margin:0 0 14px"><button type="button" class="selbtn" id="selbtn" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span id="sellbl">טוען…</span><svg class="car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button></div>
+    <div class="selbar" id="selbar" style="margin:0 0 14px"><button type="button" class="selbtn" id="selbtn" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span id="sellbl">טוען…</span><svg class="car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button></div>
 
     <div class="tog" id="tog">
       <button type="button" data-m="total" class="on">מכירות</button>
@@ -447,9 +450,9 @@
       +'<div class="mixhead">תמהיל מוצרים</div>'+bars;
   }
   function computeBranch(b){
-    var s=0,v=0,c=0,p=0,h=0,dils=0,dw=0,oo=0,xx=0,cats={};
+    var s=0,v=0,c=0,p=0,h=0,hE=0,dils=0,dw=0,oo=0,xx=0,cats={};
     b.agents.forEach(function(a){
-      s+=a.sales; v+=a.visitors; c+=a.customers; h+=a.hours; oo+=a.orders||0; xx+=a.cxl||0; p+=a.sales*a.margin/100;
+      s+=a.sales; v+=a.visitors; c+=a.customers; h+=a.hours; hE+=a.hoursEst||0; oo+=a.orders||0; xx+=a.cxl||0; p+=a.sales*a.margin/100;
       dils+=a.sales*a.disc/(100-a.disc); dw+=a.sales*a.disc;
       a.mix.forEach(function(m){cats[m.c]=(cats[m.c]||0)+a.sales*m.p/100;});
     });
@@ -459,7 +462,9 @@
     return {name:b.name, sales:s, visitors:_vis, ffReal:_ffr, customers:c, buyers:b.buyers||0,
       hours:(_sphR?b.hours:h), cxl:xx, cancelPct:(xx+oo)?xx/(xx+oo)*100:0,
       avgDeal:s/c, profitPct:p/s*100, discPct:dw/s, discIls:dils, mix:mix,
-      salesPerHour:(_sphR?+b.sph:(h?s/h:0)), sphReal:_sphR,
+      // when the branch has no measured coverage, estimate from ESTIMATED hours for every rep —
+      // never mix real hours of some reps with sales of all (that produced absurd numbers)
+      salesPerHour:(_sphR?+b.sph:(hE?s/hE:0)), sphReal:_sphR, hcov:(b.hcov==null?null:+b.hcov),
       closePct:(_convR?+b.conv:(_vis?c/_vis*100:0)), convReal:_convR};
   }
   function renderBranches(){
@@ -576,7 +581,8 @@
   function iso(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
   function estFields(a){
     // real sales-per-hour comes from timesheets (a.sphReal). Only estimate hours when it's missing.
-    if(a.sphReal==null){ a.hours = Math.max(1, Math.round(a.orders*2.5)); }
+    a.hoursEst = Math.max(1, Math.round(a.orders*2.5));
+    if(a.sphReal==null){ a.hours = a.hoursEst; }
     a.visitors = Math.max(a.customers, Math.round(a.customers*4)); // per-rep footfall unknown → estimate
     a.attach   = Math.max(10, Math.min(55, Math.round(28+(a.avg_ord-3500)/120)));
     return a;
@@ -584,6 +590,7 @@
   function buildBranches(api){
     return (api||[]).map(function(b){ return { name:b.name, footfall:b.footfall||0, buyers:b.buyers||0,
       conv:(b.conv==null?null:+b.conv), sph:(b.sph==null?null:+b.sph), hours:b.hours||0,
+      hcov:(b.hcov==null?null:+b.hcov),
       agents:(b.reps||[]).map(function(r){
       var real=(r.sph!=null);
       return estFields({ name:r.name, sales:r.sales, orders:r.orders, customers:r.customers,
@@ -698,7 +705,10 @@
     fetch('/api/meta',{cache:'no-store'}).then(function(r){return r.ok?r.json():{};}).then(function(m){
       m=m||{}; META_INFO=m;
       var vt=document.getElementById('vtog'), tg=document.getElementById('tog'), sbar=document.getElementById('selbar');
-      if(!m.owner){ if(explainBtn)explainBtn.style.display='none'; if(vt)vt.style.display='none'; if(tg)tg.style.display='none'; if(sbar)sbar.style.display='none'; devBox('הדוח נפתח בקרוב'); return; }
+      if(!m.owner){ if(explainBtn)explainBtn.style.display='none';
+        ['vtog','tog','selbar','explBox','how','insight'].forEach(function(id){
+          var el=document.getElementById(id); if(el)el.style.display='none'; });
+        devBox('הדוח נפתח בקרוב'); return; }
       if(explainBtn)explainBtn.style.display='';
       var ms=document.getElementById('msel'),ys=document.getElementById('ysel'),yo=document.getElementById('yosel');
       if(ms)ms.innerHTML=MONTHS.map(function(n,i){return '<option value="'+(i+1)+'">'+n+'</option>';}).join('');
