@@ -75,7 +75,8 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .selbtn svg{width:16px;height:16px;color:var(--bd);flex:none}
   .selbtn .car{width:12px;height:12px;color:var(--tx3)}
   .rfr{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:8px 12px;border:1px solid var(--line2);border-radius:12px;background:var(--bg);color:var(--tx2);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer}
-  #viewasbtn.on{background:var(--wbg);color:var(--wfg);border-color:var(--wfg);font-weight:700}
+  #viewasbtn.on{background:var(--dfg);border-color:var(--dfg);color:#fff;font-weight:700}
+  #viewasbtn.on svg{color:#fff}
   .rfr svg{width:14px;height:14px}
   .rfr:disabled{opacity:.45;cursor:default}
   .built{font-size:11.5px;color:var(--tx3)}
@@ -1689,14 +1690,8 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   document.getElementById('askbtn').addEventListener('click',askOpen);
   (function(){
     var v=document.getElementById('viewasbtn');
-    if(v)v.addEventListener('click',function(){previewUser=true;prevSet(true);applyOwnerUI();apply();});
-    var lg=document.querySelector('.logo'); if(!lg)return;
-    var last=0;
-    lg.addEventListener('click',function(){          // double tap = release, so it can't happen by accident
-      if(!(META&&META.owner&&previewUser))return;
-      var now=Date.now();
-      if(now-last<450){ last=0; previewUser=false; prevSet(false); applyOwnerUI(); apply(); }
-      else last=now;
+    if(v)v.addEventListener('click',function(){
+      previewUser=!previewUser; prevSet(previewUser); applyOwnerUI(); apply();
     });
   })();
   (function(){var n=document.getElementById('nrepbtn');if(n)n.addEventListener('click',function(){location.href='/agent-report';});})();
@@ -1808,9 +1803,13 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var owner=!!(META&&META.owner), prev=owner&&previewUser;
     var ab=document.getElementById('askbtn'); if(ab)ab.style.display=(!!(META&&META.admin)&&!prev)?'':'none';
     // the owner-only "view as user" button is hidden WHILE previewing, so a user-view screenshot looks exactly like a regular user
-    var vb=document.getElementById('viewasbtn'); if(vb)vb.style.display=(owner&&!prev)?'':'none';
-    // the only way back from preview is a discreet tap on the logo — nothing on screen reveals preview mode
-    var lg=document.querySelector('.logo'); if(lg){lg.style.cursor=prev?'pointer':'';lg.title=prev?'הקשה כפולה על הלוגו — חזרה לתצוגה שלי':'';}
+    // the eye stays on screen for the owner and lights up while previewing — one tap in, one tap out
+    var vb=document.getElementById('viewasbtn');
+    if(vb){ vb.style.display=owner?'':'none';
+            vb.classList.toggle('on',prev);
+            vb.setAttribute('aria-pressed',prev?'true':'false');
+            vb.title=prev?'רואה עכשיו כמו שאר המשתמשים — הקש לחזרה לתצוגה שלי':'צפה כמו שאר המשתמשים'; }
+    var lg=document.querySelector('.logo'); if(lg){lg.style.cursor='';lg.title='';}
   }
   function boot(){
     fetch('/api/meta',{cache:'no-store'})
