@@ -119,7 +119,7 @@
 .selbtn .car{width:12px;height:12px;color:var(--ink3)}
 .crumbs .chip{font-family:inherit;font-size:12px;border:1px solid var(--line2);background:var(--paper);color:var(--ink2);padding:6px 11px;min-height:36px;border-radius:999px;cursor:pointer}
 .crumbs .chip.here{background:var(--brandw);border-color:var(--brand);color:var(--okfg);font-weight:600;cursor:default}
-.seg,.dimbar,#insbar,.selbtn,.rfr,#pdfbtn,#askbtn,.hint,#pendtr .x,.sheet,.overlay,#navov,.hamb,.navnow-k{display:none !important}
+@media print{.seg,.dimbar,#insbar,.selbtn,.rfr,#pdfbtn,#askbtn,.hint,#pendtr .x,.sheet,.overlay,#navov,.hamb,.navnow-k{display:none !important}}
 /* ---- folded date sheet ---- */
   #ovl{position:fixed;inset:0;background:rgba(10,18,14,.45);z-index:90;display:none}
 #sheet{position:fixed;right:0;left:0;bottom:0;z-index:100;background:var(--paper);border-radius:18px 18px 0 0;border:1px solid var(--line);border-bottom:0;box-shadow:0 -12px 40px rgba(0,0,0,.25);padding:14px 16px calc(18px + env(safe-area-inset-bottom));display:none;max-height:86vh;overflow-y:auto}
