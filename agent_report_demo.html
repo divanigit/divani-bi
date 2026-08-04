@@ -1,4 +1,4 @@
-<title>דוח ביצועי נציגים — דמו מתודולוגיה (נתונים פיקטיביים)</title>
+<title>ניתוח ביצועי נציגים וסניפים</title>
 <style>
   :root{
     --paper:#FBFCFB; --panel:#FFFFFF; --panel2:#F4F8F6;
@@ -575,11 +575,15 @@
         hours:(r.hours||0), csales:(r.csales==null?null:+r.csales), sphReal:(real?+r.sph:null),
         mix:(r.mix&&r.mix.length?r.mix:[{c:'אחר',p:100}]) }); }) }; });
   }
-  function devBox(msg){ report.innerHTML='<div class="cbdev"><b>בפיתוח</b><span>'+(msg||'הדוח נפתח בקרוב')+'</span></div>'; }
-  var PREVIEW_KEY='divani_preview_user';
+  function devBox(msg){ report.innerHTML='<div class="cbdev"><b>שגיאה בטעינה</b><span>'+(msg||'לא הצלחנו לטעון את הנתונים. רענן את הדף ונסה שוב.')+'</span></div>'; }
+  var PREVIEW_KEY='divani_preview_user', PREV_AT_BOOT=false;
   // the owner's "view as a user" eye is set on the main dashboard and must hold on every screen
   function prevGet(){try{return localStorage.getItem(PREVIEW_KEY)==='1';}catch(e){return false;}}
   function prevSet(v){try{if(v)localStorage.setItem(PREVIEW_KEY,'1');else localStorage.removeItem(PREVIEW_KEY);}catch(e){}}
+  // if the eye was flipped on another screen or tab, this page is stale — rebuild it
+  function prevResync(){ if(prevGet()!==PREV_AT_BOOT) location.reload(); }
+  window.addEventListener('storage',function(e){ if(e.key===PREVIEW_KEY) prevResync(); });
+  document.addEventListener('visibilitychange',function(){ if(!document.hidden) prevResync(); });
   var META_INFO={};
   var MONTHS=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
   function pad(n){return (n<10?'0':'')+n;}
@@ -609,7 +613,7 @@
       if(seq!==RELOAD_SEQ) return;      // a newer period was requested meanwhile — drop this answer
       dd=dd||{};
       // always clear state first: stale rows from another period must never survive a failed load
-      if(dd.dev){ BRANCHES=[];BASKETS=[]; devBox('הדוח נפתח בקרוב'); return; }
+      if(dd.dev){ BRANCHES=[];BASKETS=[]; devBox('התכונה בבנייה ותיפתח בקרוב'); return; }
       if(!dd.branches||!dd.branches.length){ BRANCHES=[];BASKETS=[]; report.innerHTML='<div class="empty">אין נתונים בתקופה.</div>'; return; }
       BRANCHES=buildBranches(dd.branches); BASKETS=dd.baskets||[]; render();
     }).catch(function(){ if(seq!==RELOAD_SEQ) return; BRANCHES=[];BASKETS=[]; devBox('שגיאה בטעינה'); });}
@@ -690,7 +694,7 @@
     fetch('/api/meta',{cache:'no-store'}).then(function(r){return r.ok?r.json():{};}).then(function(m){
       m=m||{}; META_INFO=m;
       var isOwner = !!m.owner && !prevGet();
-      OWNER_VIEW = isOwner;
+      OWNER_VIEW = isOwner; PREV_AT_BOOT = prevGet();
       var vb=document.getElementById('viewasbtn');
       if(vb && m.owner){                       // the eye belongs to the owner in both states,
         vb.style.display='';                   // otherwise there is no way back from preview

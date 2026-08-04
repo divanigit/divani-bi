@@ -384,11 +384,11 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       <span id="sellbl">טוען…</span>
       <svg class="car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
     </button>
-    <button type="button" class="rfr" id="askbtn" title="שאלה חופשית על הנתונים">
+    <button type="button" class="rfr" id="askbtn" title="שאלה חופשית על הנתונים" style="display:none">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg>
       שאלה חופשית
     </button>
-    <button type="button" class="rfr" id="viewasbtn" title="צפה כמו שאר המשתמשים (לחזרה — הקש על הלוגו)" style="display:none;padding:8px 11px">
+    <button type="button" class="rfr" id="viewasbtn" title="צפה כמו שאר המשתמשים" style="display:none;padding:8px 11px">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
     </button>
     <button type="button" class="rfr" id="rfr" title="רענון נתונים מפריוריטי עכשיו">
@@ -1303,7 +1303,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     for(var i=0;i<agg.length;i++){var a=agg[i];if(!a.designer){repSales+=a.sales;repCust+=a.customers;if(a.avg_cust>maxRep)maxRep=a.avg_cust;}}
     var netAvg=repCust?Math.round(repSales/repCust):0;
     var note='<div class="bknote"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>'
-      +'<span>לא כל מכירות המעצבת מתויגות ככאלה. חלק ממכירות העיצוב נרשמות תחת הנציג שסגר (למשל הזמנה של יעל סבג מ־2 באוגוסט בכ־₪13,500). לכן נתוני "מעצבת" כאן הם רף תחתון בלבד.</span></div>';
+      +'<span>לא כל מכירות המעצבת מתויגות ככאלה. חלק ממכירות העיצוב נרשמות תחת הנציג שסגר. לכן נתוני "מעצבת" כאן הם רף תחתון בלבד.</span></div>';
     var ref='<div class="bkref">ממוצע הרשת ללקוח, בלי המעצבת: <b>'+ils(netAvg)+'</b></div>';
     var head='<div class="bkhead"><span class="bkhr"></span><span class="hn">נציג</span><span class="hc">לקוחות</span><span class="hv">סל ממוצע</span></div>';
     var rows='';
@@ -1816,8 +1816,8 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       .then(function(r){if(r.status===401){location.href='/login';throw 0;}if(!r.ok)throw new Error('http '+r.status);return r.json();})
       .then(function(m){
         META=m;
+        applyOwnerUI();   // gate the owner-only chrome first — it must never flash for a regular user
         if(!META.min){stage.innerHTML='<div class="empty">המסד עדיין מתמלא בנתונים — נסה שוב בעוד כמה דקות.</div>';return;}
-        applyOwnerUI();
         var ms=document.getElementById('msel'),ys=document.getElementById('ysel'),yo=document.getElementById('yosel');
         ms.innerHTML=MONTHS.map(function(n,i){return '<option value="'+(i+1)+'">'+n+'</option>';}).join('');
         var y0=parseInt(META.min.slice(0,4),10),y1=parseInt(META.max.slice(0,4),10),o='';
@@ -1829,7 +1829,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         setPreset('today');
         try{var _qv=new URLSearchParams(location.search).get('v');if(_qv&&document.querySelector('#seg [data-v="'+_qv+'"]'))setView(_qv);}catch(e){}
       })
-      .catch(function(e){if(e!==0){stage.innerHTML='<div class="empty">שגיאה בטעינה. רענן את הדף.</div>';}});
+      .catch(function(e){if(e!==0){applyOwnerUI();stage.innerHTML='<div class="empty">שגיאה בטעינה. רענן את הדף.</div>';}});
   }
   /* keep a long-open tab honest: when the user returns, re-check the date/sync.
      if the day rolled over, "היום" (and other presets) recompute to the real today
