@@ -682,13 +682,14 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(brPhoneSep){
       var pS=0,pP=0,pC=0;
       src.forEach(function(g){
-        var ps=g.ps||0, pn=g.pn||0;
-        pS+=ps; pP+=0; pC+=pn;
-        var s2=(g.s||0)-ps;
-        if(s2!==0||((g.n||0)-pn)>0) kids.push({n:brName(g.b),s:s2,profit:g.p||0,
-          pm:(s2>0)?100*(g.p||0)/s2:null,c:g.c||0,k:null});
+        var ps=g.ps||0, pp=g.pp||0, pn=g.pn||0;
+        pS+=ps; pP+=pp; pC+=pn;
+        // the profit has to move with the sales, or the branch margin turns into fiction
+        var s2=(g.s||0)-ps, p2=(g.p||0)-pp;
+        if(s2!==0||((g.n||0)-pn)>0) kids.push({n:brName(g.b),s:s2,profit:p2,
+          pm:(s2>0)?100*p2/s2:null,c:g.c||0,k:null});
       });
-      if(pS!==0) kids.push({n:brName('PHONE'),s:pS,profit:pP,pm:null,c:pC,k:null});
+      if(pS!==0) kids.push({n:brName('PHONE'),s:pS,profit:pP,pm:(pS>0)?100*pP/pS:null,c:pC,k:null});
       kids.sort(function(a,b){return b.s-a.s;});
     } else {
       kids=src.map(function(g){
