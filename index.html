@@ -82,6 +82,15 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .built{font-size:11.5px;color:var(--tx3)}
   .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
   @media (max-width:520px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .cmwrap{border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin:0 0 12px;background:var(--bg)}
+  .cmhead{font-size:13px;font-weight:600;color:var(--tx);margin-bottom:9px}
+  .cmrow{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px}
+  .cml{flex:none;width:62px;color:var(--tx2)}
+  .cmbar{flex:none;height:14px;border-radius:4px;background:var(--surface);border:1px solid var(--line2);overflow:hidden;min-width:6px}
+  .cmbar i{display:block;height:100%;background:var(--bd)}
+  .cmv{margin-inline-start:auto;color:var(--tx);font-variant-numeric:tabular-nums}
+  .cmp{flex:none;width:42px;text-align:end;color:var(--tx2);font-variant-numeric:tabular-nums}
+  .cmleg{font-size:11px;color:var(--tx3);margin-top:8px;line-height:1.5}
   .kpi{background:var(--surface);border-radius:10px;padding:9px 11px}.kpi .l{font-size:11px;color:var(--tx3)}.kpi .v{font-size:17px;font-weight:500;font-variant-numeric:tabular-nums;margin-top:2px}
   .hint{font-size:12px;color:var(--tx3);margin:0 0 8px}
   .pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px}
@@ -744,6 +753,8 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     return {s:T.s,sg:T.sg,r:T.r,disc:T.disc,
             ratio:T.sg>0?100*T.r/T.sg:null,
             dpct:(T.s+T.disc)>0?100*T.disc/(T.s+T.disc):null,
+            months:(agg.months||[]),
+            linkPct:(agg.link_pct==null?null:+agg.link_pct),
             k:kids,orders:kids.length};
   }
 
@@ -1204,24 +1215,46 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   }
 
   function renderCollectKpis(R){
+    var noLink=(R.linkPct!=null && R.linkPct<80);
     document.getElementById('kpis').innerHTML=
-      '<div class="kpi"><div class="l">יחס מקדמות למחזור</div><div class="v">'+(R.ratio==null?'—':Math.round(R.ratio)+'%')+'</div></div>'+
+      '<div class="kpi"><div class="l">יחס מקדמות למחזור</div><div class="v">'+((noLink||R.ratio==null)?'—':Math.round(R.ratio)+'%')+'</div></div>'+
       '<div class="kpi"><div class="l">מחזור</div><div class="v">'+ils(R.s)+'</div></div>'+
-      '<div class="kpi"><div class="l">תקבולים</div><div class="v">'+ils(R.r)+'</div></div>'+
+      '<div class="kpi"><div class="l">תקבולים</div><div class="v">'+(noLink?'—':ils(R.r))+'</div></div>'+
       '<div class="kpi"><div class="l">אחוז הנחה</div><div class="v">'+(R.dpct==null?'—':R.dpct.toFixed(1)+'%')+'</div></div>';
   }
 
+  // month-by-month picture: the bar is the turnover, the fill is what was collected against it
+  function collectMonthsHtml(R){
+    if(R.linkPct!=null && R.linkPct<80) return '';
+    var ms=R.months||[]; if(ms.length<2) return '';
+    var mx=0; ms.forEach(function(m){ if((m.s||0)>mx) mx=m.s||0; });
+    if(!mx) return '';
+    var HE=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+    var rows=ms.map(function(m){
+      var lbl=HE[parseInt(m.m.slice(5,7),10)-1]+' '+m.m.slice(2,4);
+      var w=Math.max(1,100*(m.s||0)/mx);
+      var pct=(m.sg>0)?Math.round(100*(m.r||0)/m.sg):null;
+      var fill=Math.max(0,Math.min(100,pct==null?0:pct));
+      return '<div class="cmrow"><span class="cml">'+lbl+'</span>'
+        +'<span class="cmbar" style="width:'+w.toFixed(1)+'%"><i style="width:'+fill+'%"></i></span>'
+        +'<span class="cmv">'+ils(m.s||0)+'</span>'
+        +'<span class="cmp">'+(pct==null?'—':pct+'%')+'</span></div>';
+    }).join('');
+    return '<div class="cmwrap"><div class="cmhead">מחזור וגבייה לפי חודש</div>'+rows
+      +'<div class="cmleg">האורך הוא המחזור החודשי · המילוי הוא מה שנגבה מהזמנות אותו חודש</div></div>';
+  }
   function renderCollectTable(R){
     if(!R.k.length){stage.innerHTML='<div class="empty">אין נתונים בתקופה שנבחרה.</div>';return;}
-    var h='<div class="tw"><table><thead><tr><th class="nm">סוכן</th><th>מכירות</th><th>תקבולים</th><th>יחס מקדמות</th><th>הנחות</th><th>אחוז הנחה</th></tr></thead><tbody>';
+    var h=collectMonthsHtml(R)+'<div class="tw"><table><thead><tr><th class="nm">סוכן</th><th>מכירות</th><th>תקבולים</th><th>יחס מקדמות</th><th>הנחות</th><th>אחוז הנחה</th></tr></thead><tbody>';
     R.k.slice().sort(function(x,y){return y.s-x.s;}).forEach(function(c){
       h+='<tr class="d0"><td class="nm"><div class="nmc"><span style="width:15px;flex:none"></span><div class="nlab"><div class="t" style="font-weight:500">'+esc(c.n)+'</div></div></div></td>'+
          '<td>'+ils(c.s)+'</td><td>'+ils(c.r)+'</td>'+
-         '<td>'+(c.ratio==null?'<span class="mut">—</span>':Math.round(c.ratio)+'%')+'</td>'+
+         '<td>'+((R.linkPct!=null&&R.linkPct<80)||c.ratio==null?'<span class="mut">—</span>':
+                 (c.sg<50000?'<span class="mut">'+Math.round(c.ratio)+'%</span>':Math.round(c.ratio)+'%'))+'</td>'+
          '<td>'+ils(c.disc)+'</td>'+
          '<td>'+(c.dpct==null?'<span class="mut">—</span>':c.dpct.toFixed(1)+'%')+'</td></tr>';
     });
-    h+='</tbody><tfoot><tr><td class="nm">סך הכל</td><td>'+ils(R.s)+'</td><td>'+ils(R.r)+'</td><td>'+(R.ratio==null?'—':Math.round(R.ratio)+'%')+'</td><td>'+ils(R.disc)+'</td><td>'+(R.dpct==null?'—':R.dpct.toFixed(1)+'%')+'</td></tr></tfoot></table></div>';
+    h+='</tbody><tfoot><tr><td class="nm">סך הכל</td><td>'+ils(R.s)+'</td><td>'+((R.linkPct!=null&&R.linkPct<80)?'—':ils(R.r))+'</td><td>'+((R.linkPct!=null&&R.linkPct<80)||R.ratio==null?'—':Math.round(R.ratio)+'%')+'</td><td>'+ils(R.disc)+'</td><td>'+(R.dpct==null?'—':R.dpct.toFixed(1)+'%')+'</td></tr></tfoot></table></div>';
     stage.innerHTML=h;
   }
 
@@ -1383,7 +1416,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(view==='cash'&&state.from<'2024-03-01')msgs.push('שיוך קבלות לסניפים קיים בפריוריטי רק משנת 2024 — קבלות מוקדמות יותר מופיעות כולן תחת "ללא שיוך סניף".');
     else if(view==='cash')msgs.push('חלק מהקבלות נרשמות בפריוריטי בלי שיוך סניף ומופיעות בשורה נפרדת.');
     if(view==='service')msgs.push('מוצגת פעילות אנשי השירות בלבד — היא אינה נספרת בדוחות המכירות.');
-    if(view==='collect')msgs.push('התקבולים כוללים מע"מ; יחס המקדמות מחושב מול המחזור בהמרה לכולל מע"מ. הנחות = שורות קיזוז, קופונים ושוברים.');
+    if(view==='collect'){var _R=ROOT();if(_R&&_R.linkPct!=null&&_R.linkPct<80){msgs.push('לא ניתן לחשב גבייה לתקופה הזו: בפריוריטי מספר ההזמנה נרשם על הקבלה רק משנת 2020, ולכן אי אפשר לשייך תשלום להזמנה. המכירות וההנחות בתקופה נכונים.');}else{msgs.push('יחס המקדמות מחושב לפי הזמנה: מכל מה שנמכר בתקופה, כמה כבר נגבה מול אותן הזמנות, כולל תשלומים שהגיעו אחר כך. לכן חודש שנסגר מגיע לגבייה מלאה והחודש הנוכחי עדיין נמוך. יחס מעל מאה אחוז נובע מהזמנה שקטנה אחרי שהלקוח כבר שילם, למשל בעקבות קיזוז. יחס על בסיס מכירות קטן מוצג באפור כי הוא רועש. התקבולים כוללים מע"מ והמחזור מומר לכולל מע"מ. הנחות = שורות קיזוז, קופונים ושוברים.');}}
     if(view==='dim'){
       if(dimKind==='sector'&&state.from<'2025-01-01')msgs.push('תיוג מגזר קיים בפריוריטי באופן מלא רק מלקוחות שנוצרו משנת 2025 — הזמנות מוקדמות יותר מופיעות תחת "ללא נתון".');
       if(dimKind==='city'&&state.from<'2022-01-01')msgs.push('רישום עיר הלקוח מלא בפריוריטי רק משנת 2022 — הזמנות מוקדמות יותר מופיעות תחת "ללא נתון".');
