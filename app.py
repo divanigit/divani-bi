@@ -239,6 +239,14 @@ def sync_window(kind: str, d_from: dt.date, d_to: dt.date):
     sb_rpc("bi_replace_window", {"p_from": d_from.isoformat(), "p_to": d_to.isoformat(),
                                  "p_rows": rows})
     took = int((time.time() - t0) * 1000)
+    # A sale can use a SKU created minutes earlier (the generator mints them per order).
+    # Until the catalog knows it, the line has no family and falls into the unclassified
+    # bucket — that is how a single day once showed 41% of sales as "אחר".
+    try:
+        if sb_rpc("bi_unknown_parts", {"p_from": d_from.isoformat(), "p_to": d_to.isoformat()}):
+            sync_parts()
+    except Exception:
+        pass
     try:
         sb_insert("bi_sync_log", {"kind": kind, "d_from": d_from.isoformat(),
                                   "d_to": d_to.isoformat(), "orders": n_orders,
