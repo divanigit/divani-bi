@@ -325,6 +325,11 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   #alertsheet.on{display:block}
   .alintro{font-size:12px;color:var(--tx2);margin:0 0 11px;line-height:1.5}
   .alnone{font-size:13px;color:var(--tx2);text-align:center;padding:22px 6px;line-height:1.6}
+  .alsec{font-size:12px;font-weight:700;color:var(--tx);margin:14px 0 7px;padding-top:10px;border-top:1px solid var(--line)}
+  .alcnt{font-weight:500;color:var(--tx2)}
+  .alitem.apr{opacity:.6;border-inline-start-color:var(--bd)}
+  .aprn{color:var(--okfg)}
+  .flga,.flgu{font-family:inherit;font-size:11px;min-height:32px;padding:5px 11px;margin-top:4px;border-radius:99px;border:1px solid var(--line2);background:var(--surface);color:var(--tx2);cursor:pointer}
   .alitem{border:1px solid var(--line);border-radius:11px;padding:10px 12px;margin-bottom:8px;border-inline-start:3px solid var(--wfg)}
   .alr1{display:flex;justify-content:space-between;align-items:center;font-size:14px}
   .alr1 b{font-weight:600}
@@ -1758,9 +1763,61 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
           +'<div class="alr2">'+esc(brName(p.b))+' · אסמכתא '+heDate(p.d)+' · לפני '+alDaysAgo(p.d)+' ימים</div></div>';
       });
     }
-    document.getElementById('alertbody').innerHTML=h;
+    document.getElementById('alertbody').innerHTML=h+'<div id="flagbox"><div class="alr2">טוען חריגים…</div></div>';
     document.getElementById('alertsheet').classList.add('on');document.getElementById('alertovl').style.display='block';
+    loadFlags();
   }
+
+  /* ---- חריגים שדורשים עין אנושית: קיזוז לא פרופורציונלי, וכסף מעל ערך ההזמנה ---- */
+  var FLAGS=null;
+  function flagRow(kind,r){
+    var isD=(kind==='disc');
+    var head=isD?(ils(r.disc)+' · '+r.pct+'%'):('עודף '+ils(r.excess));
+    return '<div class="alitem'+(r.ok?' apr':'')+'" data-fk="'+kind+'" data-fo="'+esc(r.ord)+'">'
+      +'<div class="alr1"><b>'+esc(r.cust||r.ord)+'</b><span>'+head+'</span></div>'
+      +'<div class="alr2">'+esc(r.agent||'')+' · '+brName(r.br)+' · '+heDate(r.d)
+      +' · הזמנה '+(isD?ils(r.gross):ils(r.val))+'</div>'
+      +(r.ok?'<div class="alr2 aprn">מאושר: '+esc(r.note||'')+' <button type="button" class="flgu">בטל אישור</button></div>'
+            :'<div class="alr2"><button type="button" class="flga">מאושר — הוסף סיבה</button></div>')
+      +'</div>';
+  }
+  function paintFlags(){
+    if(!FLAGS){return;}
+    var d=FLAGS.disc||{}, o=FLAGS.overpaid||{};
+    var h='<div class="alsec">מוריד כסף — קיזוז מעל '+(FLAGS.disc_pct||5)+'%'
+      +' <span class="alcnt">'+(d.open||0)+' פתוחים · '+ils(d.amount||0)+'</span></div>';
+    h+=(d.rows||[]).filter(function(r){return !r.ok;}).slice(0,40).map(function(r){return flagRow('disc',r);}).join('')
+       || '<div class="alr2">אין חריגים פתוחים בתקופה.</div>';
+    h+='<div class="alsec">שולם מעבר לערך ההזמנה'
+      +' <span class="alcnt">'+(o.open||0)+' פתוחים · '+ils(o.amount||0)+'</span></div>';
+    h+=(o.rows||[]).filter(function(r){return !r.ok;}).slice(0,40).map(function(r){return flagRow('overpaid',r);}).join('')
+       || '<div class="alr2">אין חריגים פתוחים בתקופה.</div>';
+    document.getElementById('flagbox').innerHTML=h;
+  }
+  function loadFlags(){
+    if(!state.from) return;
+    fetch('/api/flags?d_from='+state.from+'&d_to='+state.to,{cache:'no-store'})
+      .then(function(r){return r.ok?r.json():{};})
+      .then(function(j){
+        if(j.dev||!j.disc){document.getElementById('flagbox').innerHTML='';return;}
+        FLAGS=j; paintFlags();
+      }).catch(function(){document.getElementById('flagbox').innerHTML='';});
+  }
+  document.getElementById('alertbody').addEventListener('click',function(e){
+    var row=e.target.closest('[data-fk]'); if(!row) return;
+    var kind=row.getAttribute('data-fk'), ord=row.getAttribute('data-fo');
+    if(e.target.closest('.flgu')){
+      fetch('/api/flag',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({kind:kind,ord:ord,undo:true})}).then(loadFlags);
+      return;
+    }
+    if(e.target.closest('.flga')){
+      var note=prompt('למה זה תקין? (הסבר קצר — הוא נשמר ואני לומד ממנו)');
+      if(!note||!note.trim()) return;
+      fetch('/api/flag',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({kind:kind,ord:ord,note:note.trim()})}).then(loadFlags);
+    }
+  });
   function closeAlerts(){document.getElementById('alertsheet').classList.remove('on');document.getElementById('alertovl').style.display='none';}
   document.getElementById('alertbtn').addEventListener('click',openAlerts);
   document.getElementById('alertx').addEventListener('click',closeAlerts);

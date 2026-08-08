@@ -812,6 +812,42 @@ def api_dim(request: Request, d_from: str = "", d_to: str = "", dim: str = "fam"
     return JSONResponse({"mode": "dim", "dim": dim, "rank": rank, "agg": agg or {}})
 
 
+@app.get("/api/flags")
+def api_flags(request: Request, d_from: str = "", d_to: str = "", pct: float = 5.0):
+    """Rows that need a human eye: out-of-proportion discounts, and money paid above the order."""
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    if not _is_admin(request):
+        return JSONResponse({"dev": True})   # management review — owner only
+    f, t = _parse_date(d_from), _parse_date(d_to)
+    if not f or not t:
+        return JSONResponse({"error": "bad dates"}, status_code=400)
+    if f > t:
+        f, t = t, f
+    return JSONResponse(sb_rpc("bi_flags", {"p_from": f.isoformat(), "p_to": t.isoformat(),
+                                            "p_disc_pct": pct}) or {})
+
+
+@app.post("/api/flag")
+async def api_flag(request: Request):
+    """Approve a flagged row (with the reason) or take the approval back."""
+    if not _logged_in(request) or not _is_admin(request):
+        return JSONResponse({"error": "admin_only"}, status_code=403)
+    body = await request.json()
+    kind = (body.get("kind") or "").strip()
+    ord_ = (body.get("ord") or "").strip()
+    if kind not in ("disc", "overpaid") or not ord_:
+        return JSONResponse({"error": "bad request"}, status_code=400)
+    if body.get("undo"):
+        sb_rpc("bi_flag_unapprove", {"p_kind": kind, "p_ord": ord_})
+        return JSONResponse({"ok": True, "approved": False})
+    note = (body.get("note") or "").strip()
+    if not note:
+        return JSONResponse({"error": "need_note"}, status_code=400)   # the reason is the point
+    sb_rpc("bi_flag_approve", {"p_kind": kind, "p_ord": ord_, "p_note": note, "p_by": "דורון"})
+    return JSONResponse({"ok": True, "approved": True})
+
+
 @app.get("/api/branchsrc")
 def api_branchsrc(request: Request, d_from: str = "", d_to: str = ""):
     if not _logged_in(request):
