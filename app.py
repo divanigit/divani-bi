@@ -861,6 +861,27 @@ def api_branchsrc(request: Request, d_from: str = "", d_to: str = ""):
     return JSONResponse({"mode": "branchsrc", "agg": agg or []})
 
 
+@app.get("/api/moneydown")
+def api_moneydown(request: Request, d_from: str = "", d_to: str = "",
+                  des: str = "", scope: str = "sales"):
+    """כל שורה בהזמנה שסכומה שלילי — כסף שיורד. הקיבוץ הוא לפי תיאור הפריט בקטלוג,
+    והצלילה מחזירה את השורות עצמן עם הסיבה שנרשמה (אם נרשמה)."""
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    if not _is_admin(request):
+        return JSONResponse({"dev": True})   # management control — owner only
+    f, t = _parse_date(d_from), _parse_date(d_to)
+    if not f or not t:
+        return JSONResponse({"error": "bad dates"}, status_code=400)
+    if f > t:
+        f, t = t, f
+    if scope not in ("sales", "all"):
+        scope = "sales"
+    agg = sb_rpc("bi_money_down", {"p_from": f.isoformat(), "p_to": t.isoformat(),
+                                   "p_des": des or None, "p_scope": scope})
+    return JSONResponse({"mode": "moneydown", "agg": agg or {}})
+
+
 @app.get("/api/agentreport")
 def api_agentreport(request: Request, d_from: str = "", d_to: str = ""):
     if not _logged_in(request):

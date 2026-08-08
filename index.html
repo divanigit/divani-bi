@@ -241,6 +241,24 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .bspills{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 12px}
   .bspills button{font-family:inherit;font-size:13px;border:1px solid var(--line2);background:var(--surface);color:var(--tx2);padding:8px 14px;min-height:40px;border-radius:999px;cursor:pointer;white-space:nowrap}
   .bspills button.on{background:var(--accentSoft);border-color:var(--bd);color:var(--okfg);font-weight:600}
+  /* מוריד כסף */
+  .mdscope{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 10px}
+  .mdscope button{font-family:inherit;font-size:12px;border:1px solid var(--line2);background:var(--bg);color:var(--tx2);padding:6px 11px;min-height:36px;border-radius:999px;cursor:pointer}
+  .mdscope button.on{border-color:var(--bd);color:var(--tx);font-weight:600}
+  .mdscope .mdst{font-size:11px;color:var(--tx3)}
+  .mdsum{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:0 0 12px}
+  @media(min-width:640px){.mdsum{grid-template-columns:repeat(4,1fr)}}
+  .mdcard{border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:9px 11px;display:flex;flex-direction:column;gap:2px}
+  .mdcard span{font-size:10.5px;color:var(--tx3);font-weight:600}
+  .mdcard b{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
+  .mdcard i{font-size:10.5px;color:var(--tx3);font-style:normal}
+  .mdcard.mdno{border-color:var(--dfg)}
+  .mdneg{color:var(--dfg)}
+  .mdback{display:flex;align-items:center;gap:8px;margin:0 0 10px;flex-wrap:wrap}
+  .mdback button{font-family:inherit;font-size:12px;border:1px solid var(--line2);background:var(--bg);color:var(--tx2);padding:6px 11px;min-height:36px;border-radius:999px;cursor:pointer}
+  .mdback b{font-size:14px}
+  .mdwhy{color:var(--tx3);font-style:normal;font-size:11.5px}
+  .hintline{font-size:11.5px;color:var(--tx3);margin:8px 2px 0}
   .bstog{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 10px}
   .bstog button{font-family:inherit;font-size:12.5px;min-height:38px;padding:8px 13px;border-radius:999px;border:1px solid var(--line2);background:var(--surface);color:var(--tx2);cursor:pointer}
   .bstog button.on{background:var(--accentSoft);border-color:var(--bd);color:var(--okfg);font-weight:600}
@@ -368,6 +386,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         <div class="navgroup"><svg class="gico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M8 17v-5"/><path d="M13 17V8"/><path d="M18 17v-8"/></svg><span>אנליטיקה</span></div>
         <button type="button" data-v="branchsrc" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3.5h3.5a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H15"/><path d="M10 16.5l4.5-4.5L10 7.5"/><path d="M14.5 12H3.5"/></svg><span class="rlbl">מקורות הגעה</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="dim" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12V3.2A8.8 8.8 0 1 0 20.8 12H12z"/><path d="M14.5 3.9A8.8 8.8 0 0 1 20.1 9.5H14.5z"/></svg><span class="rlbl">פילוח</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
+        <button type="button" data-v="mdown" id="mdownbtn" aria-pressed="false" style="display:none"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v16.5"/><path d="M18.5 14L12 20.5 5.5 14"/></svg><span class="rlbl">מוריד כסף</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="ins" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 18.5h5"/><path d="M10.5 21.5h3"/><path d="M12 2.8a6 6 0 0 0-3.9 10.5c.75.7 1.1 1.5 1.15 2.5h5.5c.05-1 .4-1.8 1.15-2.5A6 6 0 0 0 12 2.8z"/></svg><span class="rlbl">תובנות</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <div class="navdiv"></div>
         <button type="button" id="nrepbtn" class="navext" aria-pressed="false" title="ניתוח ביצועי נציגים וסניפים"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 3.5v17h17"/><path d="M7 14.5l4-4 3 3 5.2-6"/></svg><span class="rlbl">ניתוח ביצועי נציגים וסניפים</span><svg class="rext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 16L16 8"/><path d="M9 8h7v7"/></svg></button>
@@ -550,6 +569,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(view==='branchsrc')return state.from+'|'+state.to+'|BS';
     if(view==='baskets')return state.from+'|'+state.to+'|BK';
     if(view==='cannib')return 'CN';
+    if(view==='mdown')return state.from+'|'+state.to+'|MD|'+mdScope+'|'+(mdDes||'');
     if(view==='dim'){
       if(dimKind==='fam')return state.from+'|'+state.to+'|T|'+(dimPath.grp||'')+'|'+(dimPath.fam||'')+'|'+(dimPath.model||'');
       if(dimSeg)return state.from+'|'+state.to+'|SG|'+dimSeg.seg+'|'+dimSeg.key;
@@ -590,6 +610,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
            :view==='branchsrc'?('/api/branchsrc?d_from='+state.from+'&d_to='+state.to)
            :view==='baskets'?('/api/baskets?d_from='+state.from+'&d_to='+state.to)
            :view==='cannib'?('/api/panel?name=contrib')
+           :view==='mdown'?('/api/moneydown?d_from='+state.from+'&d_to='+state.to+'&scope='+mdScope+(mdDes?'&des='+encodeURIComponent(mdDes):''))
            :view==='dim'?(function(){
               if(dimKind==='fam')return '/api/tree?d_from='+state.from+'&d_to='+state.to+(dimPath.grp?'&grp='+encodeURIComponent(dimPath.grp):'')+(dimPath.fam?'&fam='+encodeURIComponent(dimPath.fam):'')+(dimPath.model?'&model='+encodeURIComponent(dimPath.model):'');
               if(dimSeg)return '/api/segdrill?d_from='+state.from+'&d_to='+state.to+'&seg='+dimSeg.seg+'&key='+encodeURIComponent(dimSeg.key);
@@ -1470,7 +1491,67 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     sb2.style.opacity=fixed?'.45':'';sb2.style.pointerEvents=fixed?'none':'';
     sb2.title=fixed?'הפאנל הזה מחושב על חלון זמן קבוע':'';
   }
+  /* ---- מוריד כסף — כל שורה בהזמנה שסכומה שלילי ---- */
+  var mdDes=null, mdScope='sales';
+  function nlines(n){return n===1?'שורה אחת':(n+' שורות');}
+  function renderMDownMeta(){
+    document.getElementById('kpis').innerHTML='';
+    document.getElementById('sellbl').textContent=rangeLbl(state.from,state.to);
+    document.getElementById('builtlbl').textContent=META.last_sync?('עודכן '+META.last_sync):'';
+  }
+  function renderMDown(agg){
+    if(agg&&agg.dev){stage.innerHTML='<div class="cbdev"><b>בפיתוח</b><span>המסך הזה עדיין סגור</span></div>';return;}
+    agg=agg||{};
+    var rows=agg.rows||[];
+    if(!rows.length&&!mdDes){stage.innerHTML='<div class="empty">אין בתקופה הזו שום שורה שמורידה כסף.</div>';return;}
+    var scope='<div class="mdscope">'
+      +'<button type="button" class="'+(mdScope==='sales'?'on':'')+'" data-mds="sales">מכירות בלבד</button>'
+      +'<button type="button" class="'+(mdScope==='all'?'on':'')+'" data-mds="all">כולל סוכני שירות</button>'
+      +(agg.svc_total?'<span class="mdst">'+ils(agg.svc_total)+' נרשמו על סוכני שירות ('+nlines(agg.svc_lines_n)+')</span>':'')
+      +'</div>';
+    var sum='<div class="mdsum">'
+      +'<div class="mdcard"><span>סה"כ ירד</span><b class="mdneg">'+ils(agg.total||0)+'</b></div>'
+      +'<div class="mdcard"><span>הזמנות</span><b>'+(agg.orders||0)+'</b></div>'
+      +'<div class="mdcard"><span>שורות</span><b>'+(agg.lines_n||0)+'</b></div>'
+      +'<div class="mdcard mdno"><span>בלי סיבה רשומה</span><b class="mdneg">'+ils(agg.noreason_total||0)+'</b><i>'+nlines(agg.noreason_n||0)+'</i></div>'
+      +'</div>';
+    if(mdDes){
+      var lines=agg.lines||[];
+      var h='<div class="mdback"><button type="button" id="mdbk">→ חזרה לרשימה</button>'
+        +'<b>'+esc(mdDes)+'</b></div>';
+      var t='<div class="tw"><table><thead><tr>'
+        +'<th class="nm">הזמנה</th><th>תאריך</th><th>סניף</th><th>נציג</th><th>סכום</th><th>סיבה שנרשמה</th>'
+        +'</tr></thead><tbody>';
+      for(var i=0;i<lines.length;i++){var L=lines[i];
+        t+='<tr><td class="nm">'+esc(L.ord||'')+'</td><td>'+heDate(L.d)+'</td><td>'+esc(brName(L.b))+'</td>'
+          +'<td>'+esc(L.a||'')+'</td><td class="mdneg">'+ils(L.m)+'</td>'
+          +'<td>'+(L.why?esc(L.why):'<i class="mdwhy">לא נרשמה סיבה</i>')+'</td></tr>';}
+      t+='</tbody></table></div>';
+      if(agg.lines_more)t+='<div class="hintline">מוצגות '+lines.length+' השורות הגדולות ביותר. יש עוד '+agg.lines_more+'.</div>';
+      stage.innerHTML=scope+sum+h+(lines.length?t:'<div class="empty">אין שורות.</div>');
+      return;
+    }
+    var tb='<div class="tw"><table><thead><tr>'
+      +'<th class="nm">מה ירד</th><th>סכום</th><th>שורות</th><th>הזמנות</th><th>בלי סיבה</th>'
+      +'</tr></thead><tbody>';
+    for(var j=0;j<rows.length;j++){var r=rows[j];
+      tb+='<tr class="mdrow row" data-mdd="'+esc(r.k)+'"><td class="nm">'+esc(r.k)+'</td>'
+        +'<td class="mdneg">'+ils(r.m)+'</td><td>'+r.n+'</td><td>'+r.o+'</td>'
+        +'<td>'+(r.nrn?('<b class="mdneg">'+ils(r.nrm)+'</b> <i>'+nlines(r.nrn)+'</i>'):'—')+'</td></tr>';}
+    tb+='</tbody></table></div>';
+    stage.innerHTML=scope+sum+tb+'<div class="hintline">הקש על שורה כדי לראות את ההזמנות עצמן.</div>';
+  }
+  stage.addEventListener('click',function(e){
+    if(view!=='mdown')return;
+    var sc=e.target.closest('[data-mds]');
+    if(sc){mdScope=sc.getAttribute('data-mds');apply();return;}
+    if(e.target.closest('#mdbk')){mdDes=null;apply();return;}
+    var rw=e.target.closest('.mdrow');
+    if(rw){mdDes=rw.getAttribute('data-mdd');apply();}
+  });
+
   function renderAll(){
+    if(view==='mdown'){renderMDownMeta();renderMDown(cache.agg);return;}
     if(view==='ins'){renderInsMeta();renderInsStage();return;}
     if(view==='branchsrc'){renderBranchSrcMeta();renderBranchSrc(cache.agg);return;}
     if(view==='baskets'){renderBasketsMeta();renderBaskets(cache.agg);return;}
@@ -1602,9 +1683,13 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
 
   /* ---- view toggle ---- */
   function setView(v){
+    // "מוריד כסף" is owner-only. The guard lives here, not only on the nav button, because
+    // ?v=mdown in the URL reaches setView directly and would otherwise open an empty screen.
+    if(v==='mdown'&&!(META&&META.owner&&!previewUser))v='agents';
     if(view===v)return;
+    if(v!=='mdown')mdDes=null;   // leaving the drill resets it, so coming back opens on the list
     view=v;
-    var H1={agents:'ביצועי סוכנים',branches:'מכירות לפי סניפים',cash:'תקבולים במזומן',service:'פעילות שירות',collect:'מקדמות והנחות',dim:'פילוח מכירות',branchsrc:'מקורות הגעה לסניף',baskets:'סל מכירות ממוצע ללקוח',cannib:'קניבליזציה — תמהיל ערוצים',ins:'תובנות'};
+    var H1={agents:'ביצועי סוכנים',branches:'מכירות לפי סניפים',cash:'תקבולים במזומן',service:'פעילות שירות',collect:'מקדמות והנחות',dim:'פילוח מכירות',branchsrc:'מקורות הגעה לסניף',baskets:'סל מכירות ממוצע ללקוח',cannib:'קניבליזציה — תמהיל ערוצים',mdown:'מוריד כסף',ins:'תובנות'};
     document.getElementById('h1t').textContent=H1[v]||H1.agents;
     var bs=document.querySelectorAll('#seg button');
     for(var i=0;i<bs.length;i++){var on=bs[i].getAttribute('data-v')===v;bs[i].classList.toggle('on',on);bs[i].setAttribute('aria-pressed',on?'true':'false');}
@@ -1903,7 +1988,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     function numOf(td){
       var t=(td.textContent||'').replace(/[\u200e\u200f]/g,'').trim();
       if(!t||t==='—'||t==='-') return null;
-      var neg=/^\(|-\s*₪|^-/.test(t);
+      // a minus anywhere means negative — "₪-557,392" puts the sign AFTER the shekel sign,
+      // and the old pattern missed it, so reductions sorted as if they were positive
+      var neg=/^\(|[-−]/.test(t);
       var m=t.replace(/[^\d.,]/g,'').replace(/,/g,'');
       if(!m) return null;
       var v=parseFloat(m); if(isNaN(v)) return null;
@@ -1986,6 +2073,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
             vb.classList.toggle('on',prev);
             vb.setAttribute('aria-pressed',prev?'true':'false');
             vb.title=prev?'רואה עכשיו כמו שאר המשתמשים — הקש לחזרה לתצוגה שלי':'צפה כמו שאר המשתמשים'; }
+    // "מוריד כסף" is a management control screen — owner only, and hidden while previewing as a user
+    var mdb=document.getElementById('mdownbtn');
+    if(mdb){ mdb.style.display=(owner&&!prev)?'':'none';
+             if(!(owner&&!prev)&&view==='mdown')setView('agents'); }
     var lg=document.querySelector('.logo'); if(lg){lg.style.cursor='';lg.title='';}
   }
   function boot(){
