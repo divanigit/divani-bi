@@ -386,7 +386,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         <div class="navgroup"><svg class="gico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M8 17v-5"/><path d="M13 17V8"/><path d="M18 17v-8"/></svg><span>אנליטיקה</span></div>
         <button type="button" data-v="branchsrc" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3.5h3.5a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H15"/><path d="M10 16.5l4.5-4.5L10 7.5"/><path d="M14.5 12H3.5"/></svg><span class="rlbl">מקורות הגעה</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="dim" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12V3.2A8.8 8.8 0 1 0 20.8 12H12z"/><path d="M14.5 3.9A8.8 8.8 0 0 1 20.1 9.5H14.5z"/></svg><span class="rlbl">פילוח</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
-        <button type="button" data-v="mdown" id="mdownbtn" aria-pressed="false" style="display:none"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v16.5"/><path d="M18.5 14L12 20.5 5.5 14"/></svg><span class="rlbl">מוריד כסף</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
+        <button type="button" data-v="mdown" id="mdownbtn" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v16.5"/><path d="M18.5 14L12 20.5 5.5 14"/></svg><span class="rlbl">מוריד כסף</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="ins" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 18.5h5"/><path d="M10.5 21.5h3"/><path d="M12 2.8a6 6 0 0 0-3.9 10.5c.75.7 1.1 1.5 1.15 2.5h5.5c.05-1 .4-1.8 1.15-2.5A6 6 0 0 0 12 2.8z"/></svg><span class="rlbl">תובנות</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <div class="navdiv"></div>
         <button type="button" id="nrepbtn" class="navext" aria-pressed="false" title="ניתוח ביצועי נציגים וסניפים"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 3.5v17h17"/><path d="M7 14.5l4-4 3 3 5.2-6"/></svg><span class="rlbl">ניתוח ביצועי נציגים וסניפים</span><svg class="rext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 16L16 8"/><path d="M9 8h7v7"/></svg></button>
@@ -1683,9 +1683,6 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
 
   /* ---- view toggle ---- */
   function setView(v){
-    // "מוריד כסף" is owner-only. The guard lives here, not only on the nav button, because
-    // ?v=mdown in the URL reaches setView directly and would otherwise open an empty screen.
-    if(v==='mdown'&&!(META&&META.owner&&!previewUser))v='agents';
     if(view===v)return;
     if(v!=='mdown')mdDes=null;   // leaving the drill resets it, so coming back opens on the list
     view=v;
@@ -2073,10 +2070,6 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
             vb.classList.toggle('on',prev);
             vb.setAttribute('aria-pressed',prev?'true':'false');
             vb.title=prev?'רואה עכשיו כמו שאר המשתמשים — הקש לחזרה לתצוגה שלי':'צפה כמו שאר המשתמשים'; }
-    // "מוריד כסף" is a management control screen — owner only, and hidden while previewing as a user
-    var mdb=document.getElementById('mdownbtn');
-    if(mdb){ mdb.style.display=(owner&&!prev)?'':'none';
-             if(!(owner&&!prev)&&view==='mdown')setView('agents'); }
     var lg=document.querySelector('.logo'); if(lg){lg.style.cursor='';lg.title='';}
   }
   function boot(){
