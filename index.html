@@ -93,8 +93,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .cmleg{font-size:11px;color:var(--tx3);margin-top:8px;line-height:1.5}
   th.sortable{cursor:pointer;user-select:none;white-space:nowrap}
   th.sortable:hover{color:var(--tx)}
-  th.sasc::after{content:' B2';font-size:9px;opacity:.85}
-  th.sdesc::after{content:' BC';font-size:9px;opacity:.85}
+  th.sasc::after{content:' ▲';font-size:8px;opacity:.9}
+  th.sdesc::after{content:' ▼';font-size:8px;opacity:.9}
+  th.sasc,th.sdesc{color:var(--tx);box-shadow:inset 0 -2px 0 var(--tx)}
   .sortreset{display:block;margin:0 0 8px auto;font-family:inherit;font-size:12px;min-height:34px;padding:6px 12px;border-radius:999px;border:1px solid var(--line2);background:var(--surface);color:var(--tx2);cursor:pointer}
   .sortreset:hover{color:var(--tx)}
   .kpi{background:var(--surface);border-radius:10px;padding:9px 11px}.kpi .l{font-size:11px;color:var(--tx3)}.kpi .v{font-size:17px;font-weight:500;font-variant-numeric:tabular-nums;margin-top:2px}
@@ -108,6 +109,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   table{border-collapse:collapse;min-width:452px;width:100%;font-variant-numeric:tabular-nums}
   th{background:var(--surface);color:var(--tx3);font-size:10.5px;font-weight:700;padding:8px 5px;text-align:center;white-space:nowrap}
   th.nm{position:sticky;right:0;z-index:3;text-align:right;box-shadow:-5px 0 5px -5px rgba(0,0,0,.18)}
+  th.nm,td.nm{min-width:94px}
   td{padding:7px 5px;text-align:center;white-space:nowrap;font-size:12.5px}
   td.nm{position:sticky;right:0;z-index:2;text-align:right;box-shadow:-5px 0 5px -5px rgba(0,0,0,.18)}
   tr.d0 td{background:var(--bg)}tr.dn td{background:var(--surface)}tr.row{cursor:pointer}
@@ -341,6 +343,12 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   #alertsheet{position:fixed;right:0;left:0;bottom:0;z-index:121;background:var(--bg);border-radius:18px 18px 0 0;border:1px solid var(--line);border-bottom:0;box-shadow:0 -12px 40px rgba(0,0,0,.25);padding:14px 16px calc(18px + env(safe-area-inset-bottom));display:none;max-height:82vh;overflow-y:auto}
   @media (min-width:640px){#alertsheet{left:50%;right:auto;transform:translateX(-50%);width:470px;bottom:auto;top:10vh;border-radius:18px;border-bottom:1px solid var(--line)}}
   #alertsheet.on{display:block}
+  .altabs{display:flex;gap:6px;margin:0 0 12px;flex-wrap:wrap}
+  .altabs button{flex:1 1 auto;font-family:inherit;font-size:12px;border:1px solid var(--line2);background:var(--bg);color:var(--tx2);padding:8px 10px;min-height:40px;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px}
+  .altabs button.on{border-color:var(--bd);color:var(--tx);font-weight:700;background:var(--accentSoft)}
+  .altabs button i{font-style:normal;font-size:11px;color:var(--tx3);font-variant-numeric:tabular-nums}
+  .altabs button.on i{color:var(--bd)}
+  .altot{font-size:11.5px;color:var(--tx3);margin:0 0 8px;font-variant-numeric:tabular-nums}
   .alintro{font-size:12px;color:var(--tx2);margin:0 0 11px;line-height:1.5}
   .alnone{font-size:13px;color:var(--tx2);text-align:center;padding:22px 6px;line-height:1.6}
   .alsec{font-size:12px;font-weight:700;color:var(--tx);margin:14px 0 7px;padding-top:10px;border-top:1px solid var(--line)}
@@ -1252,8 +1260,8 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   function renderCollectKpis(R){
     document.getElementById('kpis').innerHTML=
       '<div class="kpi"><div class="l">יחס מקדמות למחזור</div><div class="v">'+(R.ratio==null?'—':Math.round(R.ratio)+'%')+'</div></div>'+
-      '<div class="kpi"><div class="l">מחזור</div><div class="v">'+ils(R.s)+'</div></div>'+
-      '<div class="kpi"><div class="l">תקבולים</div><div class="v">'+ils(R.r)+'</div></div>'+
+      '<div class="kpi"><div class="l">מחזור ללא מע"מ</div><div class="v">'+ils(R.s)+'</div></div>'+
+      '<div class="kpi"><div class="l">תקבולים כולל מע"מ</div><div class="v">'+ils(R.r)+'</div></div>'+
       '<div class="kpi"><div class="l">אחוז הנחה</div><div class="v">'+(R.dpct==null?'—':R.dpct.toFixed(1)+'%')+'</div></div>';
   }
 
@@ -1836,22 +1844,53 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     }).catch(function(){});
   }
   function openAlerts(){
-    var over=window.__over||[],h;
-    if(!over.length){h='<div class="alnone">אין התראות פתוחות.<br>כל האסמכתאות קיבלו קבלה בזמן.</div>';}
-    else{
-      h='<div class="alintro">העברות עם אסמכתא מלפני '+ALERT_DAYS+' ימים או יותר, שעדיין לא הופקה עליהן קבלה בפריוריטי. הכסף כבר נזקף למזומן — חסרה רק הקבלה:</div>';
-      over.slice().sort(function(a,b){return (a.d||'').localeCompare(b.d||'');}).forEach(function(p){
-        h+='<div class="alitem"><div class="alr1"><b>'+esc(p.c||p.o)+'</b><span>'+ils(p.show)+'</span></div>'
-          +'<div class="alr2">'+esc(brName(p.b))+' · אסמכתא '+heDate(p.d)+' · לפני '+alDaysAgo(p.d)+' ימים</div></div>';
-      });
-    }
-    document.getElementById('alertbody').innerHTML=h+'<div id="flagbox"><div class="alr2">טוען חריגים…</div></div>';
-    document.getElementById('alertsheet').classList.add('on');document.getElementById('alertovl').style.display='block';
+    alTab='rec'; paintAlerts();
+    document.getElementById('alertsheet').classList.add('on');
+    document.getElementById('alertovl').style.display='block';
     loadFlags();
   }
 
+  /* ---- ההתראות הן שלושה נושאים שונים לגמרי, ולכן שלוש לשוניות ולא רשימה אחת ארוכה ---- */
+  var alTab='rec';
+  function alReceiptsHtml(){
+    var over=window.__over||[];
+    if(!over.length)return '<div class="alnone">אין העברות שממתינות לקבלה.<br>כל האסמכתאות קיבלו קבלה בזמן.</div>';
+    var h='<div class="alintro">העברות עם אסמכתא מלפני '+ALERT_DAYS+' ימים או יותר, שעדיין לא הופקה עליהן קבלה בפריוריטי. הכסף כבר נזקף למזומן — חסרה רק הקבלה:</div>';
+    over.slice().sort(function(a,b){return (a.d||'').localeCompare(b.d||'');}).forEach(function(p){
+      h+='<div class="alitem"><div class="alr1"><b>'+esc(p.c||p.o)+'</b><span>'+ils(p.show)+'</span></div>'
+        +'<div class="alr2">'+esc(brName(p.b))+' · אסמכתא '+heDate(p.d)+' · לפני '+alDaysAgo(p.d)+' ימים</div></div>';
+    });
+    return h;
+  }
+  function alFlagsHtml(kind){
+    if(FLAGS_NA)return '<div class="alnone">המסך הזה עדיין בפיתוח.</div>';
+    if(!FLAGS)return '<div class="alr2">טוען חריגים…</div>';
+    var isD=(kind==='disc'), g=(isD?FLAGS.disc:FLAGS.overpaid)||{};
+    var intro=isD
+      ? '<div class="alintro">הזמנות שבהן הקיזוז גדול מ־'+(FLAGS.disc_pct||5)+'% מערך ההזמנה. אישור דורש סיבה, והסיבה נשמרת.</div>'
+      : '<div class="alintro">הזמנות שנכנס עליהן יותר כסף ממה שההזמנה שווה. אישור דורש סיבה, והסיבה נשמרת.</div>';
+    var tot='<div class="altot">'+(g.open||0)+' פתוחים · '+ils(g.amount||0)+'</div>';
+    var rows=(g.rows||[]).filter(function(r){return !r.ok;}).slice(0,40)
+             .map(function(r){return flagRow(kind,r);}).join('');
+    return intro+tot+(rows||'<div class="alnone">אין חריגים פתוחים בתקופה.</div>');
+  }
+  function paintAlerts(){
+    var rec=(window.__over||[]).length;
+    var d=(FLAGS&&FLAGS.disc)?(FLAGS.disc.open||0):null;
+    var o=(FLAGS&&FLAGS.overpaid)?(FLAGS.overpaid.open||0):null;
+    function tab(k,lbl,n){
+      return '<button type="button" class="'+(alTab===k?'on':'')+'" data-alt="'+k+'"'
+        +' aria-pressed="'+(alTab===k?'true':'false')+'">'+lbl
+        +(n==null?'':' <i>'+n+'</i>')+'</button>';
+    }
+    var bar='<div class="altabs">'+tab('rec','קבלות חסרות',rec)
+      +tab('disc','הנחות חריגות',d)+tab('over','שולם מעבר',o)+'</div>';
+    var body=(alTab==='rec')?alReceiptsHtml():alFlagsHtml(alTab==='disc'?'disc':'overpaid');
+    document.getElementById('alertbody').innerHTML=bar+'<div id="flagbox">'+body+'</div>';
+  }
+
   /* ---- חריגים שדורשים עין אנושית: קיזוז לא פרופורציונלי, וכסף מעל ערך ההזמנה ---- */
-  var FLAGS=null;
+  var FLAGS=null, FLAGS_NA=false;
   function flagRow(kind,r){
     var isD=(kind==='disc');
     var head=isD?(ils(r.disc)+' · '+r.pct+'%'):('עודף '+ils(r.excess));
@@ -1863,29 +1902,19 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
             :'<div class="alr2"><button type="button" class="flga">מאושר — הוסף סיבה</button></div>')
       +'</div>';
   }
-  function paintFlags(){
-    if(!FLAGS){return;}
-    var d=FLAGS.disc||{}, o=FLAGS.overpaid||{};
-    var h='<div class="alsec">מוריד כסף — קיזוז מעל '+(FLAGS.disc_pct||5)+'%'
-      +' <span class="alcnt">'+(d.open||0)+' פתוחים · '+ils(d.amount||0)+'</span></div>';
-    h+=(d.rows||[]).filter(function(r){return !r.ok;}).slice(0,40).map(function(r){return flagRow('disc',r);}).join('')
-       || '<div class="alr2">אין חריגים פתוחים בתקופה.</div>';
-    h+='<div class="alsec">שולם מעבר לערך ההזמנה'
-      +' <span class="alcnt">'+(o.open||0)+' פתוחים · '+ils(o.amount||0)+'</span></div>';
-    h+=(o.rows||[]).filter(function(r){return !r.ok;}).slice(0,40).map(function(r){return flagRow('overpaid',r);}).join('')
-       || '<div class="alr2">אין חריגים פתוחים בתקופה.</div>';
-    document.getElementById('flagbox').innerHTML=h;
-  }
+  function paintFlags(){ paintAlerts(); }
   function loadFlags(){
     if(!state.from) return;
     fetch('/api/flags?d_from='+state.from+'&d_to='+state.to,{cache:'no-store'})
       .then(function(r){return r.ok?r.json():{};})
       .then(function(j){
-        if(j.dev||!j.disc){document.getElementById('flagbox').innerHTML='';return;}
-        FLAGS=j; paintFlags();
-      }).catch(function(){document.getElementById('flagbox').innerHTML='';});
+        if(j.dev||!j.disc){FLAGS_NA=true;paintAlerts();return;}
+        FLAGS=j; FLAGS_NA=false; paintAlerts();
+      }).catch(function(){FLAGS_NA=true;paintAlerts();});
   }
   document.getElementById('alertbody').addEventListener('click',function(e){
+    var tb=e.target.closest('[data-alt]');
+    if(tb){ alTab=tb.getAttribute('data-alt'); paintAlerts(); return; }
     var row=e.target.closest('[data-fk]'); if(!row) return;
     var kind=row.getAttribute('data-fk'), ord=row.getAttribute('data-fo');
     if(e.target.closest('.flgu')){
@@ -2011,7 +2040,11 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         tb.innerHTML=''; tbl.__orig.forEach(function(tr){tb.appendChild(tr);});
       } else {
         bs=blocks(tb);
-        var allNum=bs.every(function(b){var c=b.head.cells[idx];return !c||numOf(c)!==null;});
+        // a single “—” or blank cell must NOT downgrade a number column to text sorting:
+        // that is what made 16.6% sort between 2.9% and 1.9% (lexicographic, not numeric)
+        var vals=bs.map(function(b){var c=b.head.cells[idx];return c?numOf(c):null;});
+        var okN=0; vals.forEach(function(v){if(v!==null)okN++;});
+        var allNum=okN>0&&okN*2>=vals.length;
         bs.sort(function(a,b){
           var ca=a.head.cells[idx],cb=b.head.cells[idx];
           if(!ca||!cb) return 0;
