@@ -44,6 +44,7 @@
   .mast .meta{font-size:.7rem;color:var(--ink3);text-align:left;line-height:1.5}
   .hactions{display:flex;align-items:center;gap:10px}
   .fake{font-size:.66rem;color:var(--ink3);white-space:nowrap}
+  .warnpill{display:block;margin-top:3px;font-style:normal;font-size:.66rem;color:var(--warn);background:var(--warnw);border-radius:6px;padding:2px 6px;width:fit-content}
   .explbtn{font-family:inherit;font-size:12px;font-weight:600;border:1px solid var(--line2);background:var(--panel);color:var(--ink2);padding:8px 14px;min-height:40px;border-radius:999px;cursor:pointer;white-space:nowrap}
   .explbtn:hover{border-color:var(--brand2)}
   .explbtn.on{background:var(--brandw);border-color:var(--brand2);color:var(--brand);font-weight:700}
@@ -541,7 +542,10 @@
         html+='<div class="agent'+(i===0?' lead':'')+(band.cls==='bad'?' attn':'')+(openSet[key]?' open':'')+'">'
           +'<button type="button" class="atop" data-fold data-name="'+key+'">'
           +'<span class="rank">'+(i+1)+'</span>'
-          +'<span class="who"><b>'+a.name+'</b><span>'+(a.sphReal!=null?a.hours+' שעות · '+shekelShort(a.csales!=null?a.csales:a.sales)+' מכירות בימים שעבד':shekelShort(a.sales)+' מכירות')+'</span></span>'
+          +'<span class="who"><b>'+a.name+'</b><span>'
+            +(a.sphReal!=null?(a.hours+' שעות · '+shekelShort(a.sales)+' מכירות'):(shekelShort(a.sales)+' מכירות'))
+            +(a.cov!=null&&a.cov<100?'<i class="warnpill" title="חלק מהמכירות נעשו בימים שאין עליהם דיווח שעות">⚠ '+a.cov+'% מהמכירות בימים עם דיווח שעות</i>':'')
+            +'</span></span>'
           +'<span class="vsavg '+band.cls+'">'+band.txt+'</span>'
           +'<span class="chev">⌄</span></button>'
           +'<div class="cbar"><i style="width:'+barPct+'%"></i></div>'
@@ -608,7 +612,7 @@
       var real=(r.sph!=null);
       return estFields({ name:r.name, sales:r.sales, orders:r.orders, customers:r.customers,
         avg_ord:r.avg_ord, margin:r.margin, disc:r.disc||0, newpct:r.newpct||0, cancel:r.cancel||0, cxl:r.cxl||0,
-        hours:(r.hours||0), csales:(r.csales==null?null:+r.csales), sphReal:(real?+r.sph:null),
+        hours:(r.hours||0), sphReal:(real?+r.sph:null), cov:(r.cov==null?null:+r.cov),
         mix:(r.mix&&r.mix.length?r.mix:[{c:'אחר',p:100}]) }); }) }; });
   }
   function devBox(msg){ report.innerHTML='<div class="cbdev"><b>שגיאה בטעינה</b><span>'+(msg||'לא הצלחנו לטעון את הנתונים. רענן את הדף ונסה שוב.')+'</span></div>'; }
