@@ -91,6 +91,12 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .cmv{margin-inline-start:auto;color:var(--tx);font-variant-numeric:tabular-nums}
   .cmp{flex:none;width:42px;text-align:end;color:var(--tx2);font-variant-numeric:tabular-nums}
   .cmleg{font-size:11px;color:var(--tx3);margin-top:8px;line-height:1.5}
+  th.sortable{cursor:pointer;user-select:none;white-space:nowrap}
+  th.sortable:hover{color:var(--tx)}
+  th.sasc::after{content:' B2';font-size:9px;opacity:.85}
+  th.sdesc::after{content:' BC';font-size:9px;opacity:.85}
+  .sortreset{display:block;margin:0 0 8px auto;font-family:inherit;font-size:12px;min-height:34px;padding:6px 12px;border-radius:999px;border:1px solid var(--line2);background:var(--surface);color:var(--tx2);cursor:pointer}
+  .sortreset:hover{color:var(--tx)}
   .kpi{background:var(--surface);border-radius:10px;padding:9px 11px}.kpi .l{font-size:11px;color:var(--tx3)}.kpi .v{font-size:17px;font-weight:500;font-variant-numeric:tabular-nums;margin-top:2px}
   .hint{font-size:12px;color:var(--tx3);margin:0 0 8px}
   .pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px}
@@ -938,7 +944,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var title=isTree?lvl[treeDepth()]:(DIMH[dimKind]||'שם');
     var canDrill=isTree?(treeDepth()<3):(dimKind==='city'||dimKind==='sector'||dimKind==='source');
     function hs(col,label){var on=dimSort&&dimSort.col===col;return '<th data-hsort="'+col+'"'+(on?' class="on"':'')+'>'+label+(on?(dimSort.dir===1?' ↑':' ↓'):'')+'</th>';}
-    var h=(isTree?treeCrumbs():'')+'<div class="tw"><table><thead><tr><th class="nm">'+title+'</th>'+hs('s','מכירות')+hs('q','כמות')+'<th>אחוז מסה"כ</th>'+hs('p','רווח')+'<th>אחוז רווח</th>'+hs('c','לקוחות')+'</tr></thead><tbody>';
+    var h=(isTree?treeCrumbs():'')+'<div class="tw">'
+      +(dimSort?'<button type="button" class="sortreset" id="dimreset">חזרה לסדר המקורי</button>':'')
+      +'<table><thead><tr><th class="nm">'+title+'</th>'+hs('s','מכירות')+hs('q','כמות')+'<th>אחוז מסה"כ</th>'+hs('p','רווח')+'<th>אחוז רווח</th>'+hs('c','לקוחות')+'</tr></thead><tbody>';
     kids.forEach(function(c){
       var base=byQ?totQ:totS,val=byQ?c.q:c.s;
       var pct=(base>0&&val>0)?Math.round(100*val/base)+'%':'—';
@@ -1664,6 +1672,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       if(sk){dimSeg={seg:dimKind,key:sk.getAttribute('data-segk')};if(META&&state.from)apply();return;}
       var sb=e.target.closest('[data-segback]');
       if(sb){dimSeg=null;if(META&&state.from)apply();return;}
+      if(e.target.closest('#dimreset')){dimSort=null;apply();return;}
       var th=e.target.closest('th[data-hsort]');
       if(th){var col=th.getAttribute('data-hsort');
         if(dimKind==='part'&&(col==='s'||col==='q')){dimMeasure=col;dimSort={col:col,dir:1};apply();return;}
@@ -1830,6 +1839,86 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   stage.addEventListener('click',function(e){var t=e.target.closest('[data-bsp]');if(t){bsPhoneSep=(t.getAttribute('data-bsp')==='1');branchSel=0;renderBranchSrc(cache.agg);return;}var b=e.target.closest('[data-bs]');if(b){branchSel=parseInt(b.getAttribute('data-bs'),10);renderBranchSrc(cache.agg);}});
   stage.addEventListener('click',function(e){var b=e.target.closest('[data-cbmode]');if(b){cannibMode=b.getAttribute('data-cbmode');renderCannib(cache.agg);}});
   stage.addEventListener('keydown',function(e){if((e.key==='Enter'||e.key===' ')&&e.target.hasAttribute&&e.target.hasAttribute('data-t')){e.preventDefault();var id=e.target.getAttribute('data-t');eT[id]=!eT[id];renderStage(ROOT());}});
+
+
+  /* ---- מיון לפי כותרות + חזרה לסדר המקורי, לכל טבלה במערכת ----
+     Works on the rendered DOM, so every table gets it — current ones and any added later.
+     Hierarchy is preserved: a d0 row and the drill rows under it move together as one block. */
+  (function(){
+    function numOf(td){
+      var t=(td.textContent||'').replace(/[\u200e\u200f]/g,'').trim();
+      if(!t||t==='—'||t==='-') return null;
+      var neg=/^\(|-\s*₪|^-/.test(t);
+      var m=t.replace(/[^\d.,]/g,'').replace(/,/g,'');
+      if(!m) return null;
+      var v=parseFloat(m); if(isNaN(v)) return null;
+      return neg&&v>0?-v:v;
+    }
+    function blocks(tb){
+      var out=[],cur=null;
+      [].forEach.call(tb.rows,function(tr){
+        var top=!/\bd[1-9]\b/.test(tr.className);   // d0 / dn / plain = a new block
+        if(top||!cur){ cur={head:tr,kids:[]}; out.push(cur); }
+        else cur.kids.push(tr);
+      });
+      return out;
+    }
+    function apply(tbl,idx,dir){
+      var tb=tbl.tBodies[0]; if(!tb) return;
+      if(!tbl.__orig) tbl.__orig=[].slice.call(tb.rows);
+      var bs;
+      if(idx==null){                                   // reset to the order the report built
+        var pos={}; tbl.__orig.forEach(function(tr,i){pos[i]=tr;});
+        tb.innerHTML=''; tbl.__orig.forEach(function(tr){tb.appendChild(tr);});
+      } else {
+        bs=blocks(tb);
+        var allNum=bs.every(function(b){var c=b.head.cells[idx];return !c||numOf(c)!==null;});
+        bs.sort(function(a,b){
+          var ca=a.head.cells[idx],cb=b.head.cells[idx];
+          if(!ca||!cb) return 0;
+          if(allNum){ var na=numOf(ca),nb=numOf(cb);
+            return dir*((na===null?-Infinity:na)-(nb===null?-Infinity:nb)); }
+          return dir*String(ca.textContent).trim().localeCompare(String(cb.textContent).trim(),'he');
+        });
+        tb.innerHTML='';
+        bs.forEach(function(b){ tb.appendChild(b.head); b.kids.forEach(function(k){tb.appendChild(k);}); });
+      }
+      var ths=tbl.tHead?tbl.tHead.rows[0].cells:[];
+      [].forEach.call(ths,function(th,i){
+        th.classList.remove('sasc','sdesc');
+        th.setAttribute('aria-sort', (idx===i)?(dir>0?'ascending':'descending'):'none');
+        if(idx===i) th.classList.add(dir>0?'sasc':'sdesc');
+      });
+      var w=tbl.closest('.tw');
+      if(w){
+        var b=w.querySelector('.sortreset');
+        if(idx==null){ if(b) b.remove(); }
+        else if(!b){
+          b=document.createElement('button');
+          b.type='button'; b.className='sortreset'; b.textContent='חזרה לסדר המקורי';
+          b.addEventListener('click',function(){ apply(tbl,null,1); });
+          w.insertBefore(b,w.firstChild);
+        }
+      }
+      tbl.__sort={idx:idx,dir:dir};
+    }
+    function wire(tbl){
+      if(tbl.__sortable) return; tbl.__sortable=true;
+      var head=tbl.tHead; if(!head||!head.rows.length) return;
+      if(!tbl.tBodies.length||tbl.tBodies[0].rows.length<2) return;
+      [].forEach.call(head.rows[0].cells,function(th,i){
+        if(th.hasAttribute('data-hsort')) return;   // this view sorts server-side; leave it alone
+        th.classList.add('sortable'); th.setAttribute('role','button');
+        th.setAttribute('tabindex','0'); th.setAttribute('aria-sort','none');
+        function go(){ var cur=tbl.__sort||{}; apply(tbl,i, (cur.idx===i&&cur.dir<0)?1:-1); }
+        th.addEventListener('click',go);
+        th.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){e.preventDefault();go();} });
+      });
+    }
+    function scan(){ [].forEach.call(document.querySelectorAll('table'),wire); }
+    if(document.readyState!=='loading') scan(); else document.addEventListener('DOMContentLoaded',scan);
+    new MutationObserver(function(){ scan(); }).observe(document.body,{childList:true,subtree:true});
+  })();
 
   /* ---- boot ---- */
   function applyOwnerUI(){

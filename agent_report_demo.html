@@ -185,6 +185,10 @@
   .bknote svg{width:16px;height:16px;flex:none;margin-top:1px;stroke:var(--warn)}
   .bkref{font-size:.8rem;color:var(--ink2);margin:0 0 8px}.bkref b{color:var(--ink)}
   .bkhead{display:flex;align-items:center;gap:10px;padding:2px 4px 8px;font-size:.66rem;font-weight:700;color:var(--ink3);border-bottom:1px solid var(--line);margin-bottom:2px}
+  .bksort{cursor:pointer;user-select:none}
+  .bksort:hover{color:var(--ink2)}
+  .bksort.on{color:var(--brand)}
+  .bkreset{display:block;margin:0 0 10px auto;font-family:inherit;font-size:12px;min-height:34px;padding:6px 12px;border-radius:999px;border:1px solid var(--line2);background:var(--panel);color:var(--ink2);cursor:pointer}
   .bkhead .bkhr{width:22px;flex:none}.bkhead .hn{flex:1}.bkhead .hc{width:48px;text-align:center;flex:none}.bkhead .hv{min-width:64px;text-align:left;flex:none}
   .bkrow{display:flex;align-items:center;gap:10px;padding:9px 4px}.bkrow+.bkrow{border-top:1px solid var(--line)}
   .bkr{width:22px;text-align:center;color:var(--ink3);font-size:.72rem;flex:none;font-variant-numeric:tabular-nums}
@@ -380,6 +384,7 @@
   };
 
   var active='total', view='agents', showExplain=false, openSet={}, OWNER_VIEW=false;
+  var bkSort=null;   // cross-branch basket table: click a header to sort, reset to go back
   var report=document.getElementById('report');
   var explainBtn=document.getElementById('explainBtn');
 
@@ -466,7 +471,22 @@
     var mx=1,rs=0,rc=0; agg.forEach(function(a){if(!a.designer){rs+=a.sales;rc+=a.customers;if(a.avg_cust>mx)mx=a.avg_cust;}});
     var net=rc?Math.round(rs/rc):0;
     var note='<div class="bknote"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg><span>לא כל מכירות המעצבת מתויגות ככאלה — חלק נרשמות תחת הנציג שסגר. לכן נתוני המעצבת כאן הם רף תחתון.</span></div>';
-    var head='<div class="bkhead"><span class="bkhr"></span><span class="hn">נציג</span><span class="hc">לקוחות</span><span class="hv">סל ממוצע</span></div>';
+    function bh(key,label,cls){
+      var on=(bkSort&&bkSort.key===key);
+      return '<span class="'+cls+' bksort'+(on?' on':'')+'" data-bk="'+key+'" role="button" tabindex="0">'
+             +label+(on?(bkSort.dir>0?' ▲':' ▼'):'')+'</span>';
+    }
+    var head='<div class="bkhead"><span class="bkhr"></span>'
+      +bh('agent','נציג','hn')+bh('customers','לקוחות','hc')+bh('avg_cust','סל ממוצע','hv')+'</div>'
+      +(bkSort?'<button type="button" class="bkreset" id="bkreset">חזרה לסדר המקורי</button>':'');
+    if(bkSort){
+      agg=agg.slice().sort(function(x,y){
+        var a=x[bkSort.key], b=y[bkSort.key];
+        if(typeof a==='string'||typeof b==='string')
+          return bkSort.dir*String(a).localeCompare(String(b),'he');
+        return bkSort.dir*((a||0)-(b||0));
+      });
+    }
     var rows=agg.map(function(a,i){
       var w=Math.max(2,Math.min(100,100*a.avg_cust/mx));
       return '<div class="bkrow"><span class="bkr">'+(i+1)+'</span><span class="bkmid"><span class="bkname">'+a.agent+'</span><span class="bkbar"><i style="width:'+w.toFixed(1)+'%"></i></span></span><span class="bkc">'+a.customers+'</span><span class="bkv">'+shekel(a.avg_cust)+'</span></div>';
@@ -551,6 +571,11 @@
     render();
   });
   report.addEventListener('click',function(e){
+    if(e.target.closest('#bkreset')){ bkSort=null; render(); return; }
+    var bs=e.target.closest('[data-bk]');
+    if(bs){ var k=bs.getAttribute('data-bk');
+      bkSort=(bkSort&&bkSort.key===k)?{key:k,dir:-bkSort.dir}:{key:k,dir:-1};
+      render(); return; }
     var t=e.target.closest('[data-fold]'); if(!t)return;
     var name=t.getAttribute('data-name');
     openSet[name]=!openSet[name];
