@@ -1223,17 +1223,15 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   }
 
   function renderCollectKpis(R){
-    var noLink=(R.linkPct!=null && R.linkPct<80);
     document.getElementById('kpis').innerHTML=
-      '<div class="kpi"><div class="l">יחס מקדמות למחזור</div><div class="v">'+((noLink||R.ratio==null)?'—':Math.round(R.ratio)+'%')+'</div></div>'+
+      '<div class="kpi"><div class="l">יחס מקדמות למחזור</div><div class="v">'+(R.ratio==null?'—':Math.round(R.ratio)+'%')+'</div></div>'+
       '<div class="kpi"><div class="l">מחזור</div><div class="v">'+ils(R.s)+'</div></div>'+
-      '<div class="kpi"><div class="l">תקבולים</div><div class="v">'+(noLink?'—':ils(R.r))+'</div></div>'+
+      '<div class="kpi"><div class="l">תקבולים</div><div class="v">'+ils(R.r)+'</div></div>'+
       '<div class="kpi"><div class="l">אחוז הנחה</div><div class="v">'+(R.dpct==null?'—':R.dpct.toFixed(1)+'%')+'</div></div>';
   }
 
   // month-by-month picture: the bar is the turnover, the fill is what was collected against it
   function collectMonthsHtml(R){
-    if(R.linkPct!=null && R.linkPct<80) return '';
     var ms=R.months||[]; if(ms.length<2) return '';
     var mx=0; ms.forEach(function(m){ if((m.s||0)>mx) mx=m.s||0; });
     if(!mx) return '';
@@ -1253,16 +1251,15 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   }
   function renderCollectTable(R){
     if(!R.k.length){stage.innerHTML='<div class="empty">אין נתונים בתקופה שנבחרה.</div>';return;}
-    var h=collectMonthsHtml(R)+'<div class="tw"><table><thead><tr><th class="nm">סוכן</th><th>מכירות</th><th>תקבולים</th><th>יחס מקדמות</th><th>הנחות</th><th>אחוז הנחה</th></tr></thead><tbody>';
+    var h=collectMonthsHtml(R)+'<div class="tw"><table><thead><tr><th class="nm">סוכן</th><th>מכירות</th><th>כולל מע"מ</th><th>תקבולים</th><th>יחס מקדמות</th><th>הנחות</th><th>אחוז הנחה</th></tr></thead><tbody>';
     R.k.slice().sort(function(x,y){return y.s-x.s;}).forEach(function(c){
       h+='<tr class="d0"><td class="nm"><div class="nmc"><span style="width:15px;flex:none"></span><div class="nlab"><div class="t" style="font-weight:500">'+esc(c.n)+'</div></div></div></td>'+
-         '<td>'+ils(c.s)+'</td><td>'+ils(c.r)+'</td>'+
-         '<td>'+((R.linkPct!=null&&R.linkPct<80)||c.ratio==null?'<span class="mut">—</span>':
-                 (c.sg<50000?'<span class="mut">'+Math.round(c.ratio)+'%</span>':Math.round(c.ratio)+'%'))+'</td>'+
+         '<td>'+ils(c.s)+'</td><td>'+ils(c.sg)+'</td><td>'+ils(c.r)+'</td>'+
+         '<td>'+(c.ratio==null?'<span class="mut">—</span>':Math.round(c.ratio)+'%')+'</td>'+
          '<td>'+ils(c.disc)+'</td>'+
          '<td>'+(c.dpct==null?'<span class="mut">—</span>':c.dpct.toFixed(1)+'%')+'</td></tr>';
     });
-    h+='</tbody><tfoot><tr><td class="nm">סך הכל</td><td>'+ils(R.s)+'</td><td>'+((R.linkPct!=null&&R.linkPct<80)?'—':ils(R.r))+'</td><td>'+((R.linkPct!=null&&R.linkPct<80)||R.ratio==null?'—':Math.round(R.ratio)+'%')+'</td><td>'+ils(R.disc)+'</td><td>'+(R.dpct==null?'—':R.dpct.toFixed(1)+'%')+'</td></tr></tfoot></table></div>';
+    h+='</tbody><tfoot><tr><td class="nm">סך הכל</td><td>'+ils(R.s)+'</td><td>'+ils(R.sg)+'</td><td>'+ils(R.r)+'</td><td>'+(R.ratio==null?'—':Math.round(R.ratio)+'%')+'</td><td>'+ils(R.disc)+'</td><td>'+(R.dpct==null?'—':R.dpct.toFixed(1)+'%')+'</td></tr></tfoot></table></div>';
     stage.innerHTML=h;
   }
 
@@ -1424,7 +1421,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(view==='cash'&&state.from<'2024-03-01')msgs.push('שיוך קבלות לסניפים קיים בפריוריטי רק משנת 2024 — קבלות מוקדמות יותר מופיעות כולן תחת "ללא שיוך סניף".');
     else if(view==='cash')msgs.push('חלק מהקבלות נרשמות בפריוריטי בלי שיוך סניף ומופיעות בשורה נפרדת.');
     if(view==='service')msgs.push('מוצגת פעילות אנשי השירות בלבד — היא אינה נספרת בדוחות המכירות.');
-    if(view==='collect'){var _R=ROOT();if(_R&&_R.linkPct!=null&&_R.linkPct<80){msgs.push('לא ניתן לחשב גבייה לתקופה הזו: בפריוריטי מספר ההזמנה נרשם על הקבלה רק משנת 2020, ולכן אי אפשר לשייך תשלום להזמנה. המכירות וההנחות בתקופה נכונים.');}else{msgs.push('היחס מתייחס רק לתקופה שבחרת: ההזמנות שנכתבו בה, והכסף שנכנס באותה תקופה מולן. תשלום שמשלים הזמנה ישנה אינו נספר כאן, וגם לא תשלום על הזמנה של התקופה שהגיע אחריה. יחס מעל מאה אחוז נובע מהזמנה שקטנה אחרי שהלקוח כבר שילם, למשל בעקבות קיזוז. יחס על בסיס מכירות קטן מוצג באפור כי הוא רועש. התקבולים כוללים מע"מ, ולכן היחס מחושב מול המחזור בהמרה לכולל מע"מ ולא מול המחזור המוצג. הנחות = שורות קיזוז, קופונים ושוברים.');}}
+    if(view==='collect'){var _R=ROOT();msgs.push('על ההזמנות שנכתבו בתקופה שבחרת: כמה הנחות ניתנו עליהן, וכמה כסף התקבל עליהן באותה תקופה. התקבולים כוללים מע"מ, ולכן היחס מחושב מול המחזור בהמרה לכולל מע"מ ולא מול המחזור המוצג. הנחות = שורות קיזוז, קופונים ושוברים.');if(_R&&_R.linkPct!=null&&_R.linkPct<80){msgs.push('שים לב: בתקופה הזו רק '+Math.round(_R.linkPct)+' אחוז מהקבלות נושאות מספר הזמנה בפריוריטי, ולכן חלק מהתקבולים לא משויכים להזמנה.');}}
     if(view==='dim'){
       if(dimKind==='sector'&&state.from<'2025-01-01')msgs.push('תיוג מגזר קיים בפריוריטי באופן מלא רק מלקוחות שנוצרו משנת 2025 — הזמנות מוקדמות יותר מופיעות תחת "ללא נתון".');
       if(dimKind==='city'&&state.from<'2022-01-01')msgs.push('רישום עיר הלקוח מלא בפריוריטי רק משנת 2022 — הזמנות מוקדמות יותר מופיעות תחת "ללא נתון".');
