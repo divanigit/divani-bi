@@ -490,11 +490,22 @@
     if(ib) ib.innerHTML=M.insight;
     var html='';
     BRANCHES.forEach(function(b,bi){
-      var rows=b.agents.map(function(a){return {a:a, m:calc(a)};});
-      var btot=b.agents.reduce(function(s,a){return s+a.sales;},0);
+      var rows=(b.agents||[]).map(function(a){return {a:a, m:calc(a)};});
+      var btot=(b.agents||[]).reduce(function(s,a){return s+a.sales;},0);
       rows.sort(function(x,y){var a=M.val(x.m),b=M.val(y.m);
         if(a==null&&b==null)return y.a.sales-x.a.sales;
         if(a==null)return 1; if(b==null)return -1; return b-a;});
+      // a branch can legitimately come back with no listed reps (e.g. a day with no sales) —
+      // show it as an empty state instead of letting rows[0] blow the whole screen up
+      if(!rows.length){
+        var pal0=BRANCH_PALETTE[bi%BRANCH_PALETTE.length];
+        html+='<div class="branch" style="--bc:'+pal0.bc+';--bcw:'+pal0.bcw+'">'
+          +'<div class="bh"><div class="bhname"><span class="bdot"></span><h2>'+b.name+'</h2>'
+          +'<span class="bcount">אין נציגים בתקופה</span></div>'
+          +'<div class="bavg">סך הסניף · <b>'+shekelShort(btot)+'</b></div></div>'
+          +'<div class="rows"><div class="empty">לא נרשמו מכירות של נציגים בסניף בתקופה שנבחרה.</div></div></div>';
+        return;
+      }
       var mx=M.val(rows[0].m)||1;
       var pal=BRANCH_PALETTE[bi%BRANCH_PALETTE.length];
       html+='<div class="branch" style="--bc:'+pal.bc+';--bcw:'+pal.bcw+'">'
