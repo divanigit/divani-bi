@@ -221,6 +221,9 @@
   .dstat span{display:block;font-size:.64rem;color:var(--ink3);margin-bottom:2px}
   .dstat b{font-size:.98rem;font-weight:800;unicode-bidi:plaintext}
   .mixhead{font-size:.72rem;color:var(--ink3);font-weight:700;margin:0 0 8px}
+  .mixmore{margin-top:2px}
+  .mixmore summary{cursor:pointer;font-size:.72rem;color:var(--ink3);padding:5px 2px;min-height:32px}
+  .mixmore summary:hover{color:var(--ink2)}
   .mixrow{display:flex;align-items:center;gap:9px;margin-bottom:6px}
   .mixl{flex:none;width:78px;font-size:.78rem;color:var(--ink2)}
   .mixbar{flex:1;height:8px;background:var(--panel2);border-radius:99px;overflow:hidden}
@@ -406,6 +409,17 @@
     if(a.cancel>=10) out.push({t:'ביטולים גבוהים',k:'bad'});
     return out;
   }
+  // every category is present; only the tail is folded, and the count says exactly how many
+  function mixBars(mix){
+    mix = mix || [];
+    function row(m){ return '<div class="mixrow"><span class="mixl">'+m.c+'</span>'
+      +'<span class="mixbar"><i style="width:'+m.p+'%"></i></span>'
+      +'<span class="mixp">'+m.p+'%</span></div>'; }
+    if(mix.length<=5) return mix.map(row).join('');
+    var head=mix.slice(0,5).map(row).join('');
+    var tail=mix.slice(5).map(row).join('');
+    return head+'<details class="mixmore"><summary>ועוד '+(mix.length-5)+' קטגוריות</summary>'+tail+'</details>';
+  }
   function deepHtml(a){
     var tags=profile(a).map(function(p){return '<span class="ptag '+p.k+'">'+p.t+'</span>';}).join('');
     var stats=[
@@ -417,9 +431,7 @@
       ['ביטולים', a.cancel+'% · '+(a.cxl||0)+' עסקאות'],
       ['חדש · חוזר', a.newpct+'% · '+(100-a.newpct)+'%']
     ].map(function(s){return '<div class="dstat'+(s[2]?' est':'')+'"><span>'+s[0]+'</span><b>'+s[1]+'</b></div>';}).join('');
-    var bars=a.mix.map(function(m){
-      return '<div class="mixrow"><span class="mixl">'+m.c+'</span><span class="mixbar"><i style="width:'+m.p+'%"></i></span><span class="mixp">'+m.p+'%</span></div>';
-    }).join('');
+    var bars=mixBars(a.mix);
     return '<div class="ptags">'+tags+'</div>'
       +'<div class="deepgrid">'+stats+'</div>'
       +'<div class="mixhead">תמהיל מוצרים</div>'+bars;
@@ -454,7 +466,7 @@
         ['יחס המרה', (r.convReal?(Math.round(r.closePct*10)/10)+'%':'—'), !r.convReal],
         ['נכנסים', (r.ffReal?r.visitors.toLocaleString('en-US'):'—'), !r.ffReal]
       ].map(function(s){return '<div class="dstat'+(s[2]?' est':'')+'"><span>'+s[0]+'</span><b>'+s[1]+'</b></div>';}).join('');
-      var bars=r.mix.map(function(m){return '<div class="mixrow"><span class="mixl">'+m.c+'</span><span class="mixbar"><i style="width:'+m.p+'%"></i></span><span class="mixp">'+m.p+'%</span></div>';}).join('');
+      var bars=mixBars(r.mix);
       var oi=BRANCHES.map(function(x){return x.name;}).indexOf(r.name), pal=BRANCH_PALETTE[(oi<0?i:oi)%BRANCH_PALETTE.length];
       var barPct=Math.max(4,Math.min(100,r.sales/mxs*100));
       return '<div class="brcard'+(i===0?' lead':'')+'" style="--bc:'+pal.bc+';--bcw:'+pal.bcw+'">'
