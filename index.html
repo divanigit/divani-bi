@@ -77,6 +77,14 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .rfr{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:8px 12px;border:1px solid var(--line2);border-radius:12px;background:var(--bg);color:var(--tx2);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer}
   #viewasbtn.on{background:var(--dfg);border-color:var(--dfg);color:#fff;font-weight:700}
   #viewasbtn.on svg{color:#fff}
+  #viewaslbl{display:none;align-items:center;min-height:44px;padding:8px 12px;border:1px solid var(--dfg);border-radius:12px;background:var(--bg);color:var(--dfg);font-size:12.5px;font-weight:700;white-space:nowrap}
+  #viewaslbl.on{display:inline-flex}
+  #vasheet{position:fixed;right:0;left:0;bottom:0;z-index:131;background:var(--bg);border-radius:18px 18px 0 0;border:1px solid var(--line);border-bottom:0;box-shadow:0 -12px 40px rgba(0,0,0,.25);padding:14px 16px calc(18px + env(safe-area-inset-bottom));display:none;max-height:80vh;overflow-y:auto}
+  @media (min-width:640px){#vasheet{left:50%;right:auto;transform:translateX(-50%);width:420px;bottom:auto;top:14vh;border-radius:18px;border-bottom:1px solid var(--line)}}
+  .varow{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:12px 13px;margin:0 0 8px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--tx);font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;text-align:start}
+  .varow .vachk{width:18px;height:18px;flex:none;color:var(--bd);opacity:0}
+  .varow.on{border-color:var(--bd);font-weight:700}
+  .varow.on .vachk{opacity:1}
   .rfr svg{width:14px;height:14px}
   .rfr:disabled{opacity:.45;cursor:default}
   .built{font-size:11.5px;color:var(--tx3)}
@@ -414,7 +422,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         <div class="navgroup"><svg class="gico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M8 17v-5"/><path d="M13 17V8"/><path d="M18 17v-8"/></svg><span>אנליטיקה</span></div>
         <button type="button" data-v="branchsrc" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3.5h3.5a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H15"/><path d="M10 16.5l4.5-4.5L10 7.5"/><path d="M14.5 12H3.5"/></svg><span class="rlbl">מקורות הגעה</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="dim" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12V3.2A8.8 8.8 0 1 0 20.8 12H12z"/><path d="M14.5 3.9A8.8 8.8 0 0 1 20.1 9.5H14.5z"/></svg><span class="rlbl">פילוח</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
-        <button type="button" data-v="mdown" id="mdownbtn" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v16.5"/><path d="M18.5 14L12 20.5 5.5 14"/></svg><span class="rlbl">מוריד כסף</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
+        <button type="button" data-v="mdown" id="mdownbtn" aria-pressed="false" style="display:none"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v16.5"/><path d="M18.5 14L12 20.5 5.5 14"/></svg><span class="rlbl">מוריד כסף</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="cancels" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><path d="M6 6l12 12"/></svg><span class="rlbl">אחוז ביטולים</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="dow" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.2" y="5" width="17.6" height="15.3" rx="2.4"/><path d="M3.2 10h17.6"/><path d="M8 3.2v3.4"/><path d="M16 3.2v3.4"/><path d="M7.5 14h3"/><path d="M13.5 14h3"/></svg><span class="rlbl">ימים חזקים בשבוע</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="ins" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 18.5h5"/><path d="M10.5 21.5h3"/><path d="M12 2.8a6 6 0 0 0-3.9 10.5c.75.7 1.1 1.5 1.15 2.5h5.5c.05-1 .4-1.8 1.15-2.5A6 6 0 0 0 12 2.8z"/></svg><span class="rlbl">תובנות</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
@@ -457,9 +465,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg>
       שאלה חופשית
     </button>
-    <button type="button" class="rfr" id="viewasbtn" title="צפה כמו שאר המשתמשים" style="display:none;padding:8px 11px">
+    <button type="button" class="rfr" id="viewasbtn" title="בחירת תצוגה" aria-label="בחירת תצוגה" aria-haspopup="dialog" aria-expanded="false" style="display:none;padding:8px 11px">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
     </button>
+    <span id="viewaslbl"></span>
     <button type="button" class="rfr" id="rfr" title="רענון נתונים מפריוריטי עכשיו">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
       רענן עכשיו
@@ -538,15 +547,43 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   <div class="askhint">התשובות מחושבות ישירות מנתוני פריוריטי שבענן. דוח מוצלח אפשר לקבע בהמשך כדוח קבוע. <span id="asktotal"></span></div>
   <div id="asklog"></div>
 </div>
+<div id="vaovl" style="position:fixed;inset:0;background:rgba(10,18,14,.45);z-index:130;display:none"></div>
+<div id="vasheet" role="dialog" aria-modal="true" aria-label="בחירת תצוגה">
+  <div class="shead">
+    <span class="t">בחירת תצוגה</span>
+    <button type="button" class="x" id="vax" aria-label="סגירה"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+  </div>
+  <div role="radiogroup" aria-label="בחירת תצוגה">
+    <button type="button" class="varow" data-va="" role="radio" aria-checked="false"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>התצוגה שלי</span></button>
+    <button type="button" class="varow" data-va="user" role="radio" aria-checked="false"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>משתמש רגיל</span></button>
+    <button type="button" class="varow" data-va="ido" role="radio" aria-checked="false"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>עידו אהרון</span></button>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
 (function(){
   var PREVIEW_KEY='divani_preview_user';
-  // the eye must survive moving between screens — it is released only by a double tap on the logo
-  function prevGet(){try{return localStorage.getItem(PREVIEW_KEY)==='1';}catch(e){return false;}}
-  function prevSet(v){try{if(v)localStorage.setItem(PREVIEW_KEY,'1');else localStorage.removeItem(PREVIEW_KEY);}catch(e){}}
-  var META=null, TARGET=50, view='agents', dimKind='fam', dimMeasure='s', previewUser=prevGet();
+  // '' = my own view · 'user' = a regular user · 'ido' = עידו אהרון.
+  // an old on/off value ('1') is read as 'user', so a preview left on yesterday is not silently dropped.
+  var PREV_NAMES={user:'משתמש רגיל',ido:'עידו אהרון'};
+  function prevMode(){try{var v=localStorage.getItem(PREVIEW_KEY);if(!v)return '';return (v==='user'||v==='ido')?v:'user';}catch(e){return '';}}
+  function prevSet(m){try{if(m==='user'||m==='ido')localStorage.setItem(PREVIEW_KEY,m);else localStorage.removeItem(PREVIEW_KEY);}catch(e){}}
+  function prevGet(){return prevMode()!=='';}
+  // previewAs starts empty on purpose and is filled in only once we know who is logged in.
+  // The key is stored per browser, not per person: it survives logout and the next login.
+  // Reading it before META arrived censored anyone who happened to open the dashboard on
+  // Doron's browser, and they had no eye button to switch back with.
+  var META=null, TARGET=50, view='agents', dimKind='fam', dimMeasure='s', previewAs='', previewUser=false;
+  function syncPreview(){
+    previewAs=(META&&META.owner)?prevMode():'';
+    previewUser=(previewAs!=='');           // one source of truth, never re-read from storage
+    if(META&&!META.owner)prevSet('');       // not the owner: clear a preview left from an earlier login
+  }
+  // no profit numbers: the עידו role on the server, or the owner previewing that role
+  function noProfit(){return previewAs==='ido'||!!(META&&META.noprofit);}
+  // what a screen that is closed to this user shows — one wording everywhere
+  function devBoxHTML(){return '<div class="cbdev"><b>בפיתוח, יעלה בקרוב</b></div>';}
   var dimPath={grp:null,fam:null,model:null}, dimSeg=null, dimSort=null, insParetoN=25;
   var DIMH={fam:'קטגוריות',part:'מוצרים',city:'ערים',sector:'מגזר',source:'מקור הגעה'};
   var SECN={'חילו.':'חילוני','חר.':'חרדי','ד.לא.':'דתי לאומי','רוס':'דובר רוסית','ע.ר':'המגזר הערבי','אחר':'אחר','לקוח מרחוק':'לקוח מרחוק','הזמנת שרות':'הזמנת שירות'};
@@ -561,7 +598,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   function brName(b){var k=(b==null?'':String(b));return BRN[k]||k;}
   var eT={}, stage=document.getElementById('stage');
   var state={from:null,to:null,preset:null,clip:false};
-  var cache={key:null,mode:null,rows:null,agg:null};
+  var cache={key:null,mode:null,rows:null,agg:null,dev:false};
   var MONTHS=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 
   function pad(n){return (n<10?'0':'')+n;}
@@ -633,7 +670,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       Promise.all([
         fetch('/api/dim?d_from='+state.from+'&d_to='+state.to+'&dim='+insDim.cmp+'&rank=s&lim=300',{cache:'no-store'}).then(ok),
         fetch('/api/dim?d_from='+py(state.from)+'&d_to='+py(state.to)+'&dim='+insDim.cmp+'&rank=s&lim=300',{cache:'no-store'}).then(ok)
-      ]).then(function(js){if(desiredKey()!==key)return;cache.key=key;cache.mode='cmp';cache.rows=null;cache.agg=js[0].agg||{};cache.agg2=js[1].agg||{};cb();})
+      ]).then(function(js){if(desiredKey()!==key)return;cache.key=key;cache.dev=!!(js[0].dev||js[1].dev);cache.mode='cmp';cache.rows=null;cache.agg=js[0].agg||{};cache.agg2=js[1].agg||{};cb();})
        .catch(fail);
       return;
     }
@@ -661,7 +698,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
            :('/api/range?d_from='+state.from+'&d_to='+state.to+'&by='+(view==='branches'?'b':(view==='service'?'s':'a')));
     fetch(url,{cache:'no-store'})
       .then(ok)
-      .then(function(j){if(desiredKey()!==key)return;cache.key=key;cache.mode=j.mode;cache.panel=j.panel||null;cache.rows=j.rows||null;cache.agg=j.agg||null;if(j.pending!==undefined){cache.pending=j.pending;cache.pendingAt=j.pending_at;}cb();})
+      // j.dev = the server refused this screen for this user. It has no agg, so keeping only
+      // j.agg threw the refusal away and the screen rendered as a real, empty result.
+      .then(function(j){if(desiredKey()!==key)return;cache.key=key;cache.dev=!!j.dev;cache.mode=j.mode;cache.panel=j.panel||null;cache.rows=j.rows||null;cache.agg=j.agg||null;if(j.pending!==undefined){cache.pending=j.pending;cache.pendingAt=j.pending_at;}cb();})
       .catch(fail);
   }
 
@@ -875,24 +914,29 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   function renderTable(R){
     if(!R.k.length){stage.innerHTML=emptyHtml();return;}
     var rows=[];walk(R.k,0,'',rows);
-    var h='<div class="tw"><table><thead><tr><th class="nm">שם</th><th>'+(view==='service'?'חיובים':'מכירות')+'</th><th>אחוז מסה"כ</th><th>רווח</th><th>אחוז רווח</th><th>לקוחות</th><th>ממוצע</th></tr></thead><tbody>';
+    var NP=noProfit();
+    var h='<div class="tw"><table><thead><tr><th class="nm">שם</th><th>'+(view==='service'?'חיובים':'מכירות')+'</th><th>אחוז מסה"כ</th>'+(NP?'':'<th>רווח</th><th>אחוז רווח</th>')+'<th>לקוחות</th><th>ממוצע</th></tr></thead><tbody>';
     rows.forEach(function(it){
       var c=it.c, cls=it.depth===0?'d0':'dn', ind=it.depth*14;
       var pct=(R.pos>0&&c.s>0)?Math.round(c.s/R.pos*100)+'%':'—';
       var nc=c.c||1, avg=nc>0?c.s/nc:0;
       var ch=it.hasK?chevSvg(!!eT[it.id]):'<span style="width:15px;flex:none"></span>';
       var sub=c.code?'<div class="c" title="'+esc(c.code)+'">'+esc(c.code)+'</div>':'';
-      h+='<tr class="'+cls+(it.hasK?' row':'')+'" '+(it.hasK?'data-t="'+it.id+'" role="button" tabindex="0"':'')+'><td class="nm"><div class="nmc" style="margin-right:'+ind+'px">'+ch+'<div class="nlab'+(it.depth?' rail':'')+'"><div class="t" style="font-weight:'+(it.depth===0?500:400)+'">'+esc(c.n)+'</div>'+sub+'</div></div></td><td>'+ils(c.s)+'</td><td class="mut">'+pct+'</td><td>'+ils(c.profit)+'</td><td>'+pill(c)+'</td><td>'+(it.depth===0?nc:'')+'</td><td class="mut">'+(it.depth===0?ils(avg):'')+'</td></tr>';
+      h+='<tr class="'+cls+(it.hasK?' row':'')+'" '+(it.hasK?'data-t="'+it.id+'" role="button" tabindex="0"':'')+'><td class="nm"><div class="nmc" style="margin-right:'+ind+'px">'+ch+'<div class="nlab'+(it.depth?' rail':'')+'"><div class="t" style="font-weight:'+(it.depth===0?500:400)+'">'+esc(c.n)+'</div>'+sub+'</div></div></td><td>'+ils(c.s)+'</td><td class="mut">'+pct+'</td>'+(NP?'':'<td>'+ils(c.profit)+'</td><td>'+pill(c)+'</td>')+'<td>'+(it.depth===0?nc:'')+'</td><td class="mut">'+(it.depth===0?ils(avg):'')+'</td></tr>';
     });
-    h+='</tbody><tfoot><tr><td class="nm">סך הכל</td><td>'+ils(R.s)+'</td><td>'+(R.pos>0?'100%':'—')+'</td><td>'+ils(R.p)+'</td><td>'+pill({s:R.s,profit:R.p,pm:R.pm})+'</td><td>'+R.c+'</td><td>'+ils(R.av)+'</td></tr></tfoot></table></div>';
+    h+='</tbody><tfoot><tr><td class="nm">סך הכל</td><td>'+ils(R.s)+'</td><td>'+(R.pos>0?'100%':'—')+'</td>'+(NP?'':'<td>'+ils(R.p)+'</td><td>'+pill({s:R.s,profit:R.p,pm:R.pm})+'</td>')+'<td>'+R.c+'</td><td>'+ils(R.av)+'</td></tr></tfoot></table></div>';
     stage.innerHTML=h;
   }
 
   function renderKpis(R){
+    var NP=noProfit();
     document.getElementById('kpis').innerHTML=
       '<div class="kpi"><div class="l">'+(view==='service'?'חיובים':'מכירות')+'</div><div class="v">'+ils(R.s)+'</div></div>'+
-      '<div class="kpi"><div class="l">רווח</div><div class="v">'+ils(R.p)+'</div></div>'+
-      '<div class="kpi"><div class="l">אחוז רווח</div><div class="v">'+(view==='service'?'—':pmTxt(R.pm))+'</div></div>'+
+      (NP
+        ? '<div class="kpi"><div class="l">הזמנות</div><div class="v">'+(R.orders||0)+'</div></div>'+
+          '<div class="kpi"><div class="l">ממוצע ללקוח</div><div class="v">'+ils(R.av||0)+'</div></div>'
+        : '<div class="kpi"><div class="l">רווח</div><div class="v">'+ils(R.p)+'</div></div>'+
+          '<div class="kpi"><div class="l">אחוז רווח</div><div class="v">'+(view==='service'?'—':pmTxt(R.pm))+'</div></div>')+
       '<div class="kpi"><div class="l">לקוחות</div><div class="v">'+R.c+'</div></div>';
   }
 
@@ -988,6 +1032,8 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
 
   function renderDimTable(R){
     if(cache.mode==='segdrill'&&dimSeg){renderSegDrill(R);return;}
+    var NP=noProfit();
+    if(NP&&dimSort&&dimSort.col==='p')dimSort=null;
     var isTree=cache.mode==='tree';
     if(!R.k.length){stage.innerHTML=(isTree?treeCrumbs():'')+emptyHtml();return;}
     var kids=R.k.slice();
@@ -1007,7 +1053,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     function hs(col,label){var on=dimSort&&dimSort.col===col;return '<th data-hsort="'+col+'"'+(on?' class="on"':'')+'>'+label+(on?(dimSort.dir===1?' ↑':' ↓'):'')+'</th>';}
     var h=(isTree?treeCrumbs():'')+'<div class="tw">'
       +(dimSort?'<button type="button" class="sortreset" id="dimreset">חזרה לסדר המקורי</button>':'')
-      +'<table><thead><tr><th class="nm">'+title+'</th>'+hs('s','מכירות')+hs('q','כמות')+'<th>אחוז מסה"כ</th>'+hs('p','רווח')+'<th>אחוז רווח</th>'+hs('c','לקוחות')+'</tr></thead><tbody>';
+      +'<table><thead><tr><th class="nm">'+title+'</th>'+hs('s','מכירות')+hs('q','כמות')+'<th>אחוז מסה"כ</th>'+(NP?'':hs('p','רווח')+'<th>אחוז רווח</th>')+hs('c','לקוחות')+'</tr></thead><tbody>';
     kids.forEach(function(c){
       var base=byQ?totQ:totS,val=byQ?c.q:c.s;
       var pct=(base>0&&val>0)?Math.round(100*val/base)+'%':'—';
@@ -1015,10 +1061,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       var drillAttr=canDrill?(isTree?' data-treek="'+esc(c.rawk)+'" role="button" tabindex="0"':' data-segk="'+esc(c.rawk)+'" role="button" tabindex="0"'):'';
       h+='<tr class="d0'+(canDrill?' row':'')+'"'+drillAttr+'><td class="nm"><div class="nmc">'+(canDrill?chevSvg(false):'<span style="width:15px;flex:none"></span>')+'<div class="nlab"><div class="t" style="font-weight:500">'+esc(c.n)+'</div>'+sub+'</div></div></td>'+
          '<td>'+ils(c.s)+'</td><td>'+qf(c.q)+'</td><td class="mut">'+pct+'</td>'+
-         '<td>'+ils(c.profit)+'</td><td>'+pill(c)+'</td><td>'+c.c+'</td></tr>';
+         (NP?'':'<td>'+ils(c.profit)+'</td><td>'+pill(c)+'</td>')+'<td>'+c.c+'</td></tr>';
     });
-    if(R.rest&&R.rest.cnt)h+='<tr class="dn"><td class="nm"><div class="nmc"><span style="width:15px;flex:none"></span><div class="nlab rail"><div class="t">עוד '+R.rest.cnt+' נוספים</div></div></div></td><td class="mut">'+ils(R.rest.s||0)+'</td><td class="mut">'+qf(R.rest.q||0)+'</td><td class="mut">—</td><td class="mut">'+ils(R.rest.p||0)+'</td><td class="mut">—</td><td class="mut">—</td></tr>';
-    h+='</tbody><tfoot><tr><td class="nm">סך הכל</td><td>'+ils(R.s)+'</td><td>'+qf(R.q)+'</td><td>100%</td><td>'+ils(R.p)+'</td><td>'+pill({s:R.s,profit:R.p,pm:R.s>0?100*R.p/R.s:null})+'</td><td>'+R.c+'</td></tr></tfoot></table></div>';
+    if(R.rest&&R.rest.cnt)h+='<tr class="dn"><td class="nm"><div class="nmc"><span style="width:15px;flex:none"></span><div class="nlab rail"><div class="t">עוד '+R.rest.cnt+' נוספים</div></div></div></td><td class="mut">'+ils(R.rest.s||0)+'</td><td class="mut">'+qf(R.rest.q||0)+'</td><td class="mut">—</td>'+(NP?'':'<td class="mut">'+ils(R.rest.p||0)+'</td><td class="mut">—</td>')+'<td class="mut">—</td></tr>';
+    h+='</tbody><tfoot><tr><td class="nm">סך הכל</td><td>'+ils(R.s)+'</td><td>'+qf(R.q)+'</td><td>100%</td>'+(NP?'':'<td>'+ils(R.p)+'</td><td>'+pill({s:R.s,profit:R.p,pm:R.s>0?100*R.p/R.s:null})+'</td>')+'<td>'+R.c+'</td></tr></tfoot></table></div>';
     stage.innerHTML=h;
   }
 
@@ -1395,7 +1441,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     document.getElementById('builtlbl').textContent=META.last_sync?('עודכן '+META.last_sync):'';
   }
   function renderBaskets(agg){
-    if(agg&&agg.dev){stage.innerHTML='<div class="cbdev"><b>בפיתוח</b><span>התכונה בבנייה ותיפתח בקרוב</span></div>';return;}
+    if(cache.dev||(agg&&agg.dev)){stage.innerHTML=devBoxHTML();return;}
     agg=agg||[];
     if(!agg.length){stage.innerHTML='<div class="empty">אין מכירות בתקופה שנבחרה.</div>';return;}
     var repSales=0,repCust=0,maxRep=1;
@@ -1427,7 +1473,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   var cannibMode='mkt';
   function cbP(v){v=+v||0;return (v>=0?'+':'')+Math.round(v)+' אחוז';}
   function renderCannib(agg){
-    if(!(META&&META.owner&&!previewUser)||(agg&&agg.dev)){stage.innerHTML='<div class="cbdev"><b>בפיתוח</b><span>התכונה בבנייה ותיפתח בקרוב</span></div>';return;}
+    if(!(META&&META.owner&&!previewUser)||cache.dev||(agg&&agg.dev)){stage.innerHTML=devBoxHTML();return;}
     var d=agg||[];
     if(!d.length){stage.innerHTML='<div class="empty">אין נתונים לניתוח.</div>';return;}
     var mode=cannibMode;
@@ -1534,7 +1580,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     document.getElementById('builtlbl').textContent=META.last_sync?('עודכן '+META.last_sync):'';
   }
   function renderMDown(agg){
-    if(agg&&agg.dev){stage.innerHTML='<div class="cbdev"><b>בפיתוח</b><span>המסך הזה עדיין סגור</span></div>';return;}
+    if(cache.dev||(agg&&agg.dev)){stage.innerHTML=devBoxHTML();return;}
     agg=agg||{};
     var rows=agg.rows||[];
     if(!rows.length&&!mdDes){stage.innerHTML='<div class="empty">אין בתקופה הזו שום שורה שמורידה כסף.</div>';return;}
@@ -1705,6 +1751,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   });
 
   function renderAll(){
+    // the server closed this screen for this user. Say so — never draw it as an empty result.
+    if(cache.dev){document.getElementById('kpis').innerHTML='';stage.innerHTML=devBoxHTML();
+      document.getElementById('sellbl').textContent=rangeLbl(state.from,state.to);return;}
     if(view==='mdown'){renderMDownMeta();renderMDown(cache.agg);return;}
     if(view==='cancels'){renderCancelsMeta();renderCancels(cache.agg);return;}
     if(view==='dow'){renderDowMeta();renderDow(cache.agg);return;}
@@ -1841,6 +1890,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
 
   /* ---- view toggle ---- */
   function setView(v){
+    if(v==='mdown'&&(!META||noProfit()))v='agents';   // before META lands we do not yet know
     if(view===v)return;
     if(v!=='mdown')mdDes=null;   // leaving the drill resets it, so coming back opens on the list
     view=v;
@@ -1973,10 +2023,69 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   function askOpen(){askSheet.classList.add('on');askOvl.classList.add('on');setTimeout(function(){document.getElementById('askq').focus();},50);}
   function askClose(){askSheet.classList.remove('on');askOvl.classList.remove('on');}
   document.getElementById('askbtn').addEventListener('click',askOpen);
+  /* ---- בחירת תצוגה — רשימה ולא מתג דליקה/כיבוי: ייתוספו עוד סוגי משתמשים ---- */
+  function vaPaint(){
+    var rows=document.querySelectorAll('#vasheet [data-va]');
+    for(var i=0;i<rows.length;i++){
+      var on=rows[i].getAttribute('data-va')===previewAs;
+      rows[i].classList.toggle('on',on);
+      rows[i].setAttribute('aria-checked',on?'true':'false');
+    }
+  }
+  function vaIsOpen(){var s=document.getElementById('vasheet');return !!s&&s.style.display==='block';}
+  function vaRows(){return [].slice.call(document.querySelectorAll('#vasheet [data-va]'));}
+  function vaOpen(){vaPaint();document.getElementById('vaovl').style.display='block';document.getElementById('vasheet').style.display='block';
+    var b=document.getElementById('viewasbtn');if(b)b.setAttribute('aria-expanded','true');
+    // it says aria-modal, so it has to behave like one: focus goes inside, and comes back on close
+    var r=vaRows(),f=null;
+    for(var i=0;i<r.length;i++)if(r[i].classList.contains('on'))f=r[i];
+    if(!f)f=r[0]||document.getElementById('vax');
+    if(f&&f.focus)try{f.focus();}catch(e){}}
+  function vaClose(){
+    if(!vaIsOpen())return;
+    document.getElementById('vaovl').style.display='none';document.getElementById('vasheet').style.display='none';
+    var b=document.getElementById('viewasbtn');
+    if(b){b.setAttribute('aria-expanded','false');if(b.focus)try{b.focus();}catch(e){}}}
+  function vaApply(m){
+    previewAs=m; previewUser=(previewAs!==''); applyOwnerUI();
+    if(noProfit()&&view==='mdown'){setView('agents');}
+    else if(META&&state.from){apply();}
+  }
+  function vaPick(m){
+    if(m===previewAs){vaClose();return;}
+    prevSet(m); vaClose(); vaApply(m);
+  }
   (function(){
-    var v=document.getElementById('viewasbtn');
-    if(v)v.addEventListener('click',function(){
-      previewUser=!previewUser; prevSet(previewUser); applyOwnerUI(); apply();
+    var v=document.getElementById('viewasbtn'); if(v)v.addEventListener('click',vaOpen);
+    var sh=document.getElementById('vasheet');
+    if(sh)sh.addEventListener('click',function(e){
+      var r=e.target.closest('[data-va]'); if(r){vaPick(r.getAttribute('data-va'));return;}
+      if(e.target.closest('#vax'))vaClose();
+    });
+    var ov=document.getElementById('vaovl'); if(ov)ov.addEventListener('click',vaClose);
+    document.addEventListener('keydown',function(e){
+      if(e.key==='Escape'){vaClose();return;}
+      if(!vaIsOpen())return;
+      if(e.key==='Tab'){                       // keep Tab inside the open sheet
+        var f=[].slice.call(sh.querySelectorAll('button:not([disabled])'));
+        if(!f.length)return;
+        var first=f[0],last=f[f.length-1],a=document.activeElement,inside=sh.contains(a);
+        if(e.shiftKey){if(!inside||a===first){e.preventDefault();last.focus();}}
+        else{if(!inside||a===last){e.preventDefault();first.focus();}}
+        return;
+      }
+      if(e.key==='ArrowDown'||e.key==='ArrowUp'||e.key==='ArrowRight'||e.key==='ArrowLeft'){
+        var r=vaRows(),i=r.indexOf(document.activeElement); if(i<0)return;
+        e.preventDefault();
+        var fwd=(e.key==='ArrowDown'||e.key==='ArrowLeft');   // RTL: left is forward
+        r[(i+(fwd?1:-1)+r.length)%r.length].focus();
+      }
+    });
+    // changed on another screen or tab — follow it here too
+    window.addEventListener('storage',function(e){
+      if(e.key!==PREVIEW_KEY)return;
+      if(!(META&&META.owner))return;           // only the owner has a preview at all
+      var m=prevMode(); if(m!==previewAs){vaApply(m);vaPaint();}
     });
   })();
   (function(){var n=document.getElementById('nrepbtn');if(n)n.addEventListener('click',function(){location.href='/agent-report';});})();
@@ -2246,13 +2355,18 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   function applyOwnerUI(){
     var owner=!!(META&&META.owner), prev=owner&&previewUser;
     var ab=document.getElementById('askbtn'); if(ab)ab.style.display=(!!(META&&META.admin)&&!prev)?'':'none';
-    // the owner-only "view as user" button is hidden WHILE previewing, so a user-view screenshot looks exactly like a regular user
-    // the eye stays on screen for the owner and lights up while previewing — one tap in, one tap out
+    // the eye stays on screen for the owner in every state — it is the only way back to his own view
     var vb=document.getElementById('viewasbtn');
     if(vb){ vb.style.display=owner?'':'none';
             vb.classList.toggle('on',prev);
-            vb.setAttribute('aria-pressed',prev?'true':'false');
-            vb.title=prev?'רואה עכשיו כמו שאר המשתמשים — הקש לחזרה לתצוגה שלי':'צפה כמו שאר המשתמשים'; }
+            vb.title='בחירת תצוגה'; }
+    // words, not colour: the owner must never have to guess whose view he is looking at
+    var vl=document.getElementById('viewaslbl');
+    if(vl){ vl.classList.toggle('on',prev);
+            vl.textContent=prev?('רואה כמו: '+(PREV_NAMES[previewAs]||'')):''; }
+    // stays hidden until we actually know who this is. It used to ship visible and be
+    // un-hidden here even when META was still null, so during a cold start it was tappable.
+    var md=document.getElementById('mdownbtn'); if(md)md.style.display=(META&&!noProfit())?'':'none';
     var lg=document.querySelector('.logo'); if(lg){lg.style.cursor='';lg.title='';}
   }
   function boot(){
@@ -2260,7 +2374,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       .then(function(r){if(r.status===401){location.href='/login';throw 0;}if(!r.ok)throw new Error('http '+r.status);return r.json();})
       .then(function(m){
         META=m;
+        syncPreview();    // only now do we know whether a preview applies to this person at all
         applyOwnerUI();   // gate the owner-only chrome first — it must never flash for a regular user
+        if(view==='mdown'&&noProfit())setView('agents');   // tapped during the cold start
         if(!META.min){stage.innerHTML='<div class="empty">המסד עדיין מתמלא בנתונים — נסה שוב בעוד כמה דקות.</div>';return;}
         var ms=document.getElementById('msel'),ys=document.getElementById('ysel'),yo=document.getElementById('yosel');
         ms.innerHTML=MONTHS.map(function(n,i){return '<option value="'+(i+1)+'">'+n+'</option>';}).join('');
@@ -2273,7 +2389,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         setPreset('today');
         try{var _qv=new URLSearchParams(location.search).get('v');if(_qv&&document.querySelector('#seg [data-v="'+_qv+'"]'))setView(_qv);}catch(e){}
       })
-      .catch(function(e){if(e!==0){applyOwnerUI();stage.innerHTML='<div class="empty">שגיאה בטעינה. רענן את הדף.</div>';}});
+      .catch(function(e){if(e!==0){syncPreview();applyOwnerUI();stage.innerHTML='<div class="empty">שגיאה בטעינה. רענן את הדף.</div>';}});
   }
   /* keep a long-open tab honest: when the user returns, re-check the date/sync.
      if the day rolled over, "היום" (and other presets) recompute to the real today

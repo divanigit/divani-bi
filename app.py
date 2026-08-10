@@ -46,6 +46,7 @@ DASH_PASS_ASK2 = os.environ.get("DASH_PASS_ASK2", "")  # Haim: ask-enabled perso
 DASH_PASS_DOV = os.environ.get("DASH_PASS_DOV", "")  # Dov (operations mgr): own credential, regular view access
 DASH_PASS_SHARON = os.environ.get("DASH_PASS_SHARON", "")  # Sharon: own credential, regular view access
 DASH_PASS_ITAMAR = os.environ.get("DASH_PASS_ITAMAR", "")  # Itamar: own credential, regular view access
+DASH_PASS_IDO = os.environ.get("DASH_PASS_IDO", "")  # עידו אהרון: regular view, without any profit figure
 SB_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SB_KEY = os.environ.get("SUPABASE_SECRET_KEY", "")
 PRI_USER = os.environ.get("PRI_USER", "")
@@ -86,6 +87,18 @@ def _ask2_token() -> str:
     return hmac.new(DASH_PASS_ASK2.encode("utf-8"), b"divani-bi-ask2-v1", hashlib.sha256).hexdigest()
 
 
+def _ido_token() -> str:
+    # keyed on his own password, so the shared password cannot produce this cookie
+    return hmac.new(DASH_PASS_IDO.encode("utf-8"), b"divani-bi-ido-v1", hashlib.sha256).hexdigest()
+
+
+def _is_noprofit(request: Request) -> bool:
+    if not DASH_PASS_IDO:
+        return False
+    tok = request.cookies.get(COOKIE_NAME, "")
+    return hmac.compare_digest(tok, _ido_token())
+
+
 def _is_ask2(request: Request) -> bool:
     if not DASH_PASS_ASK2:
         return False
@@ -109,7 +122,7 @@ def _logged_in(request: Request) -> bool:
         return False
     tok = request.cookies.get(COOKIE_NAME, "")
     return (hmac.compare_digest(tok, _session_token()) or _is_admin(request)
-            or _is_ask2(request))
+            or _is_ask2(request) or _is_noprofit(request))
 
 
 def _match(p: str, expected: str) -> bool:
@@ -120,24 +133,165 @@ def _match(p: str, expected: str) -> bool:
 def _pass_ok(p: str) -> bool:
     return (_match(p, DASH_PASS) or _match(p, DASH_PASS_ADMIN)
             or _match(p, DASH_PASS_ASK2) or _match(p, DASH_PASS_DOV)
-            or _match(p, DASH_PASS_SHARON) or _match(p, DASH_PASS_ITAMAR))
+            or _match(p, DASH_PASS_SHARON) or _match(p, DASH_PASS_ITAMAR)
+            or _match(p, DASH_PASS_IDO))
+
+
+_ALL_PASS = (("DASH_PASS", "המשותפת"), ("DASH_PASS_ADMIN", "דורון"),
+             ("DASH_PASS_ASK2", "חיים"), ("DASH_PASS_DOV", "דב"),
+             ("DASH_PASS_SHARON", "שרון"), ("DASH_PASS_ITAMAR", "איתמר"),
+             ("DASH_PASS_IDO", "עידו"))
+
+
+def _pass_collisions():
+    """Env vars that hold the same password. Two people then share one identity."""
+    seen, bad = {}, []
+    for var, name in _ALL_PASS:
+        val = globals().get(var, "")
+        if not val:
+            continue
+        key = val.strip().casefold()          # exactly the comparison _match uses
+        if key in seen:
+            bad.append((seen[key], name))
+        else:
+            seen[key] = name
+    return bad
+
+
+def _identity(p: str):
+    """(label for the login log, cookie value) for a password that already passed _pass_ok.
+
+    Ordered least-privileged-first on purpose. Nothing guarantees the seven env values
+    are distinct, and the old order checked ADMIN/ASK2 before IDO: an Ido password that
+    happened to equal Doron's or Haim's handed Ido their cookie, profit figures included.
+    Now a collision can only ever take rights away, never grant them. The label is decided
+    in the same place as the cookie, so /logins can no longer name one person while the
+    browser is holding someone else's session.
+    """
+    if _match(p, DASH_PASS_IDO):
+        return "עידו", _ido_token()
+    if _match(p, DASH_PASS_DOV):
+        return "דב", _session_token()
+    if _match(p, DASH_PASS_SHARON):
+        return "שרון", _session_token()
+    if _match(p, DASH_PASS_ITAMAR):
+        return "איתמר", _session_token()
+    if _match(p, DASH_PASS):
+        return "משותף", _session_token()
+    if _match(p, DASH_PASS_ASK2):
+        return "חיים", _ask2_token()
+    if _match(p, DASH_PASS_ADMIN):
+        return "אדמין", _admin_token()
+    return "?", ""
 
 
 def _who(p: str) -> str:
-    # identity label for the login log (most-specific credential first)
-    if _match(p, DASH_PASS_ADMIN):
-        return "אדמין"
-    if _match(p, DASH_PASS_ASK2):
-        return "חיים"
-    if _match(p, DASH_PASS_DOV):
-        return "דב"
-    if _match(p, DASH_PASS_SHARON):
-        return "שרון"
-    if _match(p, DASH_PASS_ITAMAR):
-        return "איתמר"
-    if _match(p, DASH_PASS):
-        return "משותף"
-    return "?"
+    return _identity(p)[0]
+
+
+# ---------- the no-profit role (עידו) ----------
+# One gate for every /api/ answer, and it denies by default: an endpoint that is not
+# listed here returns "בפיתוח" instead of leaking a number nobody checked.
+# A blacklist would fail open the day someone adds an endpoint and forgets this table.
+
+def _np_range(d):
+    # lines mode: every item is [pdes, partname, qprice, qprofit] — profit is index 3, unnamed
+    if d.get("mode") == "lines":
+        for r in d.get("rows") or []:
+            k = r.get("k")
+            if isinstance(k, list):
+                r["k"] = [(t[:3] if isinstance(t, list) else t) for t in k]
+        return d
+    agg = d.get("agg") or {}
+    for g in agg.get("agents") or []:
+        g.pop("p", None)
+    for g in agg.get("branches") or []:
+        g.pop("p", None)
+        g.pop("pp", None)      # the phone slice of the branch profit
+    return d
+
+
+def _np_dimtree(d):
+    agg = d.get("agg") or {}
+    agg.pop("total_p", None)
+    for g in agg.get("rows") or []:
+        g.pop("p", None)
+    rest = agg.get("rest")
+    if isinstance(rest, dict):
+        rest.pop("p", None)
+    return d
+
+
+def _np_agentreport(d):
+    for b in d.get("branches") or []:
+        b.pop("margin", None)
+        for r in b.get("reps") or []:
+            r.pop("margin", None)
+    return d
+
+
+_NP_STRIP = {
+    "/api/meta": None,
+    "/api/range": _np_range,
+    "/api/dim": _np_dimtree,
+    "/api/tree": _np_dimtree,
+    "/api/segdrill": _np_dimtree,
+    "/api/agentreport": _np_agentreport,
+    "/api/panel": None,
+    "/api/pareto": None,
+    "/api/baskets": None,
+    "/api/branchsrc": None,
+    "/api/cancels": None,
+    "/api/dow": None,
+    "/api/collect": None,
+    "/api/cash": None,
+    "/api/pending": None,
+    "/api/refresh": None,
+}
+_NP_BLOCK = {"/api/moneydown", "/api/flags", "/api/flag", "/api/ask"}
+
+# key names that can only mean profit — a second net under the per-endpoint strippers.
+# "p" is deliberately absent: in the agent report it is a mix percentage, not profit.
+_NP_KEYS = ("profit", "qprofit", "gross_profit", "gp", "total_p", "profit_pct",
+            "margin", "margin_pct", "pm", "net_p", "net_p_m")
+
+
+def _np_scrub(x):
+    if isinstance(x, dict):
+        for k in _NP_KEYS:
+            x.pop(k, None)
+        for v in x.values():
+            _np_scrub(v)
+    elif isinstance(x, list):
+        for v in x:
+            _np_scrub(v)
+    return x
+
+
+@app.middleware("http")
+async def _np_gate(request: Request, call_next):
+    path = request.url.path
+    if not (path.startswith("/api/") and _is_noprofit(request)):
+        return await call_next(request)        # everybody else: nothing changes
+    if path in _NP_BLOCK or path not in _NP_STRIP:
+        return JSONResponse({"dev": True})
+    resp = await call_next(request)
+    # Deny by default on the way out too: EVERY json answer is scrubbed, whatever its
+    # status code. Gating on 200 used to hand any non-200 body back untouched, so a future
+    # 206/207/500 that carries data would have shipped profit straight to the no-profit user.
+    ctype = (resp.headers.get("content-type") or "").lower()
+    if (not hasattr(resp, "body_iterator") or "json" not in ctype
+            or resp.status_code in (204, 304)):
+        return resp           # redirect / html / empty — never a data payload of ours
+    body = b"".join([chunk async for chunk in resp.body_iterator])
+    try:
+        payload = json.loads(body.decode("utf-8"))
+    except Exception:
+        return JSONResponse({"dev": True}, status_code=resp.status_code)
+    fn = _NP_STRIP[path]
+    if fn is not None and isinstance(payload, dict):
+        payload = fn(payload)
+    return JSONResponse(_np_scrub(payload), status_code=resp.status_code)
 
 
 def _login_html(err: str = "") -> str:
@@ -500,6 +654,15 @@ def _configured() -> bool:
     return bool(DASH_PASS and SB_URL and SB_KEY and PRI_USER and PRI_PASS and PRI_BASE)
 
 
+# A password collision or a missing DASH_PASS_IDO used to be completely silent.
+# Not added to _configured(): that gates the background refresher, and a missing
+# personal password must never stop the data from syncing.
+for _a, _b in _pass_collisions():
+    print("WARNING: הסיסמה של %s זהה לזו של %s — אחד מהם מקבל את הזהות של השני" % (_a, _b),
+          flush=True)
+if not DASH_PASS_IDO:
+    print("WARNING: DASH_PASS_IDO לא מוגדר — עידו לא יכול להתחבר והתפקיד ללא רווח מושבת", flush=True)
+
 # DISABLE_REFRESH=1 stops the background writer (local test runs must not
 # compete with production's refresher on the same Supabase windows)
 if _configured() and os.environ.get("DISABLE_REFRESH") != "1":
@@ -568,10 +731,9 @@ async def login_post(request: Request):
         _note_fail(ip)
         _log_login(request, False, _who(p))
         return HTMLResponse(_login_html("סיסמה שגויה"), status_code=401)
-    _log_login(request, True, _who(p))
+    who, tok = _identity(p)          # one decision: the log and the cookie cannot disagree
+    _log_login(request, True, who)
     resp = RedirectResponse("/", status_code=303)
-    tok = (_admin_token() if _match(p, DASH_PASS_ADMIN)
-           else _ask2_token() if _match(p, DASH_PASS_ASK2) else _session_token())
     resp.set_cookie(COOKIE_NAME, tok, max_age=60 * 60 * 24 * 30,
                     httponly=True, secure=_is_https(request), samesite="lax")
     return resp
@@ -641,6 +803,14 @@ def logins_view(request: Request):
                    + _esc(r.get("who") or "?") + '</td><td>' + badge
                    + '</td><td class="ip">' + _esc(r.get("ip")) + '</td></tr>')
     body = "".join(trs) or '<tr><td colspan="4" class="empty">אין רישומים עדיין</td></tr>'
+    # owner-only warnings — a shared password silently hands one person another's view
+    warn = []
+    for a, b in _pass_collisions():
+        warn.append("הסיסמה של " + _esc(a) + " זהה לזו של " + _esc(b)
+                    + " — אחד מהם מקבל את הזהות של השני. צריך לשנות אחת מהן.")
+    if not DASH_PASS_IDO:
+        warn.append("הסיסמה של עידו לא מוגדרת בשרת — הוא לא יכול להתחבר.")
+    warnhtml = ("".join('<div class="warn">' + w + "</div>" for w in warn)) if warn else ""
     html = ("""<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>יומן כניסות — Divani BI</title>
@@ -663,11 +833,12 @@ td.ip{font-variant-numeric:tabular-nums;color:var(--ink2);direction:ltr;text-ali
 .ok{background:var(--okbg);color:var(--ok);font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:6px}
 .bad{background:var(--badbg);color:var(--bad);font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:6px}
 .empty{text-align:center;color:var(--ink2);padding:24px}
+.warn{background:var(--badbg);color:var(--bad);border:1px solid var(--bad);border-radius:12px;padding:10px 12px;font-size:.82rem;font-weight:700;margin-bottom:10px}
 </style></head><body><div class="wrap">
 <div class="top"><h1>יומן כניסות</h1><a class="back" href="/">חזרה ללוח</a></div>
 <p class="sub">מאה חמישים הכניסות האחרונות. עמודת "מי" מזהה את בעל הסיסמה.</p>
-<table><thead><tr><th>מתי</th><th>מי</th><th>תוצאה</th><th>כתובת</th></tr></thead><tbody>{ROWS}</tbody></table>
-</div></body></html>""").replace("{ROWS}", body)
+{WARN}<table><thead><tr><th>מתי</th><th>מי</th><th>תוצאה</th><th>כתובת</th></tr></thead><tbody>{ROWS}</tbody></table>
+</div></body></html>""").replace("{ROWS}", body).replace("{WARN}", warnhtml)
     return HTMLResponse(html)
 
 
@@ -707,7 +878,8 @@ def api_meta(request: Request):
                          "refresh_minutes": REFRESH_MINUTES,
                          "line_span_days": MAX_LINE_SPAN_DAYS,
                          "admin": _can_ask(request),
-                         "owner": _is_admin(request)})
+                         "owner": _is_admin(request),
+                         "noprofit": _is_noprofit(request)})
 
 
 @app.get("/api/range")
