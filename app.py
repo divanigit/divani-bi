@@ -12,7 +12,9 @@ Mobile-first agents-performance dashboard over Priority ERP data.
                 from Priority OData into Supabase.
 - Background thread: every REFRESH_MINUTES pulls today+yesterday;
   nightly (~03:10 Israel) re-pulls the last 120 days to catch
-  retroactive edits/cancellations.
+  retroactive edits/cancellations, plus one older 90-day slice per night
+  (deep_rotate) so a cancellation entered long after the order date is
+  not lost to אחוז ביטולים, which buckets by order date.
 
 Env (set in Render, never committed):
     DASH_PASS, SUPABASE_URL, SUPABASE_SECRET_KEY,
@@ -233,9 +235,13 @@ def priority_pull(d_from: dt.date, d_to: dt.date):
     return n_orders, rows
 
 
-def sync_window(kind: str, d_from: dt.date, d_to: dt.date):
+def sync_window(kind: str, d_from: dt.date, d_to: dt.date, skip_if_empty: bool = False):
     t0 = time.time()
     n_orders, rows = priority_pull(d_from, d_to)
+    # skip_if_empty guards the OLD windows: bi_replace_window deletes the window first,
+    # so an empty pull (a Priority hiccup) would blank real history.
+    if skip_if_empty and not rows:
+        return
     sb_rpc("bi_replace_window", {"p_from": d_from.isoformat(), "p_to": d_to.isoformat(),
                                  "p_rows": rows})
     took = int((time.time() - t0) * 1000)
@@ -255,6 +261,33 @@ def sync_window(kind: str, d_from: dt.date, d_to: dt.date):
         pass
     _state["last_sync"] = dt.datetime.now(IL).strftime("%d.%m.%Y %H:%M")
     _state["minmax"] = None  # bust cache
+
+
+# ---------- deep rotation: older windows, one slice a night ----------
+# The nightly window is the last 120 days. An order cancelled MORE than four months
+# after it was written (Priority allows it) would otherwise never be re-read, and
+# אחוז ביטולים buckets cancellations by ORDER date — so an old month's rate would be
+# understated forever. One older slice per night keeps the whole rotation fresh
+# without pulling years of orders in a single request.
+DEEP_DAYS = 730        # how far back the rotation reaches
+DEEP_CHUNK = 90        # days re-pulled per night
+_deep_i = 0
+
+
+def deep_rotate(today: dt.date):
+    global _deep_i
+    span = DEEP_DAYS - 120
+    n = max(1, -(-span // DEEP_CHUNK))     # ceil
+    i = _deep_i % n
+    _deep_i = i + 1
+    hi = today - dt.timedelta(days=121 + i * DEEP_CHUNK)
+    lo = hi - dt.timedelta(days=DEEP_CHUNK - 1)
+    floor = today - dt.timedelta(days=DEEP_DAYS)
+    if lo < floor:
+        lo = floor
+    if hi < lo:
+        return
+    sync_window("deep", lo, hi, skip_if_empty=True)
 
 
 # ---------- receipts (קבלות) → cash indicator ----------
@@ -453,6 +486,10 @@ def _refresher():
                     sb_rpc("bi_refresh_firsts", {})  # first-purchase table
                 except Exception as e:
                     print("firsts nightly-refresh failed:", repr(e)[:300], flush=True)
+                try:
+                    deep_rotate(today)   # one older window a night — late cancellations
+                except Exception as e:
+                    print("deep-rotate sync failed:", repr(e)[:300], flush=True)
                 last_nightly = today
         except Exception:
             pass
@@ -878,6 +915,35 @@ def api_moneydown(request: Request, d_from: str = "", d_to: str = "",
     agg = sb_rpc("bi_money_down", {"p_from": f.isoformat(), "p_to": t.isoformat(),
                                    "p_des": des or None, "p_scope": scope})
     return JSONResponse({"mode": "moneydown", "agg": agg or {}})
+
+
+@app.get("/api/cancels")
+def api_cancels(request: Request, d_from: str = "", d_to: str = ""):
+    """אחוז ביטולים — הזמנות שבוטלו מול הזמנות פעילות, לפי סניף ולפי נציג.
+    כל חוקי הברזל בתוקף חוץ מסינון הסטטוס — הוא עצמו הנמדד."""
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    f, t = _parse_date(d_from), _parse_date(d_to)
+    if not f or not t:
+        return JSONResponse({"error": "bad dates"}, status_code=400)
+    if f > t:
+        f, t = t, f
+    agg = sb_rpc("bi_cancel_rate", {"p_from": f.isoformat(), "p_to": t.isoformat()})
+    return JSONResponse({"mode": "cancels", "agg": agg or {}})
+
+
+@app.get("/api/dow")
+def api_dow(request: Request, d_from: str = "", d_to: str = ""):
+    """מחזור ומספר הזמנות לפי יום בשבוע (0=ראשון)."""
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    f, t = _parse_date(d_from), _parse_date(d_to)
+    if not f or not t:
+        return JSONResponse({"error": "bad dates"}, status_code=400)
+    if f > t:
+        f, t = t, f
+    agg = sb_rpc("bi_dow", {"p_from": f.isoformat(), "p_to": t.isoformat()})
+    return JSONResponse({"mode": "dow", "agg": agg or {}})
 
 
 @app.get("/api/agentreport")
