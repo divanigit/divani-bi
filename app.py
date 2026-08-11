@@ -230,6 +230,26 @@ def _np_agentreport(d):
     return d
 
 
+def _np_compensation(d):
+    # /api/moneydown is blocked for the no-profit user, and the compensation payload
+    # carries the same numbers in miniature: the period money-down total, the part of it
+    # that is not linked to a fault report, and the negative money broken down per
+    # catalog description. Without this the block on the other endpoint means nothing.
+    agg = d.get("agg")
+    if not isinstance(agg, dict):
+        return d
+    meta = agg.get("meta")
+    if isinstance(meta, dict):
+        for k in ("money_down_total", "money_down_orders",
+                  "money_down_sales", "money_down_sales_orders"):
+            meta.pop(k, None)
+    agg.pop("unlinked", None)
+    amb = agg.get("ambiguity")
+    if isinstance(amb, dict):
+        amb.pop("rows", None)      # per-description negative money = the money-down drill
+    return d
+
+
 _NP_STRIP = {
     "/api/meta": None,
     "/api/range": _np_range,
@@ -244,6 +264,7 @@ _NP_STRIP = {
     "/api/cancels": None,
     "/api/cancelorders": None,
     "/api/cancelcase": None,
+    "/api/compensation": _np_compensation,
     "/api/dow": None,
     "/api/collect": None,
     "/api/cash": None,
@@ -1180,6 +1201,23 @@ def api_cancelcase(request: Request, ord: str = ""):
         return JSONResponse({"error": "bad request"}, status_code=400)
     agg = sb_rpc("bi_cancel_case", {"p_ord": o})
     return JSONResponse({"mode": "cancelcase", "agg": agg or {}})
+
+
+@app.get("/api/compensation")
+def api_compensation(request: Request, d_from: str = "", d_to: str = "",
+                     reason: str = ""):
+    """פיצויים ללקוחות — הכסף השלילי שרשום על מסמכים שיש עליהם דיווח תקלה,
+    מול שווי אותם מסמכים. reason פותח את ההזמנות של סיבת תקלה אחת."""
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    f, t = _parse_date(d_from), _parse_date(d_to)
+    if not f or not t:
+        return JSONResponse({"error": "bad dates"}, status_code=400)
+    if f > t:
+        f, t = t, f
+    agg = sb_rpc("bi_compensation", {"p_from": f.isoformat(), "p_to": t.isoformat(),
+                                     "p_reason": reason or None})
+    return JSONResponse({"mode": "compensation", "agg": agg or {}})
 
 
 @app.get("/api/dow")

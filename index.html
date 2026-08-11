@@ -70,6 +70,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .navext{color:var(--bd)}
   body.navlock{overflow:hidden}
   .notice{font-size:12px;color:var(--wfg);margin:6px 2px 0;display:none}
+  .notice div+div{margin-top:3px}
   .selbar{display:flex;align-items:center;gap:8px;margin:0 0 12px;flex-wrap:wrap}
   .selbtn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:8px 14px;border:1px solid var(--line2);border-radius:12px;background:var(--surface);color:var(--tx);font-family:inherit;font-size:14px;font-weight:500;cursor:pointer}
   .selbtn svg{width:16px;height:16px;color:var(--bd);flex:none}
@@ -268,7 +269,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .mdcard.mdno{border-color:var(--dfg)}
   .mdneg{color:var(--dfg)}
   .mdback{display:flex;align-items:center;gap:8px;margin:0 0 10px;flex-wrap:wrap}
-  .mdback button{font-family:inherit;font-size:12px;border:1px solid var(--line2);background:var(--bg);color:var(--tx2);padding:6px 11px;min-height:36px;border-radius:999px;cursor:pointer}
+  .mdback button{font-family:inherit;font-size:12px;border:1px solid var(--line2);background:var(--bg);color:var(--tx2);padding:6px 14px;min-height:44px;border-radius:999px;cursor:pointer}
   .mdback b{font-size:14px}
   .mdwhy{color:var(--tx3);font-style:normal;font-size:11.5px}
   /* אחוז ביטולים */
@@ -284,6 +285,21 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .cxscope button{font-family:inherit;font-size:12px;border:1px solid var(--line2);background:var(--bg);color:var(--tx2);padding:6px 11px;min-height:36px;border-radius:999px;cursor:pointer}
   .cxscope button.on{border-color:var(--bd);color:var(--tx);font-weight:600}
   .cxh{font-size:11px;font-weight:700;color:var(--tx3);margin:14px 2px 6px}
+  /* פיצויים ללקוחות */
+  .cpsum{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:0 0 12px}
+  @media(min-width:640px){.cpsum{grid-template-columns:repeat(3,1fr)}}
+  @media(min-width:900px){.cpsum{grid-template-columns:repeat(5,1fr)}}
+  .cpcard{border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:9px 11px;display:flex;flex-direction:column;gap:2px}
+  .cpcard span{font-size:10.5px;color:var(--tx3);font-weight:600}
+  .cpcard b{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
+  .cpneg{color:var(--dfg)}
+  .cpscope{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 10px}
+  .cpscope button{font-family:inherit;font-size:12px;border:1px solid var(--line2);background:var(--bg);color:var(--tx2);padding:6px 14px;min-height:44px;border-radius:999px;cursor:pointer}
+  .cpscope button.on{border-color:var(--bd);color:var(--tx);font-weight:600}
+  /* השורה היא אזור ההקשה היחיד לצלילה — ולכן היא חייבת להיות בגובה אצבע */
+  tr.cprow td{padding-top:14px;padding-bottom:14px}
+  .cprest td{color:var(--tx3)}
+  .cptot td{font-weight:700}
   /* ימים חזקים בשבוע */
   .dwbars{margin:0 0 14px}
   .dwcap{font-size:10.5px;font-weight:700;color:var(--tx3);margin:0 0 4px}
@@ -430,6 +446,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         <button type="button" data-v="dim" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12V3.2A8.8 8.8 0 1 0 20.8 12H12z"/><path d="M14.5 3.9A8.8 8.8 0 0 1 20.1 9.5H14.5z"/></svg><span class="rlbl">פילוח</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="mdown" id="mdownbtn" aria-pressed="false" style="display:none"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v16.5"/><path d="M18.5 14L12 20.5 5.5 14"/></svg><span class="rlbl">מוריד כסף</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="cancels" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><path d="M6 6l12 12"/></svg><span class="rlbl">אחוז ביטולים</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
+        <button type="button" data-v="comp" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.6" y="5.6" width="18.8" height="12.8" rx="2.4"/><path d="M15.4 12H8.4"/><path d="M10.8 9.6L8.4 12l2.4 2.4"/></svg><span class="rlbl">פיצויים</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="dow" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.2" y="5" width="17.6" height="15.3" rx="2.4"/><path d="M3.2 10h17.6"/><path d="M8 3.2v3.4"/><path d="M16 3.2v3.4"/><path d="M7.5 14h3"/><path d="M13.5 14h3"/></svg><span class="rlbl">ימים חזקים בשבוע</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="ins" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 18.5h5"/><path d="M10.5 21.5h3"/><path d="M12 2.8a6 6 0 0 0-3.9 10.5c.75.7 1.1 1.5 1.15 2.5h5.5c.05-1 .4-1.8 1.15-2.5A6 6 0 0 0 12 2.8z"/></svg><span class="rlbl">תובנות</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <div class="navdiv"></div>
@@ -644,6 +661,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(view==='cannib')return 'CN';
     if(view==='mdown')return state.from+'|'+state.to+'|MD|'+mdScope+'|'+(mdDes||'');
     if(view==='cancels')return state.from+'|'+state.to+'|CX'+(cxOrd?('|O|'+cxOrd):(cxSel?('|'+cxSel.t+'|'+cxSel.k):''));
+    if(view==='comp')return state.from+'|'+state.to+'|CP'+(cpSel?('|'+cpSel):'');
     if(view==='dow')return state.from+'|'+state.to+'|DW';
     if(view==='dim'){
       if(dimKind==='fam')return state.from+'|'+state.to+'|T|'+(dimPath.grp||'')+'|'+(dimPath.fam||'')+'|'+(dimPath.model||'');
@@ -689,6 +707,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
            :view==='cancels'?(cxOrd?('/api/cancelcase?ord='+encodeURIComponent(cxOrd))
               :cxSel?('/api/cancelorders?d_from='+state.from+'&d_to='+state.to+'&by='+cxSel.t+'&key='+encodeURIComponent(cxSel.k))
               :('/api/cancels?d_from='+state.from+'&d_to='+state.to))
+           :view==='comp'?('/api/compensation?d_from='+state.from+'&d_to='+state.to+(cpSel?'&reason='+encodeURIComponent(cpSel):''))
            :view==='dow'?('/api/dow?d_from='+state.from+'&d_to='+state.to)
            :view==='dim'?(function(){
               if(dimKind==='fam')return '/api/tree?d_from='+state.from+'&d_to='+state.to+(dimPath.grp?'&grp='+encodeURIComponent(dimPath.grp):'')+(dimPath.fam?'&fam='+encodeURIComponent(dimPath.fam):'')+(dimPath.model?'&model='+encodeURIComponent(dimPath.model):'');
@@ -1815,6 +1834,167 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(bc){cxSel={t:bc.getAttribute('data-cxt'),k:bc.getAttribute('data-cxk'),l:bc.getAttribute('data-cxl')};cxOrd=null;apply();return;}
   });
 
+  /* ---- פיצויים ללקוחות — כסף שיצא על מסמכים שיש עליהם דיווח תקלה ---- */
+  // הצלילה להזמנות קיימת ב-RPC לפי סיבת התקלה בלבד (p_reason). לכן שורות "לפי סיבה"
+  // נפתחות, ושאר הקיבוצים מציגים סיכום בלבד — ולא מוצג רמז שאפשר להקיש עליהם.
+  var CPBY=[{k:'reasons',l:'לפי סיבה'},{k:'products',l:'לפי מוצר'},{k:'agents',l:'לפי נציג'},
+            {k:'branches',l:'לפי סניף'},{k:'doctypes',l:'לפי סוג מסמך'},{k:'lines',l:'לפי סוג שורה'}];
+  var cpBy='reasons', cpSel=null;
+  function cpHead(){return cpBy==='products'?'מוצר':cpBy==='agents'?'נציג':cpBy==='branches'?'סניף'
+                    :cpBy==='doctypes'?'סוג מסמך':cpBy==='lines'?'סוג שורה':'סיבה';}
+  // מה שנשאר מחוץ לטבלה. בלי השורה הזו הטור לא מסתכם לכרטיס שמעליו ודורון מוצא פער בלי הסבר.
+  function cpRest(){return cpBy==='reasons'?'הזמנות בלי סיבה רשומה'
+                    :cpBy==='products'?'הזמנות בלי מוצר רשום'
+                    :cpBy==='agents'?'מסמכים שלא ברשימת נציגי המכירות'
+                    :'לא מוצג בטבלה';}
+  // ה-RPC מחזיר '(ללא סניף)' בקיבוץ הסניפים ומחרוזת ריקה בשורות ההזמנה — אותו דלי בדיוק.
+  // בלי המיפוי הזה אותו דלי היה מופיע בשני שמות בשני מסכים.
+  function cpName(k){if(cpBy!=='branches')return String(k==null?'':k);return brName(k==='(ללא סניף)'?'':k);}
+  // "כמה כסף ירד" = סכום השורות השליליות. "כמה יצא נטו" = רק מסמכים שהנטו שלהם שלילי —
+  // על מסמך החלפה השורה החיובית היא המוצר שנשלח במקום, והמסמך מתאפס.
+  function cpCards(comp,val,share,orders,netOut){
+    return '<div class="cpsum">'
+      +'<div class="cpcard"><span>כמה כסף ירד</span><b class="cpneg">'+ils(comp||0)+'</b></div>'
+      +'<div class="cpcard"><span>כמה יצא נטו</span><b class="cpneg">'+(netOut==null?'—':ils(netOut))+'</b></div>'
+      +'<div class="cpcard"><span>כמה ההזמנות האלה שוות</span><b>'+ils(val||0)+'</b></div>'
+      +'<div class="cpcard"><span>אחוז מהשווי</span><b>'+((val>0&&share!=null)?pct1(share):'—')+'</b></div>'
+      +'<div class="cpcard"><span>כמה הזמנות</span><b>'+nf(orders||0)+'</b></div>'
+      +'</div>';
+  }
+  function renderCompMeta(){
+    document.getElementById('kpis').innerHTML='';
+    document.getElementById('sellbl').textContent=rangeLbl(state.from,state.to);
+    document.getElementById('builtlbl').textContent=META.last_sync?('עודכן '+META.last_sync):'';
+    // התצוגה הזו לא עוברת דרך renderMeta, ולכן היא מחזיקה את #notice בעצמה.
+    // הצלילה היא בדיוק המסך שמדפיס עמודת אחוז לכל שורה, ולכן היא לא מסתירה את המגבלות.
+    var nt=document.getElementById('notice'),msgs=[];
+    if(state.to<META.min||state.from>META.max){nt.style.display='none';return;}
+    var agg=(cache.mode==='compensation'&&cache.agg)?cache.agg:{};
+    var mt=agg.meta||{}, amb=agg.ambiguity||{}, T=agg.totals||{};
+    var fl=mt.reason_floor||'2025-12-01';
+    if(state.from<fl)msgs.push('סיבת התקלה ושם המוצר נרשמים מ־'+heDate(fl)+'. לפני התאריך הזה אין נתון.');
+    var m2='שווי ההזמנה הוא סכום השורות החיוביות על אותו מסמך.';
+    if(mt.comp_svc_pct!=null)m2+=' '+pct1(mt.comp_svc_pct)+' מהכסף יושב על מסמכי שירות, ושם השורה החיובית היא המוצר שנשלח במקום.';
+    msgs.push(m2);
+    if(!cpSel){
+      if(amb.return_like&&T.comp)msgs.push('מתוך '+ils(T.comp)+' רשומים כהחזרת מוצר '+ils(amb.return_like)
+        +' ('+pct1(100*amb.return_like/T.comp)+'). הפירוט המלא במתג "לפי סוג שורה".');
+      if(T.net_out!=null)msgs.push('נטו יצאו '+ils(T.net_out)+' ב־'+nf(T.net_out_docs||0)+' מסמכים. ב־'+nf(T.net_zero_docs||0)+' מסמכים הנטו אפס.');
+      if(mt.money_down_sales!=null)msgs.push('מסך "מוריד כסף" באותה תקופה: '+ils(mt.money_down_sales)+' נציגי מכירות · '+ils(mt.money_down_total||0)+' הכול.');
+      if(mt.over100_orders)msgs.push('ב־'+nf(mt.over100_orders)+' הזמנות הכסף שירד גדול משווי המסמך.');
+    }
+    if(msgs.length){
+      nt.style.display='block';
+      nt.innerHTML=msgs.map(function(s){return '<div>'+esc(s)+'</div>';}).join('');
+    }else{nt.style.display='none';}
+  }
+  // הטור חייב להסתכם לכרטיס שמעליו. מה שלא נכנס לאף שורה מקבל שורה משלו במקום להיעלם.
+  function cpFoot(T,sc,so,sv,sn){
+    var rc=(T.comp||0)-sc, ro=(T.orders||0)-so, rv=(T.val||0)-sv, rn=(T.net_out||0)-sn, f='<tfoot>';
+    if(rc>0.5||ro>0.5){
+      f+='<tr class="cprest"><td class="nm">'+esc(cpRest())+'</td><td>'+nf(ro>0?ro:0)+'</td>'
+        +'<td class="cpneg">'+ils(rc>0?rc:0)+'</td><td class="cpneg">'+ils(rn>0?rn:0)+'</td>'
+        +'<td>'+ils(rv>0?rv:0)+'</td><td>—</td></tr>';
+    }else if(rc<-0.5||ro<-0.5){
+      f+='<tr class="cprest"><td class="nm" colspan="6">הטבלה גדולה מהכרטיס ב־'+ils(-rc)+' — הזמנה נספרת ביותר משורה אחת.</td></tr>';
+    }
+    f+='<tr class="cptot"><td class="nm">סך הכול</td><td>'+nf(T.orders||0)+'</td>'
+      +'<td class="cpneg">'+ils(T.comp||0)+'</td><td class="cpneg">'+ils(T.net_out||0)+'</td>'
+      +'<td>'+ils(T.val||0)+'</td><td>'+((T.val>0&&T.share!=null)?pct1(T.share):'—')+'</td></tr></tfoot>';
+    return f;
+  }
+  // סוגי השורות השליליות — כאן נראה כמה מהכסף בכלל אינו פיצוי (החזרת מוצר, קיזוז, שובר)
+  function cpLinesTable(agg){
+    var b=((agg.ambiguity||{}).buckets)||[];
+    if(!b.length)return '<div class="empty">אין שורות שליליות בתקופה שנבחרה.</div>';
+    var t='<div class="tw"><table class="tnarrow"><thead><tr>'
+      +'<th class="nm" data-stext>סוג שורה</th><th>שורות</th><th>כסף שירד</th>'
+      +'</tr></thead><tbody>', s=0;
+    for(var i=0;i<b.length;i++){s+=(b[i].m||0);
+      t+='<tr><td class="nm">'+esc(b[i].k)+'</td><td>'+nf(b[i].n||0)+'</td>'
+        +'<td class="cpneg">'+ils(b[i].m||0)+'</td></tr>';}
+    t+='</tbody><tfoot><tr class="cptot"><td class="nm">סך הכול</td><td></td>'
+      +'<td class="cpneg">'+ils(s)+'</td></tr></tfoot></table></div>';
+    return t;
+  }
+  function renderComp(agg){
+    if(cache.dev||(agg&&agg.dev)){stage.innerHTML=devBoxHTML();return;}
+    agg=agg||{};
+    if(cpSel){renderCompOrders(agg);return;}
+    var T=agg.totals||{}, mt=agg.meta||{}, fl=mt.reason_floor||'2025-12-01';
+    var sum=cpCards(T.comp,T.val,T.share,T.orders,T.net_out);
+    var tog='<div class="cpscope">';
+    for(var i=0;i<CPBY.length;i++)tog+='<button type="button" class="'+(cpBy===CPBY[i].k?'on':'')+'" data-cps="'+CPBY[i].k+'">'+CPBY[i].l+'</button>';
+    tog+='</div>';
+    if(cpBy==='lines'){
+      stage.innerHTML=sum+tog+cpLinesTable(agg)+'<div class="hintline" data-swipe=""></div>';
+      swipeHints();return;
+    }
+    var list=agg[cpBy]||[];
+    if(!list.length){
+      // הכרטיסים למעלה כבר הדפיסו כסף והזמנות — "אין נתונים" לבדו סותר אותם
+      var m='אין נתונים בתקופה שנבחרה.';
+      if((T.orders||0)>0){
+        m=(cpBy==='reasons')?('אין סיבת תקלה רשומה על אף הזמנה בתקופה. סיבות נרשמות מ־'+heDate(fl)+'.')
+         :(cpBy==='products')?('אין שם מוצר רשום על אף דיווח בתקופה. שם המוצר נרשם מ־'+heDate(fl)+'.')
+         :(cpBy==='agents')?('אין נציגי מכירות ברשימה. כל '+ils(T.comp||0)+' יושבים על מסמכים שלא נכללים ברשימת הנציגים.')
+         :'אין פילוח להצגה בתקופה.';
+      }
+      stage.innerHTML=sum+tog+'<div class="empty">'+esc(m)+'</div>';return;
+    }
+    var opn=(cpBy==='reasons');
+    var t='<div class="tw"><table class="tnarrow"><thead><tr>'
+      +'<th class="nm" data-stext>'+cpHead()+'</th><th>הזמנות</th><th>כסף שירד</th><th>יצא נטו</th><th>שווי ההזמנות</th><th>אחוז מהשווי</th>'
+      +'</tr></thead><tbody>';
+    var sc=0,so=0,sv=0,sn=0;
+    for(var j=0;j<list.length;j++){var r=list[j];
+      sc+=(r.comp||0);so+=(r.orders||0);sv+=(r.val||0);sn+=(r.net_out||0);
+      t+='<tr'+(opn?(' class="cprow row" data-cpk="'+esc(r.k)+'"'):'')+'>'
+        +'<td class="nm">'+esc(cpName(r.k))+'</td>'
+        +'<td>'+nf(r.orders||0)+'</td>'
+        +'<td class="cpneg">'+ils(r.comp||0)+'</td>'
+        +'<td class="cpneg">'+ils(r.net_out||0)+'</td>'
+        +'<td>'+ils(r.val||0)+'</td>'
+        +'<td>'+((r.val>0&&r.share!=null)?pct1(r.share):'—')+'</td></tr>';}
+    t+='</tbody>'+cpFoot(T,sc,so,sv,sn)+'</table></div>';
+    var hn=opn?'הקש על שורה לפירוט ההזמנות':'';
+    stage.innerHTML=sum+tog+t+'<div class="hintline" data-swipe="'+hn+'">'+hn+'</div>';
+    swipeHints();
+  }
+  /* ---- ההזמנות של סיבת תקלה אחת ---- */
+  function renderCompOrders(agg){
+    var rows=agg.orders||[], ls=agg.reasons||[], R=null;
+    for(var q=0;q<ls.length;q++){if(ls[q].k===cpSel){R=ls[q];break;}}
+    var back='<div class="mdback"><button type="button" id="cpbk">→ חזרה לרשימה</button><b>'+esc(cpName(cpSel))+'</b></div>';
+    var sum=R?cpCards(R.comp,R.val,R.share,R.orders,R.net_out):'';
+    if(!rows.length){stage.innerHTML=back+sum+'<div class="empty">אין הזמנות בתקופה שנבחרה.</div>';return;}
+    var t='<div class="tw"><table class="tnarrow"><thead><tr>'
+      +'<th class="nm" data-stext>הזמנה</th><th>תאריך</th><th data-stext>סניף</th><th data-stext>סוג מסמך</th><th data-stext>נציג</th><th data-stext>לקוח</th><th>כסף שירד</th><th>יצא נטו</th><th>שווי ההזמנה</th><th>אחוז מהשווי</th>'
+      +'</tr></thead><tbody>';
+    for(var i=0;i<rows.length;i++){var r=rows[i];
+      t+='<tr><td class="nm">'+esc(r.ord||'')+'</td>'
+        +'<td>'+(r.d?heDate(r.d):'—')+'</td>'
+        +'<td>'+esc(brName(r.b))+'</td>'
+        +'<td>'+esc(r.otype||'—')+'</td>'
+        +'<td>'+esc(r.a||'—')+'</td>'
+        +'<td>'+esc(r.cust||'—')+'</td>'
+        +'<td class="cpneg">'+ils(r.comp||0)+'</td>'
+        +'<td class="cpneg">'+ils(r.net_out||0)+'</td>'
+        +'<td>'+ils(r.val||0)+'</td>'
+        +'<td>'+(r.share==null?'—':pct1(r.share))+'</td></tr>';}
+    t+='</tbody></table></div>';
+    stage.innerHTML=back+sum+t+'<div class="hintline" data-swipe=""></div>';
+    swipeHints();
+  }
+  stage.addEventListener('click',function(e){
+    if(view!=='comp')return;
+    if(e.target.closest('#cpbk')){cpSel=null;apply();return;}
+    var sc=e.target.closest('[data-cps]');
+    if(sc){cpBy=sc.getAttribute('data-cps');cpSel=null;renderCompMeta();renderComp(cache.agg);return;}
+    var rw=e.target.closest('[data-cpk]');
+    if(rw){cpSel=rw.getAttribute('data-cpk');apply();}
+  });
+
   /* ---- ימים חזקים בשבוע ---- */
   var DOWN=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
   var DWH=[{k:'d',l:'יום'},{k:'n',l:'כמה ימים'},{k:'s',l:'מחזור'},{k:'o',l:'הזמנות'}];
@@ -1890,6 +2070,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       document.getElementById('sellbl').textContent=rangeLbl(state.from,state.to);return;}
     if(view==='mdown'){renderMDownMeta();renderMDown(cache.agg);return;}
     if(view==='cancels'){renderCancelsMeta();renderCancels(cache.agg);return;}
+    if(view==='comp'){renderCompMeta();renderComp(cache.agg);return;}
     if(view==='dow'){renderDowMeta();renderDow(cache.agg);return;}
     if(view==='ins'){renderInsMeta();renderInsStage();return;}
     if(view==='branchsrc'){renderBranchSrcMeta();renderBranchSrc(cache.agg);return;}
@@ -1902,6 +2083,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   function setRange(f,t,preset){
     if(f>t){var x=f;f=t;t=x;}
     cxSel=null;cxOrd=null;   // תקופה חדשה = חוזרים לטבלה הראשית של הביטולים
+    cpSel=null;
     var noOverlap=t<META.min||f>META.max;
     if(noOverlap){
       state.from=f;state.to=t;state.preset=preset||null;state.clip=false;
@@ -1911,6 +2093,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       else if(view==='dim'){var R2={s:0,q:0,p:0,orders:0,c:0,qcov:null,rest:null,k:[]};renderDimKpis(R2);renderMeta(R2);}
       else if(view==='ins'){insKpis([]);renderInsMeta();}
       else if(view==='cancels'){renderCancelsMeta();}
+      else if(view==='comp'){renderCompMeta();}
       else if(view==='dow'){renderDowMeta();}
       else{var R={c:0,s:0,p:0,pm:null,av:0,k:[],orders:0,pos:0};renderKpis(R);renderMeta(R);}
       document.getElementById('hint').style.display='none';
@@ -2029,8 +2212,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(view===v)return;
     if(v!=='mdown')mdDes=null;   // leaving the drill resets it, so coming back opens on the list
     if(v!=='cancels'){cxSel=null;cxOrd=null;}
+    if(v!=='comp')cpSel=null;
     view=v;
-    var H1={agents:'ביצועי סוכנים',branches:'מכירות לפי סניפים',cash:'תקבולים במזומן',service:'פעילות שירות',collect:'מקדמות והנחות',dim:'פילוח מכירות',branchsrc:'מקורות הגעה לסניף',baskets:'סל מכירות ממוצע ללקוח',cannib:'קניבליזציה — תמהיל ערוצים',mdown:'מוריד כסף',cancels:'אחוז ביטולים',dow:'ימים חזקים בשבוע',ins:'תובנות'};
+    var H1={agents:'ביצועי סוכנים',branches:'מכירות לפי סניפים',cash:'תקבולים במזומן',service:'פעילות שירות',collect:'מקדמות והנחות',dim:'פילוח מכירות',branchsrc:'מקורות הגעה לסניף',baskets:'סל מכירות ממוצע ללקוח',cannib:'קניבליזציה — תמהיל ערוצים',mdown:'מוריד כסף',cancels:'אחוז ביטולים',comp:'פיצויים ללקוחות',dow:'ימים חזקים בשבוע',ins:'תובנות'};
     document.getElementById('h1t').textContent=H1[v]||H1.agents;
     var bs=document.querySelectorAll('#seg button');
     for(var i=0;i<bs.length;i++){var on=bs[i].getAttribute('data-v')===v;bs[i].classList.toggle('on',on);bs[i].setAttribute('aria-pressed',on?'true':'false');}
