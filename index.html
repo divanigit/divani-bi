@@ -278,9 +278,12 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .cxcard span{font-size:10.5px;color:var(--tx3);font-weight:600}
   .cxcard b{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
   .cxneg{color:var(--dfg)}
+  /* התאריך והפריט שעליהם נרשמה התקלה — בלעדיהם הקוד נראה כאילו הוא חל על כל ההזמנה */
+  .cxsub{display:block;font-size:10.5px;color:var(--tx3);font-style:normal;margin-top:2px}
   .cxscope{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 10px}
   .cxscope button{font-family:inherit;font-size:12px;border:1px solid var(--line2);background:var(--bg);color:var(--tx2);padding:6px 11px;min-height:36px;border-radius:999px;cursor:pointer}
   .cxscope button.on{border-color:var(--bd);color:var(--tx);font-weight:600}
+  .cxh{font-size:11px;font-weight:700;color:var(--tx3);margin:14px 2px 6px}
   /* ימים חזקים בשבוע */
   .dwbars{margin:0 0 14px}
   .dwcap{font-size:10.5px;font-weight:700;color:var(--tx3);margin:0 0 4px}
@@ -640,7 +643,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(view==='baskets')return state.from+'|'+state.to+'|BK';
     if(view==='cannib')return 'CN';
     if(view==='mdown')return state.from+'|'+state.to+'|MD|'+mdScope+'|'+(mdDes||'');
-    if(view==='cancels')return state.from+'|'+state.to+'|CX';
+    if(view==='cancels')return state.from+'|'+state.to+'|CX'+(cxOrd?('|O|'+cxOrd):(cxSel?('|'+cxSel.t+'|'+cxSel.k):''));
     if(view==='dow')return state.from+'|'+state.to+'|DW';
     if(view==='dim'){
       if(dimKind==='fam')return state.from+'|'+state.to+'|T|'+(dimPath.grp||'')+'|'+(dimPath.fam||'')+'|'+(dimPath.model||'');
@@ -683,7 +686,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
            :view==='baskets'?('/api/baskets?d_from='+state.from+'&d_to='+state.to)
            :view==='cannib'?('/api/panel?name=contrib')
            :view==='mdown'?('/api/moneydown?d_from='+state.from+'&d_to='+state.to+'&scope='+mdScope+(mdDes?'&des='+encodeURIComponent(mdDes):''))
-           :view==='cancels'?('/api/cancels?d_from='+state.from+'&d_to='+state.to)
+           :view==='cancels'?(cxOrd?('/api/cancelcase?ord='+encodeURIComponent(cxOrd))
+              :cxSel?('/api/cancelorders?d_from='+state.from+'&d_to='+state.to+'&by='+cxSel.t+'&key='+encodeURIComponent(cxSel.k))
+              :('/api/cancels?d_from='+state.from+'&d_to='+state.to))
            :view==='dow'?('/api/dow?d_from='+state.from+'&d_to='+state.to)
            :view==='dim'?(function(){
               if(dimKind==='fam')return '/api/tree?d_from='+state.from+'&d_to='+state.to+(dimPath.grp?'&grp='+encodeURIComponent(dimPath.grp):'')+(dimPath.fam?'&fam='+encodeURIComponent(dimPath.fam):'')+(dimPath.model?'&model='+encodeURIComponent(dimPath.model):'');
@@ -1634,8 +1639,29 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   });
 
   /* ---- אחוז ביטולים — כמה מההזמנות שנכתבו בוטלו ---- */
-  var cxScope='branch';
+  // cxSel = הסניף או הנציג שנפתח · cxOrd = ההזמנה שנפתחה. שתי רמות צלילה, לא יותר.
+  var cxScope='branch', cxSel=null, cxOrd=null;
   function pct1(x){var v=Number(x);return (isFinite(v)?v:0).toFixed(1)+'%';}
+  // חיווי "גלול הצידה" — נכתב רק כשהטבלה באמת רחבה מהמסך. בלעדיו עמודה שלמה
+  // יושבת מחוץ למסך בטלפון ושום דבר לא מרמז שהיא קיימת; ועם טקסט קבוע הוא היה
+  // טוען טענה לא נכונה במסך רחב. מודדים אחרי שהתוכן כבר ב-DOM.
+  function swipeHints(){
+    var hs=stage.querySelectorAll('[data-swipe]');
+    for(var i=0;i<hs.length;i++){
+      var h=hs[i], w=null, s=h.previousElementSibling;
+      while(s&&!w){if(s.classList&&s.classList.contains('tw'))w=s;s=s.previousElementSibling;}
+      s=h.nextElementSibling;
+      while(s&&!w){if(s.classList&&s.classList.contains('tw'))w=s;s=s.nextElementSibling;}
+      var base=h.getAttribute('data-swipe')||'';
+      var need=!!w&&w.scrollWidth>w.clientWidth+2;
+      var txt=base+(need?((base?' · ':'')+'גלול הצידה לעוד עמודות'):'');
+      h.textContent=txt;
+      if(!base)h.style.display=txt?'':'none';
+    }
+  }
+  // הרצפה של יומן השירות: רשומות שלפניה מעולם לא נטענו לענן, ולכן "לא נרשמה"
+  // על הזמנה ישנה יותר הוא ניחוש ולא מידע.
+  function logNotLoaded(d,floor){return !!(floor&&d&&String(d)<String(floor));}
   function renderCancelsMeta(){
     document.getElementById('kpis').innerHTML='';
     document.getElementById('sellbl').textContent=rangeLbl(state.from,state.to);
@@ -1643,12 +1669,15 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     // this view never calls renderMeta, so it owns #notice itself — the caveat channel every other view uses
     var nt=document.getElementById('notice'),msgs=[];
     if(state.to<META.min||state.from>META.max){nt.style.display='none';return;}
+    if(cxOrd||cxSel){nt.style.display='none';return;}
     msgs.push('ביטולים נרשמים גם חודשים אחרי מועד ההזמנה, ולכן ככל שהתקופה קרובה יותר האחוז המוצג נמוך מהאחוז הסופי.');
     if(cxScope==='branch'&&state.from<'2024-03-01')msgs.push('שיוך הזמנות לסניפים קיים בפריוריטי רק מתחילת 2024 (במלואו מסוף פברואר) — הזמנות מוקדמות יותר מופיעות תחת "ללא שיוך סניף".');
     nt.style.display='block';nt.textContent=msgs.join(' ');
   }
   function renderCancels(agg){
     agg=agg||{};
+    if(cxOrd){renderCxCase(agg);return;}
+    if(cxSel){renderCxList(agg);return;}
     var live=agg.total_live||0, cx=agg.total_cx||0, tot=live+cx;
     if(!tot){stage.innerHTML='<div class="empty">אין הזמנות בתקופה שנבחרה.</div>';return;}
     var sum='<div class="cxsum">'
@@ -1670,7 +1699,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var list=byA?(agg.agents||[]):(agg.branches||[]);
     // שמונה עמודות. ב-375 פיקסל הטבלה נגללת הצידה ושום דבר לא רומז על כך. ה-#hint הגלובלי
     // יושב מעל הכרטיסים (כי בתצוגה הזו הכרטיסים נמצאים בתוך ה-stage), ולכן החיווי כאן, צמוד לטבלה.
-    var sh='<p class="hint" style="display:block;margin:0 0 8px">גלול הצידה לעוד עמודות</p>';
+    var sh='<p class="hint" style="display:block;margin:0 0 8px" data-swipe="הקש על שורה לפירוט ההזמנות">הקש על שורה לפירוט ההזמנות</p>';
     var t='<div class="tw"><table class="tnarrow"><thead><tr>'
       +'<th class="nm">'+(byA?'נציג':'סניף')+'</th>'+(byA?'<th data-stext>סניף</th>':'')
       +'<th>הזמנות שנכתבו</th><th>מתוכן בוטלו</th><th>כסף שבוטל</th><th>אחוז ביטולים</th><th>מכירות</th><th>לקוחות</th>'
@@ -1679,7 +1708,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       var nm=byA?(r.a||''):brName(r.b);
       // הסניף שבו נכתבו רוב הזמנות הנציג; '+1' = יש לו הזמנות בעוד סניף אחד, ולא מסתירים אותו
       var bcell=byA?(brName(r.b)+((r.bn||0)>0?(' +'+r.bn):'')):'';
-      t+='<tr><td class="nm">'+esc(nm)+'</td>'
+      // מפתח הצלילה. סניף ריק הוא דלי אמיתי ("ללא שיוך סניף") ולכן נשלח כמות שהוא;
+      // שורה בלי ביטולים לא נפתחת — אין בה מה להראות.
+      var ck=byA?(r.a||''):(r.b==null?'':String(r.b)), copen=(r.cx||0)>0;
+      t+='<tr'+(copen?(' class="cxrow row" data-cxt="'+(byA?'agent':'branch')+'" data-cxk="'+esc(ck)+'" data-cxl="'+esc(nm)+'"'):'')+'><td class="nm">'+esc(nm)+'</td>'
         +(byA?('<td>'+esc(bcell)+'</td>'):'')
         +'<td>'+nf((r.live||0)+(r.cx||0))+'</td>'
         +'<td'+(r.cx?' class="cxneg"':'')+'>'+nf(r.cx||0)+'</td>'
@@ -1689,11 +1721,98 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         +'<td>'+nf(r.cust||0)+'</td></tr>';}
     t+='</tbody></table></div>';
     stage.innerHTML=sum+scope+(list.length?(sh+t):'<div class="empty">אין הזמנות בתקופה שנבחרה.</div>');
+    swipeHints();
+  }
+  /* ---- רשימת ההזמנות שבוטלו בסניף אחד או אצל נציג אחד ---- */
+  function renderCxList(agg){
+    agg=agg||{};
+    var rows=agg.rows||[];
+    var back='<div class="mdback"><button type="button" id="cxbk">→ חזרה ל'+(cxSel.t==='agent'?'נציגים':'סניפים')+'</button><b>'+esc(cxSel.l||'')+'</b></div>';
+    var sum='<div class="cxsum">'
+      +'<div class="cxcard"><span>הזמנות שבוטלו</span><b class="cxneg">'+nf(agg.n||0)+'</b></div>'
+      +'<div class="cxcard"><span>כסף שבוטל</span><b class="cxneg">'+ils(agg.money||0)+'</b></div>'
+      +'</div>';
+    if(!rows.length){stage.innerHTML=back+sum+'<div class="empty">אין הזמנות מבוטלות בתקופה שנבחרה.</div>';return;}
+    // העמודה הזו אינה סיבת ביטול ואי אפשר להסיק ממנה למה ההזמנה בוטלה: זהו קוד
+    // תקלה מקריאת שירות שנרשמה על ההזמנה (ESTR_MALFDES). אותם קודים יושבים על
+    // מאות הזמנות שלא בוטלו כלל. לכן הכותרת אומרת מה זה באמת, ולצד הקוד מוצגים
+    // התאריך והפריט שעליהם נרשם — בלעדיהם נראה כאילו הקוד חל על כל ההזמנה.
+    var nfloor=agg.notes_floor||'';
+    var t='<div class="tw"><table class="tnarrow"><thead><tr>'
+      +'<th class="nm" data-stext>הזמנה</th><th>תאריך</th><th data-stext>לקוח</th><th>כסף שבוטל</th><th data-stext>תקלה ביומן הפעילות</th>'
+      +'</tr></thead><tbody>';
+    for(var i=0;i<rows.length;i++){var r=rows[i];
+      var sub=[];
+      if(r.reason_date)sub.push(heDate(r.reason_date));
+      if(r.reason_part)sub.push(r.reason_part);
+      var rc=r.reason
+        ? (esc(r.reason)+(sub.length?('<i class="cxsub">'+esc(sub.join(' · '))+'</i>'):''))
+        : ('<i class="mdwhy">'+(logNotLoaded(r.date,nfloor)?'יומן לא נטען':'לא נרשמה תקלה')+'</i>');
+      t+='<tr class="cxrow row" data-cxo="'+esc(r.ord||'')+'"><td class="nm">'+esc(r.ord||'')+'</td>'
+        +'<td>'+(r.date?heDate(r.date):'—')+'</td>'
+        +'<td>'+esc(r.cust||'—')+'</td>'
+        +'<td class="cxneg">'+ils(r.money||0)+'</td>'
+        +'<td>'+rc+'</td></tr>';}
+    t+='</tbody></table></div>';
+    stage.innerHTML=back+sum+t+'<div class="hintline" data-swipe="הקש על שורה לתיק ההזמנה">הקש על שורה לתיק ההזמנה</div>';
+    swipeHints();
+  }
+  /* ---- תיק ההזמנה: כותרת, שורות ההזמנה, ורשומות יומן הפעילות ---- */
+  function cxq(x){var v=Math.round((Number(x)||0)*100)/100;return v.toLocaleString('en-US');}
+  function renderCxCase(agg){
+    agg=agg||{};
+    var back='<div class="mdback"><button type="button" id="cxbk2">→ חזרה לרשימה</button><b>'+esc(cxOrd||'')+'</b></div>';
+    if(!agg.found){stage.innerHTML=back+'<div class="empty">ההזמנה לא נמצאה.</div>';return;}
+    var H=agg.head||{}, L=agg.lines||[], NN=agg.notes||[];
+    var sum='<div class="cxsum">'
+      +'<div class="cxcard"><span>תאריך</span><b>'+(H.date?heDate(H.date):'—')+'</b></div>'
+      +'<div class="cxcard"><span>סניף</span><b>'+esc(brName(H.b)||'—')+'</b></div>'
+      +'<div class="cxcard"><span>נציג</span><b>'+esc(H.agent||'—')+'</b></div>'
+      +'<div class="cxcard"><span>לקוח</span><b>'+esc(H.cust||'—')+'</b></div>'
+      +'<div class="cxcard"><span>סטטוס</span><b class="cxneg">'+esc(H.status||'—')+'</b></div>'
+      +'<div class="cxcard"><span>כסף שבוטל</span><b class="cxneg">'+ils(H.money||0)+'</b></div>'
+      +'</div>';
+    var nfl=agg.notes_floor||'';
+    var lt='<p class="cxh">שורות ההזמנה</p>';
+    if(L.length){
+      lt+='<div class="tw"><table class="tnarrow"><thead><tr>'
+        +'<th class="nm" data-stext>מוצר</th><th data-stext>מק"ט</th><th>כמות</th><th>סכום</th>'
+        +'</tr></thead><tbody>';
+      for(var i=0;i<L.length;i++){var l=L[i];
+        lt+='<tr><td class="nm">'+esc(l.pdes||'—')+'</td><td>'+esc(l.part||'—')+'</td>'
+          +'<td>'+cxq(l.qty)+'</td><td>'+ils(l.money||0)+'</td></tr>';}
+      lt+='</tbody></table></div><div class="hintline" data-swipe=""></div>';
+    }else lt+='<div class="empty">אין שורות בהזמנה.</div>';
+    var jt='<p class="cxh">יומן פעילות</p>';
+    if(NN.length){
+      jt+='<div class="tw"><table class="tnarrow"><thead><tr>'
+        +'<th class="nm">תאריך</th><th data-stext>תקלה</th><th data-stext>מוצר</th><th data-stext>נושא</th><th data-stext>הערה</th>'
+        +'</tr></thead><tbody>';
+      for(var j=0;j<NN.length;j++){var n=NN[j];
+        jt+='<tr><td class="nm">'+(n.date?heDate(n.date):'—')+'</td>'
+          +'<td>'+(n.reason?esc(n.reason):'<i class="mdwhy">לא נרשמה תקלה</i>')+'</td>'
+          +'<td>'+esc(n.pdes||n.part||'—')+'</td>'
+          +'<td>'+esc(n.subject||'—')+'</td>'
+          +'<td>'+esc(n.remark||'—')+'</td></tr>';}
+      jt+='</tbody></table></div><div class="hintline" data-swipe=""></div>';
+    // יומן השירות נטען לענן רק מהרצפה ואילך. על הזמנה ישנה יותר אי אפשר לומר
+    // "אין רשומות" — פשוט לא נטען כלום לתקופה הזו.
+    }else jt+='<div class="empty">'+(logNotLoaded(H.date,nfl)
+      ?'יומן הפעילות לא נטען לתקופה הזו.'
+      :'אין רשומות פעילות להזמנה הזו.')+'</div>';
+    stage.innerHTML=back+sum+lt+jt;
+    swipeHints();
   }
   stage.addEventListener('click',function(e){
     if(view!=='cancels')return;
+    if(e.target.closest('#cxbk2')){cxOrd=null;apply();return;}
+    if(e.target.closest('#cxbk')){cxSel=null;cxOrd=null;apply();return;}
     var sc=e.target.closest('[data-cxs]');
-    if(sc){cxScope=sc.getAttribute('data-cxs');apply();}
+    if(sc){cxScope=sc.getAttribute('data-cxs');cxSel=null;cxOrd=null;apply();return;}
+    var oc=e.target.closest('[data-cxo]');
+    if(oc){cxOrd=oc.getAttribute('data-cxo');apply();return;}
+    var bc=e.target.closest('[data-cxk]');
+    if(bc){cxSel={t:bc.getAttribute('data-cxt'),k:bc.getAttribute('data-cxk'),l:bc.getAttribute('data-cxl')};cxOrd=null;apply();return;}
   });
 
   /* ---- ימים חזקים בשבוע ---- */
@@ -1782,6 +1901,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
 
   function setRange(f,t,preset){
     if(f>t){var x=f;f=t;t=x;}
+    cxSel=null;cxOrd=null;   // תקופה חדשה = חוזרים לטבלה הראשית של הביטולים
     var noOverlap=t<META.min||f>META.max;
     if(noOverlap){
       state.from=f;state.to=t;state.preset=preset||null;state.clip=false;
@@ -1908,6 +2028,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(v==='mdown'&&(!META||noProfit()))v='agents';   // before META lands we do not yet know
     if(view===v)return;
     if(v!=='mdown')mdDes=null;   // leaving the drill resets it, so coming back opens on the list
+    if(v!=='cancels'){cxSel=null;cxOrd=null;}
     view=v;
     var H1={agents:'ביצועי סוכנים',branches:'מכירות לפי סניפים',cash:'תקבולים במזומן',service:'פעילות שירות',collect:'מקדמות והנחות',dim:'פילוח מכירות',branchsrc:'מקורות הגעה לסניף',baskets:'סל מכירות ממוצע ללקוח',cannib:'קניבליזציה — תמהיל ערוצים',mdown:'מוריד כסף',cancels:'אחוז ביטולים',dow:'ימים חזקים בשבוע',ins:'תובנות'};
     document.getElementById('h1t').textContent=H1[v]||H1.agents;

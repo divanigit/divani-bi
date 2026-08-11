@@ -242,6 +242,8 @@ _NP_STRIP = {
     "/api/baskets": None,
     "/api/branchsrc": None,
     "/api/cancels": None,
+    "/api/cancelorders": None,
+    "/api/cancelcase": None,
     "/api/dow": None,
     "/api/collect": None,
     "/api/cash": None,
@@ -600,6 +602,39 @@ def sync_parts():
     return len(rows)
 
 
+SN_SEL = ("$select=CUSTNOTE,TODOREFA,CURDATE,STIME,CUSTNAME,CUSTDES,AGENTNAME,BRANCHNAME,"
+          "STATDES,CLOSED,CLOSEDATE,ESTR_MALFCODE,ESTR_MALFDES,ESTR_ACCOUNTDES,"
+          "RSOL_PARTNAME,RSOL_PARTDES,SUBJECT,REMARK,IVDES,TOPICDES,USERLOGIN,OUSERLOGIN")
+
+
+def sync_service_notes_window(days_back: int):
+    """Upsert the service/activity log (CUSTNOTESA) for records OPENED in the last
+    `days_back` days. Window is on CURDATE (opening date, immutable) — a note is
+    closed and its fault reason filled in days or months after it opens, so the
+    nightly call uses a wide window to pick those later edits up."""
+    auth = "Basic " + base64.b64encode(f"{PRI_USER}:{PRI_PASS}".encode("utf-8")).decode("ascii")
+    lo = (dt.datetime.now(IL).date() - dt.timedelta(days=days_back)).isoformat()
+    url = (f"{PRI_BASE}/CUSTNOTESA?$filter=CURDATE%20ge%20{lo}T00:00:00%2B02:00"
+           f"&{SN_SEL}")
+    rows = [{"id": r.get("CUSTNOTE"), "o": (r.get("TODOREFA") or "").strip(),
+             "d": (r.get("CURDATE") or "")[:10], "t": r.get("STIME") or "",
+             "cn": r.get("CUSTNAME") or "", "cd": r.get("CUSTDES") or "",
+             "a": r.get("AGENTNAME") or "", "b": r.get("BRANCHNAME") or "",
+             "st": r.get("STATDES") or "", "cl": r.get("CLOSED") or "",
+             "cld": (r.get("CLOSEDATE") or "")[:10],
+             "mc": r.get("ESTR_MALFCODE") or "", "md": r.get("ESTR_MALFDES") or "",
+             "ad": r.get("ESTR_ACCOUNTDES") or "",
+             "pn": r.get("RSOL_PARTNAME") or "", "pd": r.get("RSOL_PARTDES") or "",
+             "sb": r.get("SUBJECT") or "", "rm": r.get("REMARK") or "",
+             "iv": r.get("IVDES") or "", "tp": r.get("TOPICDES") or "",
+             "u": r.get("USERLOGIN") or "", "ou": r.get("OUSERLOGIN") or ""}
+            for r in _pri_pages(url, auth) if r.get("CUSTNOTE") is not None]
+    if rows:
+        for i in range(0, len(rows), 1000):
+            sb_rpc("bi_upsert_service_notes", {"p_rows": rows[i:i + 1000]})
+    return len(rows)
+
+
 def _refresher():
     last_nightly = None
     while True:
@@ -615,6 +650,10 @@ def _refresher():
                 sync_customers_window(3)   # fresh dims for today's new customers
             except Exception as e:
                 print("customers auto-sync failed:", repr(e)[:300], flush=True)
+            try:
+                sync_service_notes_window(3)   # today's service/activity records
+            except Exception as e:
+                print("service-notes auto-sync failed:", repr(e)[:300], flush=True)
             if ANTHROPIC_KEY:  # without vision there are no slip amounts — nothing to show
                 try:
                     _scan_pending_transfers()
@@ -636,6 +675,13 @@ def _refresher():
                     sync_parts()                # catalog families
                 except Exception as e:
                     print("parts nightly-sync failed:", repr(e)[:300], flush=True)
+                # wide window: a note opened months ago gets CLOSED and gets its
+                # fault reason typed in later, and the window is on the opening
+                # date — so the whole rotation has to be re-read to catch that
+                try:
+                    sync_service_notes_window(DEEP_DAYS)
+                except Exception as e:
+                    print("service-notes nightly-sync failed:", repr(e)[:300], flush=True)
                 try:
                     sb_rpc("bi_refresh_firsts", {})  # first-purchase table
                 except Exception as e:
@@ -1102,6 +1148,38 @@ def api_cancels(request: Request, d_from: str = "", d_to: str = ""):
         f, t = t, f
     agg = sb_rpc("bi_cancel_rate", {"p_from": f.isoformat(), "p_to": t.isoformat()})
     return JSONResponse({"mode": "cancels", "agg": agg or {}})
+
+
+@app.get("/api/cancelorders")
+def api_cancelorders(request: Request, d_from: str = "", d_to: str = "",
+                     by: str = "", key: str = ""):
+    """ההזמנות שבוטלו בתקופה — הכול, או רק של סניף אחד / נציג אחד.
+    by=branch/agent + key. key ריק הוא ערך אמיתי (דלי "ללא שיוך סניף"), ולכן מה שקובע
+    אם מסננים הוא by ולא השאלה אם key ריק — אחרת לחיצה על אותו דלי הייתה מחזירה הכול."""
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    f, t = _parse_date(d_from), _parse_date(d_to)
+    if not f or not t:
+        return JSONResponse({"error": "bad dates"}, status_code=400)
+    if f > t:
+        f, t = t, f
+    agg = sb_rpc("bi_cancel_orders", {
+        "p_from": f.isoformat(), "p_to": t.isoformat(),
+        "p_branch": key if by == "branch" else None,
+        "p_agent": key if by == "agent" else None})
+    return JSONResponse({"mode": "cancelorders", "agg": agg or {}})
+
+
+@app.get("/api/cancelcase")
+def api_cancelcase(request: Request, ord: str = ""):
+    """תיק הזמנה מבוטלת אחת — כותרת, שורות ההזמנה, ורשומות יומן הפעילות שלה."""
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    o = (ord or "").strip()
+    if not o:
+        return JSONResponse({"error": "bad request"}, status_code=400)
+    agg = sb_rpc("bi_cancel_case", {"p_ord": o})
+    return JSONResponse({"mode": "cancelcase", "agg": agg or {}})
 
 
 @app.get("/api/dow")
