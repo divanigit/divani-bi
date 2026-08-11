@@ -120,6 +120,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   th.nm,td.nm{min-width:94px}
   td{padding:7px 5px;text-align:center;white-space:nowrap;font-size:12.5px}
   td.nm{position:sticky;right:0;z-index:2;text-align:right;box-shadow:-5px 0 5px -5px rgba(0,0,0,.18)}
+  /* עמודת השם המוצמדת חייבת להיות אטומה. בלי זה, בטבלה עם שורות בלי d0/dn המספרים
+     נגללים מתחת לשם ומודפסים עליו. השורות המפוספסות (d0/dn) מוגדרות מיד אחרי ולכן גוברות. */
+  tbody td.nm{background:var(--bg)}
   tr.d0 td{background:var(--bg)}tr.dn td{background:var(--surface)}tr.row{cursor:pointer}
   tbody tr+tr td{border-top:1px solid var(--line)}
   tfoot td{border-top:2px solid var(--line2);background:var(--surface);font-weight:500}
@@ -1630,7 +1633,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(rw){mdDes=rw.getAttribute('data-mdd');apply();}
   });
 
-  /* ---- אחוז ביטולים — הזמנות שבוטלו מול הזמנות פעילות ---- */
+  /* ---- אחוז ביטולים — כמה מההזמנות שנכתבו בוטלו ---- */
   var cxScope='branch';
   function pct1(x){var v=Number(x);return (isFinite(v)?v:0).toFixed(1)+'%';}
   function renderCancelsMeta(){
@@ -1649,12 +1652,15 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var live=agg.total_live||0, cx=agg.total_cx||0, tot=live+cx;
     if(!tot){stage.innerHTML='<div class="empty">אין הזמנות בתקופה שנבחרה.</div>';return;}
     var sum='<div class="cxsum">'
-      +'<div class="cxcard"><span>אחוז ביטולים</span><b class="cxneg">'+pct1(agg.pct)+'</b></div>'
-      +'<div class="cxcard"><span>הזמנות שבוטלו</span><b class="cxneg">'+nf(cx)+'</b></div>'
-      +'<div class="cxcard"><span>הזמנות פעילות</span><b>'+nf(live)+'</b></div>'
-      +'<div class="cxcard"><span>כל ההזמנות</span><b>'+nf(tot)+'</b></div>'
+      +'<div class="cxcard"><span>הזמנות שנכתבו</span><b>'+nf(tot)+'</b></div>'
+      +'<div class="cxcard"><span>מתוכן בוטלו</span><b class="cxneg">'+nf(cx)+'</b></div>'
       +'<div class="cxcard"><span>כסף שבוטל</span><b class="cxneg">'+ils(agg.total_mcx||0)+'</b></div>'
-      +'<div class="cxcard"><span>כסף שנשאר</span><b>'+ils(agg.total_mlive||0)+'</b></div>'
+      +'<div class="cxcard"><span>אחוז ביטולים</span><b class="cxneg">'+pct1(agg.pct)+'</b></div>'
+      +'<div class="cxcard"><span>מכירות</span><b>'+ils(agg.total_sales||agg.total_mlive||0)+'</b></div>'
+      // 'ברשת' ולא סתם 'לקוחות': הכרטיס סופר לקוחות שונים בכל הרשת, ועמודת הלקוחות
+      // בטבלה סופרת לקוח בכל סניף שקנה בו. לקוח שקנה בשני סניפים נספר פעמיים בעמודה,
+      // ולכן העמודה גבוהה מהכרטיס. שתי תוויות זהות לשני מדדים שונים = בלבול.
+      +'<div class="cxcard"><span>לקוחות ברשת</span><b>'+nf(agg.total_cust||0)+'</b></div>'
       +'</div>';
     var byA=(cxScope==='agent');
     var scope='<div class="cxscope">'
@@ -1662,18 +1668,27 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       +'<button type="button" class="'+(byA?'on':'')+'" data-cxs="agent">לפי נציג</button>'
       +'</div>';
     var list=byA?(agg.agents||[]):(agg.branches||[]);
+    // שמונה עמודות. ב-375 פיקסל הטבלה נגללת הצידה ושום דבר לא רומז על כך. ה-#hint הגלובלי
+    // יושב מעל הכרטיסים (כי בתצוגה הזו הכרטיסים נמצאים בתוך ה-stage), ולכן החיווי כאן, צמוד לטבלה.
+    var sh='<p class="hint" style="display:block;margin:0 0 8px">גלול הצידה לעוד עמודות</p>';
     var t='<div class="tw"><table class="tnarrow"><thead><tr>'
-      +'<th class="nm">'+(byA?'נציג':'סניף')+'</th><th>בוטלו</th><th>כסף שבוטל</th><th>פעילות</th><th>אחוז ביטולים</th>'
+      +'<th class="nm">'+(byA?'נציג':'סניף')+'</th>'+(byA?'<th data-stext>סניף</th>':'')
+      +'<th>הזמנות שנכתבו</th><th>מתוכן בוטלו</th><th>כסף שבוטל</th><th>אחוז ביטולים</th><th>מכירות</th><th>לקוחות</th>'
       +'</tr></thead><tbody>';
     for(var i=0;i<list.length;i++){var r=list[i];
       var nm=byA?(r.a||''):brName(r.b);
+      // הסניף שבו נכתבו רוב הזמנות הנציג; '+1' = יש לו הזמנות בעוד סניף אחד, ולא מסתירים אותו
+      var bcell=byA?(brName(r.b)+((r.bn||0)>0?(' +'+r.bn):'')):'';
       t+='<tr><td class="nm">'+esc(nm)+'</td>'
+        +(byA?('<td>'+esc(bcell)+'</td>'):'')
+        +'<td>'+nf((r.live||0)+(r.cx||0))+'</td>'
         +'<td'+(r.cx?' class="cxneg"':'')+'>'+nf(r.cx||0)+'</td>'
         +'<td'+(r.mcx?' class="cxneg"':'')+'>'+ils(r.mcx||0)+'</td>'
-        +'<td>'+nf(r.live||0)+'</td>'
-        +'<td>'+pct1(r.pct)+'</td></tr>';}
+        +'<td>'+pct1(r.pct)+'</td>'
+        +'<td>'+ils(r.sales||0)+'</td>'
+        +'<td>'+nf(r.cust||0)+'</td></tr>';}
     t+='</tbody></table></div>';
-    stage.innerHTML=sum+scope+(list.length?t:'<div class="empty">אין הזמנות בתקופה שנבחרה.</div>');
+    stage.innerHTML=sum+scope+(list.length?(sh+t):'<div class="empty">אין הזמנות בתקופה שנבחרה.</div>');
   }
   stage.addEventListener('click',function(e){
     if(view!=='cancels')return;
@@ -2303,7 +2318,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         // that is what made 16.6% sort between 2.9% and 1.9% (lexicographic, not numeric)
         var vals=bs.map(function(b){var c=b.head.cells[idx];return c?numOf(c):null;});
         var okN=0; vals.forEach(function(v){if(v!==null)okN++;});
-        var allNum=okN>0&&okN*2>=vals.length;
+        // data-stext = עמודת טקסט שיש בה ספרות ("נתניה +2"); בלעדיו היא נמיינת לפי המספר
+        var hdr=tbl.tHead&&tbl.tHead.rows[0]?tbl.tHead.rows[0].cells[idx]:null;
+        var allNum=okN>0&&okN*2>=vals.length&&!(hdr&&hdr.hasAttribute('data-stext'));
         bs.sort(function(a,b){
           var ca=a.head.cells[idx],cb=b.head.cells[idx];
           if(!ca||!cb) return 0;
