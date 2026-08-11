@@ -164,6 +164,41 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   #sheet{position:fixed;right:0;left:0;bottom:0;z-index:100;background:var(--bg);border-radius:18px 18px 0 0;border:1px solid var(--line);border-bottom:0;box-shadow:0 -12px 40px rgba(0,0,0,.25);padding:14px 16px calc(18px + env(safe-area-inset-bottom));display:none;max-height:86vh;overflow-y:auto}
   @media (min-width:640px){#sheet{left:50%;right:auto;transform:translateX(-50%);width:420px;bottom:auto;top:12vh;border-radius:18px;border-bottom:1px solid var(--line)}}
   #sheet.on,#ovl.on{display:block}
+  /* ---- מספר שנפתח לגרף + הפאנל המשותף ---- */
+  .dnum{font:inherit;color:inherit;background:none;border:0;border-radius:5px;cursor:pointer;padding:4px 3px;margin:-4px -3px;display:inline-flex;align-items:center;gap:4px;font-variant-numeric:tabular-nums;unicode-bidi:plaintext;box-shadow:inset 0 -1px 0 var(--line2)}
+  .dnum:hover{color:var(--bd);box-shadow:inset 0 -1px 0 var(--bd)}
+  .dnum:focus-visible{outline:2px solid var(--bd);outline-offset:1px}
+  .dnum::after{content:'';width:8px;height:8px;flex:none;opacity:.55;background:linear-gradient(currentColor,currentColor) 0 100%/2px 40% no-repeat,linear-gradient(currentColor,currentColor) 3px 100%/2px 70% no-repeat,linear-gradient(currentColor,currentColor) 6px 100%/2px 100% no-repeat}
+  #srovl{position:fixed;inset:0;background:rgba(10,18,14,.45);z-index:140;display:none}
+  #srsheet{position:fixed;right:0;left:0;bottom:0;z-index:141;background:var(--bg);border-radius:18px 18px 0 0;border:1px solid var(--line);border-bottom:0;box-shadow:0 -12px 40px rgba(0,0,0,.25);padding:14px 16px calc(18px + env(safe-area-inset-bottom));display:none;max-height:86vh;overflow-y:auto}
+  @media (min-width:640px){#srsheet{left:50%;right:auto;transform:translateX(-50%);width:520px;bottom:auto;top:12vh;border-radius:18px;border-bottom:1px solid var(--line)}}
+  #srsheet.on,#srovl.on{display:block}
+  .srmeta{font-size:11.5px;color:var(--tx3);margin:0 0 8px}
+  .srtot{display:flex;align-items:baseline;justify-content:space-between;gap:10px;background:var(--surface);border-radius:10px;padding:8px 11px;margin:0 0 10px}
+  .srtot span{font-size:11px;color:var(--tx3)}
+  .srtot b{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;unicode-bidi:plaintext}
+  .srtools{margin:0 0 8px}
+  .srtools button{font-family:inherit;font-size:12.5px;border:1px solid var(--line2);background:var(--bg);color:var(--tx2);padding:8px 15px;min-height:40px;border-radius:999px;cursor:pointer}
+  .srtools button.on{background:var(--accentSoft);border-color:var(--bd);color:var(--okfg);font-weight:600}
+  .srtools button:disabled{opacity:.4;cursor:default}
+  .srsvg{width:100%;height:auto;display:block}
+  .srbar{fill:var(--bd)}
+  .srbar.neg{fill:var(--dfg)}
+  .srbar.part{opacity:.42}
+  .srbar.on{fill:var(--tx)}
+  .srhit{fill:transparent;cursor:pointer}
+  .srline{fill:none;stroke:var(--bd);stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}
+  .srdot{fill:var(--bd)}
+  .srdot.on{fill:var(--tx)}
+  .srzero{stroke:var(--line2);stroke-width:1}
+  .srtrend{fill:none;stroke:var(--tx3);stroke-width:1.6}
+  .sraxis{direction:ltr;display:flex;justify-content:space-between;font-size:10.5px;color:var(--tx3);margin-top:5px}
+  .srpick{min-height:34px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12.5px;border-top:1px solid var(--line);margin-top:8px;padding-top:9px}
+  .srpick b{font-weight:600}
+  .srpick span{font-variant-numeric:tabular-nums;unicode-bidi:plaintext}
+  .srnote{font-size:11px;color:var(--tx3);margin-top:6px}
+  .srwait{font-size:13px;color:var(--tx2);text-align:center;padding:26px 6px}
+  @media print{.dnum{box-shadow:none}.dnum::after{display:none}}
   .shead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
   .shead .t{font-size:15px;font-weight:500}
   .x{width:44px;height:44px;display:flex;align-items:center;justify-content:center;border:0;background:none;color:var(--tx3);cursor:pointer;border-radius:10px}
@@ -582,6 +617,14 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     <button type="button" class="varow" data-va="ido" role="radio" aria-checked="false"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>עידו אהרון</span></button>
   </div>
 </div>
+<div id="srovl"></div>
+<div id="srsheet" role="dialog" aria-modal="true" aria-labelledby="srtitle">
+  <div class="shead">
+    <span class="t" id="srtitle"></span>
+    <button type="button" class="x" id="srx" aria-label="סגירה"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+  </div>
+  <div id="srbody"></div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -736,7 +779,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var agents={}, custSet={}, orderCount=rows.length, posTotal=0;
     rows.forEach(function(r){
       var an=r.a||'ללא סוכן', ak='a_'+an, ck='c_'+r.cn;
-      var ag=agents[ak]||(agents[ak]={n:an,s:0,profit:0,cu:{},custIds:{}});
+      var ag=agents[ak]||(agents[ak]={n:an,raw:(r.a||''),s:0,profit:0,cu:{},custIds:{}});
       ag.custIds[ck]=1; custSet[ck]=1;
       var cu=ag.cu[ck]||(ag.cu[ck]={n:r.c||r.cn,s:0,profit:0,k:[]});
       (r.k||[]).forEach(function(L){
@@ -753,7 +796,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         return {n:cu.n,s:cu.s,profit:cu.profit,pm:cu.s>0?100*cu.profit/cu.s:null,k:cu.k};
       });
       if(ag.s>0)posTotal+=ag.s;
-      return {n:ag.n,s:ag.s,profit:ag.profit,pm:ag.s>0?100*ag.profit/ag.s:null,c:Object.keys(ag.custIds).length,k:custKids};
+      return {n:ag.n,rawk:ag.raw,s:ag.s,profit:ag.profit,pm:ag.s>0?100*ag.profit/ag.s:null,c:Object.keys(ag.custIds).length,k:custKids};
     });
     var ts=0,tp=0;kids.forEach(function(a){ts+=a.s;tp+=a.profit;});
     var tc=Object.keys(custSet).length;
@@ -762,7 +805,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
 
   function buildAgg(agg){
     var kids=(agg.agents||[]).map(function(g){
-      return {n:g.a||'ללא סוכן',s:g.s||0,profit:g.p||0,pm:(g.s>0)?100*g.p/g.s:null,c:g.c||0,k:null};
+      return {n:g.a||'ללא סוכן',rawk:(g.a||''),s:g.s||0,profit:g.p||0,pm:(g.s>0)?100*g.p/g.s:null,c:g.c||0,k:null};
     });
     var ts=0,tp=0,pos=0;kids.forEach(function(a){ts+=a.s;tp+=a.profit;if(a.s>0)pos+=a.s;});
     var tc=agg.customers||0;
@@ -774,7 +817,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var brs={}, custSet={}, orderCount=rows.length, posTotal=0;
     rows.forEach(function(r){
       var bn=brName((brPhoneSep&&r.ph)?'PHONE':r.b), bk='b_'+bn, an=r.a||'ללא סוכן', ak='a_'+an, ck='c_'+r.cn;
-      var br=brs[bk]||(brs[bk]={n:bn,custIds:{},ag:{}});
+      var br=brs[bk]||(brs[bk]={n:bn,raw:((brPhoneSep&&r.ph)?'PHONE':(r.b==null?'':String(r.b))),custIds:{},ag:{}});
       br.custIds[ck]=1; custSet[ck]=1;
       var ag=br.ag[ak]||(br.ag[ak]={n:an,s:0,profit:0,cu:{}});
       var cu=ag.cu[ck]||(ag.cu[ck]={n:r.c||r.cn,s:0,profit:0,k:[]});
@@ -796,7 +839,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         });
         return {n:ag.n,s:ag.s,profit:ag.profit,pm:ag.s>0?100*ag.profit/ag.s:null,k:custKids};
       });
-      return {n:br.n,s:bs,profit:bp,pm:bs>0?100*bp/bs:null,c:Object.keys(br.custIds).length,k:agKids};
+      return {n:br.n,rawk:br.raw,s:bs,profit:bp,pm:bs>0?100*bp/bs:null,c:Object.keys(br.custIds).length,k:agKids};
     });
     var ts=0,tp=0;kids.forEach(function(a){ts+=a.s;tp+=a.profit;});
     var tc=Object.keys(custSet).length;
@@ -806,20 +849,23 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   function buildAggBr(agg){
     var src=(agg.branches||[]), kids=[];
     if(brPhoneSep){
-      var pS=0,pP=0,pC=0;
+      var pS=0,pP=0;
       src.forEach(function(g){
         var ps=g.ps||0, pp=g.pp||0, pn=g.pn||0;
-        pS+=ps; pP+=pp; pC+=pn;
+        pS+=ps; pP+=pp;
         // the profit has to move with the sales, or the branch margin turns into fiction
         var s2=(g.s||0)-ps, p2=(g.p||0)-pp;
-        if(s2!==0||((g.n||0)-pn)>0) kids.push({n:brName(g.b),s:s2,profit:p2,
-          pm:(s2>0)?100*p2/s2:null,c:g.c||0,k:null});
+        // and so do the customers: cn is the branch WITHOUT phone, straight from the server.
+        // c cannot be used here (it still holds the phone customers) and the phone row cannot
+        // be a sum of the branches (one customer who bought by phone at two branches = 2).
+        if(s2!==0||((g.n||0)-pn)>0) kids.push({n:brName(g.b),rawk:(g.b==null?'':String(g.b)),s:s2,profit:p2,
+          pm:(s2>0)?100*p2/s2:null,c:(g.cn==null?(g.c||0):g.cn),k:null});
       });
-      if(pS!==0) kids.push({n:brName('PHONE'),s:pS,profit:pP,pm:(pS>0)?100*pP/pS:null,c:pC,k:null});
+      if(pS!==0) kids.push({n:brName('PHONE'),rawk:'PHONE',s:pS,profit:pP,pm:(pS>0)?100*pP/pS:null,c:agg.pcust||0,k:null});
       kids.sort(function(a,b){return b.s-a.s;});
     } else {
       kids=src.map(function(g){
-        return {n:brName(g.b),s:g.s||0,profit:g.p||0,pm:(g.s>0)?100*g.p/g.s:null,c:g.c||0,k:null};
+        return {n:brName(g.b),rawk:(g.b==null?'':String(g.b)),s:g.s||0,profit:g.p||0,pm:(g.s>0)?100*g.p/g.s:null,c:g.c||0,k:null};
       });
     }
     var ts=0,tp=0,pos=0;kids.forEach(function(a){ts+=a.s;tp+=a.profit;if(a.s>0)pos+=a.s;});
@@ -841,7 +887,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     rows.forEach(function(x){
       var slot=cashSlot(x.k,x.pd,x.d);
       var bn=brName(x.b), bk='b_'+bn;
-      var br=brs[bk]||(brs[bk]={n:bn,mz:0,hv:0,sk:0,ot:0,rc:{}});
+      var br=brs[bk]||(brs[bk]={n:bn,raw:(x.b==null?'':String(x.b)),mz:0,hv:0,sk:0,ot:0,rc:{}});
       var rc=br.rc['i_'+x.iv]||(br.rc['i_'+x.iv]={n:x.c||x.cn||'קבלה',code:x.iv+(state.from!==state.to?' · '+heShort(x.d):''),mz:0,hv:0,sk:0,ot:0});
       br[slot]+=x.s; rc[slot]+=x.s; T[slot]+=x.s;
     });
@@ -853,7 +899,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       });
       totalRc+=rcs.length;
       var tot=br.mz+br.hv+br.sk;
-      return {n:br.n,mz:br.mz,hv:br.hv,sk:br.sk,ot:br.ot,tot:tot,s:tot,k:rcs};
+      return {n:br.n,rawk:br.raw,mz:br.mz,hv:br.hv,sk:br.sk,ot:br.ot,tot:tot,s:tot,k:rcs};
     });
     return {mz:T.mz,hv:T.hv,sk:T.sk,ot:T.ot,tot:T.mz+T.hv+T.sk,k:kids,orders:totalRc};
   }
@@ -862,7 +908,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var brs={};
     (agg.rows||[]).forEach(function(g){
       var bn=brName(g.b), bk='b_'+bn;
-      var br=brs[bk]||(brs[bk]={n:bn,mz:0,hv:0,sk:0,ot:0});
+      var br=brs[bk]||(brs[bk]={n:bn,raw:(g.b==null?'':String(g.b)),mz:0,hv:0,sk:0,ot:0});
       var slot=g.k==='cash'?'mz':(g.k==='transfer'||g.k==='bit')?'hv':(g.k==='check_now')?'sk':'ot';
       br[slot]+=(g.s||0);
     });
@@ -870,7 +916,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var kids=Object.keys(brs).map(function(bk){
       var br=brs[bk];T.mz+=br.mz;T.hv+=br.hv;T.sk+=br.sk;T.ot+=br.ot;
       var tot=br.mz+br.hv+br.sk;
-      return {n:br.n,mz:br.mz,hv:br.hv,sk:br.sk,ot:br.ot,tot:tot,s:tot,k:null};
+      return {n:br.n,rawk:br.raw,mz:br.mz,hv:br.hv,sk:br.sk,ot:br.ot,tot:tot,s:tot,k:null};
     });
     return {mz:T.mz,hv:T.hv,sk:T.sk,ot:T.ot,tot:T.mz+T.hv+T.sk,k:kids,orders:agg.receipts||0};
   }
@@ -878,7 +924,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   function buildCollect(agg){
     var kids=(agg.agents||[]).map(function(g){
       var s=g.s||0, sg=g.sg||0, r=g.r||0, disc=g.disc||0;
-      return {n:g.a||'ללא סוכן',s:s,r:r,ratio:sg>0?100*r/sg:null,disc:disc,
+      return {n:g.a||'ללא סוכן',rawk:(g.a||''),s:s,r:r,ratio:sg>0?100*r/sg:null,disc:disc,
               dpct:(s+disc)>0?100*disc/(s+disc):null,sg:sg,k:null};
     });
     var T={s:0,sg:0,r:0,disc:0};
@@ -942,29 +988,41 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(!R.k.length){stage.innerHTML=emptyHtml();return;}
     var rows=[];walk(R.k,0,'',rows);
     var NP=noProfit();
+    // מה נפתח מכל עמודה במסך הזה — המדד, הפילוח והתווית. שירות הוא אוכלוסייה אחרת
+    // בצד השרת, ולכן מדד אחר; רווח אין לו, ולכן הוא לא נלחץ שם.
+    var SRT=(view==='service')
+      ? {s:'svc_sales',p:null,c:'svc_customers',d:'agent',l:'חיובים'}
+      : {s:'sales',p:'profit',c:'customers',
+         d:(view==='branches'?(brPhoneSep?'branchp':'branch'):'agent'),l:'מכירות'};
     var h='<div class="tw"><table><thead><tr><th class="nm">שם</th><th>'+(view==='service'?'חיובים':'מכירות')+'</th><th>אחוז מסה"כ</th>'+(NP?'':'<th>רווח</th><th>אחוז רווח</th>')+'<th>לקוחות</th><th>ממוצע</th></tr></thead><tbody>';
     rows.forEach(function(it){
       var c=it.c, cls=it.depth===0?'d0':'dn', ind=it.depth*14;
       var pct=(R.pos>0&&c.s>0)?Math.round(c.s/R.pos*100)+'%':'—';
       var nc=c.c||1, avg=nc>0?c.s/nc:0;
+      // רק שורת הראש נפתחת לגרף — רק לה יש מפתח שהסדרה יודעת לסנן לפיו
+      var d0=(it.depth===0), rk=(c.rawk==null?'':c.rawk);
+      var cS=d0?srNum(ils(c.s),SRT.s,SRT.d,rk,c.n+' · '+SRT.l):ils(c.s);
+      var cP=(d0&&SRT.p)?srNum(ils(c.profit),SRT.p,SRT.d,rk,c.n+' · רווח'):ils(c.profit);
+      var cC=d0?srNum(String(nc),SRT.c,SRT.d,rk,c.n+' · לקוחות'):'';
       var ch=it.hasK?chevSvg(!!eT[it.id]):'<span style="width:15px;flex:none"></span>';
       var sub=c.code?'<div class="c" title="'+esc(c.code)+'">'+esc(c.code)+'</div>':'';
-      h+='<tr class="'+cls+(it.hasK?' row':'')+'" '+(it.hasK?'data-t="'+it.id+'" role="button" tabindex="0"':'')+'><td class="nm"><div class="nmc" style="margin-right:'+ind+'px">'+ch+'<div class="nlab'+(it.depth?' rail':'')+'"><div class="t" style="font-weight:'+(it.depth===0?500:400)+'">'+esc(c.n)+'</div>'+sub+'</div></div></td><td>'+ils(c.s)+'</td><td class="mut">'+pct+'</td>'+(NP?'':'<td>'+ils(c.profit)+'</td><td>'+pill(c)+'</td>')+'<td>'+(it.depth===0?nc:'')+'</td><td class="mut">'+(it.depth===0?ils(avg):'')+'</td></tr>';
+      h+='<tr class="'+cls+(it.hasK?' row':'')+'" '+(it.hasK?'data-t="'+it.id+'" role="button" tabindex="0"':'')+'><td class="nm"><div class="nmc" style="margin-right:'+ind+'px">'+ch+'<div class="nlab'+(it.depth?' rail':'')+'"><div class="t" style="font-weight:'+(it.depth===0?500:400)+'">'+esc(c.n)+'</div>'+sub+'</div></div></td><td>'+cS+'</td><td class="mut">'+pct+'</td>'+(NP?'':'<td>'+cP+'</td><td>'+pill(c)+'</td>')+'<td>'+cC+'</td><td class="mut">'+(it.depth===0?ils(avg):'')+'</td></tr>';
     });
     h+='</tbody><tfoot><tr><td class="nm">סך הכל</td><td>'+ils(R.s)+'</td><td>'+(R.pos>0?'100%':'—')+'</td>'+(NP?'':'<td>'+ils(R.p)+'</td><td>'+pill({s:R.s,profit:R.p,pm:R.pm})+'</td>')+'<td>'+R.c+'</td><td>'+ils(R.av)+'</td></tr></tfoot></table></div>';
     stage.innerHTML=h;
   }
 
   function renderKpis(R){
-    var NP=noProfit();
+    var NP=noProfit(), svc=(view==='service');
+    var mS=svc?'svc_sales':'sales', mC=svc?'svc_customers':'customers', lS=svc?'חיובים':'מכירות';
     document.getElementById('kpis').innerHTML=
-      '<div class="kpi"><div class="l">'+(view==='service'?'חיובים':'מכירות')+'</div><div class="v">'+ils(R.s)+'</div></div>'+
+      '<div class="kpi"><div class="l">'+lS+'</div><div class="v">'+srNum(ils(R.s),mS,'','',lS)+'</div></div>'+
       (NP
-        ? '<div class="kpi"><div class="l">הזמנות</div><div class="v">'+(R.orders||0)+'</div></div>'+
+        ? '<div class="kpi"><div class="l">הזמנות</div><div class="v">'+srNum(String(R.orders||0),svc?'svc_orders':'orders','','','הזמנות')+'</div></div>'+
           '<div class="kpi"><div class="l">ממוצע ללקוח</div><div class="v">'+ils(R.av||0)+'</div></div>'
-        : '<div class="kpi"><div class="l">רווח</div><div class="v">'+ils(R.p)+'</div></div>'+
-          '<div class="kpi"><div class="l">אחוז רווח</div><div class="v">'+(view==='service'?'—':pmTxt(R.pm))+'</div></div>')+
-      '<div class="kpi"><div class="l">לקוחות</div><div class="v">'+R.c+'</div></div>';
+        : '<div class="kpi"><div class="l">רווח</div><div class="v">'+(svc?ils(R.p):srNum(ils(R.p),'profit','','','רווח'))+'</div></div>'+
+          '<div class="kpi"><div class="l">אחוז רווח</div><div class="v">'+(svc?'—':pmTxt(R.pm))+'</div></div>')+
+      '<div class="kpi"><div class="l">לקוחות</div><div class="v">'+srNum(String(R.c),mC,'','','לקוחות')+'</div></div>';
   }
 
   function pendInRange(){
@@ -973,10 +1031,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var pend=pendInRange();
     document.getElementById('kpis').innerHTML=
       '<div class="kpi"><div class="l">סה"כ מזומן</div><div class="v">'+ils(R.tot+pend)+'</div></div>'+
-      '<div class="kpi"><div class="l">מזומן בקופה</div><div class="v">'+ils(R.mz)+'</div></div>'+
-      '<div class="kpi"><div class="l">העברות בקבלה</div><div class="v">'+ils(R.hv)+'</div></div>'+
+      '<div class="kpi"><div class="l">מזומן בקופה</div><div class="v">'+srNum(ils(R.mz),'cash_mz','','','מזומן בקופה')+'</div></div>'+
+      '<div class="kpi"><div class="l">העברות בקבלה</div><div class="v">'+srNum(ils(R.hv),'cash_hv','','','העברות בקבלה')+'</div></div>'+
       '<div class="kpi"><div class="l">העברות מאומתות</div><div class="v">'+ils(pend)+'</div></div>'+
-      '<div class="kpi"><div class="l">שיקים מזומן</div><div class="v">'+ils(R.sk)+'</div></div>';
+      '<div class="kpi"><div class="l">שיקים מזומן</div><div class="v">'+srNum(ils(R.sk),'cash_sk','','','שיקים מזומן')+'</div></div>';
   }
 
   function renderCashTable(R){
@@ -990,7 +1048,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       var c=it.c, cls=it.depth===0?'d0':'dn', ind=it.depth*14;
       var ch=it.hasK?chevSvg(!!eT[it.id]):'<span style="width:15px;flex:none"></span>';
       var sub=c.code?'<div class="c" title="'+esc(c.code)+'">'+esc(c.code)+'</div>':'';
-      h+='<tr class="'+cls+(it.hasK?' row':'')+'" '+(it.hasK?'data-t="'+it.id+'" role="button" tabindex="0"':'')+'><td class="nm"><div class="nmc" style="margin-right:'+ind+'px">'+ch+'<div class="nlab'+(it.depth?' rail':'')+'"><div class="t" style="font-weight:'+(it.depth===0?500:400)+'">'+esc(c.n)+'</div>'+sub+'</div></div></td><td>'+ils(c.mz)+'</td><td>'+ils(c.hv)+'</td><td>'+ils(c.sk)+'</td><td style="font-weight:500">'+ils(c.tot)+'</td><td class="mut">'+ils(c.ot)+'</td></tr>';
+      // שורת סניף נפתחת לגרף; שורת קבלה בודדת מתחתיה אינה סדרה בזמן
+      var d0=(it.depth===0), rk=(c.rawk==null?'':c.rawk);
+      function cn(txt,m,lb){return d0?srNum(txt,m,'branch',rk,c.n+' · '+lb):txt;}
+      h+='<tr class="'+cls+(it.hasK?' row':'')+'" '+(it.hasK?'data-t="'+it.id+'" role="button" tabindex="0"':'')+'><td class="nm"><div class="nmc" style="margin-right:'+ind+'px">'+ch+'<div class="nlab'+(it.depth?' rail':'')+'"><div class="t" style="font-weight:'+(it.depth===0?500:400)+'">'+esc(c.n)+'</div>'+sub+'</div></div></td><td>'+cn(ils(c.mz),'cash_mz','מזומן')+'</td><td>'+cn(ils(c.hv),'cash_hv','העברות')+'</td><td>'+cn(ils(c.sk),'cash_sk','שיקים מזומן')+'</td><td style="font-weight:500">'+cn(ils(c.tot),'cash_tot','סה"כ מזומן')+'</td><td class="mut">'+cn(ils(c.ot),'cash_ot','שאר תקבולים')+'</td></tr>';
     });
     var pend=pendInRange();
     if(pend>0){h+='<tr class="d0"><td class="nm"><div class="nmc"><span style="width:15px;flex:none"></span><div class="nlab"><div class="t" style="font-weight:500">העברות מאומתות (אסמכתא)</div></div></div></td><td>'+ils(0)+'</td><td>'+ils(pend)+'</td><td>'+ils(0)+'</td><td style="font-weight:500">'+ils(pend)+'</td><td class="mut">'+ils(0)+'</td></tr>';}
@@ -1017,10 +1078,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   function qf(x){return Math.round(x).toLocaleString('en-US');}
   function renderDimKpis(R){
     document.getElementById('kpis').innerHTML=
-      '<div class="kpi"><div class="l">מכירות</div><div class="v">'+ils(R.s)+'</div></div>'+
-      '<div class="kpi"><div class="l">כמות פריטים</div><div class="v">'+qf(R.q)+'</div></div>'+
-      '<div class="kpi"><div class="l">הזמנות</div><div class="v">'+R.orders+'</div></div>'+
-      '<div class="kpi"><div class="l">לקוחות</div><div class="v">'+R.c+'</div></div>';
+      '<div class="kpi"><div class="l">מכירות</div><div class="v">'+srNum(ils(R.s),'dim_sales','','','מכירות')+'</div></div>'+
+      '<div class="kpi"><div class="l">כמות פריטים</div><div class="v">'+srNum(qf(R.q),'dim_qty','','','כמות פריטים')+'</div></div>'+
+      '<div class="kpi"><div class="l">הזמנות</div><div class="v">'+srNum(String(R.orders),'dim_orders','','','הזמנות')+'</div></div>'+
+      '<div class="kpi"><div class="l">לקוחות</div><div class="v">'+srNum(String(R.c),'dim_customers','','','לקוחות')+'</div></div>';
   }
 
   function renderSegDrill(R){
@@ -1077,6 +1138,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var lvl=['קטגוריית־אב','קטגוריה','דגם','וורסיה'];
     var title=isTree?lvl[treeDepth()]:(DIMH[dimKind]||'שם');
     var canDrill=isTree?(treeDepth()<3):(dimKind==='city'||dimKind==='sector'||dimKind==='source');
+    // הפילוח שהסדרה מכירה ברמה הזו. דגם ווורסיה אינם פילוח בסדרה, ולכן שם המספר אינו נלחץ.
+    var srd=isTree?(treeDepth()===0?'grp':(treeDepth()===1?'fam':null))
+                  :({part:'part',city:'city',sector:'sector',source:'source'}[dimKind]||null);
     function hs(col,label){var on=dimSort&&dimSort.col===col;return '<th data-hsort="'+col+'"'+(on?' class="on"':'')+'>'+label+(on?(dimSort.dir===1?' ↑':' ↓'):'')+'</th>';}
     var h=(isTree?treeCrumbs():'')+'<div class="tw">'
       +(dimSort?'<button type="button" class="sortreset" id="dimreset">חזרה לסדר המקורי</button>':'')
@@ -1086,9 +1150,13 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       var pct=(base>0&&val>0)?Math.round(100*val/base)+'%':'—';
       var sub=c.code?'<div class="c" title="'+esc(c.code)+'">'+esc(c.code)+'</div>':'';
       var drillAttr=canDrill?(isTree?' data-treek="'+esc(c.rawk)+'" role="button" tabindex="0"':' data-segk="'+esc(c.rawk)+'" role="button" tabindex="0"'):'';
+      var rk=(c.rawk==null?'':c.rawk);
+      var dS=srd?srNum(ils(c.s),'dim_sales',srd,rk,c.n+' · מכירות'):ils(c.s);
+      var dQ=srd?srNum(qf(c.q),'dim_qty',srd,rk,c.n+' · כמות'):qf(c.q);
+      var dP=srd?srNum(ils(c.profit),'dim_profit',srd,rk,c.n+' · רווח'):ils(c.profit);
       h+='<tr class="d0'+(canDrill?' row':'')+'"'+drillAttr+'><td class="nm"><div class="nmc">'+(canDrill?chevSvg(false):'<span style="width:15px;flex:none"></span>')+'<div class="nlab"><div class="t" style="font-weight:500">'+esc(c.n)+'</div>'+sub+'</div></div></td>'+
-         '<td>'+ils(c.s)+'</td><td>'+qf(c.q)+'</td><td class="mut">'+pct+'</td>'+
-         (NP?'':'<td>'+ils(c.profit)+'</td><td>'+pill(c)+'</td>')+'<td>'+c.c+'</td></tr>';
+         '<td>'+dS+'</td><td>'+dQ+'</td><td class="mut">'+pct+'</td>'+
+         (NP?'':'<td>'+dP+'</td><td>'+pill(c)+'</td>')+'<td>'+c.c+'</td></tr>';
     });
     if(R.rest&&R.rest.cnt)h+='<tr class="dn"><td class="nm"><div class="nmc"><span style="width:15px;flex:none"></span><div class="nlab rail"><div class="t">עוד '+R.rest.cnt+' נוספים</div></div></div></td><td class="mut">'+ils(R.rest.s||0)+'</td><td class="mut">'+qf(R.rest.q||0)+'</td><td class="mut">—</td>'+(NP?'':'<td class="mut">'+ils(R.rest.p||0)+'</td><td class="mut">—</td>')+'<td class="mut">—</td></tr>';
     h+='</tbody><tfoot><tr><td class="nm">סך הכל</td><td>'+ils(R.s)+'</td><td>'+qf(R.q)+'</td><td>100%</td>'+(NP?'':'<td>'+ils(R.p)+'</td><td>'+pill({s:R.s,profit:R.p,pm:R.s>0?100*R.p/R.s:null})+'</td>')+'<td>'+R.c+'</td></tr></tfoot></table></div>';
@@ -1358,10 +1426,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
 
   function renderCollectKpis(R){
     document.getElementById('kpis').innerHTML=
-      '<div class="kpi"><div class="l">יחס מקדמות למחזור</div><div class="v">'+(R.ratio==null?'—':Math.round(R.ratio)+'%')+'</div></div>'+
-      '<div class="kpi"><div class="l">מחזור ללא מע"מ</div><div class="v">'+ils(R.s)+'</div></div>'+
-      '<div class="kpi"><div class="l">תקבולים כולל מע"מ</div><div class="v">'+ils(R.r)+'</div></div>'+
-      '<div class="kpi"><div class="l">אחוז הנחה</div><div class="v">'+(R.dpct==null?'—':R.dpct.toFixed(1)+'%')+'</div></div>';
+      '<div class="kpi"><div class="l">יחס מקדמות למחזור</div><div class="v">'+(R.ratio==null?'—':srNum(srPct1(R.ratio),'collect_ratio','','','יחס מקדמות למחזור'))+'</div></div>'+
+      '<div class="kpi"><div class="l">מחזור ללא מע"מ</div><div class="v">'+srNum(ils(R.s),'collect_net','','','מחזור ללא מע"מ')+'</div></div>'+
+      '<div class="kpi"><div class="l">תקבולים כולל מע"מ</div><div class="v">'+srNum(ils(R.r),'collect_paid','','','תקבולים כולל מע"מ')+'</div></div>'+
+      '<div class="kpi"><div class="l">אחוז הנחה</div><div class="v">'+(R.dpct==null?'—':srNum(R.dpct.toFixed(1)+'%','collect_discpct','','','אחוז הנחה'))+'</div></div>';
   }
 
   // month-by-month picture: the bar is the turnover, the fill is what was collected against it
@@ -1387,13 +1455,16 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(!R.k.length){stage.innerHTML='<div class="empty">אין נתונים בתקופה שנבחרה.</div>';return;}
     var h=collectMonthsHtml(R)+'<div class="tw"><table><thead><tr><th class="nm">סוכן</th><th>מכירות</th><th>כולל מע"מ</th><th>תקבולים</th><th>יחס מקדמות</th><th>הנחות</th><th>אחוז הנחה</th></tr></thead><tbody>';
     R.k.slice().sort(function(x,y){return y.s-x.s;}).forEach(function(c){
+      var rk=(c.rawk==null?'':c.rawk);
       h+='<tr class="d0"><td class="nm"><div class="nmc"><span style="width:15px;flex:none"></span><div class="nlab"><div class="t" style="font-weight:500">'+esc(c.n)+'</div></div></div></td>'+
-         '<td>'+ils(c.s)+'</td><td>'+ils(c.sg)+'</td><td>'+ils(c.r)+'</td>'+
-         '<td>'+(c.ratio==null?'<span class="mut">—</span>':Math.round(c.ratio)+'%')+'</td>'+
-         '<td>'+ils(c.disc)+'</td>'+
-         '<td>'+(c.dpct==null?'<span class="mut">—</span>':c.dpct.toFixed(1)+'%')+'</td></tr>';
+         '<td>'+srNum(ils(c.s),'collect_net','agent',rk,c.n+' · מחזור ללא מע"מ')+'</td>'+
+         '<td>'+srNum(ils(c.sg),'collect_gross','agent',rk,c.n+' · כולל מע"מ')+'</td>'+
+         '<td>'+srNum(ils(c.r),'collect_paid','agent',rk,c.n+' · תקבולים')+'</td>'+
+         '<td>'+(c.ratio==null?'<span class="mut">—</span>':srNum(srPct1(c.ratio),'collect_ratio','agent',rk,c.n+' · יחס מקדמות'))+'</td>'+
+         '<td>'+srNum(ils(c.disc),'collect_disc','agent',rk,c.n+' · הנחות')+'</td>'+
+         '<td>'+(c.dpct==null?'<span class="mut">—</span>':srNum(c.dpct.toFixed(1)+'%','collect_discpct','agent',rk,c.n+' · אחוז הנחה'))+'</td></tr>';
     });
-    h+='</tbody><tfoot><tr><td class="nm">סך הכל</td><td>'+ils(R.s)+'</td><td>'+ils(R.sg)+'</td><td>'+ils(R.r)+'</td><td>'+(R.ratio==null?'—':Math.round(R.ratio)+'%')+'</td><td>'+ils(R.disc)+'</td><td>'+(R.dpct==null?'—':R.dpct.toFixed(1)+'%')+'</td></tr></tfoot></table></div>';
+    h+='</tbody><tfoot><tr><td class="nm">סך הכל</td><td>'+ils(R.s)+'</td><td>'+ils(R.sg)+'</td><td>'+ils(R.r)+'</td><td>'+(R.ratio==null?'—':srPct1(R.ratio))+'</td><td>'+ils(R.disc)+'</td><td>'+(R.dpct==null?'—':R.dpct.toFixed(1)+'%')+'</td></tr></tfoot></table></div>';
     stage.innerHTML=h;
   }
 
@@ -1616,11 +1687,15 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       +'<button type="button" class="'+(mdScope==='all'?'on':'')+'" data-mds="all">כולל סוכני שירות</button>'
       +(agg.svc_total?'<span class="mdst">'+ils(agg.svc_total)+' נרשמו על סוכני שירות ('+nlines(agg.svc_lines_n)+')</span>':'')
       +'</div>';
+    // הסיומת _all היא בדיוק המתג שבמסך — "כולל סוכני שירות"
+    var msf=(mdScope==='all'?'_all':'');
+    // בתוך צלילה לתיאור אחד הכרטיסים הם עדיין של כל התקופה, ולכן הם לא נלחצים שם
+    function mdn(txt,m,lb){return mdDes?txt:srNum(txt,m+msf,'','',lb);}
     var sum='<div class="mdsum">'
-      +'<div class="mdcard"><span>סה"כ ירד</span><b class="mdneg">'+ils(agg.total||0)+'</b></div>'
-      +'<div class="mdcard"><span>הזמנות</span><b>'+(agg.orders||0)+'</b></div>'
-      +'<div class="mdcard"><span>שורות</span><b>'+(agg.lines_n||0)+'</b></div>'
-      +'<div class="mdcard mdno"><span>בלי סיבה רשומה</span><b class="mdneg">'+ils(agg.noreason_total||0)+'</b><i>'+nlines(agg.noreason_n||0)+'</i></div>'
+      +'<div class="mdcard"><span>סה"כ ירד</span><b class="mdneg">'+mdn(ils(agg.total||0),'md_total','סה"כ ירד')+'</b></div>'
+      +'<div class="mdcard"><span>הזמנות</span><b>'+mdn(String(agg.orders||0),'md_orders','הזמנות')+'</b></div>'
+      +'<div class="mdcard"><span>שורות</span><b>'+mdn(String(agg.lines_n||0),'md_lines','שורות')+'</b></div>'
+      +'<div class="mdcard mdno"><span>בלי סיבה רשומה</span><b class="mdneg">'+mdn(ils(agg.noreason_total||0),'md_noreason','בלי סיבה רשומה')+'</b><i>'+nlines(agg.noreason_n||0)+'</i></div>'
       +'</div>';
     if(mdDes){
       var lines=agg.lines||[];
@@ -1643,7 +1718,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       +'</tr></thead><tbody>';
     for(var j=0;j<rows.length;j++){var r=rows[j];
       tb+='<tr class="mdrow row" data-mdd="'+esc(r.k)+'"><td class="nm">'+esc(r.k)+'</td>'
-        +'<td class="mdneg">'+ils(r.m)+'</td><td>'+r.n+'</td><td>'+r.o+'</td>'
+        +'<td class="mdneg">'+srNum(ils(r.m),'md_total'+msf,'des',r.k,r.k+' · סה"כ ירד')+'</td>'
+        +'<td>'+srNum(String(r.n),'md_lines'+msf,'des',r.k,r.k+' · שורות')+'</td>'
+        +'<td>'+srNum(String(r.o),'md_orders'+msf,'des',r.k,r.k+' · הזמנות')+'</td>'
         +'<td>'+(r.nrn?('<b class="mdneg">'+ils(r.nrm)+'</b> <i>'+nlines(r.nrn)+'</i>'):'—')+'</td></tr>';}
     tb+='</tbody></table></div>';
     stage.innerHTML=scope+sum+tb+'<div class="hintline">הקש על שורה כדי לראות את ההזמנות עצמן.</div>';
@@ -1700,15 +1777,15 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var live=agg.total_live||0, cx=agg.total_cx||0, tot=live+cx;
     if(!tot){stage.innerHTML='<div class="empty">אין הזמנות בתקופה שנבחרה.</div>';return;}
     var sum='<div class="cxsum">'
-      +'<div class="cxcard"><span>הזמנות שנכתבו</span><b>'+nf(tot)+'</b></div>'
-      +'<div class="cxcard"><span>מתוכן בוטלו</span><b class="cxneg">'+nf(cx)+'</b></div>'
-      +'<div class="cxcard"><span>כסף שבוטל</span><b class="cxneg">'+ils(agg.total_mcx||0)+'</b></div>'
-      +'<div class="cxcard"><span>אחוז ביטולים</span><b class="cxneg">'+pct1(agg.pct)+'</b></div>'
-      +'<div class="cxcard"><span>מכירות</span><b>'+ils(agg.total_sales||agg.total_mlive||0)+'</b></div>'
+      +'<div class="cxcard"><span>הזמנות שנכתבו</span><b>'+srNum(nf(tot),'cx_written','','','הזמנות שנכתבו')+'</b></div>'
+      +'<div class="cxcard"><span>מתוכן בוטלו</span><b class="cxneg">'+srNum(nf(cx),'cx_orders','','','הזמנות שבוטלו')+'</b></div>'
+      +'<div class="cxcard"><span>כסף שבוטל</span><b class="cxneg">'+srNum(ils(agg.total_mcx||0),'cx_money','','','כסף שבוטל')+'</b></div>'
+      +'<div class="cxcard"><span>אחוז ביטולים</span><b class="cxneg">'+srNum(pct1(agg.pct),'cx_pct','','','אחוז ביטולים')+'</b></div>'
+      +'<div class="cxcard"><span>מכירות</span><b>'+srNum(ils(agg.total_sales||agg.total_mlive||0),'cx_sales','','','מכירות')+'</b></div>'
       // 'ברשת' ולא סתם 'לקוחות': הכרטיס סופר לקוחות שונים בכל הרשת, ועמודת הלקוחות
       // בטבלה סופרת לקוח בכל סניף שקנה בו. לקוח שקנה בשני סניפים נספר פעמיים בעמודה,
       // ולכן העמודה גבוהה מהכרטיס. שתי תוויות זהות לשני מדדים שונים = בלבול.
-      +'<div class="cxcard"><span>לקוחות ברשת</span><b>'+nf(agg.total_cust||0)+'</b></div>'
+      +'<div class="cxcard"><span>לקוחות ברשת</span><b>'+srNum(nf(agg.total_cust||0),'cx_customers','','','לקוחות ברשת')+'</b></div>'
       +'</div>';
     var byA=(cxScope==='agent');
     var scope='<div class="cxscope">'
@@ -1729,15 +1806,15 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       var bcell=byA?(brName(r.b)+((r.bn||0)>0?(' +'+r.bn):'')):'';
       // מפתח הצלילה. סניף ריק הוא דלי אמיתי ("ללא שיוך סניף") ולכן נשלח כמות שהוא;
       // שורה בלי ביטולים לא נפתחת — אין בה מה להראות.
-      var ck=byA?(r.a||''):(r.b==null?'':String(r.b)), copen=(r.cx||0)>0;
+      var ck=byA?(r.a||''):(r.b==null?'':String(r.b)), copen=(r.cx||0)>0, cd=byA?'agent':'branch';
       t+='<tr'+(copen?(' class="cxrow row" data-cxt="'+(byA?'agent':'branch')+'" data-cxk="'+esc(ck)+'" data-cxl="'+esc(nm)+'"'):'')+'><td class="nm">'+esc(nm)+'</td>'
         +(byA?('<td>'+esc(bcell)+'</td>'):'')
-        +'<td>'+nf((r.live||0)+(r.cx||0))+'</td>'
-        +'<td'+(r.cx?' class="cxneg"':'')+'>'+nf(r.cx||0)+'</td>'
-        +'<td'+(r.mcx?' class="cxneg"':'')+'>'+ils(r.mcx||0)+'</td>'
-        +'<td>'+pct1(r.pct)+'</td>'
-        +'<td>'+ils(r.sales||0)+'</td>'
-        +'<td>'+nf(r.cust||0)+'</td></tr>';}
+        +'<td>'+srNum(nf((r.live||0)+(r.cx||0)),'cx_written',cd,ck,nm+' · הזמנות שנכתבו')+'</td>'
+        +'<td'+(r.cx?' class="cxneg"':'')+'>'+srNum(nf(r.cx||0),'cx_orders',cd,ck,nm+' · הזמנות שבוטלו')+'</td>'
+        +'<td'+(r.mcx?' class="cxneg"':'')+'>'+srNum(ils(r.mcx||0),'cx_money',cd,ck,nm+' · כסף שבוטל')+'</td>'
+        +'<td>'+srNum(pct1(r.pct),'cx_pct',cd,ck,nm+' · אחוז ביטולים')+'</td>'
+        +'<td>'+srNum(ils(r.sales||0),'cx_sales',cd,ck,nm+' · מכירות')+'</td>'
+        +'<td>'+srNum(nf(r.cust||0),'cx_customers',cd,ck,nm+' · לקוחות')+'</td></tr>';}
     t+='</tbody></table></div>';
     stage.innerHTML=sum+scope+(list.length?(sh+t):'<div class="empty">אין הזמנות בתקופה שנבחרה.</div>');
     swipeHints();
@@ -2064,6 +2141,186 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(th){e.preventDefault();th.click();}
   });
 
+  /* ---- הצלילה מכל מספר: פאנל אחד, כל המסכים ---- */
+  // המספר שנלחץ, לאורך התקופה שכבר נבחרה למעלה. הדלי (יום / שבוע / חודש) מגיע
+  // מהשרת לפי אורך התקופה — לפאנל אין בורר תאריכים משלו.
+  var srOvl=document.getElementById('srovl'), srSheet=document.getElementById('srsheet');
+  var srBody=document.getElementById('srbody'), srTitle=document.getElementById('srtitle');
+  var srSeq=0, srJob=null, srTrend=false, srPick=-1, srBack=null;
+  var SR_MONEY={sales:1,profit:1,svc_sales:1,cash_mz:1,cash_hv:1,cash_sk:1,cash_ot:1,cash_tot:1,
+    collect_net:1,collect_gross:1,collect_paid:1,collect_disc:1,dim_sales:1,dim_profit:1,
+    md_total:1,md_total_all:1,md_noreason:1,md_noreason_all:1,cx_money:1,cx_sales:1};
+  // אחוז בספרה אחת אחרי הנקודה — אותו נוסח בטבלה, ב-KPI ובפאנל שנפתח מהם.
+  // עיגול שונה בין הטבלה לפאנל נראה למשתמש כמו מספר שהשתנה בלחיצה.
+  function srPct1(v){var x=Number(v);return (isFinite(x)?(Math.round(x*10)/10):0).toFixed(1)+'%';}
+
+  // מספר שאפשר ללחוץ עליו. d ריק = כל הרשת, בלי פילוח.
+  function srNum(txt,m,d,k,t){
+    return '<button type="button" class="dnum" data-srm="'+m+'"'
+      +(d?(' data-srd="'+d+'" data-srk="'+esc(k==null?'':k)+'"'):'')
+      +' data-srt="'+esc(t)+'">'+txt+'</button>';
+  }
+  function srFmt(v,j){
+    if(v==null)return '—';
+    if(j.kind==='ratio')return srPct1(v);
+    return SR_MONEY[j.measure]?ils(v):nf(v);
+  }
+  // דלי חלקי: או שהשרת חתך אותו באמצע, או שהוא נגמר היום — והיום עוד לא נגמר.
+  // ה-RPC מסמן רק את הראשון, ולכן ביום שוטף הדלי האחרון נראה כמו יום מלא שירד.
+  function srPF(j){return !!j.partial_first;}
+  function srPL(j){
+    var td=(typeof META==='object'&&META&&META.today)?META.today:'';
+    return !!j.partial_last||(!!td&&String(j.to||'')>=td);
+  }
+  function srIsPart(j,i,n){return (i===0&&srPF(j))||(i===n-1&&srPL(j));}
+  // קו המגמה הוא חישוב, ולכן הוא רץ רק על דליים מלאים. הפאנל כבר אומר שדלי חלקי
+  // אינו בר השוואה, ורגרסיה שמשקללת אותו כמו דלי מלא סותרת בדיוק את מה שנכתב מעליה.
+  function srTrend2(j){
+    var rows=j.rows||[],n=rows.length,i,y,m=0,sx=0,sy=0,sxx=0,sxy=0,i0=-1,i1=-1,skip=false;
+    for(i=0;i<n;i++){
+      if(rows[i].v==null)continue;
+      if(srIsPart(j,i,n)){skip=true;continue;}
+      y=Number(rows[i].v);if(!isFinite(y))continue;
+      m++;sx+=i;sy+=y;sxx+=i*i;sxy+=i*y;
+      if(i0<0)i0=i;i1=i;
+    }
+    if(m<2||i0===i1)return null;
+    var den=m*sxx-sx*sx;if(!den)return null;
+    var b=(m*sxy-sx*sy)/den,a=(sy-b*sx)/m;
+    return {slope:b,i0:i0,i1:i1,y0:a+b*i0,y1:a+b*i1,n:m,skipped:skip};
+  }
+  function srLbl(t,b){
+    if(b==='m')return MONTHS[parseInt(t.slice(5,7),10)-1]+' '+t.slice(0,4);
+    if(b==='w')return 'שבוע '+heDate(t);
+    return heDate(t);
+  }
+  function srOpen(m,d,k,title,from){
+    srJob=null;srTrend=false;srPick=-1;
+    srBack=from||null;
+    srSheet.classList.add('on');srOvl.classList.add('on');
+    try{document.getElementById('srx').focus();}catch(e){}
+    srTitle.textContent=title||'';
+    srBody.innerHTML='<div class="srwait">טוען…</div>';
+    var n=++srSeq;
+    var u='/api/series?d_from='+state.from+'&d_to='+state.to+'&measure='+encodeURIComponent(m)
+      +(d?('&dim='+encodeURIComponent(d)+'&key='+encodeURIComponent(k==null?'':k)):'');
+    fetch(u,{cache:'no-store'})
+      .then(function(r){if(r.status===401){location.href='/login';throw 0;}if(!r.ok)throw new Error('http '+r.status);return r.json();})
+      .then(function(j){
+        if(n!==srSeq)return;
+        if(j.dev){srBody.innerHTML=devBoxHTML();return;}
+        srJob=j.agg||{};srDraw();
+      })
+      .catch(function(e){
+        if(n!==srSeq||e===0)return;
+        srBody.innerHTML='<div class="srwait">שגיאה בטעינת נתונים.</div>';
+      });
+  }
+  function srClose(){
+    srSeq++;srJob=null;srSheet.classList.remove('on');srOvl.classList.remove('on');
+    // חזרה למספר שממנו נפתח — אחרת המיקוד נשאר על אלמנט מוסתר
+    if(srBack){try{srBack.focus();}catch(e){}srBack=null;}
+  }
+
+  function srDraw(){
+    var j=srJob;if(!j)return;
+    var rows=j.rows||[],n=rows.length,i;
+    var head='<div class="srmeta">'+esc(j.bucket_label||'')+' · '+esc(rangeLbl(state.from,state.to))+'</div>';
+    // אפס הוא מדידה, לא היעדר נתונים: "לא בוטל כלום" הוא ₪0, ורק סדרה בלי אף דלי
+    // מדוד היא באמת "אין נתונים". ליחס אין דלי אפס — מכנה חסר מגיע כ-null.
+    var any=false,got=false;
+    for(i=0;i<n;i++){
+      if(rows[i].v==null)continue;
+      got=true;
+      if(j.kind==='ratio'||Number(rows[i].v)!==0){any=true;break;}
+    }
+    if(!got){srBody.innerHTML=head+'<div class="srwait">אין נתונים בתקופה שנבחרה.</div>';return;}
+    if(!any){srBody.innerHTML=head+'<div class="srwait">'+esc(srFmt(0,j))+' בתקופה שנבחרה.</div>';return;}
+    // סכום הדליים אינו הסך כשלקוח נספר בכל דלי שקנה בו, ולא כשזה יחס — ולכן התווית שונה
+    var totLbl=(j.kind==='ratio'||j.additive===false)?'בתקופה':'סה"כ';
+    var tot='<div class="srtot"><span>'+totLbl+'</span><b>'+srFmt(j.total==null?null:Number(j.total),j)+'</b></div>';
+    var T=srTrend2(j), hasT=!!T, on=(srTrend&&hasT);
+    var tools='<div class="srtools"><button type="button" id="srtg"'+(hasT?'':' disabled')
+      +' class="'+(on?'on':'')+'" aria-pressed="'+(on?'true':'false')+'">קו מגמה</button></div>';
+    var pickTxt=(srPick>=0&&rows[srPick])
+      ? '<b>'+esc(srLbl(rows[srPick].t,j.bucket))+'</b><span>'+esc(srFmt(rows[srPick].v==null?null:Number(rows[srPick].v),j))+'</span>'
+      : '';
+    var note='';
+    if(srPF(j))note+='<div class="srnote">התקופה הראשונה חלקית.</div>';
+    if(srPL(j))note+='<div class="srnote">'+((!j.partial_last&&j.bucket==='d')?'היום עוד לא נגמר.':'התקופה האחרונה חלקית.')+'</div>';
+    if(on&&T.skipped)note+='<div class="srnote">קו המגמה לא כולל תקופות חלקיות.</div>';
+    srBody.innerHTML=head+tot+tools+srChart(j,on?T:null)
+      +'<div class="sraxis"><span>'+esc(srLbl(rows[0].t,j.bucket))+'</span><span>'+esc(srLbl(rows[n-1].t,j.bucket))+'</span></div>'
+      +'<div class="srpick">'+pickTxt+'</div>'+note;
+  }
+
+  function srChart(j,T){
+    var rows=j.rows||[],n=rows.length,i;
+    var W=340,H=134,PT=9,PB=3;
+    var v=[],mx=0,mn=0,x;
+    for(i=0;i<n;i++){x=rows[i].v==null?null:Number(rows[i].v);v.push(x);
+      if(x==null)continue;if(x>mx)mx=x;if(x<mn)mn=x;}
+    if(mx===0&&mn===0)mx=1;
+    if(T){                                // קו המגמה מחושב, ובלי זה הוא היה בורח מהמסגרת
+      var a1=Number(T.y0),a2=Number(T.y1);
+      if(isFinite(a1)){if(a1>mx)mx=a1;if(a1<mn)mn=a1;}
+      if(isFinite(a2)){if(a2>mx)mx=a2;if(a2<mn)mn=a2;}
+    }
+    var hi=mx,lo=mn;if(hi===lo)hi=lo+1;
+    var ph=H-PT-PB;
+    function Y(y){return PT+ph*(hi-y)/(hi-lo);}
+    function X(i2){return W*(i2+0.5)/n;}
+    var y0=Y(0),bw=Math.max(1.4,(W/n)*0.72);
+    var s='<svg class="srsvg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(j.bucket_label||'')+'">';
+    if(lo<0)s+='<line class="srzero" x1="0" y1="'+y0.toFixed(2)+'" x2="'+W+'" y2="'+y0.toFixed(2)+'"></line>';
+    if(j.kind==='ratio'){
+      // יחס בלי מכנה בדלי הוא לא אפס — הקו נקטע שם ואין נקודה
+      var d='',pen=false;
+      for(i=0;i<n;i++){
+        if(v[i]==null){pen=false;continue;}
+        d+=(pen?'L':'M')+X(i).toFixed(2)+' '+Y(v[i]).toFixed(2)+' ';pen=true;
+      }
+      s+='<path class="srline" d="'+d+'" vector-effect="non-scaling-stroke"></path>';
+      for(i=0;i<n;i++)if(v[i]!=null)
+        s+='<circle class="srdot'+(srPick===i?' on':'')+'" cx="'+X(i).toFixed(2)+'" cy="'+Y(v[i]).toFixed(2)+'" r="'+(srPick===i?3:2)+'"></circle>';
+    }else{
+      for(i=0;i<n;i++){
+        var val=v[i]==null?0:v[i],yv=Y(val),yt=Math.min(yv,y0),hh=Math.abs(yv-y0);
+        if(val!==0&&hh<0.9)hh=0.9;
+        var part=srIsPart(j,i,n);
+        s+='<rect class="srbar'+(val<0?' neg':'')+(part?' part':'')+(srPick===i?' on':'')
+          +'" x="'+(X(i)-bw/2).toFixed(2)+'" y="'+yt.toFixed(2)+'" width="'+bw.toFixed(2)
+          +'" height="'+hh.toFixed(2)+'"></rect>';
+      }
+    }
+    if(T)   // רק מעל הדליים שנכנסו לחישוב — קו שנמתח מעל דלי חלקי מחזיר את אותה סתירה
+      s+='<path class="srtrend" d="M'+X(T.i0).toFixed(2)+' '+Y(Number(T.y0)).toFixed(2)
+        +' L'+X(T.i1).toFixed(2)+' '+Y(Number(T.y1)).toFixed(2)+'" vector-effect="non-scaling-stroke"></path>';
+    for(i=0;i<n;i++)
+      s+='<rect class="srhit" data-sri="'+i+'" x="'+(W*i/n).toFixed(2)+'" y="0" width="'+(W/n).toFixed(2)+'" height="'+H+'"><title>'
+        +esc(srLbl(rows[i].t,j.bucket))+' · '+esc(srFmt(v[i],j))+'</title></rect>';
+    return s+'</svg>';
+  }
+
+  document.getElementById('srx').addEventListener('click',srClose);
+  srOvl.addEventListener('click',srClose);
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&srSheet.classList.contains('on'))srClose();});
+  srBody.addEventListener('click',function(e){
+    var t=e.target.closest('#srtg');
+    if(t){if(!t.disabled){srTrend=!srTrend;srDraw();}return;}
+    var h=e.target.closest('[data-sri]');
+    if(h){var i=parseInt(h.getAttribute('data-sri'),10);srPick=(srPick===i?-1:i);srDraw();}
+  });
+  // שלב הלכידה: המספר יושב בתוך שורה שגם היא נלחצת, ובלעדיו לחיצה על המספר
+  // הייתה פותחת גם את השורה. מאזין רגיל על stage רץ לפני מאזין על document.
+  document.addEventListener('click',function(e){
+    var b=(e.target&&e.target.closest)?e.target.closest('[data-srm]'):null;
+    if(!b)return;
+    e.preventDefault();e.stopPropagation();
+    srOpen(b.getAttribute('data-srm'),b.getAttribute('data-srd')||'',
+           b.getAttribute('data-srk')||'',b.getAttribute('data-srt')||'',b);
+  },true);
+
   function renderAll(){
     // the server closed this screen for this user. Say so — never draw it as an empty result.
     if(cache.dev){document.getElementById('kpis').innerHTML='';stage.innerHTML=devBoxHTML();
@@ -2078,10 +2335,11 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(view==='cannib'){renderCannibMeta();renderCannib(cache.agg);return;}
     var R=ROOT();if(view==='cash'){renderCashKpis(R);}else if(view==='collect'){renderCollectKpis(R);}else if(view==='dim'){renderDimKpis(R);}else{renderKpis(R);}renderMeta(R);renderStage(R);}
 
-  function apply(){eT={};renderChips();fetchRange(renderAll);}
+  function apply(){srClose();eT={};renderChips();fetchRange(renderAll);}
 
   function setRange(f,t,preset){
     if(f>t){var x=f;f=t;t=x;}
+    srClose();   // הפאנל מצייר את התקופה שנבחרה; תקופה חדשה = הוא כבר לא נכון
     cxSel=null;cxOrd=null;   // תקופה חדשה = חוזרים לטבלה הראשית של הביטולים
     cpSel=null;
     var noOverlap=t<META.min||f>META.max;

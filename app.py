@@ -263,6 +263,7 @@ _NP_STRIP = {
     "/api/branchsrc": None,
     "/api/cancels": None,
     "/api/cancelorders": None,
+    "/api/series": None,
     "/api/cancelcase": None,
     "/api/compensation": _np_compensation,
     "/api/dow": None,
@@ -1169,6 +1170,73 @@ def api_cancels(request: Request, d_from: str = "", d_to: str = ""):
         f, t = t, f
     agg = sb_rpc("bi_cancel_rate", {"p_from": f.isoformat(), "p_to": t.isoformat()})
     return JSONResponse({"mode": "cancels", "agg": agg or {}})
+
+
+# ---------- one number, over time (the drill-down chart) ----------
+# Every screen opens the SAME panel, so the series has to come out of one place.
+# bi_series carries the iron rules and derives the bucket from the length of the
+# period; this endpoint only decides who may ask and what may be asked for.
+# The allow-list is here and not in the RPC on purpose: an unknown measure has to
+# come back 400, not a 500 out of a raise inside plpgsql.
+
+_SERIES_MEASURES = {
+    "sales", "profit", "orders", "customers",
+    "svc_sales", "svc_orders", "svc_customers",
+    "cash_mz", "cash_hv", "cash_sk", "cash_ot", "cash_tot", "cash_receipts",
+    "collect_net", "collect_gross", "collect_paid", "collect_disc",
+    "collect_ratio", "collect_discpct",
+    "dim_sales", "dim_profit", "dim_qty", "dim_orders", "dim_customers",
+    "md_total", "md_orders", "md_lines", "md_noreason",
+    "md_total_all", "md_orders_all", "md_lines_all", "md_noreason_all",
+    "cx_written", "cx_orders", "cx_live", "cx_money", "cx_sales",
+    "cx_customers", "cx_pct", "cx_mpct",
+}
+# What the no-profit role may not ask this endpoint for. Refused here, before the RPC
+# runs: the response stripper downstream only knows key NAMES, and in this payload the
+# numbers sit in "total"/"rows"/"rows_sum" like every other measure's.
+#   profit / dim_profit — the profit itself.
+#   md_*                — the money-down family. /api/moneydown is in _NP_BLOCK and
+#                         _np_compensation strips the same figures out of a second
+#                         endpoint; without them here /api/series is a third door to
+#                         the identical numbers, including the per-description drill.
+_SERIES_NP_BLOCK = {"profit", "dim_profit",
+                    "md_total", "md_orders", "md_lines", "md_noreason",
+                    "md_total_all", "md_orders_all", "md_lines_all", "md_noreason_all"}
+_SERIES_DIMS = {"agent", "branch", "branchp", "fam", "grp", "part",
+                "city", "sector", "source", "des"}
+
+
+@app.get("/api/series")
+def api_series(request: Request, d_from: str = "", d_to: str = "",
+               measure: str = "", dim: str = "", key: str = "",
+               bucket: str = ""):
+    """סדרה בזמן של מדד אחד — הבסיס של הצלילה מכל מספר.
+    הדלי (יום / שבוע / חודש) נגזר מאורך התקופה בתוך ה-RPC,
+    ושם גם חלים כל חוקי הברזל. כאן רק העברה."""
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    f, t = _parse_date(d_from), _parse_date(d_to)
+    if not f or not t:
+        return JSONResponse({"error": "bad dates"}, status_code=400)
+    if f > t:
+        f, t = t, f
+    m = (measure or "").strip()
+    if m not in _SERIES_MEASURES:
+        return JSONResponse({"error": "bad measure"}, status_code=400)
+    if m in _SERIES_NP_BLOCK and _is_noprofit(request):
+        return JSONResponse({"dev": True})
+    d = (dim or "").strip() or None
+    if d is not None and d not in _SERIES_DIMS:
+        return JSONResponse({"error": "bad dim"}, status_code=400)
+    if len(key or "") > 120:
+        return JSONResponse({"error": "bad key"}, status_code=400)
+    b = (bucket or "").strip().lower() or None
+    if b is not None and b not in ("d", "w", "m"):
+        return JSONResponse({"error": "bad bucket"}, status_code=400)
+    agg = sb_rpc("bi_series", {"p_from": f.isoformat(), "p_to": t.isoformat(),
+                               "p_measure": m, "p_dim": d,
+                               "p_key": (key if d else None), "p_bucket": b})
+    return JSONResponse({"mode": "series", "agg": agg or {}})
 
 
 @app.get("/api/cancelorders")
