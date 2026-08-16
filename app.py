@@ -71,7 +71,7 @@ app = FastAPI(title="Divani BI", docs_url=None, redoc_url=None, openapi_url=None
 
 _state = {"last_sync": None, "last_rc": None, "last_manual": 0.0, "minmax": None,
           "minmax_at": 0.0, "pending": [], "pending_at": None, "ocr_cache": {},
-          "last_web": None}
+          "last_web": None, "last_prices": None}
 
 
 # ---------- auth ----------
@@ -779,9 +779,86 @@ def sync_web_prices():
     return len(rows)
 
 
+# ---------- Priority price list snapshot (LOGPART) → bi_part_prices ----------
+# The other half of price control. Priority holds TODAY's list price and nothing
+# else: LOGPART is overwritten in place, so a price that changed this morning has
+# erased what it was yesterday. Without a daily copy, "was this line sold at the
+# list price of that day?" is unanswerable for every day not captured — which is
+# why July 2026 shows 0 lines checked and 345 lines "no list price for the order
+# date". Same rule as the website capture: a missed day is gone forever.
+#
+# BASEPLPRICE is before VAT and is the one to compare with; qprice is also before
+# VAT. VATPRICE is stored alongside only because Priority publishes it — note that
+# it still carries 17% on old rows, so it must never be used for a 2025+ figure.
+
+PRICE_HOUR = 4          # alongside the website capture, before the working day
+PRICE_FLOOR = 0.80      # see the guard below
+
+
+def sync_part_prices():
+    t0 = time.time()
+    snap = dt.datetime.now(IL).date().isoformat()
+    auth = "Basic " + base64.b64encode(f"{PRI_USER}:{PRI_PASS}".encode("utf-8")).decode("ascii")
+    url = (f"{PRI_BASE}/LOGPART?$select=PARTNAME,PARTDES,FAMILYDES,"
+           "BASEPLPRICE,VATPRICE,STATDES")
+
+    rows, seen = [], set()
+    for r in _pri_pages(url, auth, guard_max=400):
+        pn = (r.get("PARTNAME") or "").strip()
+        if not pn or pn in seen:
+            continue
+        seen.add(pn)
+        rows.append({
+            "snap_date":   snap,
+            "partname":    pn,
+            "pdes":        r.get("PARTDES") or "",
+            "family":      r.get("FAMILYDES") or "",
+            "base_price":  r.get("BASEPLPRICE") or 0,
+            "vat_price":   r.get("VATPRICE") or 0,
+            "part_status": r.get("STATDES") or "",
+        })
+
+    # A short read must never be stored. It looks exactly like parts that were
+    # deleted from the catalogue, and every order line for a missing part would be
+    # reported as "no list price" — a silent hole in the audit rather than an error.
+    # The floor is 80% of the last snapshot: the catalogue moves by a handful of
+    # parts a day, never by a fifth. Adjustable — this is an operational guard,
+    # not a business rule.
+    # Counted by RPC, not by selecting rows: PostgREST caps a plain select at 1,000
+    # rows whatever limit is asked for, so counting client-side would report 1,000
+    # for a 9,600-part snapshot and quietly disable the floor below.
+    prev = 0
+    try:
+        r = sb_rpc("bi_part_prices_last", {"p_before": snap})
+        if r:
+            prev = int(r[0]["n"])
+    except Exception as e:
+        # No previous snapshot, or Supabase unreachable for the count: fall through
+        # with prev=0 so the floor can never block the very first capture.
+        print("part-prices: previous count unavailable:", repr(e)[:200], flush=True)
+    if prev and len(rows) < prev * PRICE_FLOOR:
+        raise RuntimeError(f"read {len(rows)} parts but the last snapshot had {prev} — "
+                           f"below the {int(PRICE_FLOOR*100)}% floor, snapshot aborted "
+                           f"rather than storing a partial day")
+    if not rows:
+        raise RuntimeError("LOGPART returned no rows — snapshot aborted")
+
+    for i in range(0, len(rows), 500):
+        sb_upsert("bi_part_prices?on_conflict=snap_date,partname", rows[i:i + 500])
+    took = int((time.time() - t0) * 1000)
+    # Written LAST and only on success — bi_health proves this flow by the log row.
+    sb_insert("bi_sync_log", {"kind": "part_prices", "d_from": snap, "d_to": snap,
+                              "lines": len(rows), "took_ms": took})
+    _state["last_prices"] = dt.datetime.now(IL).strftime("%d.%m.%Y %H:%M")
+    print(f"part-prices {snap}: {len(rows)} parts (previous snapshot {prev}), "
+          f"{took} ms", flush=True)
+    return len(rows)
+
+
 def _refresher():
     last_nightly = None
     last_web = None
+    last_prices = None
     while True:
         try:
             now = dt.datetime.now(IL)
@@ -801,6 +878,15 @@ def _refresher():
                     last_web = today
                 except Exception as e:
                     print("web-prices capture failed:", repr(e)[:300], flush=True)
+            # Priority list price snapshot — the other half of price control, and
+            # equally unrecoverable after the fact. Its own guard and its own marker
+            # so a failure on one side never costs the other side its day.
+            if now.hour >= PRICE_HOUR and last_prices != today:
+                try:
+                    sync_part_prices()
+                    last_prices = today
+                except Exception as e:
+                    print("part-prices capture failed:", repr(e)[:300], flush=True)
             sync_window("auto", today - dt.timedelta(days=1), today)
             try:
                 sync_receipts_window("auto", today - dt.timedelta(days=1), today)
@@ -881,7 +967,8 @@ if _configured() and os.environ.get("DISABLE_REFRESH") != "1":
 def health():
     return JSONResponse({"ok": True, "configured": _configured(),
                          "last_sync": _state["last_sync"],
-                         "last_web": _state["last_web"]})
+                         "last_web": _state["last_web"],
+                         "last_prices": _state["last_prices"]})
 
 
 @app.get("/login")
