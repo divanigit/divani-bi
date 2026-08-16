@@ -15,6 +15,8 @@ Mobile-first agents-performance dashboard over Priority ERP data.
   retroactive edits/cancellations, plus one older 90-day slice per night
   (deep_rotate) so a cancellation entered long after the order date is
   not lost to אחוז ביטולים, which buckets by order date.
+  The same thread also takes ONE website price snapshot a day at 04:00 Israel
+  (bi_web_prices) — the expected price that price control compares orders against.
 
 Env (set in Render, never committed):
     DASH_PASS, SUPABASE_URL, SUPABASE_SECRET_KEY,
@@ -68,7 +70,8 @@ ASK_USD_ILS = float(os.environ.get("ASK_USD_ILS", "3.7"))
 app = FastAPI(title="Divani BI", docs_url=None, redoc_url=None, openapi_url=None)
 
 _state = {"last_sync": None, "last_rc": None, "last_manual": 0.0, "minmax": None,
-          "minmax_at": 0.0, "pending": [], "pending_at": None, "ocr_cache": {}}
+          "minmax_at": 0.0, "pending": [], "pending_at": None, "ocr_cache": {},
+          "last_web": None}
 
 
 # ---------- auth ----------
@@ -361,6 +364,17 @@ def sb_insert(table: str, row: dict):
           {"apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY,
            "Content-Type": "application/json", "Prefer": "return=minimal"},
           data=body, timeout=60)
+
+
+def sb_upsert(path: str, rows: list):
+    # path = "table?on_conflict=col_a,col_b" (PostgREST bulk upsert).
+    # merge-duplicates = a row that already exists is overwritten, not duplicated.
+    body = json.dumps(rows, ensure_ascii=False).encode("utf-8")
+    _http(f"{SB_URL}/rest/v1/{path}",
+          {"apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY,
+           "Content-Type": "application/json",
+           "Prefer": "resolution=merge-duplicates,return=minimal"},
+          data=body, timeout=120)
 
 
 def sb_select(path: str):
@@ -657,12 +671,136 @@ def sync_service_notes_window(days_back: int):
     return len(rows)
 
 
+# ---------- website price snapshot (vdivani.co.il) → bi_web_prices ----------
+# Price control compares every order line to the website price of that day. The site
+# keeps NO price history: a day that was not captured can never be reconstructed
+# afterwards. That is why the capture runs here, on the server, and not on a person's
+# PC where a forgotten task or a shut-down laptop silently ends the whole record.
+#
+# Source: the public WooCommerce Store API. Site prices INCLUDE VAT and are stored as
+# shown; bi_order_lines is before VAT, so any comparison must convert first.
+# One row per product per day (PK snap_date+product_id) — a re-run overwrites the
+# day's rows instead of duplicating them.
+# Manual/local twin of this code: C:\Users\doron\divani_bi\cloud\capture_web_prices.py
+# (keep the two in step — same API, same columns, same VAT rule).
+
+WEB_API = "https://vdivani.co.il/wp-json/wc/store/v1/products"
+WEB_PER_PAGE = 100
+WEB_HOUR = 4          # 04:00 Israel — quiet on the site, and clear of the 03:00 nightly block
+
+
+def _web_money(raw, minor_unit):
+    """WooCommerce price string -> shekels. currency_minor_unit is 0 on this site,
+    but the division stays generic so the code survives that changing."""
+    if raw is None or raw == "":
+        return None
+    try:
+        return round(int(raw) / (10 ** int(minor_unit or 0)), 2)
+    except (TypeError, ValueError):
+        return None
+
+
+def web_fetch_catalogue():
+    """The whole public catalogue, verified against the x-wp-total header.
+    A partial read is NOT stored — it would look exactly like products that
+    disappeared from the site, and price control would flag phantom variances.
+    Uses urllib directly (not _http) because paging needs the response headers."""
+    rows, page, total, pages = [], 1, None, 1
+    while True:
+        req = urllib.request.Request(
+            f"{WEB_API}?per_page={WEB_PER_PAGE}&page={page}",
+            headers={"User-Agent": "divani-bi-price-capture/1.0",
+                     "Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            data = json.loads(r.read().decode("utf-8"))
+            hdr = {k.lower(): v for k, v in dict(r.headers).items()}
+        if total is None:
+            total = int(hdr.get("x-wp-total") or 0)
+            pages = int(hdr.get("x-wp-totalpages") or 1)
+        if not data:
+            break
+        rows += data
+        if page >= pages:
+            break
+        page += 1
+    ids = {r["id"] for r in rows}
+    if total and len(rows) != total:
+        raise RuntimeError(f"site declared {total} products but {len(rows)} were read — "
+                           f"snapshot aborted rather than storing a partial day")
+    if len(ids) != len(rows):
+        raise RuntimeError(f"duplicate product ids ({len(rows)} rows, {len(ids)} ids)")
+    return rows, total
+
+
+def sync_web_prices():
+    t0 = time.time()
+    snap = dt.datetime.now(IL).date().isoformat()
+    products, declared = web_fetch_catalogue()
+    rows, ranged = [], 0
+    for p in products:
+        pr = p.get("prices") or {}
+        mu = pr.get("currency_minor_unit", 0)
+        # A price_range product means its variations differ and `price` is only the
+        # cheapest one — half a truth that would raise a variance that is not real.
+        # None exist today (16.8.26); if one appears it must be seen in the log.
+        if pr.get("price_range"):
+            ranged += 1
+        on_sale = bool(p.get("on_sale"))
+        rows.append({
+            "snap_date":     snap,
+            "product_id":    p["id"],
+            "name":          p.get("name"),
+            "slug":          p.get("slug"),
+            "url":           p.get("permalink"),
+            "sku":           (p.get("sku") or None),
+            "product_type":  p.get("type"),
+            "regular_price": _web_money(pr.get("regular_price"), mu),
+            # WooCommerce echoes the catalogue price into sale_price even with no sale.
+            # NULL when not on sale, so no discount is invented.
+            "sale_price":    _web_money(pr.get("sale_price"), mu) if on_sale else None,
+            "price":         _web_money(pr.get("price"), mu),
+            "on_sale":       on_sale,
+            "in_stock":      bool(p.get("is_in_stock")),
+            "currency":      pr.get("currency_code"),
+        })
+    for i in range(0, len(rows), 200):
+        sb_upsert("bi_web_prices?on_conflict=snap_date,product_id", rows[i:i + 200])
+    took = int((time.time() - t0) * 1000)
+    # Written LAST and only on success: bi_health measures this flow by the log row,
+    # so a failed capture leaves no proof of life and is reported as a silent feed.
+    sb_insert("bi_sync_log", {"kind": "web_prices", "d_from": snap, "d_to": snap,
+                              "lines": len(rows), "took_ms": took})
+    _state["last_web"] = dt.datetime.now(IL).strftime("%d.%m.%Y %H:%M")
+    print(f"web-prices {snap}: {len(rows)} products (site declared {declared}), "
+          f"{took} ms", flush=True)
+    if ranged:
+        print(f"web-prices WARNING: {ranged} product(s) have a price range — "
+              f"only the lowest price was stored", flush=True)
+    return len(rows)
+
+
 def _refresher():
     last_nightly = None
+    last_web = None
     while True:
         try:
             now = dt.datetime.now(IL)
             today = now.date()
+            # Website price snapshot — once a day, 04:00 Israel time (quiet on the
+            # site, clear of the 03:00 nightly block).
+            # Placed FIRST on purpose, and not inside the nightly block: sync_window
+            # below is unguarded, so a Priority failure aborts the whole cycle, and
+            # the nightly block is skipped entirely until its own pull succeeds.
+            # A day of Priority data can be re-pulled later; a missed day of website
+            # prices is gone forever — the site keeps no history.
+            # On failure last_web is left alone, so the next cycle (15 min) retries
+            # until the day is captured.
+            if now.hour >= WEB_HOUR and last_web != today:
+                try:
+                    sync_web_prices()
+                    last_web = today
+                except Exception as e:
+                    print("web-prices capture failed:", repr(e)[:300], flush=True)
             sync_window("auto", today - dt.timedelta(days=1), today)
             try:
                 sync_receipts_window("auto", today - dt.timedelta(days=1), today)
@@ -742,7 +880,8 @@ if _configured() and os.environ.get("DISABLE_REFRESH") != "1":
 @app.get("/health")
 def health():
     return JSONResponse({"ok": True, "configured": _configured(),
-                         "last_sync": _state["last_sync"]})
+                         "last_sync": _state["last_sync"],
+                         "last_web": _state["last_web"]})
 
 
 @app.get("/login")
