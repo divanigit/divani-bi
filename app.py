@@ -1882,6 +1882,19 @@ def api_cash(request: Request, d_from: str = "", d_to: str = ""):
     return JSONResponse({"mode": "cashagg", "agg": agg or {}, **pend})
 
 
+@app.get("/api/pricecontrol")
+def api_pricecontrol(request: Request):
+    """בקרת מחירים — הזמנות אתר מול פריוריטי, מחיר בסיס, וזוגות שנלמדו.
+    מוגבל לבעלים ולמנהלים בלבד כל עוד המסך חדש ולא נסקר: מסך שלא אושר מוצג
+    לאחרים כ"בפיתוח" ולא בנתונים חלקיים."""
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    if not _is_admin(request):
+        return JSONResponse({"dev": True})
+    agg = sb_rpc("bi_price_control", {"p_limit": 40})
+    return JSONResponse({"mode": "pricecontrol", "agg": agg or {}})
+
+
 @app.get("/api/pending")
 def api_pending(request: Request):
     if not _logged_in(request):

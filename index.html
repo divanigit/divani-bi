@@ -125,6 +125,11 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .pctdet .i .p{font-size:15px;font-weight:500;font-variant-numeric:tabular-nums}
   .pctdet .f{font-size:11px;color:var(--tx3);margin-top:8px}
   @media (prefers-reduced-motion:reduce){.pctdown{transition:none}}
+  /* בקרת מחירים — פרקים אחד מתחת לשני, בלי צבע דקורטיבי */
+  .pcsec{margin:0 0 20px}
+  .pcsec h3{font-size:13px;font-weight:500;margin:0 0 8px;color:var(--tx2)}
+  .pcnote{font-size:12px;color:var(--tx3);margin:0 0 8px;line-height:1.55}
+  .pcfoot{font-size:11px;color:var(--tx3);border-top:1px solid var(--line2);padding-top:9px;margin-top:4px}
   .hint{font-size:12px;color:var(--tx3);margin:0 0 8px}
   .pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px}
   .pill.ok{background:var(--okbg);color:var(--okfg)}.pill.warn{background:var(--wbg);color:var(--wfg)}.pill.bad{background:var(--dbg);color:var(--dfg)}
@@ -493,6 +498,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         <button type="button" data-v="cash" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2.4"/><circle cx="12" cy="12" r="2.6"/><path d="M6 12h.02M18 12h.02"/></svg><span class="rlbl">מזומן</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="collect" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.8" y="6" width="18.4" height="13" rx="2.4"/><path d="M3 10.5h18.2"/><circle cx="17" cy="14.6" r="1.35"/></svg><span class="rlbl">מקדמות</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="service" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13.5v-1.5a8 8 0 0 1 16 0v1.5"/><rect x="2.5" y="13" width="4" height="6" rx="1.8"/><rect x="17.5" y="13" width="4" height="6" rx="1.8"/><path d="M20 19v.5a3 3 0 0 1-3 3H13"/></svg><span class="rlbl">שירות</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
+        <button type="button" data-v="pctrl" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 4.5h11a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2z"/><path d="M8.5 9.5h7"/><path d="M8.5 13h7"/><path d="M8.5 16.5h4"/></svg><span class="rlbl">בקרת מחירים</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <div class="navgroup"><svg class="gico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M8 17v-5"/><path d="M13 17V8"/><path d="M18 17v-8"/></svg><span>אנליטיקה</span></div>
         <button type="button" data-v="branchsrc" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3.5h3.5a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H15"/><path d="M10 16.5l4.5-4.5L10 7.5"/><path d="M14.5 12H3.5"/></svg><span class="rlbl">מקורות הגעה</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="dim" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12V3.2A8.8 8.8 0 1 0 20.8 12H12z"/><path d="M14.5 3.9A8.8 8.8 0 0 1 20.1 9.5H14.5z"/></svg><span class="rlbl">פילוח</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
@@ -724,6 +730,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(view==='cancels')return state.from+'|'+state.to+'|CX'+(cxOrd?('|O|'+cxOrd):(cxSel?('|'+cxSel.t+'|'+cxSel.k):''));
     if(view==='comp')return state.from+'|'+state.to+'|CP'+(cpSel?('|'+cpSel):'');
     if(view==='dow')return state.from+'|'+state.to+'|DW';
+    // בקרת מחירים אינה תלויה בטווח התאריכים: היא בודקת את מצב המחירים עכשיו
+    // מול מה שכבר נמכר. מפתח קבוע = לא נטען מחדש בכל שינוי תאריך
+    if(view==='pctrl')return 'PCTRL';
     if(view==='dim'){
       if(dimKind==='fam')return state.from+'|'+state.to+'|T|'+(dimPath.grp||'')+'|'+(dimPath.fam||'')+'|'+(dimPath.model||'');
       if(dimSeg)return state.from+'|'+state.to+'|SG|'+dimSeg.seg+'|'+dimSeg.key;
@@ -769,6 +778,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
               :cxSel?('/api/cancelorders?d_from='+state.from+'&d_to='+state.to+'&by='+cxSel.t+'&key='+encodeURIComponent(cxSel.k))
               :('/api/cancels?d_from='+state.from+'&d_to='+state.to))
            :view==='comp'?('/api/compensation?d_from='+state.from+'&d_to='+state.to+(cpSel?'&reason='+encodeURIComponent(cpSel):''))
+           :view==='pctrl'?('/api/pricecontrol')
            :view==='dow'?('/api/dow?d_from='+state.from+'&d_to='+state.to)
            :view==='dim'?(function(){
               if(dimKind==='fam')return '/api/tree?d_from='+state.from+'&d_to='+state.to+(dimPath.grp?'&grp='+encodeURIComponent(dimPath.grp):'')+(dimPath.fam?'&fam='+encodeURIComponent(dimPath.fam):'')+(dimPath.model?'&model='+encodeURIComponent(dimPath.model):'');
@@ -2148,6 +2158,90 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     while(d<=e&&g<20000){c[d.getDay()]++;d.setDate(d.getDate()+1);g++;}
     return c;
   }
+  // ---------- בקרת מחירים ----------
+  // המסך אינו תלוי בטווח התאריכים שנבחר: הוא מציג את מצב הבקרה עכשיו — מה נבדק,
+  // מה לא תואם, ומה המערכת למדה לבד ממכירות אמיתיות.
+  function renderPctrlMeta(){
+    var a=cache.agg||{}, o=a.orders||{}, m=a.meta||{};
+    document.getElementById('kpis').innerHTML=
+      '<div class="kpi"><div class="l">הזמנות אתר שנבדקו</div><div class="v">'+nf(o.bridged||0)+'</div></div>'+
+      '<div class="kpi"><div class="l">תואמות</div><div class="v">'+nf(o.agreed||0)+'</div></div>'+
+      '<div class="kpi"><div class="l">פערים</div><div class="v">'+nf(o.gaps||0)+'</div></div>'+
+      '<div class="kpi"><div class="l">זוגות שנלמדו</div><div class="v">'+nf((a.pairs||{}).total||0)+'</div></div>';
+    document.getElementById('sellbl').textContent=
+      'מצב עכשיו · '+nf(m.web_orders||0)+' הזמנות אתר במערכת';
+    document.getElementById('builtlbl').textContent=META.last_sync?('עודכן '+META.last_sync):'';
+  }
+
+  // ווקומרס מחזיר שמות מוצר עם ישויות HTML ("ריבן &#8211; דמוי שיש"). מפענחים
+  // אותן דרך textarea — שם התוכן אינו נקרא כתגיות — ורק אחר כך מריצים esc,
+  // כך שהפענוח לא פותח פתח להזרקה. חותכים אחרי הפענוח, אחרת ישות נחתכת באמצע.
+  function deent(s){
+    if(s==null)return '';
+    var t=document.createElement('textarea'); t.innerHTML=String(s); return t.value;
+  }
+  function pctrlSection(title, note, head, rows){
+    if(!rows.length)return '<div class="pcsec"><h3>'+title+'</h3><div class="empty">'+note+'</div></div>';
+    return '<div class="pcsec"><h3>'+title+'</h3><div class="tw"><table><thead><tr>'
+      +head.map(function(h){return '<th'+(h.nm?' class="nm"':'')+'>'+esc(h.t)+'</th>';}).join('')
+      +'</tr></thead><tbody>'+rows.join('')+'</tbody></table></div></div>';
+  }
+
+  function renderPctrl(a){
+    if(cache.dev||(a&&a.dev)){stage.innerHTML=devBoxHTML();return;}
+    a=a||{};
+    var b=a.base||{}, p=a.pairs||{}, m=a.meta||{};
+
+    // פערים בהזמנות אתר — המחיר ששולם באתר מול מה שנרשם בפריוריטי
+    var og=(a.order_gaps||[]).map(function(r){
+      return '<tr><td class="nm">'+esc(r.number)+'</td><td>'+esc(r.d||'')+'</td><td>'
+        +ils(r.web)+'</td><td>'+ils(r.pri)+'</td><td style="font-weight:500">'+ils(r.gap)
+        +'</td><td class="mut">'+esc(r.pri_status||'')+'</td></tr>';});
+
+    // מחיר הבסיס באתר מול מחיר הבסיס בפריוריטי
+    var bg=(a.base_gaps||[]).map(function(r){
+      var noPrice=(r.verdict==='אין מחיר מחירון');
+      return '<tr><td class="nm">'+esc(deent(r.name).slice(0,44))+'</td><td class="mut">'+esc(r.kind||'')
+        +'</td><td>'+ils(r.web)+'</td><td>'+(noPrice?'<span class="mut">אין</span>':ils(r.pri))
+        +'</td><td style="font-weight:500">'+(noPrice?'—':ils(r.gap))
+        +'</td><td><span class="pill '+(noPrice?'warn':'bad')+'">'+esc(r.verdict)+'</span></td></tr>';});
+
+    // מה נלמד לבד. "פעמים" = בכמה הזמנות שונות הזוג הופיע — אחת היא השערה, שתיים כבר עדות
+    var lp=(a.learned||[]).map(function(r){
+      return '<tr><td class="nm">'+esc(deent(r.web_name).slice(0,40))+'</td><td class="mut">'
+        +esc(r.partname)+'</td><td class="mut">'+esc((r.pri_des||'').slice(0,34))+'</td><td>'
+        +nf(r.times||0)+'</td></tr>';});
+
+    var mv=(a.moves||[]).map(function(r){
+      return '<tr><td class="nm">'+esc(deent(r.des||r.key).slice(0,40))+'</td><td class="mut">'
+        +esc(r.source==='web'?'אתר':'פריוריטי')+'</td><td>'+ils(r.old)+'</td><td>'+ils(r.new)
+        +'</td><td class="mut">'+esc(String(r.at||'').slice(0,16).replace('T',' '))+'</td></tr>';});
+
+    var amb=(p.ambiguous||0)
+      ? '<div class="pcnote">'+nf(p.ambiguous)+' מוצרים באתר ממופים ליותר ממק"ט אחד. '
+        +'זה תקין כשמדובר בשתי תצורות של אותו דגם — ומעיד על טעות כשהדגמים שונים.</div>' : '';
+
+    stage.innerHTML=
+      pctrlSection('פערים בהזמנות אתר',
+        'אין פערים. כל הזמנה שנבדקה תואמת בין האתר לפריוריטי.',
+        [{t:'הזמנה',nm:1},{t:'תאריך'},{t:'שולם באתר'},{t:'נרשם בפריוריטי'},{t:'פער'},{t:'סטטוס'}], og)
+      + pctrlSection('מחיר הבסיס — האתר מול פריוריטי',
+        'אין פערים במחיר הבסיס.',
+        [{t:'המוצר',nm:1},{t:'סוג'},{t:'באתר'},{t:'בפריוריטי'},{t:'פער'},{t:'מצב'}], bg)
+      + '<div class="pcsec"><h3>מה המערכת למדה לבד</h3>'
+      + '<div class="pcnote">כל הזמנת אתר מלמדת איזה מוצר באתר הוא איזה מק"ט בפריוריטי. '
+      + 'אף אחד לא מקליד את זה.' + (b.no_model ? ' ' + nf(b.no_model) + ' מוצרים עדיין בלי דגם מזוהה.' : '')
+      + '</div>' + amb
+      + (lp.length ? '<div class="tw"><table><thead><tr><th class="nm">המוצר באתר</th><th>מק"ט</th><th>תיאור בפריוריטי</th><th>הזמנות</th></tr></thead><tbody>'
+          + lp.join('') + '</tbody></table></div>' : '<div class="empty">עדיין לא נלמד אף זוג.</div>')
+      + '</div>'
+      + pctrlSection('שינויי מחיר שנתפסו',
+        'אף מחיר לא זז מאז שהמעקב התחיל.',
+        [{t:'המוצר',nm:1},{t:'מקור'},{t:'היה'},{t:'עכשיו'},{t:'מתי'}], mv)
+      + '<div class="pcfoot">נבדקים ' + nf(m.models_confident||0) + ' דגמים מתוך ' + nf(m.models_resolved||0)
+      + ' · ' + nf(m.frozen_live||0) + ' שורות הזמנה עם מחיר מוקפא · הבדיקה רצה כל 15 דקות</div>';
+  }
+
   function renderDowMeta(){
     document.getElementById('kpis').innerHTML='';
     document.getElementById('sellbl').textContent=rangeLbl(state.from,state.to);
@@ -2393,6 +2487,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(view==='cancels'){renderCancelsMeta();renderCancels(cache.agg);return;}
     if(view==='comp'){renderCompMeta();renderComp(cache.agg);return;}
     if(view==='dow'){renderDowMeta();renderDow(cache.agg);return;}
+    if(view==='pctrl'){renderPctrlMeta();renderPctrl(cache.agg);return;}
     if(view==='ins'){renderInsMeta();renderInsStage();return;}
     if(view==='branchsrc'){renderBranchSrcMeta();renderBranchSrc(cache.agg);return;}
     if(view==='baskets'){renderBasketsMeta();renderBaskets(cache.agg);return;}
