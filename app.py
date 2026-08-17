@@ -1052,6 +1052,18 @@ def sync_web_orders():
             gaps = int(r[0].get("gaps") or 0)
     except Exception as e:
         print("web-bridge failed:", repr(e)[:300], flush=True)
+    # Base price on the site against base price in Priority, on everything learned
+    # so far. Generator models resolve to their base part; anything whose model
+    # cannot be established with confidence is reported as "לא נקבע דגם" and NEVER
+    # as a variance — a false alarm costs more than a missed one here.
+    try:
+        b = sb_rpc("bi_base_price_check", {"p_tol": WOO_TOL})
+        if b:
+            print(f"base-price: checked {b[0].get('checked')}, agreed {b[0].get('agreed')}, "
+                  f"gaps {b[0].get('gaps')}, no price {b[0].get('no_price')}, "
+                  f"no model {b[0].get('no_model')}", flush=True)
+    except Exception as e:
+        print("base-price check failed:", repr(e)[:300], flush=True)
     took = int((time.time() - t0) * 1000)
     try:
         today = dt.datetime.now(IL).date().isoformat()
