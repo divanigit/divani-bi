@@ -1524,6 +1524,10 @@ _SERIES_MEASURES = {
     "sales", "profit", "orders", "customers",
     "svc_sales", "svc_orders", "svc_customers",
     "cash_mz", "cash_hv", "cash_sk", "cash_ot", "cash_tot", "cash_receipts",
+    # Cash as a share of turnover. A trend line on absolute shekels is unreadable
+    # — the denominator moves too — so collection can only be judged as a ratio.
+    # Served by bi_cash_pct_series, not bi_series: see _SERIES_PCT below.
+    "cash_mzpct", "cash_hvpct", "cash_skpct", "cash_totpct",
     "collect_net", "collect_gross", "collect_paid", "collect_disc",
     "collect_ratio", "collect_discpct",
     "dim_sales", "dim_profit", "dim_qty", "dim_orders", "dim_customers",
@@ -1545,6 +1549,10 @@ _SERIES_NP_BLOCK = {"profit", "dim_profit",
                     "md_total_all", "md_orders_all", "md_lines_all", "md_noreason_all"}
 _SERIES_DIMS = {"agent", "branch", "branchp", "fam", "grp", "part",
                 "city", "sector", "source", "des"}
+# The only measures whose numerator and denominator come from two different tables
+# bucketed on two different dates — receipts on iv_date, turnover on ord_date — so
+# they live in their own RPC that returns the identical JSON shape.
+_SERIES_PCT = {"cash_mzpct", "cash_hvpct", "cash_skpct", "cash_totpct"}
 
 
 @app.get("/api/series")
@@ -1569,14 +1577,21 @@ def api_series(request: Request, d_from: str = "", d_to: str = "",
     d = (dim or "").strip() or None
     if d is not None and d not in _SERIES_DIMS:
         return JSONResponse({"error": "bad dim"}, status_code=400)
+    # The ratio measures split by branch and by nothing else. Caught here, like the
+    # measure allow-list above and for the same reason: the RPC would raise inside
+    # plpgsql, PostgREST would answer 400, sb_rpc would turn that into an exception
+    # and the caller would get a 500 for what is really a bad request.
+    if m in _SERIES_PCT and d is not None and d != "branch":
+        return JSONResponse({"error": "bad dim"}, status_code=400)
     if len(key or "") > 120:
         return JSONResponse({"error": "bad key"}, status_code=400)
     b = (bucket or "").strip().lower() or None
     if b is not None and b not in ("d", "w", "m"):
         return JSONResponse({"error": "bad bucket"}, status_code=400)
-    agg = sb_rpc("bi_series", {"p_from": f.isoformat(), "p_to": t.isoformat(),
-                               "p_measure": m, "p_dim": d,
-                               "p_key": (key if d else None), "p_bucket": b})
+    fn = "bi_cash_pct_series" if m in _SERIES_PCT else "bi_series"
+    agg = sb_rpc(fn, {"p_from": f.isoformat(), "p_to": t.isoformat(),
+                      "p_measure": m, "p_dim": d,
+                      "p_key": (key if d else None), "p_bucket": b})
     return JSONResponse({"mode": "series", "agg": agg or {}})
 
 
@@ -1694,6 +1709,17 @@ def api_cash(request: Request, d_from: str = "", d_to: str = ""):
         f, t = t, f
     pend = {"pending": _state.get("pending") or [],
             "pending_at": _state.get("pending_at")}
+    # Turnover for the same period, VAT included, so the screen can show each cash
+    # figure as a share of it. Absolute shekels cannot answer "is collection
+    # improving" — the denominator moves as well. Guarded: the cash screen must
+    # still open if this one call fails, just without the ratios.
+    try:
+        gross = sb_rpc("bi_turnover_gross", {"p_from": f.isoformat(), "p_to": t.isoformat()})
+        gross = float(gross) if gross is not None else None
+    except Exception as e:
+        print("turnover-gross failed:", repr(e)[:200], flush=True)
+        gross = None
+    pend["gross"] = gross
     if (t - f).days <= MAX_LINE_SPAN_DAYS:
         rows = sb_rpc("bi_cash_lines", {"p_from": f.isoformat(), "p_to": t.isoformat()})
         return JSONResponse({"mode": "cashlines", "rows": rows or [], **pend})
