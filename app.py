@@ -858,6 +858,19 @@ def sync_part_prices():
     _state["last_prices"] = dt.datetime.now(IL).strftime("%d.%m.%Y %H:%M")
     print(f"part-prices {snap}: {len(rows)} parts (previous snapshot {prev}), "
           f"{took} ms", flush=True)
+    # Resolve every generator part to its base model, right after the fresh
+    # catalogue lands. This is the expensive half of the base-price check —
+    # 2,352 parts against 298 base parts by prefix, 35 s — and running it every
+    # 15 minutes blew straight through service_role's 30 s statement timeout and
+    # returned a 500. The catalogue moves by a handful of parts a day, so once a
+    # day is right and the 15-minute check just reads the answer (0.4 s).
+    try:
+        r = sb_rpc("bi_resolve_part_models", {})
+        if r:
+            print(f"base-models: {r[0].get('resolved')} resolved, "
+                  f"{r[0].get('confident')} confident", flush=True)
+    except Exception as e:
+        print("base-model resolve failed:", repr(e)[:300], flush=True)
     return len(rows)
 
 
