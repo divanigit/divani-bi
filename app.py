@@ -71,7 +71,7 @@ app = FastAPI(title="Divani BI", docs_url=None, redoc_url=None, openapi_url=None
 
 _state = {"last_sync": None, "last_rc": None, "last_manual": 0.0, "minmax": None,
           "minmax_at": 0.0, "pending": [], "pending_at": None, "ocr_cache": {},
-          "last_web": None, "last_prices": None}
+          "last_web": None, "last_prices": None, "last_pulse": None}
 
 
 # ---------- auth ----------
@@ -855,6 +855,106 @@ def sync_part_prices():
     return len(rows)
 
 
+# ---------- the price at the MOMENT of the sale ----------
+# The two daily snapshots above answer "what was the list price on day D". That is
+# a different question from the one price control exists for — "what was the list
+# price when THIS line was written" — and the two come apart in two proven ways:
+#
+#   * a promotion lands at 10:00 and the 04:00 snapshot knows nothing about it;
+#   * ord_date is the ORDER's date, not the line's. SO26RIS002047 is dated 14.8,
+#     still a draft, and its sofa line was configured AFTER the 16.8 04:00 snapshot
+#     — so no snapshot keyed to ord_date could ever have priced it.
+#
+# So the price is captured every cycle and stamped onto each order line the first
+# time we ever see it. Exposure falls from up to 24 hours to one refresh cycle.
+# Only prices that MOVED are stored; a normal day writes zero rows.
+#
+# Measured 17.8.26: Priority 9.1 s for 9,615 parts, the site 6.5 s for 438 products.
+# At 15 minutes that is ~26 minutes of work a day on a server that is otherwise idle.
+
+PULSE_CHUNK = 4000       # rows per RPC call — keeps the JSON body well under a MB
+
+
+def _pri_price_rows():
+    """LOGPART -> [{k: partname, p: price before VAT, d: description}]."""
+    auth = "Basic " + base64.b64encode(f"{PRI_USER}:{PRI_PASS}".encode("utf-8")).decode("ascii")
+    url = f"{PRI_BASE}/LOGPART?$select=PARTNAME,PARTDES,BASEPLPRICE"
+    out, seen = [], set()
+    for r in _pri_pages(url, auth, guard_max=400):
+        pn = (r.get("PARTNAME") or "").strip()
+        if not pn or pn in seen:
+            continue
+        seen.add(pn)
+        out.append({"k": pn, "p": r.get("BASEPLPRICE"), "d": r.get("PARTDES") or ""})
+    return out
+
+
+def _web_price_rows():
+    """The site -> [{k: product id, p: the price a shopper sees, d: name}].
+    web_fetch_catalogue raises on a partial read, which is what we want: a short
+    read here would look like hundreds of products changing price at once."""
+    products, _ = web_fetch_catalogue()
+    return [{"k": str(p["id"]),
+             "p": _web_money((p.get("prices") or {}).get("price"),
+                             (p.get("prices") or {}).get("currency_minor_unit", 0)),
+             "d": p.get("name") or ""}
+            for p in products]
+
+
+def capture_price_moves():
+    """One pulse over both sources. The diff is done in SQL, never here: PostgREST
+    caps a plain select at 1,000 rows, so bi_price_now cannot be read back to
+    compare client-side — a cap that has already caused one silent bug here."""
+    t0, total = time.time(), 0
+    for source, fetch in (("pri", _pri_price_rows), ("web", _web_price_rows)):
+        try:
+            rows = fetch()
+        except Exception as e:
+            print(f"price-pulse {source} read failed:", repr(e)[:300], flush=True)
+            continue
+        if not rows:
+            # An empty read is a failed read, not a catalogue that emptied. Storing
+            # it would leave every price unconfirmed and make the NEXT real read
+            # look like thousands of price changes.
+            print(f"price-pulse {source}: empty read, skipped", flush=True)
+            continue
+        changed = seen = 0
+        for i in range(0, len(rows), PULSE_CHUNK):
+            r = sb_rpc("bi_price_pulse", {"p_source": source,
+                                          "p_rows": rows[i:i + PULSE_CHUNK]})
+            if r:
+                changed += int(r[0].get("changed") or 0)
+                seen += int(r[0].get("seen") or 0)
+        total += changed
+        if changed:
+            print(f"price-pulse {source}: {changed} of {seen} prices MOVED", flush=True)
+    took = int((time.time() - t0) * 1000)
+    # Logged only when something actually moved. bi_health proves this flow is
+    # alive from bi_price_now.seen_at instead, which is overwritten every pulse —
+    # so a quiet day stays quiet in the log without looking like a dead feed.
+    if total:
+        try:
+            today = dt.datetime.now(IL).date().isoformat()
+            sb_insert("bi_sync_log", {"kind": "price_moves", "d_from": today,
+                                      "d_to": today, "lines": total, "took_ms": took})
+        except Exception:
+            pass
+    _state["last_pulse"] = dt.datetime.now(IL).strftime("%d.%m.%Y %H:%M")
+    return total
+
+
+def freeze_new_lines():
+    """Stamp today's list price on every line we have never seen before.
+    Everything that existed on 17.8.26 was seeded as 'seed' with no price, so a
+    line missing from bi_line_price_frozen is genuinely new — never history being
+    back-dated with a price nobody captured at the time."""
+    r = sb_rpc("bi_freeze_new_lines", {})
+    try:
+        return int(r if isinstance(r, (int, float)) else (r or [0])[0])
+    except (TypeError, ValueError, IndexError):
+        return 0
+
+
 def _refresher():
     last_nightly = None
     last_web = None
@@ -888,6 +988,20 @@ def _refresher():
                 except Exception as e:
                     print("part-prices capture failed:", repr(e)[:300], flush=True)
             sync_window("auto", today - dt.timedelta(days=1), today)
+            # Price pulse, then freeze — in that order and immediately after the
+            # order pull. The price must be read AFTER the line is known to us, so
+            # what gets stamped is the price as it stands now, not minutes stale.
+            # Both are guarded: neither may cost the cycle its Priority sync.
+            try:
+                capture_price_moves()
+            except Exception as e:
+                print("price-pulse failed:", repr(e)[:300], flush=True)
+            try:
+                n_frozen = freeze_new_lines()
+                if n_frozen:
+                    print(f"line-freeze: {n_frozen} new line(s) stamped", flush=True)
+            except Exception as e:
+                print("line-freeze failed:", repr(e)[:300], flush=True)
             try:
                 sync_receipts_window("auto", today - dt.timedelta(days=1), today)
             except Exception as e:
@@ -968,7 +1082,8 @@ def health():
     return JSONResponse({"ok": True, "configured": _configured(),
                          "last_sync": _state["last_sync"],
                          "last_web": _state["last_web"],
-                         "last_prices": _state["last_prices"]})
+                         "last_prices": _state["last_prices"],
+                         "last_pulse": _state["last_pulse"]})
 
 
 @app.get("/login")
