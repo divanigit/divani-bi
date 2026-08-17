@@ -108,15 +108,23 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .sortreset{display:block;margin:0 0 8px auto;font-family:inherit;font-size:12px;min-height:34px;padding:6px 12px;border-radius:999px;border:1px solid var(--line2);background:var(--surface);color:var(--tx2);cursor:pointer}
   .sortreset:hover{color:var(--tx)}
   .kpi{background:var(--surface);border-radius:10px;padding:9px 11px}.kpi .l{font-size:11px;color:var(--tx3)}.kpi .v{font-size:17px;font-weight:500;font-variant-numeric:tabular-nums;margin-top:2px}
-  /* אחוז מהמחזור — רצועה מתחת לאריחים. שורה אחת, גובה נמוך, בלי צבע:
-     היא נספחת לאריחים ולא מתחרה בהם */
-  .pctstrip{background:var(--surface);border-radius:10px;padding:8px 11px;margin:-6px 0 14px}
-  .pctstrip .h{font-size:11px;color:var(--tx3);margin-bottom:6px}
-  .pctstrip .r{display:flex;flex-wrap:wrap;gap:6px 18px}
-  .pctstrip .i{display:flex;align-items:baseline;gap:6px}
-  .pctstrip .i .n{font-size:11px;color:var(--tx3)}
-  .pctstrip .i .p{font-size:15px;font-weight:500;font-variant-numeric:tabular-nums}
-  .pctstrip .f{font-size:11px;color:var(--tx3);margin-top:6px}
+  /* אחוז מהמחזור — תיבה אחת עם המספר הראשי, וחץ שפותח את ההתפלגות.
+     סגורה כברירת מחדל: המספר שצריך לקפוץ לעין הוא אחד, לא ארבעה */
+  .pctbox{background:var(--surface);border-radius:10px;margin:-6px 0 14px;overflow:hidden}
+  .pcthead{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:9px 11px;
+    font-family:inherit;text-align:right;background:none;border:0;color:inherit;cursor:pointer}
+  .pcthead .l{font-size:11px;color:var(--tx3);flex:1;min-width:0}
+  .pcthead .v{font-size:19px;font-weight:500;font-variant-numeric:tabular-nums}
+  .pctdown{flex:none;width:16px;height:16px;color:var(--tx3);transition:transform .18s ease}
+  .pcthead[aria-expanded="true"] .pctdown{transform:rotate(180deg)}
+  .pctdet{padding:0 11px 10px;border-top:1px solid var(--line2)}
+  .pctdet[hidden]{display:none}
+  .pctdet .r{display:flex;flex-wrap:wrap;gap:8px 18px;padding-top:9px}
+  .pctdet .i{display:flex;align-items:baseline;gap:6px}
+  .pctdet .i .n{font-size:11px;color:var(--tx3)}
+  .pctdet .i .p{font-size:15px;font-weight:500;font-variant-numeric:tabular-nums}
+  .pctdet .f{font-size:11px;color:var(--tx3);margin-top:8px}
+  @media (prefers-reduced-motion:reduce){.pctdown{transition:none}}
   .hint{font-size:12px;color:var(--tx3);margin:0 0 8px}
   .pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px}
   .pill.ok{background:var(--okbg);color:var(--okfg)}.pill.warn{background:var(--wbg);color:var(--wfg)}.pill.bad{background:var(--dbg);color:var(--dfg)}
@@ -1053,6 +1061,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   // זה 23.5 מול 21.6, כלומר כמעט אותו דבר.
   // המחזור כאן כולל מע"מ, כי התקבולים כוללים מע"מ. בלי התיקון הזה יולי היה
   // מוצג כ-46 אחוז במקום 39.
+  // התיבה סגורה כברירת מחדל ונשארת במצב שבו דורון השאיר אותה, גם כשהנתונים
+  // מתרעננים כל רבע שעה — אחרת היא הייתה נסגרת לו מתחת לאצבע
+  var cashPctOpen=false;
   function renderCashPct(R,pend){
     var el=document.getElementById('kpipct'); if(!el)return;
     var g=cache.gross;
@@ -1068,13 +1079,26 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var note=(pend>0)
       ? 'התקבולים כוללים מע"מ ולכן גם המחזור. "סה"כ מזומן" כולל העברות מאומתות; הגרף לפי יום אינו כולל אותן.'
       : 'התקבולים כוללים מע"מ, ולכן גם המחזור שמוצג כאן כולל מע"מ.';
-    el.innerHTML='<div class="pctstrip">'
-      +'<div class="h">אחוז מהמחזור בתקופה · מחזור '+ils(g)+'</div><div class="r">'
+    // הכותרת עצמה היא הכפתור שפותח וסוגר, ולכן אין בה data-srm — אחרת לחיצה
+    // אחת הייתה גם פותחת התפלגות וגם קופצת לגרף. הגרף של סה"כ מזומן נגיש
+    // מתוך ההתפלגות, שם הוא מספר לחיץ ככל האחרים
+    var arrow='<svg class="pctdown" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
+      +' stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+      +'<path d="M6 9l6 6 6-6"/></svg>';
+    el.innerHTML='<div class="pctbox">'
+      +'<button type="button" class="pcthead" id="pcth" aria-controls="pctdet" aria-expanded="'
+      +(cashPctOpen?'true':'false')+'">'
+      +'<span class="l">אחוז מזומן מהמחזור בתקופה · מחזור '+ils(g)+'</span>'
+      +'<span class="v">'+srPct1(100*(R.tot+pend)/g)+'</span>'+arrow+'</button>'
+      +'<div class="pctdet" id="pctdet"'+(cashPctOpen?'':' hidden')+'><div class="r">'
       +it('סה"כ מזומן',R.tot+pend,'cash_totpct')
       +it('מזומן בקופה',R.mz,'cash_mzpct')
       +it('העברות בקבלה',R.hv,'cash_hvpct')
       +it('שיקים מזומן',R.sk,'cash_skpct')
-      +'</div><div class="f">'+note+'</div></div>';
+      +'</div><div class="f">'+note+'</div></div></div>';
+    document.getElementById('pcth').addEventListener('click',function(){
+      cashPctOpen=!cashPctOpen;renderCashPct(R,pend);
+    });
   }
 
   function renderCashTable(R){
