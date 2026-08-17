@@ -71,7 +71,8 @@ app = FastAPI(title="Divani BI", docs_url=None, redoc_url=None, openapi_url=None
 
 _state = {"last_sync": None, "last_rc": None, "last_manual": 0.0, "minmax": None,
           "minmax_at": 0.0, "pending": [], "pending_at": None, "ocr_cache": {},
-          "last_web": None, "last_prices": None, "last_pulse": None}
+          "last_web": None, "last_prices": None, "last_pulse": None,
+          "last_weborders": None}
 
 
 # ---------- auth ----------
@@ -385,7 +386,11 @@ def sb_select(path: str):
     return json.loads(out.decode("utf-8")) if out else []
 
 
-PRI_SEL = ("$select=ORDNAME,CURDATE,ORDSTATUSDES,AGENTNAME,CUSTNAME,CDES,BRANCHNAME,TYPEDES"
+# REFERENCE carries the WooCommerce order number on website orders — the only
+# field that links the two systems. Verified 17.8.26: of 25 Priority orders in a
+# three-week window that had one, 23 matched a live website order exactly.
+PRI_SEL = ("$select=ORDNAME,CURDATE,ORDSTATUSDES,AGENTNAME,CUSTNAME,CDES,BRANCHNAME,"
+           "TYPEDES,REFERENCE"
            "&$expand=ORDERITEMS_SUBFORM($select=PARTNAME,PDES,QPRICE,QPROFIT,TQUANT)")
 
 
@@ -423,7 +428,8 @@ def priority_pull(d_from: dt.date, d_to: dt.date):
                          "p": round(float(ln.get("QPROFIT") or 0), 2),
                          "q": (None if ln.get("TQUANT") is None
                                else round(float(ln.get("TQUANT") or 0), 3)),
-                         "ln": i})
+                         "ln": i,
+                         "wr": (o.get("REFERENCE") or "").strip()})
     return n_orders, rows
 
 
@@ -943,6 +949,123 @@ def capture_price_moves():
     return total
 
 
+# ---------- website orders, and the bridge to Priority ----------
+# Doron's rule, 17.8.26: THE WEBSITE IS THE PRICE LIST, not Priority. Priority
+# holds a base price plus whatever was configured on top, so it is not the
+# reference — the shop window is.
+#
+# For a website order both sides are already known: the site says what was bought
+# and for how much, Priority says what was recorded, and ORDERS.REFERENCE joins
+# them. No SKU mapping is needed for these at all — which is why this runs today
+# while the mapping question is still open.
+#
+# Measured on 23 bridged orders before this was written: 21 agreed to the agora.
+# The two that did not were both real — a delivery billed on a self-pickup order,
+# and a different sofa model recorded against the sale.
+#
+# The site keeps only about three weeks of orders (checked in the admin: 104), so
+# there is nothing to backfill. This is a forward-looking control by nature.
+
+WOO_API = "https://vdivani.co.il/wp-json/wc/v3"
+WOO_DAYS = 30            # how far back each pull reaches; the site holds ~3 weeks
+WOO_TOL = 1.0            # rounding allowance in shekels, NOT a business threshold
+
+
+def _woo_auth():
+    """The key is Read-scoped. Absent on a machine without it — the caller skips."""
+    ck, cs = os.environ.get("WOO_CK", ""), os.environ.get("WOO_CS", "")
+    if not (ck and cs):
+        return None
+    return "Basic " + base64.b64encode(f"{ck}:{cs}".encode("utf-8")).decode("ascii")
+
+
+def woo_fetch_orders(auth, days=WOO_DAYS):
+    after = (dt.datetime.now(IL) - dt.timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%S")
+    rows, page = [], 1
+    while page <= 40:
+        url = (f"{WOO_API}/orders?per_page=100&page={page}&status=any"
+               f"&after={urllib.parse.quote(after)}&orderby=id&order=asc")
+        req = urllib.request.Request(url, headers={"Authorization": auth,
+                                                   "User-Agent": "divani-bi/1.0",
+                                                   "Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=90) as r:
+            data = json.loads(r.read().decode("utf-8"))
+            pages = int({k.lower(): v for k, v in dict(r.headers).items()}
+                        .get("x-wp-totalpages") or 1)
+        rows += data
+        if page >= pages:
+            break
+        page += 1
+    return rows
+
+
+def _money(x):
+    try:
+        return round(float(x or 0), 2)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def sync_web_orders():
+    """Pull recent website orders, then let the database bridge and compare."""
+    auth = _woo_auth()
+    if not auth:
+        return None
+    t0 = time.time()
+    orders = woo_fetch_orders(auth)
+    if not orders:
+        print("web-orders: nothing returned, skipped", flush=True)
+        return None
+    heads, lines = [], []
+    for o in orders:
+        num = str(o.get("number") or "").strip()
+        if not num:
+            continue
+        b = o.get("billing") or {}
+        heads.append({"number": num, "wid": o.get("id"), "status": o.get("status"),
+                      "date_created": o.get("date_created"),
+                      "date_modified": o.get("date_modified"),
+                      "total": _money(o.get("total")),
+                      "shipping_total": _money(o.get("shipping_total")),
+                      "discount_total": _money(o.get("discount_total")),
+                      "payment_method": o.get("payment_method_title"),
+                      "customer_email": (b.get("email") or "").lower().strip() or None})
+        for li in (o.get("line_items") or []):
+            lines.append({"number": num, "line_id": li.get("id"),
+                          "product_id": li.get("product_id"),
+                          "variation_id": li.get("variation_id"),
+                          "sku": (li.get("sku") or None), "name": li.get("name"),
+                          "quantity": _money(li.get("quantity")),
+                          "subtotal": _money(li.get("subtotal")),
+                          "total": _money(li.get("total"))})
+    for i in range(0, len(heads), 200):
+        sb_upsert("bi_web_orders?on_conflict=number", heads[i:i + 200])
+    for i in range(0, len(lines), 400):
+        sb_upsert("bi_web_order_lines?on_conflict=number,line_id", lines[i:i + 400])
+
+    linked = agreed = gaps = 0
+    try:
+        r = sb_rpc("bi_web_bridge", {"p_tol": WOO_TOL})
+        if r:
+            linked = int(r[0].get("linked") or 0)
+            agreed = int(r[0].get("agreed") or 0)
+            gaps = int(r[0].get("gaps") or 0)
+    except Exception as e:
+        print("web-bridge failed:", repr(e)[:300], flush=True)
+    took = int((time.time() - t0) * 1000)
+    try:
+        today = dt.datetime.now(IL).date().isoformat()
+        sb_insert("bi_sync_log", {"kind": "web_orders", "d_from": today, "d_to": today,
+                                  "orders": len(heads), "lines": len(lines),
+                                  "took_ms": took})
+    except Exception:
+        pass
+    _state["last_weborders"] = dt.datetime.now(IL).strftime("%d.%m.%Y %H:%M")
+    print(f"web-orders: {len(heads)} orders, {len(lines)} lines | bridged {linked}, "
+          f"agreed {agreed}, gaps {gaps} | {took} ms", flush=True)
+    return len(heads)
+
+
 def freeze_new_lines():
     """Stamp today's list price on every line we have never seen before.
     Everything that existed on 17.8.26 was seeded as 'seed' with no price, so a
@@ -1002,6 +1125,12 @@ def _refresher():
                     print(f"line-freeze: {n_frozen} new line(s) stamped", flush=True)
             except Exception as e:
                 print("line-freeze failed:", repr(e)[:300], flush=True)
+            # Website orders and the bridge to Priority. AFTER the Priority pull,
+            # so an order written minutes ago already has its lines here to join to.
+            try:
+                sync_web_orders()
+            except Exception as e:
+                print("web-orders failed:", repr(e)[:300], flush=True)
             try:
                 sync_receipts_window("auto", today - dt.timedelta(days=1), today)
             except Exception as e:
@@ -1083,7 +1212,8 @@ def health():
                          "last_sync": _state["last_sync"],
                          "last_web": _state["last_web"],
                          "last_prices": _state["last_prices"],
-                         "last_pulse": _state["last_pulse"]})
+                         "last_pulse": _state["last_pulse"],
+                         "last_weborders": _state["last_weborders"]})
 
 
 @app.get("/login")
