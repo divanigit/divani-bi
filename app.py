@@ -1035,7 +1035,7 @@ def sync_web_orders():
         if not num:
             continue
         b = o.get("billing") or {}
-        heads.append({"number": num, "wid": o.get("id"), "status": o.get("status"),
+        heads.append({"site": "new", "number": num, "wid": o.get("id"), "status": o.get("status"),
                       "date_created": o.get("date_created"),
                       "date_modified": o.get("date_modified"),
                       "total": _money(o.get("total")),
@@ -1044,7 +1044,7 @@ def sync_web_orders():
                       "payment_method": o.get("payment_method_title"),
                       "customer_email": (b.get("email") or "").lower().strip() or None})
         for li in (o.get("line_items") or []):
-            lines.append({"number": num, "line_id": li.get("id"),
+            lines.append({"site": "new", "number": num, "line_id": li.get("id"),
                           "product_id": li.get("product_id"),
                           "variation_id": li.get("variation_id"),
                           "sku": (li.get("sku") or None), "name": li.get("name"),
@@ -1052,9 +1052,9 @@ def sync_web_orders():
                           "subtotal": _money(li.get("subtotal")),
                           "total": _money(li.get("total"))})
     for i in range(0, len(heads), 200):
-        sb_upsert("bi_web_orders?on_conflict=number", heads[i:i + 200])
+        sb_upsert("bi_web_orders?on_conflict=site,number", heads[i:i + 200])
     for i in range(0, len(lines), 400):
-        sb_upsert("bi_web_order_lines?on_conflict=number,line_id", lines[i:i + 400])
+        sb_upsert("bi_web_order_lines?on_conflict=site,number,line_id", lines[i:i + 400])
 
     linked = agreed = gaps = 0
     try:
