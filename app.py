@@ -1103,6 +1103,37 @@ def freeze_new_lines():
         return 0
 
 
+def _job_last(job):
+    """The day this daily job last COMPLETED, straight from the database.
+    The markers used to live in this thread's local variables, so every Render
+    restart forgot them and the job ran again: the daily price snapshot was
+    taken twice (04:13 and 15:12 on 18.8), and the nightly 120-day resync —
+    which deletes its window before writing it — re-ran on every restart."""
+    try:
+        r = sb_rpc("bi_job_last", {"p_job": job})
+        v = r if isinstance(r, str) else (r or [None])[0]
+        return dt.date.fromisoformat(v) if v else None
+    except Exception:
+        return None      # unreadable marker: run the job. Wasteful, never wrong.
+
+
+def _job_mark(job, day):
+    """Only ever called after the job SUCCEEDED, so a failure still retries on
+    the next cycle exactly as it did before."""
+    try:
+        sb_rpc("bi_job_mark", {"p_job": job, "p_day": day.isoformat()})
+    except Exception as e:
+        print("job-mark failed:", job, repr(e)[:200], flush=True)
+
+
+def _due(local_marker, job, today):
+    """True when the job still owes us today. Checks the local marker first, so
+    the database is asked once a day at most — and once more after a restart."""
+    if local_marker == today:
+        return False
+    return _job_last(job) != today
+
+
 def _refresher():
     last_nightly = None
     last_web = None
@@ -1120,19 +1151,21 @@ def _refresher():
             # prices is gone forever — the site keeps no history.
             # On failure last_web is left alone, so the next cycle (15 min) retries
             # until the day is captured.
-            if now.hour >= WEB_HOUR and last_web != today:
+            if now.hour >= WEB_HOUR and _due(last_web, "web_prices", today):
                 try:
                     sync_web_prices()
                     last_web = today
+                    _job_mark("web_prices", today)
                 except Exception as e:
                     print("web-prices capture failed:", repr(e)[:300], flush=True)
             # Priority list price snapshot — the other half of price control, and
             # equally unrecoverable after the fact. Its own guard and its own marker
             # so a failure on one side never costs the other side its day.
-            if now.hour >= PRICE_HOUR and last_prices != today:
+            if now.hour >= PRICE_HOUR and _due(last_prices, "part_prices", today):
                 try:
                     sync_part_prices()
                     last_prices = today
+                    _job_mark("part_prices", today)
                 except Exception as e:
                     print("part-prices capture failed:", repr(e)[:300], flush=True)
             sync_window("auto", today - dt.timedelta(days=1), today)
@@ -1173,7 +1206,7 @@ def _refresher():
                     _scan_pending_transfers()
                 except Exception as e:
                     print("pending-transfers scan failed:", repr(e)[:300], flush=True)
-            if now.hour >= 3 and last_nightly != today:
+            if now.hour >= 3 and _due(last_nightly, "nightly", today):
                 sync_window("nightly", today - dt.timedelta(days=120), today)
                 try:
                     sync_receipts_window("nightly", today - dt.timedelta(days=120), today)
@@ -1205,6 +1238,7 @@ def _refresher():
                 except Exception as e:
                     print("deep-rotate sync failed:", repr(e)[:300], flush=True)
                 last_nightly = today
+                _job_mark("nightly", today)
         except Exception:
             pass
         time.sleep(REFRESH_MINUTES * 60)
