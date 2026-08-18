@@ -2220,6 +2220,14 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var amb=(p.ambiguous||0)
       ? '<div class="pcnote">'+nf(p.ambiguous)+' מוצרים באתר ממופים ליותר ממק"ט אחד. '
         +'זה תקין כשמדובר בשתי תצורות של אותו דגם — ומעיד על טעות כשהדגמים שונים.</div>' : '';
+    // הכיוון ההפוך, וזה זה שעוצר בדיקה: מק"ט אחד שיושב על כמה מוצרים באתר.
+    // שולחן אוכל אחד נמכר גם עם 4 כיסאות וגם עם 6, ולכן המק"ט לבדו אינו
+    // אומר מה המחיר באתר. אלה השורות שמסומנות "זיווג לא חד-משמעי".
+    var amb2=(p.part_many||0)
+      ? '<div class="pcnote">'+nf(p.part_many)+' מק"טים יושבים על יותר ממוצר אחד באתר'
+        +(b.ambiguous ? ' — ולכן ' + nf(b.ambiguous) + ' מוצרים לא נבדקו' : '')
+        +'. מק"ט של שולחן נמכר גם עם 4 כיסאות וגם עם 6, ולכן המק"ט לבדו אינו קובע מה המחיר. '
+        +'המערכת לא בוחרת בשבילך — היא מסמנת.</div>' : '';
 
     stage.innerHTML=
       pctrlSection('פערים בהזמנות אתר',
@@ -2231,7 +2239,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       + '<div class="pcsec"><h3>מה המערכת למדה לבד</h3>'
       + '<div class="pcnote">כל הזמנת אתר מלמדת איזה מוצר באתר הוא איזה מק"ט בפריוריטי. '
       + 'אף אחד לא מקליד את זה.' + (b.no_model ? ' ' + nf(b.no_model) + ' מוצרים עדיין בלי דגם מזוהה.' : '')
-      + '</div>' + amb
+      + '</div>' + amb + amb2
       + (lp.length ? '<div class="tw"><table><thead><tr><th class="nm">המוצר באתר</th><th>מק"ט</th><th>תיאור בפריוריטי</th><th>הזמנות</th></tr></thead><tbody>'
           + lp.join('') + '</tbody></table></div>' : '<div class="empty">עדיין לא נלמד אף זוג.</div>')
       + '</div>'

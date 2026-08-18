@@ -1074,7 +1074,8 @@ def sync_web_orders():
         if b:
             print(f"base-price: checked {b[0].get('checked')}, agreed {b[0].get('agreed')}, "
                   f"gaps {b[0].get('gaps')}, no price {b[0].get('no_price')}, "
-                  f"no model {b[0].get('no_model')}", flush=True)
+                  f"no model {b[0].get('no_model')}, "
+                  f"ambiguous {b[0].get('ambiguous')}", flush=True)
     except Exception as e:
         print("base-price check failed:", repr(e)[:300], flush=True)
     took = int((time.time() - t0) * 1000)
