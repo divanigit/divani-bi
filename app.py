@@ -1949,6 +1949,26 @@ def api_pricecontrol(request: Request):
     return JSONResponse({"mode": "pricecontrol", "agg": agg or {}})
 
 
+@app.get("/api/likeyactivity")
+def api_likeyactivity(request: Request, d_from: str = "", d_to: str = "", bucket: int = 5):
+    """מי באמת עובד עם לייקי — נוכחות מול עבודה, לפי משתמש.
+    דורון ביקש 19.8.2026: "אין לי שליטה אם עובדים עם המערכת ואם לא".
+    לבעלים בלבד. מי עבד ומי לא הוא נתון ניהולי על אנשים, ולא מסך שכל מי
+    שנכנס ללוח אמור לראות — ובלייקי עצמה יש בין כה סיסמה אחת משותפת לכולם."""
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    if not _is_admin(request):
+        return JSONResponse({"dev": True})
+    f, t = _parse_date(d_from), _parse_date(d_to)
+    if not f or not t:
+        return JSONResponse({"error": "bad dates"}, status_code=400)
+    if f > t:
+        f, t = t, f
+    agg = sb_rpc("pulse_activity", {"p_from": f.isoformat(), "p_to": t.isoformat(),
+                                    "p_bucket_min": max(1, min(int(bucket or 5), 60))})
+    return JSONResponse({"mode": "likey", "agg": agg or {}})
+
+
 @app.get("/api/pending")
 def api_pending(request: Request):
     if not _logged_in(request):

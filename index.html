@@ -129,6 +129,11 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .pcsec{margin:0 0 20px}
   .pcsec h3{font-size:13px;font-weight:500;margin:0 0 8px;color:var(--tx2)}
   .pcnote{font-size:12px;color:var(--tx3);margin:0 0 8px;line-height:1.55}
+  /* מי עובד בלייקי — נוכחות עכשיו. מסגרת בלבד, בלי מילוי צבע (אסתטיקת הלוח) */
+  .lknow{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px;min-height:26px;align-items:center}
+  .lkon{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;
+        border:1px solid var(--ok,#0f5132);color:var(--ok,#0f5132);border-radius:999px;padding:3px 11px}
+  .lkon::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
   .pcfoot{font-size:11px;color:var(--tx3);border-top:1px solid var(--line2);padding-top:9px;margin-top:4px}
   .hint{font-size:12px;color:var(--tx3);margin:0 0 8px}
   .pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px}
@@ -506,6 +511,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         <button type="button" data-v="cancels" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><path d="M6 6l12 12"/></svg><span class="rlbl">אחוז ביטולים</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="comp" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.6" y="5.6" width="18.8" height="12.8" rx="2.4"/><path d="M15.4 12H8.4"/><path d="M10.8 9.6L8.4 12l2.4 2.4"/></svg><span class="rlbl">פיצויים</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="dow" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.2" y="5" width="17.6" height="15.3" rx="2.4"/><path d="M3.2 10h17.6"/><path d="M8 3.2v3.4"/><path d="M16 3.2v3.4"/><path d="M7.5 14h3"/><path d="M13.5 14h3"/></svg><span class="rlbl">ימים חזקים בשבוע</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
+        <button type="button" data-v="likey" id="likeybtn" aria-pressed="false" style="display:none"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><path d="M12 7.5V12l3 2"/></svg><span class="rlbl">מי עובד בלייקי</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="ins" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 18.5h5"/><path d="M10.5 21.5h3"/><path d="M12 2.8a6 6 0 0 0-3.9 10.5c.75.7 1.1 1.5 1.15 2.5h5.5c.05-1 .4-1.8 1.15-2.5A6 6 0 0 0 12 2.8z"/></svg><span class="rlbl">תובנות</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <div class="navdiv"></div>
         <button type="button" id="nrepbtn" class="navext" aria-pressed="false" title="ניתוח ביצועי נציגים וסניפים"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 3.5v17h17"/><path d="M7 14.5l4-4 3 3 5.2-6"/></svg><span class="rlbl">ניתוח ביצועי נציגים וסניפים</span><svg class="rext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 16L16 8"/><path d="M9 8h7v7"/></svg></button>
@@ -733,6 +739,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     // בקרת מחירים אינה תלויה בטווח התאריכים: היא בודקת את מצב המחירים עכשיו
     // מול מה שכבר נמכר. מפתח קבוע = לא נטען מחדש בכל שינוי תאריך
     if(view==='pctrl')return 'PCTRL';
+    if(view==='likey')return state.from+'|'+state.to+'|LK|'+lkBucket;
     if(view==='dim'){
       if(dimKind==='fam')return state.from+'|'+state.to+'|T|'+(dimPath.grp||'')+'|'+(dimPath.fam||'')+'|'+(dimPath.model||'');
       if(dimSeg)return state.from+'|'+state.to+'|SG|'+dimSeg.seg+'|'+dimSeg.key;
@@ -779,6 +786,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
               :('/api/cancels?d_from='+state.from+'&d_to='+state.to))
            :view==='comp'?('/api/compensation?d_from='+state.from+'&d_to='+state.to+(cpSel?'&reason='+encodeURIComponent(cpSel):''))
            :view==='pctrl'?('/api/pricecontrol')
+           :view==='likey'?('/api/likeyactivity?d_from='+state.from+'&d_to='+state.to+'&bucket='+lkBucket)
            :view==='dow'?('/api/dow?d_from='+state.from+'&d_to='+state.to)
            :view==='dim'?(function(){
               if(dimKind==='fam')return '/api/tree?d_from='+state.from+'&d_to='+state.to+(dimPath.grp?'&grp='+encodeURIComponent(dimPath.grp):'')+(dimPath.fam?'&fam='+encodeURIComponent(dimPath.fam):'')+(dimPath.model?'&model='+encodeURIComponent(dimPath.model):'');
@@ -2304,6 +2312,119 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       + ' · ' + nf(m.frozen_live||0) + ' שורות הזמנה עם מחיר מוקפא · הבדיקה רצה כל 15 דקות</div>';
   }
 
+  /* ===== מי עובד בלייקי — נוכחות מול עבודה =====
+     דורון, 19.8.2026: "אין לי שליטה אם עובדים עם המערכת ואם לא".
+     שתי מידות שלעולם אינן מתחברות למספר אחד, לפי הכרעתו:
+       נוכח = הדף היה פתוח מולו. נמדד בפעימה כל LK_BUCKET דקות.
+       עבד  = הוא באמת שינה משהו במערכת.
+     auto-reopen אינה נספרת בשום צד: זו המערכת מדברת עם עצמה. */
+  var lkBucket=5;
+  var LK_START='2026-08-19';   // היום שבו הותקנה הפעימה — לפניו אין מדידת נוכחות כלל
+
+  function lkMin(m){
+    m=Math.round(m||0);
+    if(!m)return '—';
+    if(m<60)return m+' דק׳';
+    var h=Math.floor(m/60), r=m%60;
+    return r? (h+' שע׳ '+r+' דק׳') : (h+' שע׳');
+  }
+  function lkAgo(iso){
+    if(!iso)return '—';
+    var d=new Date(iso); if(isNaN(d))return '—';
+    var mins=Math.floor((Date.now()-d.getTime())/60000);
+    if(mins<1)return 'עכשיו';
+    if(mins<60)return 'לפני '+mins+' דק׳';
+    if(mins<60*24)return 'לפני '+Math.floor(mins/60)+' שע׳';
+    return 'לפני '+Math.floor(mins/1440)+' ימים';
+  }
+  function lkClock(iso){
+    if(!iso)return '—';
+    try{return new Intl.DateTimeFormat('he-IL',{timeZone:'Asia/Jerusalem',hour:'2-digit',minute:'2-digit'}).format(new Date(iso));}
+    catch(e){return '—';}
+  }
+
+  function renderLikeyMeta(){
+    var el=document.getElementById('meta'); if(!el)return;
+    el.innerHTML='<div class="mrow"><span class="mlbl">דגימת נוכחות</span>'
+      +[5,15,30].map(function(b){
+          return '<button type="button" class="chip'+(lkBucket===b?' on':'')+'" data-lkb="'+b+'">כל '+b+' דק׳</button>';
+        }).join('')
+      +'</div>';
+    el.querySelectorAll('[data-lkb]').forEach(function(b){
+      b.addEventListener('click',function(){lkBucket=+b.getAttribute('data-lkb');load();});
+    });
+  }
+
+  function renderLikey(a){
+    a=a||{};
+    var users=a.users||[], days=a.days||[], now=a.now||[], ev=a.work_events||[];
+    var anyPresence=users.some(function(u){return (u.minutes||0)>0;});
+
+    // מי על המערכת ברגע זה
+    var nowTxt = now.length
+      ? now.map(function(n){return '<span class="lkon">'+esc(n.member)+'</span>';}).join(' ')
+      : '<span class="mut">אף אחד</span>';
+
+    var kp='<div class="kpi"><div class="l">על המערכת עכשיו</div><div class="v">'+(now.length||0)+'</div></div>'
+      +'<div class="kpi"><div class="l">אנשים שעבדו בתקופה</div><div class="v">'
+        +users.filter(function(u){return (u.actions||0)>0;}).length+'</div></div>'
+      +'<div class="kpi"><div class="l">פעולות בתקופה</div><div class="v">'
+        +nf(users.reduce(function(x,u){return x+(u.actions||0);},0))+'</div></div>'
+      +'<div class="kpi"><div class="l">ימים שבהם מישהו עבד</div><div class="v">'
+        +nf(new Set(days.filter(function(d){return (d.actions||0)>0;}).map(function(d){return d.d;})).size)+'</div></div>';
+    document.getElementById('kpis').innerHTML=kp;
+
+    // הודעת יושר: בלי זה אפסים בעמודת הנוכחות נקראים כמו "אף אחד לא נכנס מעולם"
+    var startNote = anyPresence ? ''
+      : '<div class="pcnote">מדידת הנוכחות התחילה ב-'+heDate(LK_START)+'. לפני התאריך הזה '
+        +'המערכת רשמה רק מי <b>שינה</b> משהו, ולא מי פתח את הדף — ולכן עמודת "נוכח" '
+        +'ריקה לאחור. עמודת "עבד" מלאה מאז 15.06.</div>';
+
+    var ur=users.map(function(u){
+      var stale=(u.actions||0)===0;
+      return '<tr'+(stale?' class="mut"':'')+'><td class="nm">'+esc(u.member)+'</td>'
+        +'<td>'+lkMin(u.minutes)+'</td>'
+        +'<td style="font-weight:500">'+((u.actions||0)?nf(u.actions):'—')+'</td>'
+        +'<td>'+((u.days_present||0)||'—')+'</td>'
+        +'<td>'+((u.days_worked||0)||'—')+'</td>'
+        +'<td class="mut">'+lkAgo(u.last_at)+'</td></tr>';
+    });
+
+    var dr=days.map(function(d){
+      return '<tr><td class="nm">'+heShort(d.d)+'</td><td>'+esc(d.member)+'</td>'
+        +'<td>'+lkMin(d.minutes)+'</td>'
+        +'<td style="font-weight:500">'+((d.actions||0)?nf(d.actions):'—')+'</td>'
+        +'<td class="mut">'+lkClock(d.first)+'</td><td class="mut">'+lkClock(d.last)+'</td></tr>';
+    });
+
+    var er=ev.slice(0,60).map(function(e){
+      return '<tr><td class="nm">'+esc(e.member)+'</td><td>'+esc(e.what||'')+'</td>'
+        +'<td class="mut">'+heShort(String(e.at||'').slice(0,10))+' '+lkClock(e.at)+'</td></tr>';
+    });
+
+    stage.innerHTML=
+      '<div class="pcsec"><h3>ברגע זה</h3><div class="lknow">'+nowTxt+'</div>'
+      +'<div class="pcnote">מי שהדף פתוח מולו כרגע. נמדד לפי פעימה שהדף שולח כל '+lkBucket
+      +' דקות — לשונית שנשכחה פתוחה ברקע אינה נספרת.</div></div>'
+
+      + pctrlSection('לפי משתמש',
+          'אף אחד לא נגע במערכת בתקופה שנבחרה.',
+          [{t:'שם',nm:1},{t:'נוכח'},{t:'עבד'},{t:'ימי נוכחות'},{t:'ימי עבודה'},{t:'אחרון'}], ur)
+      + startNote
+
+      + pctrlSection('יום אחר יום',
+          'אין ימים עם פעילות בתקופה שנבחרה.',
+          [{t:'יום',nm:1},{t:'מי'},{t:'נוכח'},{t:'עבד'},{t:'משעה'},{t:'עד שעה'}], dr)
+
+      + pctrlSection('הפעולות האחרונות',
+          'לא נרשמה אף פעולה.',
+          [{t:'מי',nm:1},{t:'מה שינה'},{t:'מתי'}], er)
+
+      + '<div class="pcfoot">"נוכח" = הדף היה פתוח · "עבד" = שינה משהו בפועל. '
+      + 'שתי המידות נפרדות ולעולם אינן מחוברות למספר אחד. '
+      + 'פעולות אוטומטיות של המערכת אינן נספרות באף אחת מהן.</div>';
+  }
+
   function renderDowMeta(){
     document.getElementById('kpis').innerHTML='';
     document.getElementById('sellbl').textContent=rangeLbl(state.from,state.to);
@@ -2550,6 +2671,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(view==='comp'){renderCompMeta();renderComp(cache.agg);return;}
     if(view==='dow'){renderDowMeta();renderDow(cache.agg);return;}
     if(view==='pctrl'){renderPctrlMeta();renderPctrl(cache.agg);return;}
+    if(view==='likey'){renderLikeyMeta();renderLikey(cache.agg);return;}
     if(view==='ins'){renderInsMeta();renderInsStage();return;}
     if(view==='branchsrc'){renderBranchSrcMeta();renderBranchSrc(cache.agg);return;}
     if(view==='baskets'){renderBasketsMeta();renderBaskets(cache.agg);return;}
@@ -3174,6 +3296,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     // stays hidden until we actually know who this is. It used to ship visible and be
     // un-hidden here even when META was still null, so during a cold start it was tappable.
     var md=document.getElementById('mdownbtn'); if(md)md.style.display=(META&&!noProfit())?'':'none';
+    var lk=document.getElementById('likeybtn'); if(lk)lk.style.display=(META&&META.owner)?'':'none';
     var lg=document.querySelector('.logo'); if(lg){lg.style.cursor='';lg.title='';}
   }
   function boot(){
