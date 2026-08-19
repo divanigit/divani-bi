@@ -2381,11 +2381,12 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         +'ריקה לאחור. עמודת "עבד" מלאה מאז 15.06.</div>';
 
     var ur=users.map(function(u){
-      var stale=(u.actions||0)===0;
-      return '<tr'+(stale?' class="mut"':'')+'><td class="nm">'+esc(u.member)+'</td>'
+      var idle=(u.actions||0)===0 && (u.tickets||0)===0 && (u.minutes||0)===0;
+      return '<tr'+(idle?' class="mut"':'')+'><td class="nm">'+esc(u.member)+'</td>'
         +'<td>'+lkMin(u.minutes)+'</td>'
+        +'<td>'+((u.tickets||0)?nf(u.tickets):'—')+'</td>'
+        +'<td>'+((u.searches||0)?nf(u.searches):'—')+'</td>'
         +'<td style="font-weight:500">'+((u.actions||0)?nf(u.actions):'—')+'</td>'
-        +'<td>'+((u.days_present||0)||'—')+'</td>'
         +'<td>'+((u.days_worked||0)||'—')+'</td>'
         +'<td class="mut">'+lkAgo(u.last_at)+'</td></tr>';
     });
@@ -2393,8 +2394,18 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var dr=days.map(function(d){
       return '<tr><td class="nm">'+heShort(d.d)+'</td><td>'+esc(d.member)+'</td>'
         +'<td>'+lkMin(d.minutes)+'</td>'
+        +'<td>'+((d.tickets||0)?nf(d.tickets):'—')+'</td>'
         +'<td style="font-weight:500">'+((d.actions||0)?nf(d.actions):'—')+'</td>'
         +'<td class="mut">'+lkClock(d.first)+'</td><td class="mut">'+lkClock(d.last)+'</td></tr>';
+    });
+
+    // מסלול הפעולות — מה נעשה, צעד אחר צעד
+    var LKKIND={ticket:'פתחה פנייה',search:'חיפשה',click:'לחצה',screen:'עברה למסך',export:'ייצאה'};
+    var tr=(a.trail||[]).slice(0,120).map(function(t){
+      return '<tr><td class="nm">'+esc(t.member)+'</td>'
+        +'<td>'+esc(LKKIND[t.kind]||t.kind)+'</td>'
+        +'<td>'+esc(t.target||'')+(t.detail?' <span class="mut">· '+esc(t.detail)+'</span>':'')+'</td>'
+        +'<td class="mut">'+heShort(String(t.at||'').slice(0,10))+' '+lkClock(t.at)+'</td></tr>';
     });
 
     var er=ev.slice(0,60).map(function(e){
@@ -2409,12 +2420,16 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
 
       + pctrlSection('לפי משתמש',
           'אף אחד לא נגע במערכת בתקופה שנבחרה.',
-          [{t:'שם',nm:1},{t:'נוכח'},{t:'עבד'},{t:'ימי נוכחות'},{t:'ימי עבודה'},{t:'אחרון'}], ur)
+          [{t:'שם',nm:1},{t:'נוכח'},{t:'פניות שקראה'},{t:'חיפושים'},{t:'עבד'},{t:'ימי עבודה'},{t:'אחרון'}], ur)
       + startNote
 
       + pctrlSection('יום אחר יום',
           'אין ימים עם פעילות בתקופה שנבחרה.',
-          [{t:'יום',nm:1},{t:'מי'},{t:'נוכח'},{t:'עבד'},{t:'משעה'},{t:'עד שעה'}], dr)
+          [{t:'יום',nm:1},{t:'מי'},{t:'נוכח'},{t:'פניות'},{t:'עבד'},{t:'משעה'},{t:'עד שעה'}], dr)
+
+      + pctrlSection('מסלול הפעולות — צעד אחר צעד',
+          'עדיין לא נרשם מסלול. המעקב התחיל היום.',
+          [{t:'מי',nm:1},{t:'מה עשתה'},{t:'על מה'},{t:'מתי'}], tr)
 
       + pctrlSection('הפעולות האחרונות',
           'לא נרשמה אף פעולה.',
@@ -2426,8 +2441,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       + 'גם לא לי. שכח סיסמה — קובעים חדשה כאן, בשתי לחיצות.</div>'
       + '<div id="lkusers" class="tw"><div class="empty">טוען…</div></div></div>'
 
-      + '<div class="pcfoot">"נוכח" = הדף היה פתוח · "עבד" = שינה משהו בפועל. '
-      + 'שתי המידות נפרדות ולעולם אינן מחוברות למספר אחד. '
+      + '<div class="pcfoot">"נוכח" = הדף היה פתוח · "פניות שקראה" = פתחה וקראה, בלי לשנות · '
+      + '"עבד" = שינה משהו בפועל. שלוש מידות נפרדות שלעולם אינן מחוברות למספר אחד — '
+      + 'קריאה איננה עבודה, והיעדר שינוי איננו היעדר עבודה. '
       + 'פעולות אוטומטיות של המערכת אינן נספרות באף אחת מהן.</div>';
 
     loadLkUsers();
