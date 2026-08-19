@@ -36,7 +36,7 @@ import urllib.parse
 import urllib.request
 from zoneinfo import ZoneInfo
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -1956,10 +1956,11 @@ def api_likeyactivity(request: Request, d_from: str = "", d_to: str = "", bucket
     דורון ביקש 19.8.2026: "אין לי שליטה אם עובדים עם המערכת ואם לא".
     לבעלים בלבד. מי עבד ומי לא הוא נתון ניהולי על אנשים, ולא מסך שכל מי
     שנכנס ללוח אמור לראות — ובלייקי עצמה יש בין כה סיסמה אחת משותפת לכולם."""
-    if not _logged_in(request):
-        return JSONResponse({"error": "auth"}, status_code=401)
+    # דורון (19.8.2026): "אין להציג 'בפיתוח' ואין להציג את המסך הזה לאף אחד
+    # חוץ ממני". גם 401 וגם "בפיתוח" מסגירים שהנתיב קיים, ולכן לכל מי שאינו
+    # דורון הוא פשוט לא קיים — בדיוק כמו כתובת שמעולם לא נבנתה.
     if not _is_admin(request):
-        return JSONResponse({"dev": True})
+        raise HTTPException(status_code=404)
     f, t = _parse_date(d_from), _parse_date(d_to)
     if not f or not t:
         return JSONResponse({"error": "bad dates"}, status_code=400)
@@ -1983,10 +1984,8 @@ def _likey_pw_hash(pw: str) -> str:
 def api_likeyusers(request: Request):
     """רשימת המשתמשים של לייקי לניהול. לבעלים בלבד, ובלי גיבובים —
     המסך מראה רק אם יש סיסמה, לא מה היא."""
-    if not _logged_in(request):
-        return JSONResponse({"error": "auth"}, status_code=401)
     if not _is_admin(request):
-        return JSONResponse({"dev": True})
+        raise HTTPException(status_code=404)
     return JSONResponse({"users": sb_rpc("likey_users_list", {}) or []})
 
 
@@ -1994,10 +1993,8 @@ def api_likeyusers(request: Request):
 async def api_likeyuser_password(request: Request):
     """קביעת סיסמה למשתמש לייקי. הסיסמה מגובבת כאן ונשלחת למסד כגיבוב בלבד;
     היא לעולם אינה נשמרת כטקסט ואינה מודפסת ליומן — גם לא בשגיאה."""
-    if not _logged_in(request):
-        return JSONResponse({"error": "auth"}, status_code=401)
     if not _is_admin(request):
-        return JSONResponse({"error": "forbidden"}, status_code=403)
+        raise HTTPException(status_code=404)
     try:
         body = json.loads((await request.body()).decode("utf-8", "replace") or "{}")
     except Exception:

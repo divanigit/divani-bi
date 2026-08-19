@@ -511,7 +511,6 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         <button type="button" data-v="cancels" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><path d="M6 6l12 12"/></svg><span class="rlbl">אחוז ביטולים</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="comp" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.6" y="5.6" width="18.8" height="12.8" rx="2.4"/><path d="M15.4 12H8.4"/><path d="M10.8 9.6L8.4 12l2.4 2.4"/></svg><span class="rlbl">פיצויים</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="dow" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.2" y="5" width="17.6" height="15.3" rx="2.4"/><path d="M3.2 10h17.6"/><path d="M8 3.2v3.4"/><path d="M16 3.2v3.4"/><path d="M7.5 14h3"/><path d="M13.5 14h3"/></svg><span class="rlbl">ימים חזקים בשבוע</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
-        <button type="button" data-v="likey" id="likeybtn" aria-pressed="false" style="display:none"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><path d="M12 7.5V12l3 2"/></svg><span class="rlbl">מי עובד בלייקי</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="ins" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 18.5h5"/><path d="M10.5 21.5h3"/><path d="M12 2.8a6 6 0 0 0-3.9 10.5c.75.7 1.1 1.5 1.15 2.5h5.5c.05-1 .4-1.8 1.15-2.5A6 6 0 0 0 12 2.8z"/></svg><span class="rlbl">תובנות</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <div class="navdiv"></div>
         <button type="button" id="nrepbtn" class="navext" aria-pressed="false" title="ניתוח ביצועי נציגים וסניפים"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 3.5v17h17"/><path d="M7 14.5l4-4 3 3 5.2-6"/></svg><span class="rlbl">ניתוח ביצועי נציגים וסניפים</span><svg class="rext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 16L16 8"/><path d="M9 8h7v7"/></svg></button>
@@ -2880,6 +2879,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   /* ---- view toggle ---- */
   function setView(v){
     if(v==='mdown'&&(!META||noProfit()))v='agents';   // before META lands we do not yet know
+    // קישור ישיר אינו דרך עוקפת: למי שאינו דורון המסך פשוט לא נפתח, ובלי
+    // שום הודעה שמסגירה שהוא בכלל קיים
+    if(v==='likey'&&!(META&&META.owner&&!previewUser))v='agents';
     if(view===v)return;
     if(v!=='mdown')mdDes=null;   // leaving the drill resets it, so coming back opens on the list
     if(v!=='cancels'){cxSel=null;cxOrd=null;}
@@ -3347,6 +3349,25 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   })();
 
   /* ---- boot ---- */
+  function likeyBtnSync(show){
+    var seg=document.getElementById('seg'), b=document.getElementById('likeybtn');
+    if(!seg)return;
+    if(!show){ if(b)b.remove(); return; }   // remove, לא hide: לא נשאר זכר ב-DOM
+    if(b)return;
+    var dow=seg.querySelector('[data-v="dow"]');
+    b=document.createElement('button');
+    b.type='button'; b.id='likeybtn'; b.setAttribute('data-v','likey');
+    b.setAttribute('aria-pressed','false');
+    b.innerHTML='<svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+      +'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'
+      +'<circle cx="12" cy="12" r="8.6"/><path d="M12 7.5V12l3 2"/></svg>'
+      +'<span class="rlbl">מי עובד בלייקי</span>'
+      +'<svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+      +'stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
+    if(dow&&dow.nextSibling)seg.insertBefore(b,dow.nextSibling); else seg.appendChild(b);
+    b.addEventListener('click',function(){setView('likey');});
+  }
+
   function applyOwnerUI(){
     var owner=!!(META&&META.owner), prev=owner&&previewUser;
     var ab=document.getElementById('askbtn'); if(ab)ab.style.display=(!!(META&&META.admin)&&!prev)?'':'none';
@@ -3365,7 +3386,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     // נבדק מול prev ולא רק מול הבעלים: במצב "רואה כמו" המסך הזה חייב להיעלם,
     // אחרת התצוגה משקרת לדורון בדיוק ברגע שבו הוא בודק מה אחרים רואים. הנתונים עצמם
     // חסומים בשרת בלאו הכי, אבל כלי בדיקה שמראה דבר שגוי גרוע מכלי בדיקה שאינו קיים.
-    var lk=document.getElementById('likeybtn'); if(lk)lk.style.display=(owner&&!prev)?'':'none';
+    // המסך הזה לא רק מוסתר — הוא לא קיים אצל אף אחד אחר. דורון (19.8.2026):
+    // "אין להציג 'בפיתוח' ואין להציג את המסך הזה לאף אחד חוץ ממני".
+    // "בפיתוח" מסגיר שקיים מסך, וכאן גם עצם הקיום אינו לידיעת הצוות.
+    likeyBtnSync(owner&&!prev);
     var lg=document.querySelector('.logo'); if(lg){lg.style.cursor='';lg.title='';}
   }
   function boot(){
