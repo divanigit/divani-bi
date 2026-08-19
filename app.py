@@ -1135,7 +1135,26 @@ def _due(local_marker, job, today):
     return _job_last(job) != today
 
 
+def _seed_state_from_markers():
+    """המסך מציג מתי נלקח הצילום היומי האחרון, והנתון הזה ישב בזיכרון התהליך
+    בלבד. מרגע שהסמנים עברו למסד, הפעלה מחדש כבר אינה מריצה את הצילום שוב —
+    וזה הנכון — אבל המסך נשאר ריק עד הצילום של מחר. הנתון היה שם כל הזמן,
+    פשוט לא נקרא. נקרא פעם אחת בעלייה, ואחר כך הזיכרון מתעדכן לבד."""
+    try:
+        j = sb_rpc("bi_job_runs_all", {}) or {}
+        for job, key in (("web_prices", "last_web"), ("part_prices", "last_prices")):
+            m = j.get(job) or {}
+            at = m.get("at")
+            if not at:
+                continue
+            ts = dt.datetime.fromisoformat(at.replace("Z", "+00:00"))
+            _state[key] = ts.astimezone(IL).strftime("%d.%m.%Y %H:%M")
+    except Exception as e:
+        print("state-seed from markers failed:", repr(e)[:200], flush=True)
+
+
 def _refresher():
+    _seed_state_from_markers()
     last_nightly = None
     last_web = None
     last_prices = None
