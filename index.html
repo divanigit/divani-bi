@@ -929,6 +929,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       var tot=br.mz+br.hv+br.sk;
       return {n:br.n,rawk:br.raw,mz:br.mz,hv:br.hv,sk:br.sk,ot:br.ot,tot:tot,s:tot,k:rcs};
     });
+    // הסכומים ב-T נשארים בלי האסמכתאות, כי הכותרת והשורה התחתונה מוסיפות
+    // אותן בנפרד. השיבוץ לסניפים הוא רק בעץ עצמו, ולכן אין ספירה כפולה.
+    mergePending(kids, true);
     return {mz:T.mz,hv:T.hv,sk:T.sk,ot:T.ot,tot:T.mz+T.hv+T.sk,k:kids,orders:totalRc};
   }
 
@@ -946,6 +949,8 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       var tot=br.mz+br.hv+br.sk;
       return {n:br.n,rawk:br.raw,mz:br.mz,hv:br.hv,sk:br.sk,ot:br.ot,tot:tot,s:tot,k:null};
     });
+    // בתצוגה המצטברת אין שורות קבלה מתחת לסניף, ולכן רק המספרים משובצים
+    mergePending(kids, false);
     return {mz:T.mz,hv:T.hv,sk:T.sk,ot:T.ot,tot:T.mz+T.hv+T.sk,k:kids,orders:agg.receipts||0};
   }
 
@@ -1055,6 +1060,49 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
 
   function pendInRange(){
     var s=0;if(cache.pending)cache.pending.forEach(function(p){var d=p.d||'';if(d>=state.from&&d<=state.to)s+=p.show||0;});return s;}
+
+  // העברה שאומתה מהאסמכתא נזקפת למזומן לפי תאריך האסמכתא, עוד לפני שיש לה
+  // קבלה בפריוריטי. עד כה כולן נערמו בשורה אחת בתחתית הטבלה, ולכן הסניף
+  // שאליו הכסף נכנס הראה 0, וסניף שכל תקבוליו היום הם אסמכתא — לא הופיע
+  // בטבלה בכלל. הסניף ידוע בנתונים ומוצג בקופסה שמעל, אז אין סיבה לא לשבץ.
+  function pendingByBranch(){
+    var out={};
+    if(!cache.pending)return out;
+    cache.pending.forEach(function(p){
+      var d=p.d||'';if(d<state.from||d>state.to)return;
+      var k=(p.b==null?'':String(p.b));
+      (out[k]||(out[k]=[])).push(p);
+    });
+    return out;
+  }
+
+  // withKids: במסך היומי לכל סניף יש שורות קבלה מתחתיו, ואז ההעברה חייבת
+  // להופיע גם כשורה משלה — אחרת סכום הבנים אינו שווה לשורת הסניף, וזו בדיוק
+  // אותה אי-הלימה במקום אחר. בתצוגה המצטברת (טווח ארוך) אין שורות בנים כלל.
+  function mergePending(kids, withKids){
+    var byB=pendingByBranch();
+    Object.keys(byB).forEach(function(bk){
+      var list=byB[bk], sum=0; list.forEach(function(p){sum+=(p.show||0);});
+      if(!sum)return;
+      var row=null;
+      for(var i=0;i<kids.length;i++){ if(String(kids[i].rawk==null?'':kids[i].rawk)===bk){row=kids[i];break;} }
+      if(!row){
+        // סניף שכל תקבוליו בתקופה הם אסמכתא בלבד — ירושלים ב-19.08 היא בדיוק זה
+        row={n:brName(bk),rawk:bk,mz:0,hv:0,sk:0,ot:0,tot:0,s:0,k:(withKids?[]:null),onlyPend:1};
+        kids.push(row);
+      }
+      row.hv+=sum; row.tot+=sum; row.s=row.tot; row.pend=(row.pend||0)+sum;
+      if(withKids){
+        if(!row.k)row.k=[];
+        list.forEach(function(p){
+          row.k.push({n:(p.c||p.o||'העברה'),
+                      code:'אסמכתא '+heDate(p.d)+' · טרם הופקה קבלה',
+                      mz:0,hv:(p.show||0),sk:0,ot:0,tot:(p.show||0),s:(p.show||0),k:null,pend:(p.show||0)});
+        });
+      }
+    });
+    return kids;
+  }
   function renderCashKpis(R){
     var pend=pendInRange();
     document.getElementById('kpis').innerHTML=
@@ -1122,13 +1170,19 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       var c=it.c, cls=it.depth===0?'d0':'dn', ind=it.depth*14;
       var ch=it.hasK?chevSvg(!!eT[it.id]):'<span style="width:15px;flex:none"></span>';
       var sub=c.code?'<div class="c" title="'+esc(c.code)+'">'+esc(c.code)+'</div>':'';
+      // כמה מתוך שורת הסניף הוא אסמכתא שעדיין אין לה קבלה בפריוריטי
+      if(c.pend&&it.depth===0&&!c.onlyPend)
+        sub+='<div class="c">כולל '+ils(c.pend)+' שטרם הופקה לה קבלה</div>';
+      if(c.onlyPend)
+        sub+='<div class="c">הכול אסמכתא — טרם הופקה קבלה</div>';
       // שורת סניף נפתחת לגרף; שורת קבלה בודדת מתחתיה אינה סדרה בזמן
       var d0=(it.depth===0), rk=(c.rawk==null?'':c.rawk);
-      function cn(txt,m,lb){return d0?srNum(txt,m,'branch',rk,c.n+' · '+lb):txt;}
+      // סניף שכל כולו אסמכתא אינו נפתח לגרף — אין לו סדרה יומית בפריוריטי
+      function cn(txt,m,lb){return (d0&&!c.onlyPend)?srNum(txt,m,'branch',rk,c.n+' · '+lb):txt;}
       h+='<tr class="'+cls+(it.hasK?' row':'')+'" '+(it.hasK?'data-t="'+it.id+'" role="button" tabindex="0"':'')+'><td class="nm"><div class="nmc" style="margin-right:'+ind+'px">'+ch+'<div class="nlab'+(it.depth?' rail':'')+'"><div class="t" style="font-weight:'+(it.depth===0?500:400)+'">'+esc(c.n)+'</div>'+sub+'</div></div></td><td>'+cn(ils(c.mz),'cash_mz','מזומן')+'</td><td>'+cn(ils(c.hv),'cash_hv','העברות')+'</td><td>'+cn(ils(c.sk),'cash_sk','שיקים מזומן')+'</td><td style="font-weight:500">'+cn(ils(c.tot),'cash_tot','סה"כ מזומן')+'</td><td class="mut">'+cn(ils(c.ot),'cash_ot','שאר תקבולים')+'</td></tr>';
     });
+    // אין יותר שורת אוסף אחת בתחתית: כל העברה מאומתת יושבת בסניף שלה למעלה
     var pend=pendInRange();
-    if(pend>0){h+='<tr class="d0"><td class="nm"><div class="nmc"><span style="width:15px;flex:none"></span><div class="nlab"><div class="t" style="font-weight:500">העברות מאומתות (אסמכתא)</div></div></div></td><td>'+ils(0)+'</td><td>'+ils(pend)+'</td><td>'+ils(0)+'</td><td style="font-weight:500">'+ils(pend)+'</td><td class="mut">'+ils(0)+'</td></tr>';}
     h+='</tbody><tfoot><tr><td class="nm">סך הכל</td><td>'+ils(R.mz)+'</td><td>'+ils(R.hv+pend)+'</td><td>'+ils(R.sk)+'</td><td>'+ils(R.tot+pend)+'</td><td>'+ils(R.ot)+'</td></tr></tfoot></table></div>';
     stage.innerHTML=h;
   }
