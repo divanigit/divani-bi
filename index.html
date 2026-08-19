@@ -2420,9 +2420,57 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
           'לא נרשמה אף פעולה.',
           [{t:'מי',nm:1},{t:'מה שינה'},{t:'מתי'}], er)
 
+      + '<div class="pcsec"><h3>חשבונות לייקי</h3>'
+      + '<div class="pcnote">משתמש וסיסמה אישיים לכל אחד — זה מה שהופך את הנתונים '
+      + 'למדויקים במקום להצהרתיים. <b>הסיסמה לא נשמרת</b> ולא ניתן לקרוא אותה בחזרה, '
+      + 'גם לא לי. שכח סיסמה — קובעים חדשה כאן, בשתי לחיצות.</div>'
+      + '<div id="lkusers" class="tw"><div class="empty">טוען…</div></div></div>'
+
       + '<div class="pcfoot">"נוכח" = הדף היה פתוח · "עבד" = שינה משהו בפועל. '
       + 'שתי המידות נפרדות ולעולם אינן מחוברות למספר אחד. '
       + 'פעולות אוטומטיות של המערכת אינן נספרות באף אחת מהן.</div>';
+
+    loadLkUsers();
+  }
+
+  /* ניהול חשבונות לייקי — לבעלים בלבד, גם בשרת ולא רק כאן */
+  function loadLkUsers(){
+    var box=document.getElementById('lkusers'); if(!box)return;
+    fetch('/api/likeyusers',{credentials:'same-origin'})
+      .then(function(r){return r.ok?r.json():null;})
+      .then(function(j){
+        if(!j||j.dev||!j.users){box.innerHTML='<div class="empty">אין הרשאה.</div>';return;}
+        var rows=(j.users||[]).map(function(u){
+          return '<tr><td class="nm">'+esc(u.display||u.username)+'</td>'
+            +'<td class="mut">'+esc(u.username)+'</td>'
+            +'<td>'+(u.has_password?'יש סיסמה':'<span class="mut">אין עדיין</span>')+'</td>'
+            +'<td class="mut">'+(u.last_login?lkAgo(u.last_login):'טרם נכנס')+'</td>'
+            +'<td><button type="button" class="chip" data-lku="'+esc(u.username)+'">'
+            +(u.has_password?'סיסמה חדשה':'קבע סיסמה')+'</button></td></tr>';
+        }).join('');
+        box.innerHTML='<table><thead><tr><th class="nm">שם</th><th>שם משתמש</th>'
+          +'<th>סיסמה</th><th>כניסה אחרונה</th><th></th></tr></thead><tbody>'
+          +rows+'</tbody></table>';
+        box.querySelectorAll('[data-lku]').forEach(function(b){
+          b.addEventListener('click',function(){setLkPassword(b.getAttribute('data-lku'),b);});
+        });
+      }).catch(function(){box.innerHTML='<div class="empty">לא נטען.</div>';});
+  }
+
+  function setLkPassword(user, btn){
+    var pw=prompt('סיסמה חדשה עבור '+user+' (שישה תווים לפחות):');
+    if(pw===null)return;                       // ביטול — לא נוגעים בכלום
+    if(String(pw).length<6){alert('סיסמה חייבת להיות באורך שש תווים לפחות.');return;}
+    if(btn){btn.disabled=true;btn.textContent='שומר…';}
+    fetch('/api/likeyusers/password',{method:'POST',credentials:'same-origin',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({username:user,password:pw})})
+      .then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});})
+      .then(function(x){
+        if(!x.ok){alert(x.j&&x.j.error?x.j.error:'לא נשמר.');}
+        else{alert('נשמר. מסור ל'+user+' את הסיסמה — היא לא ניתנת לשחזור מכאן.');}
+        loadLkUsers();
+      }).catch(function(){alert('לא נשמר.');loadLkUsers();});
   }
 
   function renderDowMeta(){

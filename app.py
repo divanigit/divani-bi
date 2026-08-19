@@ -27,6 +27,7 @@ import datetime as dt
 import hashlib
 import hmac
 import json
+import secrets
 import os
 import re
 import threading
@@ -1967,6 +1968,55 @@ def api_likeyactivity(request: Request, d_from: str = "", d_to: str = "", bucket
     agg = sb_rpc("pulse_activity", {"p_from": f.isoformat(), "p_to": t.isoformat(),
                                     "p_bucket_min": max(1, min(int(bucket or 5), 60))})
     return JSONResponse({"mode": "likey", "agg": agg or {}})
+
+
+def _likey_pw_hash(pw: str) -> str:
+    """אותו אלגוריתם בדיוק כמו בשרת לייקי (PBKDF2-SHA256, 200 אלף סיבובים).
+    הסיסמה עצמה לא נשמרת ולא נרשמת ליומן — רק הגיבוב נכתב למסד."""
+    import hashlib as _h
+    salt = secrets.token_bytes(16)
+    dk = _h.pbkdf2_hmac("sha256", (pw or "").encode("utf-8"), salt, 200_000)
+    return "pbkdf2_sha256$%d$%s$%s" % (200_000, salt.hex(), dk.hex())
+
+
+@app.get("/api/likeyusers")
+def api_likeyusers(request: Request):
+    """רשימת המשתמשים של לייקי לניהול. לבעלים בלבד, ובלי גיבובים —
+    המסך מראה רק אם יש סיסמה, לא מה היא."""
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    if not _is_admin(request):
+        return JSONResponse({"dev": True})
+    return JSONResponse({"users": sb_rpc("likey_users_list", {}) or []})
+
+
+@app.post("/api/likeyusers/password")
+async def api_likeyuser_password(request: Request):
+    """קביעת סיסמה למשתמש לייקי. הסיסמה מגובבת כאן ונשלחת למסד כגיבוב בלבד;
+    היא לעולם אינה נשמרת כטקסט ואינה מודפסת ליומן — גם לא בשגיאה."""
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    if not _is_admin(request):
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    try:
+        body = json.loads((await request.body()).decode("utf-8", "replace") or "{}")
+    except Exception:
+        return JSONResponse({"error": "bad body"}, status_code=400)
+    user = str(body.get("username") or "").strip().lower()
+    pw = str(body.get("password") or "")
+    if not user:
+        return JSONResponse({"error": "no user"}, status_code=400)
+    if len(pw) < 6:
+        return JSONResponse({"error": "סיסמה חייבת להיות באורך שש תווים לפחות"},
+                            status_code=400)
+    try:
+        sb_rpc("likey_user_set_hash", {"p_username": user, "p_hash": _likey_pw_hash(pw),
+                                       "p_must_change": False})
+    except Exception as e:
+        # repr של החריגה בלבד, בלי הגוף — כדי שסיסמה לא תדלוף ליומן
+        print("likey set-password failed for", user, ":", type(e).__name__, flush=True)
+        return JSONResponse({"error": "failed"}, status_code=500)
+    return JSONResponse({"ok": True, "username": user})
 
 
 @app.get("/api/pending")
