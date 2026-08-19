@@ -3039,7 +3039,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(b){b.setAttribute('aria-expanded','false');if(b.focus)try{b.focus();}catch(e){}}}
   function vaApply(m){
     previewAs=m; previewUser=(previewAs!==''); applyOwnerUI();
-    if(noProfit()&&view==='mdown'){setView('agents');}
+    // המסך "מי עובד בלייקי" סגור לכל מי שאינו דורון, ולכן גם בתצוגה של מישהו אחר
+    if(previewUser&&view==='likey'){setView('agents');}
+    else if(noProfit()&&view==='mdown'){setView('agents');}
     else if(META&&state.from){apply();}
   }
   function vaPick(m){
@@ -3360,7 +3362,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     // stays hidden until we actually know who this is. It used to ship visible and be
     // un-hidden here even when META was still null, so during a cold start it was tappable.
     var md=document.getElementById('mdownbtn'); if(md)md.style.display=(META&&!noProfit())?'':'none';
-    var lk=document.getElementById('likeybtn'); if(lk)lk.style.display=(META&&META.owner)?'':'none';
+    // נבדק מול prev ולא רק מול הבעלים: במצב "רואה כמו" המסך הזה חייב להיעלם,
+    // אחרת התצוגה משקרת לדורון בדיוק ברגע שבו הוא בודק מה אחרים רואים. הנתונים עצמם
+    // חסומים בשרת בלאו הכי, אבל כלי בדיקה שמראה דבר שגוי גרוע מכלי בדיקה שאינו קיים.
+    var lk=document.getElementById('likeybtn'); if(lk)lk.style.display=(owner&&!prev)?'':'none';
     var lg=document.querySelector('.logo'); if(lg){lg.style.cursor='';lg.title='';}
   }
   function boot(){
