@@ -805,7 +805,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       .then(ok)
       // j.dev = the server refused this screen for this user. It has no agg, so keeping only
       // j.agg threw the refusal away and the screen rendered as a real, empty result.
-      .then(function(j){if(desiredKey()!==key)return;cache.key=key;cache.dev=!!j.dev;cache.mode=j.mode;cache.panel=j.panel||null;cache.rows=j.rows||null;cache.agg=j.agg||null;cache.gross=(j.gross===undefined?null:j.gross);if(j.pending!==undefined){cache.pending=j.pending;cache.pendingAt=j.pending_at;}cb();})
+      .then(function(j){if(desiredKey()!==key)return;cache.key=key;cache.dev=!!j.dev;cache.mode=j.mode;cache.panel=j.panel||null;cache.rows=j.rows||null;cache.agg=j.agg||null;cache.gross=(j.gross===undefined?null:j.gross);if(j.pending!==undefined){cache.pending=j.pending;cache.pendingAt=j.pending_at;cache.slipcost=j.slipcost||null;}cb();})
       .catch(fail);
   }
 
@@ -1203,10 +1203,19 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var h='<div class="pt">העברות מאומתות שנזקפו למזומן · '+list.length+' · '+ils(sum)+'</div>';
     list.slice().sort(function(a,b){return (b.d||'').localeCompare(a.d||'');}).forEach(function(p){
       h+='<div class="pr"><span class="nm2">'+esc(p.c||p.o)+'</span><span>'+ils(p.show)+'</span>'+
-         '<span class="mut2">מאומת מהאסמכתא</span><span class="mut2">'+esc(brName(p.b))+'</span>'+
+         '<span class="mut2">'+(p.n>1?'מאומת מ־'+p.n+' אסמכתאות':'מאומת מהאסמכתא')+'</span>'+
+         '<span class="mut2">'+esc(brName(p.b))+'</span>'+
          (p.d?'<span class="mut2">אסמכתא '+heDate(p.d)+'</span>':'')+'</div>';
     });
     h+='<div class="pn">נזקפו לסך המזומן לפי תאריך האסמכתא, עוד לפני הפקת הקבלה בפריוריטי. אם לא תופק קבלה תוך כמה ימים — יופיעו בהתראות.'+(cache.pendingAt?' נסרק '+esc(cache.pendingAt)+'.':'')+'</div>';
+    // מד עלות — לדורון בלבד, ומהחיוב האמיתי שהוחזר מה-API
+    var sc=cache.slipcost;
+    if(sc&&sc.files){
+      h+='<div class="pn">קריאת התמונות ב־30 הימים האחרונים: '+sc.files+' תמונות · '+
+         sc.amounts+' מהן אסמכתאות תשלום · '+sc.ils.toFixed(2)+' ₪ סך הכל'+
+         (sc.per_img?' · '+sc.per_img.toFixed(3)+' ₪ לתמונה':'')+
+         (sc.errors?' · '+sc.errors+' נכשלו':'')+'. כל תמונה נקראת פעם אחת בלבד, לתמיד.</div>';
+    }
     el.innerHTML=h;el.style.display='block';
   }
 

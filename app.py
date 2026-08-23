@@ -71,7 +71,7 @@ ASK_USD_ILS = float(os.environ.get("ASK_USD_ILS", "3.7"))
 app = FastAPI(title="Divani BI", docs_url=None, redoc_url=None, openapi_url=None)
 
 _state = {"last_sync": None, "last_rc": None, "last_manual": 0.0, "minmax": None,
-          "minmax_at": 0.0, "pending": [], "pending_at": None, "ocr_cache": {},
+          "minmax_at": 0.0, "pending": [], "pending_at": None,
           "last_web": None, "last_prices": None, "last_pulse": None,
           "last_weborders": None}
 
@@ -1919,6 +1919,22 @@ def api_cash(request: Request, d_from: str = "", d_to: str = ""):
         f, t = t, f
     pend = {"pending": _state.get("pending") or [],
             "pending_at": _state.get("pending_at")}
+    # מה עלתה קריאת האסמכתאות בפועל — לדורון בלבד, ומהטוקנים שה-API החזיר,
+    # לא מהערכה. שאלה מפורשת שלו: "מהי עלות קריאה של כל תמונה בכל הזמנה".
+    if _is_admin(request):
+        try:
+            c = sb_rpc("bi_slip_cost", {"p_days": 30}) or {}
+            usd = ((c.get("in_tok") or 0) / 1e6 * ASK_PRICE_IN
+                   + (c.get("out_tok") or 0) / 1e6 * ASK_PRICE_OUT)
+            files = int(c.get("files") or 0)
+            pend["slipcost"] = {
+                "files": files, "amounts": int(c.get("amounts") or 0),
+                "errors": int(c.get("errors") or 0),
+                "ils": round(usd * ASK_USD_ILS, 2),
+                "per_img": round(usd * ASK_USD_ILS / files, 3) if files else None,
+                "since": c.get("since")}
+        except Exception as e:
+            print("slip-cost failed:", repr(e)[:200], flush=True)
     # Turnover for the same period, VAT included, so the screen can show each cash
     # figure as a share of it. Absolute shekels cannot answer "is collection
     # improving" — the denominator moves as well. Guarded: the cash screen must
@@ -2026,15 +2042,56 @@ def api_pending(request: Request):
 
 # ---------- pending bank transfers (העברות בהמתנה לקבלה) ----------
 # A transfer is visible 1-2 days before its receipt: the confirmation screenshot
-# is uploaded to the ORDER's attachments. Detection: attachment description
-# matches TR_DESC_RE + the order still has an open collection balance.
-# Dedup is structural: issuing the receipt zeroes PRIO_BALANCE, so the item
-# leaves this list exactly when the transfer enters the cash report.
-# PRIVACY (hard rule): only amount + customer name are kept; images are read
-# in memory for amount extraction only and never stored.
+# is uploaded to the ORDER's attachments. Dedup is structural: issuing the
+# receipt zeroes PRIO_BALANCE, so the item leaves this list exactly when the
+# transfer enters the cash report.
+#
+# Detection is EVENT-DRIVEN (Doron approved 23.8.26): the trigger is a NEW IMAGE
+# appearing on an order that still owes money — not the file's name.
+#
+# Why the name was dropped as the gate. It used to be a regex on EXTFILEDES
+# ("העבר|אסמכ"). Measured over 9-23.8: 28 image files landed on open-balance
+# orders and the name gate matched 8 — 29%. The other 71% arrive named
+# "whatsapp image 2026-08-22", "file - 2026-08-23t113041", or a bare GUID,
+# because the branch forwards the customer's WhatsApp screenshot straight in.
+# That is exactly how ראשל"צ's 11,190 ₪ went missing: SO26RIS002105 (7,898)
+# + SO26RIS002106 (3,292), both ציון נפשי, both named by WhatsApp and a GUID.
+#
+# What replaces it, and why it is not expensive:
+#   1. SUFFIX + FILESIZE come free in the list scan. Only jpg/jpeg/png with a
+#      real byte count are candidates — PDFs, the Pairzon URLs and the signed
+#      order (all FILESIZE 0) never cost a thing.
+#   2. Every candidate is read ONCE EVER. The memory is bi_slip_reads in the
+#      database, keyed (ORDNAME, EXTFILENUM) — so a restart does not re-read and
+#      re-pay, which the old in-process cache did on every deploy.
+#   3. Only then does the image go to Claude. Measured volume: 1.9 images/day.
+#
+# > A second bug this fixes: the payload used to be pulled with a bare
+# > $expand=EXTFILES_SUBFORM, which drags EVERY attachment's base64. On
+# > SO26HAI000689 (four WhatsApp videos, 73 MB each) that blew Priority's
+# > 350 MB response cap and returned HTTP 400 — so its 108 KB "העברה" slip was
+# > unreadable no matter what the name was. Payloads are now pulled one file at
+# > a time with a nested $filter on EXTFILENUM.
+#
+# PRIVACY (hard rule): only the amount, the date on the slip and the order
+# number written on it are kept. The image is decoded in memory for the reading
+# and is never written to disk or to the database.
 
-TR_DESC_RE = re.compile("העבר|אסמכ|אמסכתא")
 PENDING_SCAN_DAYS = 14
+SLIP_IMG_SUFFIX = {"jpg", "jpeg", "png"}
+SLIP_MAX_BYTES = 4_500_000      # over this the API refuses the image anyway
+SLIP_MAX_TRIES = 3              # a file that keeps failing stops costing us
+SLIP_MAX_READS = 60             # per cycle; a runaway can never empty the budget
+
+SLIP_PROMPT = (
+    'לפניך תמונה שצורפה להזמנת רהיטים. ייתכן שהיא אסמכתת תשלום (צילום מסך של העברה '
+    'בנקאית, ביט, פייבוקס, קבלה מהבנק) וייתכן שהיא משהו אחר לגמרי — תמונה של ספה, '
+    'צילום של פגם, מסמך, תעודת זהות. החזר JSON בלבד, בלי שום טקסט נוסף:\n'
+    '{"is_payment": true אם ורק אם זו אסמכתת תשלום אחרת false, '
+    '"amount": הסכום ששולם בשקלים כמספר, או null אם אין סכום ברור, '
+    '"date": "תאריך התשלום כפי שמופיע בצילום בפורמט YYYY-MM-DD, אחרת null", '
+    '"order": "מספר ההזמנה אם כתוב בפרטי ההעברה, אחרת null"}'
+)
 
 
 def _pri_get(path: str, timeout=90):
@@ -2044,78 +2101,145 @@ def _pri_get(path: str, timeout=90):
     return json.loads(out.decode("utf-8"))
 
 
-def _ocr_transfer_amount(ordname: str):
-    """Fetch the order's transfer attachments and read the amount via Claude
-    vision. Returns float or None. Nothing but the amount leaves this function."""
-    j = _pri_get(f"ORDERS?$filter=ORDNAME%20eq%20'{ordname}'&$expand=EXTFILES_SUBFORM")
+def _same_stamp(a, b) -> bool:
+    """Is this the same file timestamp, as told by two systems that write it
+    differently? Priority answers 2026-08-23T11:27:00+03:00 and PostgREST
+    answers the same instant as 08:27:00+00:00. Comparing the strings said "the
+    file changed" every single cycle, so every image was re-read — and re-paid
+    for — on every scan, which is precisely what this whole mechanism exists to
+    prevent. Compare instants, never rendered text."""
+    if not a or not b:
+        return False
+    try:
+        pa = dt.datetime.fromisoformat(str(a).replace("Z", "+00:00"))
+        pb = dt.datetime.fromisoformat(str(b).replace("Z", "+00:00"))
+    except ValueError:
+        return str(a) == str(b)
+    if pa.tzinfo is None:
+        pa = pa.replace(tzinfo=dt.timezone.utc)
+    if pb.tzinfo is None:
+        pb = pb.replace(tzinfo=dt.timezone.utc)
+    return abs((pa - pb).total_seconds()) < 90   # Priority stamps to the minute
+
+
+def _slip_payload(ordname: str, filenum: int):
+    """The base64 bytes of ONE attachment. Nested $filter keeps the other
+    attachments — which may be 70 MB videos — out of the response entirely."""
+    j = _pri_get(f"ORDERS?$filter=ORDNAME%20eq%20'{ordname}'&$select=ORDNAME"
+                 f"&$expand=EXTFILES_SUBFORM($filter=EXTFILENUM%20eq%20{int(filenum)})",
+                 timeout=120)
     rows = j.get("value", [])
     if not rows:
         return None
     for f in (rows[0].get("EXTFILES_SUBFORM") or []):
-        if not TR_DESC_RE.search(f.get("EXTFILEDES") or ""):
-            continue
         name = f.get("EXTFILENAME") or ""
-        data = None
+        # embedded uploads only. An http:// value is a Pairzon marketing asset,
+        # never a payment slip, and fetching it would cost a request for nothing.
+        m = re.match(r"^data:image/[^;]+;base64,(.*)$", name, re.S)
+        if not m:
+            return None
+        b64 = m.group(1)
         try:
-            if name.startswith("http"):
-                data = _http(name, {"Accept": "*/*"}, timeout=60)
-            else:
-                m = re.match(r"^data:[^;]+;base64,(.*)$", name, re.S)
-                b64 = m.group(1) if m else name
-                data = base64.b64decode(b64 + "=" * (-len(b64) % 4), validate=False)
+            return base64.b64decode(b64 + "=" * (-len(b64) % 4), validate=False)
         except Exception:
-            continue
-        if not data or len(data) > 5_000_000:
-            continue
-        if data[:3] == b"\xff\xd8\xff":
-            media = "image/jpeg"
-        elif data[:8] == b"\x89PNG\r\n\x1a\n":
-            media = "image/png"
-        else:
-            continue  # PDFs and other types: fall back to balance estimate
-        body = json.dumps({"model": ASK_MODEL, "max_tokens": 200, "messages": [{
-            "role": "user", "content": [
-                {"type": "image", "source": {"type": "base64", "media_type": media,
-                                             "data": base64.b64encode(data).decode("ascii")}},
-                {"type": "text", "text":
-                    'זהו צילום אסמכתה של העברה בנקאית. החזר JSON בלבד, בלי שום טקסט נוסף: '
-                    '{"amount": הסכום שהועבר בשקלים כמספר או null, '
-                    '"order": "מספר ההזמנה אם כתוב בתיאור ההעברה, אחרת null"}'}]}]}).encode("utf-8")
-        try:
-            r = json.loads(_http("https://api.anthropic.com/v1/messages",
-                                 {"x-api-key": ANTHROPIC_KEY,
-                                  "anthropic-version": "2023-06-01",
-                                  "Content-Type": "application/json"},
-                                 data=body, timeout=90).decode("utf-8"))
-            text = "".join(b.get("text", "") for b in (r.get("content") or [])
-                           if b.get("type") == "text")
-            m = re.search(r"\{.*\}", text, re.S)
-            if not m:
-                continue
-            parsed = json.loads(m.group(0))
-            amt = parsed.get("amount")
-            ref = parsed.get("order")
-            if amt is None:
-                continue
-            # safety: if the slip names a DIFFERENT order, skip this image
-            if ref and ordname not in str(ref).replace(" ", ""):
-                continue
-            return round(float(amt), 2)
-        except Exception as e:
-            print("transfer OCR failed:", ordname, repr(e)[:150], flush=True)
+            return None
     return None
+
+
+def _read_slip(ordname: str, filenum: int):
+    """Read one image once. Returns a dict for bi_slip_mark — always, including
+    the failure shapes, so a file is never silently read twice."""
+    out = {"amount": None, "slip_date": None, "ref": None,
+           "kind": "error", "in_tok": None, "out_tok": None}
+    data = _slip_payload(ordname, filenum)
+    if not data:
+        out["kind"] = "none"          # not an embedded image — settled, never retry
+        return out
+    if len(data) > SLIP_MAX_BYTES:
+        out["kind"] = "none"
+        return out
+    if data[:3] == b"\xff\xd8\xff":
+        media = "image/jpeg"
+    elif data[:8] == b"\x89PNG\r\n\x1a\n":
+        media = "image/png"
+    else:
+        out["kind"] = "none"
+        return out
+    # max_tokens was 200 and the model sometimes opened with a sentence, hit the
+    # ceiling mid-answer and returned no closing brace — and a cut-off answer was
+    # being filed as "not a payment slip". That silently lost SO26RIS002107, whose
+    # attachment is named, in so many words, "העברה בנקאית". Fixed by room to
+    # answer plus the stop_reason guard below.
+    # > Do NOT try to force JSON by prefilling an assistant "{" turn: Sonnet 5
+    # > rejects prefill outright — 400 "This model does not support assistant
+    # > message prefill". The answer arrives fenced in ```json anyway and the
+    # > brace-matching regex below reads it fine.
+    body = json.dumps({"model": ASK_MODEL, "max_tokens": 400, "messages": [
+        {"role": "user", "content": [
+            {"type": "image", "source": {"type": "base64", "media_type": media,
+                                         "data": base64.b64encode(data).decode("ascii")}},
+            {"type": "text", "text": SLIP_PROMPT}]}]}).encode("utf-8")
+    try:
+        r = json.loads(_http("https://api.anthropic.com/v1/messages",
+                             {"x-api-key": ANTHROPIC_KEY,
+                              "anthropic-version": "2023-06-01",
+                              "Content-Type": "application/json"},
+                             data=body, timeout=120).decode("utf-8"))
+    except Exception as e:
+        print("slip read failed:", ordname, filenum, repr(e)[:150], flush=True)
+        return out                     # kind='error' -> retried up to SLIP_MAX_TRIES
+    u = r.get("usage") or {}
+    out["in_tok"] = u.get("input_tokens")
+    out["out_tok"] = u.get("output_tokens")
+    if r.get("stop_reason") == "max_tokens":
+        # cut off mid-answer. That is not evidence of anything — retry it,
+        # never file it as "no payment here".
+        print("slip read truncated:", ordname, filenum, flush=True)
+        return out                     # kind='error'
+    text = "".join(b.get("text", "") for b in (r.get("content") or [])
+                   if b.get("type") == "text")
+    m = re.search(r"\{.*\}", text, re.S)
+    if not m:
+        out["kind"] = "none"           # the model answered but not with JSON
+        return out
+    try:
+        p = json.loads(m.group(0))
+    except Exception:
+        out["kind"] = "none"
+        return out
+    ref = p.get("order")
+    out["ref"] = str(ref)[:40] if ref else None
+    d = p.get("date")
+    if isinstance(d, str) and re.match(r"^\d{4}-\d{2}-\d{2}$", d.strip()):
+        out["slip_date"] = d.strip()
+    if not p.get("is_payment") or p.get("amount") is None:
+        out["kind"] = "none"           # a sofa photo. Settled — never read again.
+        return out
+    try:
+        out["amount"] = round(float(p["amount"]), 2)
+    except (TypeError, ValueError):
+        out["kind"] = "none"
+        return out
+    # the slip names a DIFFERENT order — it is not evidence for this one
+    if ref and ordname not in str(ref).replace(" ", ""):
+        out["kind"] = "other"
+        return out
+    out["kind"] = "amount"
+    return out
 
 
 def _scan_pending_transfers():
     today = dt.datetime.now(IL).date()
-    pending = []
+    orders = {}
     for d in range(PENDING_SCAN_DAYS):
         day = (today - dt.timedelta(days=d)).isoformat()
         nxt = (today - dt.timedelta(days=d - 1)).isoformat()
+        # EXTFILENUM/SUFFIX/FILESIZE/UDATE only — never EXTFILENAME. The payload
+        # is what blows the 350 MB cap, and here we only need to know what exists.
         path = (f"ORDERS?$filter=CURDATE%20ge%20{day}T00:00:00%2B03:00"
                 f"%20and%20CURDATE%20lt%20{nxt}T00:00:00%2B03:00"
                 "&$select=ORDNAME,CDES,CURDATE,BRANCHNAME,TOTPRICE,PRIO_BALANCE"
-                "&$expand=EXTFILES_SUBFORM($select=EXTFILEDES,UDATE)")
+                "&$expand=EXTFILES_SUBFORM($select=EXTFILENUM,EXTFILEDES,SUFFIX,FILESIZE,UDATE)")
         try:
             rows = _pri_get(path).get("value", [])
         except Exception as e:
@@ -2128,36 +2252,124 @@ def _scan_pending_transfers():
                 continue
             if bal < 1:  # skip zero and agorot rounding leftovers
                 continue
-            atts = [f for f in (o.get("EXTFILES_SUBFORM") or [])
-                    if TR_DESC_RE.search(f.get("EXTFILEDES") or "")]
-            if not atts:
-                continue
-            up = max((f.get("UDATE") or "") for f in atts)[:10]
-            pending.append({"o": o.get("ORDNAME") or "", "c": o.get("CDES") or "",
-                            "b": o.get("BRANCHNAME") or "", "bal": round(bal, 2),
-                            "d": up})
-    if ANTHROPIC_KEY:
-        for item in pending:
-            key = item["o"]
-            if key not in _state["ocr_cache"]:
-                amt = None
+            cands = []
+            for f in (o.get("EXTFILES_SUBFORM") or []):
+                if (f.get("SUFFIX") or "").lower() not in SLIP_IMG_SUFFIX:
+                    continue
                 try:
-                    amt = _ocr_transfer_amount(key)
+                    size = int(f.get("FILESIZE") or 0)
+                except (TypeError, ValueError):
+                    size = 0
+                if size <= 0 or size > SLIP_MAX_BYTES:
+                    continue          # 0 = a URL, not an upload; too big = unreadable
+                try:
+                    num = int(f.get("EXTFILENUM"))
+                except (TypeError, ValueError):
+                    continue
+                cands.append({"num": num, "udate": f.get("UDATE") or "", "size": size})
+            if not cands:
+                continue
+            on = o.get("ORDNAME") or ""
+            orders[on] = {"o": on, "c": o.get("CDES") or "",
+                          "b": o.get("BRANCHNAME") or "", "bal": round(bal, 2),
+                          "cands": cands}
+
+    # once-ever memory: one round trip for everything already read
+    seen = {}
+    if orders:
+        try:
+            for r in (sb_rpc("bi_slip_seen", {"p_ords": list(orders)}) or []):
+                seen[(r["ordname"], int(r["filenum"]))] = r
+        except Exception as e:
+            print("slip memory read failed:", repr(e)[:200], flush=True)
+            return          # without the memory we would re-read and re-pay. Stop.
+
+    if ANTHROPIC_KEY:
+        budget, skipped = SLIP_MAX_READS, 0
+        for on, item in orders.items():
+            for c in item["cands"]:
+                if budget <= 0:
+                    skipped += 1        # never silently: the count is logged below
+                    continue
+                prev = seen.get((on, c["num"]))
+                if prev:
+                    if prev["kind"] != "error" and _same_stamp(prev.get("udate"), c["udate"]):
+                        continue                       # read once, ever
+                    if prev["kind"] == "error" and int(prev.get("tries") or 1) >= SLIP_MAX_TRIES:
+                        continue
+                budget -= 1
+                res = _read_slip(on, c["num"])
+                try:
+                    sb_rpc("bi_slip_mark", {
+                        "p_ordname": on, "p_filenum": c["num"],
+                        "p_udate": c["udate"] or None, "p_amount": res["amount"],
+                        "p_slip_date": res["slip_date"], "p_ref_order": res["ref"],
+                        "p_kind": res["kind"], "p_in": res["in_tok"], "p_out": res["out_tok"]})
+                    seen[(on, c["num"])] = {"ordname": on, "filenum": c["num"],
+                                            "udate": c["udate"], "amount": res["amount"],
+                                            "slip_date": res["slip_date"],
+                                            "ref_order": res["ref"], "kind": res["kind"],
+                                            "tries": 1}
                 except Exception as e:
-                    print("pending OCR error:", key, repr(e)[:120], flush=True)
-                _state["ocr_cache"][key] = amt
-            item["amt"] = _state["ocr_cache"][key]
-    for item in pending:
-        ocr = item.get("amt")
-        if ocr:
-            # never show more than the open balance (partial receipts already
-            # moved the rest into the cash report — no double counting)
-            item["show"] = round(min(ocr, item["bal"]), 2)
-        item.pop("amt", None)
+                    print("slip mark failed:", on, c["num"], repr(e)[:200], flush=True)
+        if skipped:
+            # a cap that hides what it dropped reads as "everything was covered"
+            print(f"slip budget: {SLIP_MAX_READS} read, {skipped} left for the "
+                  f"next cycle", flush=True)
+
+    # ---- one transfer, credited once, however many orders it is filed under ----
+    # SO26RIS002038 #10 and SO26RIS002039 #6 are the SAME 80,671-byte file: one
+    # 5,003 ₪ transfer covering two orders of the same customer. Crediting each
+    # order its own open balance would have put that money on the screen twice.
+    # Grouping key = (amount, date on the slip, byte size). The size comes free
+    # in the list scan and is what separates two different customers who happened
+    # to transfer the same sum on the same day from two copies of one screenshot.
+    # Each group is then allocated at most its own amount, biggest balance first.
+    groups = {}
+    for on, item in orders.items():
+        for c in item["cands"]:
+            r = seen.get((on, c["num"]))
+            if not r or r.get("kind") != "amount" or r.get("amount") is None:
+                continue
+            amt = round(float(r["amount"]), 2)
+            g = groups.setdefault((amt, r.get("slip_date") or "", c["size"]),
+                                  {"amt": amt, "orders": {}, "up": ""})
+            # an order takes a given transfer once, however many copies of the
+            # same photo were uploaded to it
+            g["orders"].setdefault(on, item["bal"])
+            if (c["udate"] or "") > g["up"]:
+                g["up"] = c["udate"] or ""
+
+    credit, lastup, nslips = {}, {}, {}
+    for g in groups.values():
+        left = g["amt"]
+        for on in sorted(g["orders"], key=lambda o: -g["orders"][o]):
+            if left <= 0:
+                break
+            # never more than what this order still owes: the rest of the
+            # transfer was already receipted and is in the cash report already
+            take = min(g["orders"][on] - credit.get(on, 0), left)
+            if take <= 0:
+                continue
+            credit[on] = credit.get(on, 0) + take
+            left -= take
+            nslips[on] = nslips.get(on, 0) + 1
+            if g["up"] > lastup.get(on, ""):
+                lastup[on] = g["up"]
+
+    pending = []
+    for on, amt in credit.items():
+        show = round(amt, 2)
+        if show <= 0:
+            continue
+        item = orders[on]
+        pending.append({"o": on, "c": item["c"], "b": item["b"], "bal": item["bal"],
+                        "d": lastup.get(on, "")[:10], "show": show,
+                        "n": nslips.get(on, 1)})
     # Doron's rule: a transfer amount comes ONLY from reading the slip photo —
     # the open balance is NOT evidence (may be a pay-on-delivery remainder).
     # No amount read -> the item is not shown at all.
-    _state["pending"] = [i for i in pending if i.get("show")]
+    _state["pending"] = pending
     _state["pending_at"] = dt.datetime.now(IL).strftime("%d.%m.%Y %H:%M")
 
 
