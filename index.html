@@ -295,6 +295,16 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .dimbar .chip.on{background:var(--accentSoft);border-color:var(--bd);color:var(--okfg);font-weight:600}
   .dimsep{width:1px;height:22px;background:var(--line2);margin:0 4px}
   .subchips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+  .prodq{font-family:inherit;font-size:14px;padding:9px 13px;min-height:40px;border-radius:999px;
+    border:1px solid var(--line2);background:var(--bg);color:var(--tx);flex:1 1 210px;max-width:340px}
+  .prodq:focus{outline:2px solid var(--bd);outline-offset:1px}
+  .prodsel{font-family:inherit;font-size:13px;padding:9px 11px;min-height:40px;border-radius:999px;
+    border:1px solid var(--line2);background:var(--surface);color:var(--tx2);max-width:190px}
+  .prodbar-sep{flex-basis:100%;height:0}
+  .gentag{display:inline-block;font-size:10.5px;font-weight:600;padding:1px 6px;border-radius:999px;
+    background:var(--wbg);color:var(--wfg);margin-inline-start:6px;vertical-align:1px}
+  .famtag{display:inline-block;font-size:10.5px;padding:1px 6px;border-radius:999px;
+    background:var(--surface);color:var(--tx3);margin-inline-start:5px;vertical-align:1px}
   .subchips .chip{font-family:inherit;font-size:12px;border:1px solid var(--line2);background:var(--bg);color:var(--tx2);padding:6px 11px;min-height:36px;border-radius:999px;cursor:pointer}
   .subchips .chip.on{background:var(--accentSoft);border-color:var(--bd);color:var(--okfg);font-weight:600}
   .inschart{background:var(--surface);border-radius:12px;padding:12px 8px 6px;margin:0 0 12px}
@@ -499,6 +509,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         <div class="navgroup"><svg class="gico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l3.5-3.5 3 3L21 7"/></svg><span>מכירות</span></div>
         <button type="button" data-v="agents" class="on" aria-pressed="true"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1"/><circle cx="9" cy="7.5" r="3.2"/><path d="M22 19v-1a4 4 0 0 0-3-3.87"/><path d="M16 3.3a4 4 0 0 1 0 7.4"/></svg><span class="rlbl">סוכנים</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="branches" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.6-4.4A1 1 0 0 1 5.5 4h13a1 1 0 0 1 .9.6L21 9"/><path d="M4.5 9v9a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V9"/><path d="M3 9h18"/><path d="M9.5 20v-5h5v5"/></svg><span class="rlbl">סניפים</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
+        <button type="button" data-v="products" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 7.5L12 3.2 3.5 7.5v9L12 20.8l8.5-4.3v-9z"/><path d="M3.5 7.5L12 11.8l8.5-4.3"/><path d="M12 11.8v9"/></svg><span class="rlbl">מוצרים</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <div class="navgroup"><svg class="gico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="8.5" r="5.3"/><path d="M13.8 6.1a5.3 5.3 0 1 1 0 10.6"/></svg><span>כספים ושירות</span></div>
         <button type="button" data-v="cash" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2.4"/><circle cx="12" cy="12" r="2.6"/><path d="M6 12h.02M18 12h.02"/></svg><span class="rlbl">מזומן</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="collect" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.8" y="6" width="18.4" height="13" rx="2.4"/><path d="M3 10.5h18.2"/><circle cx="17" cy="14.6" r="1.35"/></svg><span class="rlbl">מקדמות</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
@@ -540,6 +551,21 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     <button type="button" class="chip" data-d="city" aria-pressed="false">ערים</button>
     <button type="button" class="chip" data-d="sector" aria-pressed="false">מגזר</button>
     <button type="button" class="chip" data-d="source" aria-pressed="false">מקור הגעה</button>
+  </div>
+  <div class="dimbar" id="prodbar" style="display:none" role="group" aria-label="חיפוש וסינון מוצרים">
+    <input type="search" id="prodq" class="prodq" autocomplete="off"
+           placeholder="חיפוש דגם, תיאור, מק&quot;ט או קטגוריה" aria-label="חיפוש מוצר">
+    <select id="prodfam" class="prodsel" aria-label="סינון לפי קטגוריה">
+      <option value="">כל הקטגוריות</option>
+    </select>
+    <div class="prodbar-sep"></div>
+    <button type="button" class="chip on" data-pl="model" aria-pressed="true">לפי דגם</button>
+    <button type="button" class="chip" data-pl="part" aria-pressed="false">לפי מק&quot;ט</button>
+    <div class="prodbar-sep"></div>
+    <button type="button" class="chip on" data-ps="s" aria-pressed="true">הכי הרבה כסף</button>
+    <button type="button" class="chip" data-ps="q" aria-pressed="false">הכי הרבה יחידות</button>
+    <button type="button" class="chip" data-ps="n" aria-pressed="false">הכי הרבה הזמנות</button>
+    <button type="button" class="chip" data-ps="pm" aria-pressed="false">אחוז רווח גבוה</button>
   </div>
   <div class="selbar">
     <button type="button" class="selbtn" id="selbtn" aria-haspopup="dialog">
@@ -680,6 +706,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   // what a screen that is closed to this user shows — one wording everywhere
   function devBoxHTML(){return '<div class="cbdev"><b>בפיתוח, יעלה בקרוב</b></div>';}
   var dimPath={grp:null,fam:null,model:null}, dimSeg=null, dimSort=null, insParetoN=25;
+  // מסך המוצרים. prodModel מוחזק בנפרד מ-prodFam: הוא נקבע רק בצלילה משורה,
+  // ומתאפס ברגע שחוזרים לרמת הדגם.
+  var prodQ='', prodLevel='model', prodFam='', prodSort='s', prodModel=null, prodQTimer=null;
   var DIMH={fam:'קטגוריות',part:'מוצרים',city:'ערים',sector:'מגזר',source:'מקור הגעה'};
   var SECN={'חילו.':'חילוני','חר.':'חרדי','ד.לא.':'דתי לאומי','רוס':'דובר רוסית','ע.ר':'המגזר הערבי','אחר':'אחר','לקוח מרחוק':'לקוח מרחוק','הזמנת שרות':'הזמנת שירות'};
   function dimName(k){if(dimKind==='sector')return SECN[k]||k;return k;}
@@ -735,6 +764,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(view==='cancels')return state.from+'|'+state.to+'|CX'+(cxOrd?('|O|'+cxOrd):(cxSel?('|'+cxSel.t+'|'+cxSel.k):''));
     if(view==='comp')return state.from+'|'+state.to+'|CP'+(cpSel?('|'+cpSel):'');
     if(view==='dow')return state.from+'|'+state.to+'|DW';
+    if(view==='products')return state.from+'|'+state.to+'|PR|'+prodLevel+'|'+prodSort+'|'+prodFam+'|'+(prodModel||'')+'|'+prodQ;
     // בקרת מחירים אינה תלויה בטווח התאריכים: היא בודקת את מצב המחירים עכשיו
     // מול מה שכבר נמכר. מפתח קבוע = לא נטען מחדש בכל שינוי תאריך
     if(view==='pctrl')return 'PCTRL';
@@ -787,6 +817,11 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
            :view==='pctrl'?('/api/pricecontrol')
            :view==='likey'?('/api/likeyactivity?d_from='+state.from+'&d_to='+state.to+'&bucket='+lkBucket)
            :view==='dow'?('/api/dow?d_from='+state.from+'&d_to='+state.to)
+           :view==='products'?('/api/products?d_from='+state.from+'&d_to='+state.to
+              +'&level='+prodLevel+'&sort='+prodSort
+              +(prodFam?'&fam='+encodeURIComponent(prodFam):'')
+              +(prodModel?'&model='+encodeURIComponent(prodModel):'')
+              +(prodQ?'&q='+encodeURIComponent(prodQ):''))
            :view==='dim'?(function(){
               if(dimKind==='fam')return '/api/tree?d_from='+state.from+'&d_to='+state.to+(dimPath.grp?'&grp='+encodeURIComponent(dimPath.grp):'')+(dimPath.fam?'&fam='+encodeURIComponent(dimPath.fam):'')+(dimPath.model?'&model='+encodeURIComponent(dimPath.model):'');
               if(dimSeg)return '/api/segdrill?d_from='+state.from+'&d_to='+state.to+'&seg='+dimSeg.seg+'&key='+encodeURIComponent(dimSeg.key);
@@ -2746,6 +2781,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(view==='cancels'){renderCancelsMeta();renderCancels(cache.agg);return;}
     if(view==='comp'){renderCompMeta();renderComp(cache.agg);return;}
     if(view==='dow'){renderDowMeta();renderDow(cache.agg);return;}
+    if(view==='products'){renderProductsMeta();renderProducts(cache.agg);return;}
     if(view==='pctrl'){renderPctrlMeta();renderPctrl(cache.agg);return;}
     if(view==='likey'){renderLikeyMeta();renderLikey(cache.agg);return;}
     if(view==='ins'){renderInsMeta();renderInsStage();return;}
@@ -2756,6 +2792,80 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     // אחרת היא נשארת תלויה מתחת לאריחים של מסך שאין לה בו משמעות
     var kp=document.getElementById('kpipct');if(kp)kp.innerHTML='';
     var R=ROOT();if(view==='cash'){renderCashKpis(R);}else if(view==='collect'){renderCollectKpis(R);}else if(view==='dim'){renderDimKpis(R);}else{renderKpis(R);}renderMeta(R);renderStage(R);}
+
+  // ---------- מסך המוצרים ----------
+  function prodFamOptions(list){
+    var sel=document.getElementById('prodfam');
+    if(!list||!list.length||sel.getAttribute('data-filled')==='1')return;
+    var h='<option value="">כל הקטגוריות</option>';
+    for(var i=0;i<list.length;i++)h+='<option value="'+esc(list[i])+'">'+esc(list[i])+'</option>';
+    sel.innerHTML=h; sel.value=prodFam; sel.setAttribute('data-filled','1');
+  }
+  function renderProductsMeta(){
+    var a=cache.agg||{}, np=noProfit();
+    var s=a.total_s||0, p=a.total_p||0, q=a.total_q||0, q0=a.total_q0||0;
+    var h='<div class="kpi"><div class="l">'+(a.level==='part'?'מק"טים':'דגמים')+'</div><div class="v">'+nf(a.matched||0)+'</div></div>'
+      +'<div class="kpi"><div class="l">יחידות</div><div class="v">'+nf(q)+'</div></div>'
+      +'<div class="kpi"><div class="l">מהן ללא חיוב</div><div class="v">'+nf(q0)+'</div></div>'
+      +'<div class="kpi"><div class="l">מחזור</div><div class="v">'+ils(s)+'</div></div>';
+    if(!np){
+      h+='<div class="kpi"><div class="l">רווח גולמי</div><div class="v">'+ils(p)+'</div></div>'
+       + '<div class="kpi"><div class="l">אחוז רווח</div><div class="v">'+(s>0?pmTxt(100*p/s):'—')+'</div></div>';
+    }
+    document.getElementById('kpis').innerHTML=h;
+    var bits=[rangeLbl(state.from,state.to),'הזמנות'];
+    if(prodFam)bits.push('קטגוריה: '+prodFam);
+    if(prodModel)bits.push('דגם: '+prodModel);
+    if(prodQ)bits.push('חיפוש: '+prodQ);
+    document.getElementById('sellbl').textContent=bits.join(' · ');
+    document.getElementById('builtlbl').textContent=META.last_sync?('עודכן '+META.last_sync):'';
+  }
+  function renderProducts(a){
+    if(cache.dev||(a&&a.dev)){stage.innerHTML=devBoxHTML();return;}
+    a=a||{}; prodFamOptions(a.families);
+    var np=noProfit(), part=(a.level==='part'), rows=a.rows||[];
+    var crumb='';
+    if(prodModel){
+      crumb='<div class="crumbs"><button type="button" class="chip" data-prodback="1">→ חזרה לכל הדגמים</button>'
+        +'<button type="button" class="chip here">'+esc(prodModel)+'</button></div>';
+    }
+    if(!rows.length){
+      stage.innerHTML=crumb+'<div class="empty">לא נמצא מוצר שמתאים לחיפוש או לסינון.<br>נסה מילה אחרת, או נקה את הסינון.</div>';
+      return;
+    }
+    var head='<tr><th class="nm">'+(part?'מוצר':'דגם')+'</th><th>קטגוריה</th>'
+      +(part?'':'<th>מק"טים</th>')
+      +'<th>יחידות</th><th>מהן ללא חיוב</th><th>מחזור ₪</th>'
+      +(np?'':'<th>רווח גולמי ₪</th><th>אחוז רווח</th>')
+      +'<th>מחיר ליחידה ₪</th><th>הזמנות</th><th>לקוחות</th></tr>';
+    var body=rows.map(function(r){
+      var pm=(r.s>0)?(100*r.p/r.s):null;
+      var nm=esc(String(r.lbl||r.k||'').slice(0,52));
+      // דגם שנמכר גם כספה וגם כהדום מוצג תחת הקטגוריה שבה יש לו הכי הרבה כסף.
+      // בלי הסימון הזה מחיר היחידה נראה שגוי, כי הוא ממוצע של שני מוצרים שונים.
+      // "+1 קטגוריות" יצא עברית שבורה. מציגים את המספר המלא, שתמיד שניים ומעלה.
+      var ft=(r.fams>1)?'<span class="famtag">ב-'+nf(r.fams)+' קטגוריות</span>':'';
+      var gt=r.gen?'<span class="gentag">מק"ט לכל מכירה</span>':'';
+      return '<tr'+(part?'':' data-prodk="'+esc(r.k)+'" style="cursor:pointer"')+'>'
+        +'<td class="nm">'+nm+gt+'</td>'
+        +'<td class="mut">'+esc(r.fam||'')+ft+'</td>'
+        +(part?'':'<td>'+nf(r.skus||0)+'</td>')
+        +'<td>'+nf(r.q||0)+'</td>'
+        +'<td class="mut">'+(r.q0?nf(r.q0):'—')+'</td>'
+        +'<td>'+ils(r.s||0)+'</td>'
+        +(np?'':'<td>'+ils(r.p||0)+'</td><td>'+(pm==null?'—':pmTxt(pm))+'</td>')
+        +'<td>'+(r.unit==null?'—':ils(r.unit))+'</td>'
+        +'<td>'+nf(r.n||0)+'</td><td>'+nf(r.c||0)+'</td></tr>';
+    }).join('');
+    var rest=a.rest?('<div class="pcnote">מוצגים '+nf(a.shown||0)+' מתוך '+nf(a.matched||0)
+      +'. השאר — '+nf(a.rest.cnt)+' פריטים, '+ils(a.rest.s||0)+'. צמצם עם חיפוש או סינון כדי לראות אותם.</div>'):'';
+    var z=(a.total_q0||0)
+      ? '<div class="pcnote">"מהן ללא חיוב" = יחידות בשורות במחיר אפס — בדים, תוספות ופריטי חבילה '
+        + 'שמחירם מגולם במוצר הראשי. הן נספרות בכמות, ולכן הכמות כאן גדולה ממספר המוצרים שנמכרו בתשלום. '
+        + 'מחיר ליחידה מחושב על היחידות שחויבו בלבד.</div>' : '';
+    var hint=(part?'':'<div class="pcnote">לחיצה על שורה פותחת את המק"טים של אותו דגם.</div>')+z;
+    stage.innerHTML=crumb+'<div class="tw"><table><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>'+rest+hint;
+  }
 
   function apply(){srClose();eT={};renderChips();fetchRange(renderAll);}
 
@@ -2900,13 +3010,14 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(v!=='cancels'){cxSel=null;cxOrd=null;}
     if(v!=='comp')cpSel=null;
     view=v;
-    var H1={agents:'ביצועי סוכנים',branches:'מכירות לפי סניפים',cash:'תקבולים במזומן',service:'פעילות שירות',collect:'מקדמות והנחות',dim:'פילוח מכירות',branchsrc:'מקורות הגעה לסניף',baskets:'סל מכירות ממוצע ללקוח',cannib:'קניבליזציה — תמהיל ערוצים',mdown:'מוריד כסף',cancels:'אחוז ביטולים',comp:'פיצויים ללקוחות',dow:'ימים חזקים בשבוע',ins:'תובנות'};
+    var H1={agents:'ביצועי סוכנים',branches:'מכירות לפי סניפים',cash:'תקבולים במזומן',service:'פעילות שירות',collect:'מקדמות והנחות',dim:'פילוח מכירות',branchsrc:'מקורות הגעה לסניף',baskets:'סל מכירות ממוצע ללקוח',cannib:'קניבליזציה — תמהיל ערוצים',mdown:'מוריד כסף',cancels:'אחוז ביטולים',comp:'פיצויים ללקוחות',dow:'ימים חזקים בשבוע',products:'מוצרים',ins:'תובנות'};
     document.getElementById('h1t').textContent=H1[v]||H1.agents;
     var bs=document.querySelectorAll('#seg button');
     for(var i=0;i<bs.length;i++){var on=bs[i].getAttribute('data-v')===v;bs[i].classList.toggle('on',on);bs[i].setAttribute('aria-pressed',on?'true':'false');}
     document.getElementById('dimbar').style.display=(v==='dim')?'flex':'none';
     document.getElementById('phbar').style.display=(v==='branches')?'flex':'none';
     document.getElementById('insbar').style.display=(v==='ins')?'flex':'none';
+    document.getElementById('prodbar').style.display=(v==='products')?'flex':'none';
     if(v!=='ins'){var sb3=document.getElementById('selbtn');sb3.style.opacity='';sb3.style.pointerEvents='';sb3.title='';}
     if(META&&state.from)apply();
   }
@@ -2919,6 +3030,37 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   });
   document.getElementById('seg').addEventListener('click',function(e){
     var b=e.target.closest('[data-v]');if(b)setView(b.getAttribute('data-v'));
+  });
+  document.getElementById('prodbar').addEventListener('click',function(e){
+    var lv=e.target.closest('[data-pl]'), so=e.target.closest('[data-ps]');
+    if(lv){
+      var v=lv.getAttribute('data-pl'); if(v===prodLevel)return;
+      prodLevel=v; if(v==='model')prodModel=null;
+      var a=this.querySelectorAll('[data-pl]');
+      for(var i=0;i<a.length;i++){var on=a[i]===lv;a[i].classList.toggle('on',on);a[i].setAttribute('aria-pressed',on?'true':'false');}
+      if(META&&state.from)apply(); return;
+    }
+    if(so){
+      var w=so.getAttribute('data-ps'); if(w===prodSort)return;
+      prodSort=w;
+      var b=this.querySelectorAll('[data-ps]');
+      for(var j=0;j<b.length;j++){var o2=b[j]===so;b[j].classList.toggle('on',o2);b[j].setAttribute('aria-pressed',o2?'true':'false');}
+      if(META&&state.from)apply();
+    }
+  });
+  document.getElementById('prodfam').addEventListener('change',function(){
+    prodFam=this.value||''; prodModel=null;
+    if(META&&state.from)apply();
+  });
+  // המתנה של רבע שנייה אחרי ההקלדה. בלי זה כל תו שולח שאילתה לשרת.
+  document.getElementById('prodq').addEventListener('input',function(){
+    var v=this.value||'';
+    if(prodQTimer)clearTimeout(prodQTimer);
+    prodQTimer=setTimeout(function(){
+      if(v===prodQ)return;
+      prodQ=v; prodModel=null;
+      if(META&&state.from)apply();
+    },250);
   });
   (function(){
     var trig=document.getElementById('navtrig'),ov=document.getElementById('navov'),sh=document.getElementById('navsheet'),cl=document.getElementById('navclose');
@@ -2955,6 +3097,23 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(META&&state.from)apply();
   });
   stage.addEventListener('click',function(e){
+    if(view==='products'){
+      if(e.target.closest('[data-prodback]')){
+        prodModel=null; prodLevel='model';
+        var pb=document.querySelectorAll('#prodbar [data-pl]');
+        for(var i=0;i<pb.length;i++){var on=pb[i].getAttribute('data-pl')==='model';
+          pb[i].classList.toggle('on',on);pb[i].setAttribute('aria-pressed',on?'true':'false');}
+        apply(); return;
+      }
+      var pr=e.target.closest('[data-prodk]');
+      if(pr){
+        prodModel=pr.getAttribute('data-prodk'); prodLevel='part';
+        var pc=document.querySelectorAll('#prodbar [data-pl]');
+        for(var j=0;j<pc.length;j++){var o3=pc[j].getAttribute('data-pl')==='part';
+          pc[j].classList.toggle('on',o3);pc[j].setAttribute('aria-pressed',o3?'true':'false');}
+        apply(); return;
+      }
+    }
     if(view==='dim'){
       var tk=e.target.closest('[data-treek]');
       if(tk){var d=treeDepth();var kv=tk.getAttribute('data-treek');

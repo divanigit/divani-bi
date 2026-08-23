@@ -264,6 +264,7 @@ _NP_STRIP = {
     "/api/range": _np_range,
     "/api/dim": _np_dimtree,
     "/api/tree": _np_dimtree,
+    "/api/products": _np_dimtree,   # same shape: agg.rows[].p, agg.total_p, agg.rest.p
     "/api/segdrill": _np_dimtree,
     "/api/agentreport": _np_agentreport,
     "/api/panel": None,
@@ -1626,6 +1627,37 @@ def api_tree(request: Request, d_from: str = "", d_to: str = "",
                                  "p_grp": grp or None, "p_fam": fam or None,
                                  "p_model": model or None})
     return JSONResponse({"mode": "tree", "agg": agg or {}})
+
+
+@app.get("/api/products")
+def api_products(request: Request, d_from: str = "", d_to: str = "",
+                 level: str = "model", q: str = "", fam: str = "",
+                 model: str = "", sort: str = "s", lim: int = 300):
+    """The product screen: every product, searchable and filterable.
+
+    level='model' groups by the Priority model name, level='part' by SKU. Model is
+    the default because a sofa made in Israel gets a fresh SKU on every sale — in
+    2026, 1,516 of the 1,636 SKUs in the generator families sold exactly once, and
+    they collapse to 71 real models. A SKU list for those families is a list of
+    individual sales, not a list of products."""
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    f, t = _parse_date(d_from), _parse_date(d_to)
+    if not f or not t:
+        return JSONResponse({"error": "bad dates"}, status_code=400)
+    if f > t:
+        f, t = t, f
+    if level not in ("model", "part"):
+        level = "model"
+    if sort not in ("s", "q", "n", "pm"):
+        sort = "s"
+    if max(len(q), len(fam), len(model)) > 120:
+        return JSONResponse({"error": "bad key"}, status_code=400)
+    agg = sb_rpc("bi_products", {"p_from": f.isoformat(), "p_to": t.isoformat(),
+                                 "p_level": level, "p_q": q or None,
+                                 "p_fam": fam or None, "p_model": model or None,
+                                 "p_sort": sort, "p_limit": max(1, min(lim, 500))})
+    return JSONResponse({"mode": "products", "agg": agg or {}})
 
 
 @app.get("/api/segdrill")
