@@ -634,15 +634,25 @@ def parse_model_version(pdes: str):
 
 
 def sync_parts():
-    """Upsert the full part catalog (part -> family + parsed model/version)."""
+    """Upsert the full part catalog (part -> family, parsed model/version, and the
+    model name Priority itself holds in LOGPART.SPEC9).
+
+    Two model columns on purpose. `model` is parse_model_version() reading PARTDES,
+    which takes the second token — so 'ספה פינתי סטארה נפתח-למיטה' comes out as
+    'פינתי' and four corner-sofa models (סטארה, סיאם, סליפו, לאוס — 386 units in
+    2026) collapse into one meaningless bucket. `pri_model` is SPEC9, filled by
+    whoever built the part, and covers 99.7 percent of 2026 units. Display reads
+    coalesce(nullif(pri_model,''), model) so the 16 units SPEC9 misses still get
+    the parsed name."""
     auth = "Basic " + base64.b64encode(f"{PRI_USER}:{PRI_PASS}".encode("utf-8")).decode("ascii")
-    url = f"{PRI_BASE}/LOGPART?$select=PARTNAME,PARTDES,FAMILYDES"
+    url = f"{PRI_BASE}/LOGPART?$select=PARTNAME,PARTDES,FAMILYDES,SPEC9"
     rows = []
     for r in _pri_pages(url, auth, guard_max=400):
         d = r.get("PARTDES") or ""
         m, v = parse_model_version(d)
         rows.append({"pn": r.get("PARTNAME") or "", "f": r.get("FAMILYDES") or "",
-                     "d": d, "m": m, "v": v})
+                     "d": d, "m": m, "v": v,
+                     "mp": (r.get("SPEC9") or "").strip()})
     if rows:
         for i in range(0, len(rows), 2000):
             sb_rpc("bi_upsert_parts", {"p_rows": rows[i:i + 2000]})
