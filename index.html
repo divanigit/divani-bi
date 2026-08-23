@@ -1200,9 +1200,13 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var list=all?all.filter(function(p){var d=p.d||'';return d>=state.from&&d<=state.to;}):null;
     if(!list||!list.length){el.style.display='none';el.innerHTML='';return;}
     var sum=0;list.forEach(function(p){sum+=p.show||0;});
-    var h='<div class="pt">העברות מאומתות שנזקפו למזומן · '+list.length+' · '+ils(sum)+'</div>';
+    // דורון: "כל אגורה להציג. אין סף תחתון." ils() הרגיל מעגל לשקל שלם, ולכן
+    // יתרה של 40 אגורות היתה מוצגת כאפס. כאן בלבד — האגורות מוצגות כשהן קיימות.
+    function ilsA(x){var r=Math.round(x*100)/100;
+      return r===Math.round(r)?ils(r):'₪'+r.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+    var h='<div class="pt">העברות מאומתות שנזקפו למזומן · '+list.length+' · '+ilsA(sum)+'</div>';
     list.slice().sort(function(a,b){return (b.d||'').localeCompare(a.d||'');}).forEach(function(p){
-      h+='<div class="pr"><span class="nm2">'+esc(p.c||p.o)+'</span><span>'+ils(p.show)+'</span>'+
+      h+='<div class="pr"><span class="nm2">'+esc(p.c||p.o)+'</span><span>'+ilsA(p.show)+'</span>'+
          '<span class="mut2">'+(p.n>1?'מאומת מ־'+p.n+' אסמכתאות':'מאומת מהאסמכתא')+'</span>'+
          '<span class="mut2">'+esc(brName(p.b))+'</span>'+
          (p.d?'<span class="mut2">אסמכתא '+heDate(p.d)+'</span>':'')+'</div>';

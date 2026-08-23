@@ -59,6 +59,10 @@ REFRESH_MINUTES = max(5, int(os.environ.get("REFRESH_MINUTES", "15") or 15))
 
 COOKIE_NAME = "dvbi_session"
 MAX_LINE_SPAN_DAYS = 92
+# כמה ימים אחורה מרענן סנכרון הקבלות של רבע השעה. חייב לשבת כאן ולא ליד שאר
+# קבועי הקבלות: הרפרשר עולה כחוט באמצע קריאת המודול, ומשתמש בו לפני שהשורות
+# שבהמשך הקובץ בכלל רצו. ההסבר למה עשרה ולא יומיים נמצא ב-_refresher.
+RC_AUTO_DAYS = 10
 
 ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 ASK_MODEL = os.environ.get("ASK_MODEL", "claude-sonnet-5")
@@ -1211,7 +1215,15 @@ def _refresher():
             except Exception as e:
                 print("web-orders failed:", repr(e)[:300], flush=True)
             try:
-                sync_receipts_window("auto", today - dt.timedelta(days=1), today)
+                # RC_AUTO_DAYS, not 1. The back office keys receipts in with an
+                # EARLIER business date than the day it types them: on 23.8 it
+                # entered 21 receipts dated 20-21.8, and 19 of them were bank
+                # transfers worth 80,771 ₪. A two-day window cannot see those, so
+                # the money stayed off the cash screen until the next nightly —
+                # up to a full day of "המזומן לא תואם את הסניפים".
+                # Cost of the wider window: ~280 rows re-written every cycle
+                # instead of ~15. The nightly does 4,035 rows in 15 seconds.
+                sync_receipts_window("auto", today - dt.timedelta(days=RC_AUTO_DAYS), today)
             except Exception as e:
                 print("receipts auto-sync failed:", repr(e)[:300], flush=True)
             try:
@@ -2250,7 +2262,9 @@ def _scan_pending_transfers():
                 bal = float(o.get("PRIO_BALANCE") or 0)
             except (TypeError, ValueError):
                 continue
-            if bal < 1:  # skip zero and agorot rounding leftovers
+            # דורון, 23.8.26: "כל אגורה להציג. אין סף תחתון." קודם היה כאן bal < 1,
+            # וזה הסתיר יתרות של אגורות בודדות. רק אפס ומינוס יוצאים.
+            if bal <= 0:
                 continue
             cands = []
             for f in (o.get("EXTFILES_SUBFORM") or []):
