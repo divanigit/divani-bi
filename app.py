@@ -1971,8 +1971,8 @@ def api_cash(request: Request, d_from: str = "", d_to: str = ""):
         return JSONResponse({"error": "bad dates"}, status_code=400)
     if f > t:
         f, t = t, f
-    pend = {"pending": _state.get("pending") or [],
-            "pending_at": _state.get("pending_at")}
+    _pl, _pat = _pending_now()
+    pend = {"pending": _pl, "pending_at": _pat}
     # מה עלתה קריאת האסמכתאות בפועל — לדורון בלבד, ומהטוקנים שה-API החזיר,
     # לא מהערכה. שאלה מפורשת שלו: "מהי עלות קריאה של כל תמונה בכל הזמנה".
     if _is_admin(request):
@@ -2086,12 +2086,52 @@ async def api_likeyuser_password(request: Request):
     return JSONResponse({"ok": True, "username": user})
 
 
+def _pending_db():
+    """הרשימה כפי שהיא במסד. עד 24.8.26 היא חיה רק ב-_state של התהליך, ולכן כל
+    אתחול של Render מחק אותה, לא הייתה היסטוריה, והבדיקה האוטומטית של סוף היום
+    לא יכלה לקרוא אותה בכלל (אין לה סיסמה לאתר — /api/pending החזיר לה 401)."""
+    rows = sb_select("bi_pending_transfers?select=ordname,cust,branch,balance,"
+                     "amount,slip_date,n_slips,last_seen"
+                     "&cleared_at=is.null&order=slip_date.asc&limit=500")
+    out, seen_at = [], ""
+    for r in rows:
+        out.append({"o": r.get("ordname"), "c": r.get("cust") or "",
+                    "b": r.get("branch") or "",
+                    "bal": float(r.get("balance") or 0),
+                    "d": (r.get("slip_date") or "")[:10],
+                    "show": float(r.get("amount") or 0),
+                    "n": int(r.get("n_slips") or 1)})
+        if (r.get("last_seen") or "") > seen_at:
+            seen_at = r.get("last_seen") or ""
+    at = None
+    if seen_at:
+        try:
+            at = (dt.datetime.fromisoformat(seen_at.replace("Z", "+00:00"))
+                  .astimezone(IL).strftime("%d.%m.%Y %H:%M"))
+        except ValueError:
+            at = None
+    return out, at
+
+
+def _pending_now():
+    """זיכרון קודם למסד: אם הסריקה כבר רצה במחזור הזה היא האמת העדכנית ביותר.
+    pending_at ריק = עוד לא נסרק מאז העלייה, ואז דווקא המסד הוא שמחזיק את
+    הרשימה. רשימה ריקה עם pending_at מלא היא תשובה אמיתית ולא נופלת למסד."""
+    if _state.get("pending_at"):
+        return _state.get("pending") or [], _state.get("pending_at")
+    try:
+        return _pending_db()
+    except Exception as e:
+        print("pending db read failed:", repr(e)[:200], flush=True)
+        return [], None
+
+
 @app.get("/api/pending")
 def api_pending(request: Request):
     if not _logged_in(request):
         return JSONResponse({"error": "auth"}, status_code=401)
-    return JSONResponse({"pending": _state.get("pending") or [],
-                         "pending_at": _state.get("pending_at")})
+    pend, at = _pending_now()
+    return JSONResponse({"pending": pend, "pending_at": at})
 
 
 # ---------- pending bank transfers (העברות בהמתנה לקבלה) ----------
@@ -2427,6 +2467,13 @@ def _scan_pending_transfers():
     # No amount read -> the item is not shown at all.
     _state["pending"] = pending
     _state["pending_at"] = dt.datetime.now(IL).strftime("%d.%m.%Y %H:%M")
+    # ...ואל המסד, כדי שהרשימה תשרוד אתחול שרת, תיצבור היסטוריה (first_seen /
+    # cleared_at) ותהיה קריאה לבדיקה האוטומטית. כשל כאן לא מפיל את הסריקה —
+    # התצוגה בדשבורד עובדת מהזיכרון בכל מקרה.
+    try:
+        sb_rpc("bi_pending_sync", {"p_rows": pending})
+    except Exception as e:
+        print("pending db sync failed:", repr(e)[:200], flush=True)
 
 
 # ---------- free-form questions (Ask) ----------
