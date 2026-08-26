@@ -32,6 +32,7 @@ import os
 import re
 import threading
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from zoneinfo import ZoneInfo
@@ -1288,6 +1289,45 @@ def _refresher():
         time.sleep(REFRESH_MINUTES * 60)
 
 
+# 26.8.2026: מפתח השירות של סופאבייס נפסל אי שם בין 14:37 ל-15:03, וכל
+# הלוח נפל — /api/meta החזיר 500 וכל מסך הראה "שגיאה בטעינה". /health באותו
+# רגע החזיר בדיוק את מה שהוא מחזיר תמיד: ok:true, configured:true.
+#
+# הסיבה: הוא בדק שמשתני הסביבה *קיימים*, לא שהם *עובדים*. מפתח מבוטל הוא
+# מחרוזת תקינה לגמרי. בדיקה שאומרת "תקין" כשהמערכת מתה גרועה מאין בדיקה,
+# כי היא שולחת את מי שבודק לחפש במקום הלא נכון.
+#
+# עכשיו נשלחת קריאה אמיתית וזולה למסד. התוצאה נשמרת ל-60 שניות, כי רנדר
+# דוגם את /health כל חמש שניות ואסור להפוך אותה למטח.
+#
+# הסטטוס נשאר 200 גם כשהמסד מת, ו-ok יורד ל-false: /health הוא גם בדיקת
+# החיים של רנדר, ו-503 היה מפיל את השירות למעגל הפעלות מחדש בדיוק ברגע
+# שבו הוא דווקא כן מסוגל להגיש את דף ההסבר.
+_DB_PING = {"at": 0.0, "state": "unknown"}
+_DB_PING_TTL = 60
+
+
+def _db_ping() -> str:
+    """'ok' · 'unauthorized' (המפתח נפסל) · 'unreachable: ...' · 'unconfigured'."""
+    if not (SB_URL and SB_KEY):
+        return "unconfigured"
+    now = time.time()
+    if now - _DB_PING["at"] < _DB_PING_TTL and _DB_PING["state"] != "unknown":
+        return _DB_PING["state"]
+    try:
+        _http(f"{SB_URL}/rest/v1/bi_sync_log?select=kind&limit=1",
+              {"apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY},
+              timeout=8)
+        state = "ok"
+    except urllib.error.HTTPError as e:
+        state = "unauthorized" if e.code in (401, 403) else "http %d" % e.code
+    except Exception as e:
+        state = "unreachable: " + type(e).__name__
+    _DB_PING["at"] = now
+    _DB_PING["state"] = state
+    return state
+
+
 def _configured() -> bool:
     return bool(DASH_PASS and SB_URL and SB_KEY and PRI_USER and PRI_PASS and PRI_BASE)
 
@@ -1311,7 +1351,10 @@ if _configured() and os.environ.get("DISABLE_REFRESH") != "1":
 
 @app.get("/health")
 def health():
-    return JSONResponse({"ok": True, "configured": _configured(),
+    db = _db_ping()
+    return JSONResponse({"ok": bool(_configured() and db == "ok"),
+                         "configured": _configured(),
+                         "db": db,
                          "last_sync": _state["last_sync"],
                          "last_web": _state["last_web"],
                          "last_prices": _state["last_prices"],
