@@ -21,8 +21,8 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
 });}
 </script>
 <style>
-  :root{--bd:#0d9668;--bg:#ffffff;--surface:#f4f8f6;--line:#e2e9e5;--line2:#cdd8d2;--tx:#18241f;--tx2:#53635c;--tx3:#8a978f;--okbg:#e3f3ec;--okfg:#0b6e4f;--wbg:#fbf0da;--wfg:#8f5f08;--dbg:#fbe6e4;--dfg:#a3271f;--accentSoft:rgba(13,150,104,.10);}
-  @media (prefers-color-scheme:dark){:root{--bd:#2fbf8f;--bg:#0f1512;--surface:#19211d;--line:#26302b;--line2:#35423b;--tx:#e9efeb;--tx2:#a2b0a9;--tx3:#6f7d76;--okbg:#12312765;--okfg:#63d3a6;--wbg:#2e241065;--wfg:#e0b25a;--dbg:#2e161465;--dfg:#f0968f;--accentSoft:rgba(47,191,143,.16);}}
+  :root{--bd:#0d9668;--bg:#ffffff;--surface:#f4f8f6;--line:#e2e9e5;--line2:#cdd8d2;--tx:#18241f;--tx2:#53635c;--tx3:#8a978f;--okbg:#e3f3ec;--okfg:#0b6e4f;--wbg:#fbf0da;--wfg:#8f5f08;--dbg:#fbe6e4;--dfg:#a3271f;--accentSoft:rgba(13,150,104,.10);--sys:#4a3aa7;--sysSoft:rgba(74,58,167,.07);--sysLine:rgba(74,58,167,.22);}
+  @media (prefers-color-scheme:dark){:root{--bd:#2fbf8f;--bg:#0f1512;--surface:#19211d;--line:#26302b;--line2:#35423b;--tx:#e9efeb;--tx2:#a2b0a9;--tx3:#6f7d76;--okbg:#12312765;--okfg:#63d3a6;--wbg:#2e241065;--wfg:#e0b25a;--dbg:#2e161465;--dfg:#f0968f;--accentSoft:rgba(47,191,143,.16);--sys:#9085e9;--sysSoft:rgba(144,133,233,.10);--sysLine:rgba(144,133,233,.26);}}
   html,body{background:var(--bg);color:var(--tx);margin:0}*{box-sizing:border-box}
   body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Hebrew",Arial,sans-serif;-webkit-text-size-adjust:100%}
   .wrap{max-width:640px;margin:0 auto;padding:16px 14px 44px}
@@ -68,6 +68,15 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .navgroup .gico{width:15px;height:15px;flex:none}
   .navdiv{height:1px;background:var(--line);margin:8px 14px}
   .navext{color:var(--bd)}
+  /* מערכת ניטור ואנליטיקת פרסום — קטגוריה נפרדת. כל הדשבורד ירוק, היא סגולה. */
+  .navsys{margin:6px 4px 2px;padding:10px 8px 8px;border-radius:14px;background:var(--sysSoft);border:1px solid var(--sysLine)}
+  .navsys .syshead{display:flex;align-items:center;gap:8px;padding:2px 10px 0}
+  .navsys .sysmark{width:19px;height:19px;flex:none;color:var(--sys)}
+  .navsys .systitle{font-size:12.5px;font-weight:800;color:var(--sys);letter-spacing:.03em}
+  .navsys .syssub{font-size:11.5px;color:var(--tx3);padding:2px 10px 8px}
+  .navsys button{min-height:44px}
+  .navsys button .rico{color:var(--sys)}
+  .navsys button:hover{background:var(--sysSoft)}
   body.navlock{overflow:hidden}
   .notice{font-size:12px;color:var(--wfg);margin:6px 2px 0;display:none}
   .notice div+div{margin-top:3px}
@@ -551,6 +560,14 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         <button type="button" data-v="ins" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 18.5h5"/><path d="M10.5 21.5h3"/><path d="M12 2.8a6 6 0 0 0-3.9 10.5c.75.7 1.1 1.5 1.15 2.5h5.5c.05-1 .4-1.8 1.15-2.5A6 6 0 0 0 12 2.8z"/></svg><span class="rlbl">תובנות</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <div class="navdiv"></div>
         <button type="button" id="nrepbtn" class="navext" aria-pressed="false" title="ניתוח ביצועי נציגים וסניפים"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 3.5v17h17"/><path d="M7 14.5l4-4 3 3 5.2-6"/></svg><span class="rlbl">ניתוח ביצועי נציגים וסניפים</span><svg class="rext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 16L16 8"/><path d="M9 8h7v7"/></svg></button>
+        <div class="navsys" id="navsys">
+          <div class="syshead">
+            <svg class="sysmark" viewBox="0 0 48 48" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><circle cx="16.5" cy="20" r="7.5"/><circle cx="31.5" cy="20" r="7.5"/><path d="M11 13.2 L8.6 6.5"/><path d="M37 13.2 L39.4 6.5"/><path d="M16.5 42.5 L16.5 38.5"/><path d="M24 42.5 L24 36"/><path d="M31.5 42.5 L31.5 32.5"/></g><path d="M24 28 L26.4 32 L21.6 32 Z" fill="currentColor"/></svg>
+            <span class="systitle">מערכת ניטור ואנליטיקת פרסום</span>
+          </div>
+          <div class="syssub">גוגל אנליטיקס · תנועה לאתר · פרסום</div>
+          <button type="button" id="trafficbtn" aria-pressed="false" title="תנועה לאתר לפי ערוץ"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.8"/><path d="M3.4 12h17.2"/><path d="M12 3.2a13.5 13.5 0 0 1 0 17.6"/><path d="M12 3.2a13.5 13.5 0 0 0 0 17.6"/></svg><span class="rlbl">תמהיל מקורות התנועה</span><svg class="rext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 16L16 8"/><path d="M9 8h7v7"/></svg></button>
+        </div>
       </div>
     </div>
   </div>
@@ -3413,6 +3430,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     });
   })();
   (function(){var n=document.getElementById('nrepbtn');if(n)n.addEventListener('click',function(){location.href='/agent-report';});})();
+  (function(){var t=document.getElementById('trafficbtn');if(t)t.addEventListener('click',function(){location.href='/traffic';});})();
 
   /* ---- התראות (alerts layer — v1: transfers with an אסמכתא but no receipt yet) ---- */
   var ALERT_DAYS=3;
@@ -3703,6 +3721,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     // מראה לו מסך שאף אחד אחר לא רואה, וזו בדיוק הבדיקה שהוא בא לעשות.
     document.body.classList.toggle('isowner', owner && !prev);
     var ab=document.getElementById('askbtn'); if(ab)ab.style.display=(!!(META&&META.admin)&&!prev)?'':'none';
+    // עידו לא רואה את קטגוריית ניטור הפרסום כלל. המסלול /traffic חוסם אותו בשרת,
+    // וזה מסיר גם את הכפתור — אחרת הוא לוחץ ומוחזר לדף הבית בלי הסבר.
+    var ns=document.getElementById('navsys'); if(ns)ns.style.display=noProfit()?'none':'';
     // the eye stays on screen for the owner in every state — it is the only way back to his own view
     var vb=document.getElementById('viewasbtn');
     if(vb){ vb.style.display=owner?'':'none';

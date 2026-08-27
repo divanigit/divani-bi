@@ -1441,6 +1441,28 @@ def agent_report(request: Request):
     return HTMLResponse(head + body)
 
 
+@app.get("/traffic")
+def traffic(request: Request):
+    """מערכת ניטור ואנליטיקת פרסום — תנועה לאתר מגוגל אנליטיקס.
+
+    הקובץ הוא מסמך HTML שלם עם הנתונים מוטמעים בתוכו, ולכן הוא מוגש כמות שהוא
+    בלי להוסיף לו head כמו ב-/agent-report.
+
+    עידו חסום כאן במפורש: מחסום _np_gate מכסה רק מסלולי /api/, ומסלול HTML
+    היה עובר אותו. החלטת דורון 24.8.2026 — פתוח לכולם חוץ מעידו.
+    """
+    if not _logged_in(request):
+        return RedirectResponse("/login", status_code=303)
+    if _is_noprofit(request):
+        return RedirectResponse("/", status_code=303)
+    try:
+        with open(os.path.join(HERE, "traffic_dashboard.html"), encoding="utf-8") as f:
+            return HTMLResponse(f.read())
+    except Exception:
+        return HTMLResponse("<div dir='rtl' style='font-family:sans-serif;padding:40px'>"
+                            "לוח התנועה לא נמצא.</div>", status_code=404)
+
+
 @app.get("/nav-preview")
 def nav_preview(request: Request):
     # temporary: 4 candidate navigation designs for the owner to try and choose.
