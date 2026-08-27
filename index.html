@@ -306,6 +306,13 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .hrbar{height:8px;border-radius:4px;background:var(--bd);display:block}
   .hrwrap{overflow-x:auto}
   .hrnote{font-size:12px;color:var(--tx3);margin:10px 0 0;line-height:1.55}
+  /* הסברי שיטה — רק לדורון. גוף הדף מקבל isowner רק אחרי ש-/api/meta ענה,
+     ולכן ברירת המחדל היא מוסתר: הסבר שמהבהב לרגע אצל מי שאסור לו לראותו
+     גרוע בדיוק כמו הסבר שנשאר על המסך. */
+  .ownernote{display:none}
+  body.isowner .ownernote{display:block}
+  span.ownernote{display:none}
+  body.isowner span.ownernote{display:inline}
   .prodq{font-family:inherit;font-size:14px;padding:9px 13px;min-height:40px;border-radius:999px;
     border:1px solid var(--line2);background:var(--bg);color:var(--tx);flex:1 1 210px;max-width:340px}
   .prodq:focus{outline:2px solid var(--bd);outline-offset:1px}
@@ -677,7 +684,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     <textarea id="askq" rows="2" placeholder="למשל: כמה מכרנו בנתניה בכל אחד משלושת החודשים האחרונים?"></textarea>
     <button type="button" class="go" id="asksend">שלח</button>
   </div>
-  <div class="askhint">התשובות מחושבות ישירות מנתוני פריוריטי שבענן. דוח מוצלח אפשר לקבע בהמשך כדוח קבוע. <span id="asktotal"></span></div>
+  <div class="askhint ownernote">התשובות מחושבות ישירות מנתוני פריוריטי שבענן. דוח מוצלח אפשר לקבע בהמשך כדוח קבוע. <span id="asktotal"></span></div>
   <div id="asklog"></div>
 </div>
 <div id="vaovl" style="position:fixed;inset:0;background:rgba(10,18,14,.45);z-index:130;display:none"></div>
@@ -1806,10 +1813,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         +'</div>';
     }).join('');
     var note;
-    if(mode==='mkt')note='<div class="cbnote"><b>מול שוק הלמ״ס:</b> מנכים את מגמת שוק הרהיטים הארצי — פדיון בני הקיימא הריאלי של הלשכה המרכזית לסטטיסטיקה — באותם חודשים בדיוק. עודף חיובי פירושו שהסניף צמח מעבר לשוק, ולא רק נסחף עם התאוששות כללית.</div>';
-    else if(mode==='biz')note='<div class="cbnote"><b>מול שאר העסק:</b> מנכים כמה שאר העסק שלך גדל או ירד באותה תקופה. מבודד קניבליזציה פנימית, אבל מוטה כלפי מעלה כששאר העסק התכווץ.</div>';
-    else note='<div class="cbnote"><b>ללא ניכוי:</b> השינוי המוחלט של האזור, לפני מול אחרי הפתיחה, בלי השוואה לשום מגמה.</div>';
-    note+='<div class="cbnote">מדד השוק לשנים 2023 ו־2026 מבוסס משתנה חלופי, כי הלמ״ס לא מפרסם בני קיימא לשנים אלו בנפרד. ירושלים ובית שמש נפתחו לא מזמן, אז אצלם התמונה עדיין מוקדמת.</div>';
+    if(mode==='mkt')note='<div class="cbnote ownernote"><b>מול שוק הלמ״ס:</b> מנכים את מגמת שוק הרהיטים הארצי — פדיון בני הקיימא הריאלי של הלשכה המרכזית לסטטיסטיקה — באותם חודשים בדיוק. עודף חיובי פירושו שהסניף צמח מעבר לשוק, ולא רק נסחף עם התאוששות כללית.</div>';
+    else if(mode==='biz')note='<div class="cbnote ownernote"><b>מול שאר העסק:</b> מנכים כמה שאר העסק שלך גדל או ירד באותה תקופה. מבודד קניבליזציה פנימית, אבל מוטה כלפי מעלה כששאר העסק התכווץ.</div>';
+    else note='<div class="cbnote ownernote"><b>ללא ניכוי:</b> השינוי המוחלט של האזור, לפני מול אחרי הפתיחה, בלי השוואה לשום מגמה.</div>';
+    note+='<div class="cbnote ownernote">מדד השוק לשנים 2023 ו־2026 מבוסס משתנה חלופי, כי הלמ״ס לא מפרסם בני קיימא לשנים אלו בנפרד. ירושלים ובית שמש נפתחו לא מזמן, אז אצלם התמונה עדיין מוקדמת.</div>';
     stage.innerHTML=tog+'<div class="cbwrap">'+cards+'</div>'+note;
   }
 
@@ -2351,13 +2358,13 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         +'</td><td class="mut">'+esc(String(r.at||'').slice(0,16).replace('T',' '))+'</td></tr>';});
 
     var amb=(p.ambiguous||0)
-      ? '<div class="pcnote">'+nf(p.ambiguous)+' מוצרים באתר ממופים ליותר ממק"ט אחד. '
+      ? '<div class="pcnote ownernote">'+nf(p.ambiguous)+' מוצרים באתר ממופים ליותר ממק"ט אחד. '
         +'זה תקין כשמדובר בשתי תצורות של אותו דגם — ומעיד על טעות כשהדגמים שונים.</div>' : '';
     // הכיוון ההפוך, וזה זה שעוצר בדיקה: מק"ט אחד שיושב על כמה מוצרים באתר.
     // שולחן אוכל אחד נמכר גם עם 4 כיסאות וגם עם 6, ולכן המק"ט לבדו אינו
     // אומר מה המחיר באתר. אלה השורות שמסומנות "זיווג לא חד-משמעי".
     var amb2=(p.part_many||0)
-      ? '<div class="pcnote">'+nf(p.part_many)+' מק"טים יושבים על יותר ממוצר אחד באתר'
+      ? '<div class="pcnote ownernote">'+nf(p.part_many)+' מק"טים יושבים על יותר ממוצר אחד באתר'
         +(b.ambiguous ? ' — ולכן ' + nf(b.ambiguous) + ' מוצרים לא נבדקו' : '')
         +'. מק"ט של שולחן נמכר גם עם 4 כיסאות וגם עם 6, ולכן המק"ט לבדו אינו קובע מה המחיר. '
         +'המערכת לא בוחרת בשבילך — היא מסמנת.</div>' : '';
@@ -2370,7 +2377,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         'אין פערים במחיר הבסיס.',
         [{t:'המוצר',nm:1},{t:'סוג'},{t:'באתר'},{t:'בפריוריטי'},{t:'פער'},{t:'מצב'}], bg)
       + '<div class="pcsec"><h3>מה המערכת למדה לבד</h3>'
-      + '<div class="pcnote">כל הזמנת אתר מלמדת איזה מוצר באתר הוא איזה מק"ט בפריוריטי. '
+      + '<div class="pcnote ownernote">כל הזמנת אתר מלמדת איזה מוצר באתר הוא איזה מק"ט בפריוריטי. '
       + 'אף אחד לא מקליד את זה.' + (b.no_model ? ' ' + nf(b.no_model) + ' מוצרים עדיין בלי דגם מזוהה.' : '')
       + '</div>' + amb + amb2
       + (lp.length ? '<div class="tw"><table><thead><tr><th class="nm">המוצר באתר</th><th>מק"ט</th><th>תיאור בפריוריטי</th><th>הזמנות</th></tr></thead><tbody>'
@@ -2379,7 +2386,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       + pctrlSection('שינויי מחיר שנתפסו',
         'אף מחיר לא זז מאז שהמעקב התחיל.',
         [{t:'המוצר',nm:1},{t:'מקור'},{t:'היה'},{t:'עכשיו'},{t:'מתי'}], mv)
-      + '<div class="pcfoot">נבדקים ' + nf(m.models_confident||0) + ' דגמים מתוך ' + nf(m.models_resolved||0)
+      + '<div class="pcfoot ownernote">נבדקים ' + nf(m.models_confident||0) + ' דגמים מתוך ' + nf(m.models_resolved||0)
       + ' · ' + nf(m.frozen_live||0) + ' שורות הזמנה עם מחיר מוקפא · הבדיקה רצה כל 15 דקות</div>';
   }
 
@@ -2894,12 +2901,16 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
 
     var wd=cv.per_weekday||{}, minD=99;
     for(var k in wd){if(wd[k]<minD)minD=wd[k];}
+    // שתי שורות ולא אחת. הראשונה נשארת לכולם כי בלעדיה המסך נקרא כמכירות,
+    // והשנייה — למה אין שעה בפריוריטי ומה ביקשנו — היא הנמקה שלי ולא של הצוות.
     h+='<div class="hrnote"><b>המספר בתא = כניסות ליום באותה שעה.</b> '
-      +'ריק = פחות מכניסה אחת ליום.<br>'
-      +'<b>המדד הוא כניסות לסניף, לא מכירות.</b> פריוריטי אינה רושמת שעה על הזמנה — '
-      +'נבדקו כל 162 שדות ההזמנה על חמש שנים שונות. ביקשנו לפתוח את הישויות שמחזיקות זאת.<br>'
+      +'ריק = פחות מכניסה אחת ליום. <b>המדד הוא כניסות לסניף, לא מכירות.</b><br>'
       +'נמדדו '+nf(cv.days||0)+' ימים, מ-'+heShort(cv.first||'')+' עד '+heShort(cv.last||'')
-      +(minD<99?(' — כל יום בשבוע מיוצג על ידי '+nf(minD)+' ימים לפחות. <b>זה בסיס צר; הדפוס יתייצב ככל שייצברו שבועות.</b>'):'')
+      +(minD<99?(' — כל יום בשבוע מיוצג על ידי '+nf(minD)+' ימים לפחות.'):'')
+      +'</div>';
+    h+='<div class="hrnote ownernote">פריוריטי אינה רושמת שעה על הזמנה — נבדקו כל 162 '
+      +'שדות ההזמנה על חמש שנים שונות. ביקשנו לפתוח את הישויות שמחזיקות זאת.'
+      +(minD<99?(' <b>זה בסיס צר; הדפוס יתייצב ככל שייצברו שבועות.</b>'):'')
       +'</div>';
     stage.innerHTML=h;
   }
@@ -2971,7 +2982,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var rest=a.rest?('<div class="pcnote">מוצגים '+nf(a.shown||0)+' מתוך '+nf(a.matched||0)
       +'. השאר — '+nf(a.rest.cnt)+' פריטים, '+ils(a.rest.s||0)+'. צמצם עם חיפוש או סינון כדי לראות אותם.</div>'):'';
     var z=(a.total_q0||0)
-      ? '<div class="pcnote">"מהן ללא חיוב" = יחידות בשורות במחיר אפס — בדים, תוספות ופריטי חבילה '
+      ? '<div class="pcnote ownernote">"מהן ללא חיוב" = יחידות בשורות במחיר אפס — בדים, תוספות ופריטי חבילה '
         + 'שמחירם מגולם במוצר הראשי. הן נספרות בכמות, ולכן הכמות כאן גדולה ממספר המוצרים שנמכרו בתשלום. '
         + 'מחיר ליחידה מחושב על היחידות שחויבו בלבד.</div>' : '';
     var hint=(part?'':'<div class="pcnote">לחיצה על שורה פותחת את המק"טים של אותו דגם.</div>')+z;
@@ -3672,6 +3683,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
 
   function applyOwnerUI(){
     var owner=!!(META&&META.owner), prev=owner&&previewUser;
+    // גם במצב "רואה כמו" ההסברים נעלמים — אחרת בדיקת התצוגה של דורון
+    // מראה לו מסך שאף אחד אחר לא רואה, וזו בדיוק הבדיקה שהוא בא לעשות.
+    document.body.classList.toggle('isowner', owner && !prev);
     var ab=document.getElementById('askbtn'); if(ab)ab.style.display=(!!(META&&META.admin)&&!prev)?'':'none';
     // the eye stays on screen for the owner in every state — it is the only way back to his own view
     var vb=document.getElementById('viewasbtn');
