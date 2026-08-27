@@ -2839,7 +2839,21 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(cache.dev||(a&&a.dev)){stage.innerHTML=devBoxHTML();return;}
     a=a||{};
     var grid=a.grid||[], hs=a.hours||[], cv=a.coverage||{};
-    if(!grid.length){stage.innerHTML='<div class="empty">אין נתוני כניסות לתקופה שנבחרה.</div>';return;}
+    if(!grid.length){
+      // המסך נפתח על "היום" בברירת מחדל, ולנתוני קאונטרייט יש פיגור מובנה של
+      // יום — דוח של יום מגיע למחרת בבוקר. ריק אינו תקלה, אבל ריק בלי הסבר כן.
+      var av=a.available||{};
+      var h0='<div class="empty">אין נתוני כניסות לתקופה שנבחרה.';
+      if(av.last){
+        h0+='<br><br><b>הנתון האחרון שיש: '+heShort(av.last)+'</b>'
+          + ' — סך הכל '+nf(av.days||0)+' ימים, מ-'+heShort(av.first)+'.'
+          + '<br>דוח המונים של יום מגיע רק למחרת בבוקר, ולכן להיום עדיין אין נתון.'
+          + '<br><br><button type="button" class="chip" data-hrjump="1">הצג את '
+          + nf(Math.min(av.days||0,30))+' הימים האחרונים</button>';
+      }
+      stage.innerHTML=h0+'</div>';
+      return;
+    }
     var mx=0; grid.forEach(function(c){if(c.per_day>mx)mx=c.per_day;});
     var byHr={}; grid.forEach(function(c){(byHr[c.hr]=byHr[c.hr]||{})[c.dw]=c;});
     var hours=Object.keys(byHr).map(Number).sort(function(x,y){return x-y;});
@@ -3128,6 +3142,16 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   });
   document.getElementById('seg').addEventListener('click',function(e){
     var b=e.target.closest('[data-v]');if(b)setView(b.getAttribute('data-v'));
+  });
+  stage.addEventListener('click',function(e){
+    if(view!=='hours')return;
+    var j=e.target.closest('[data-hrjump]'); if(!j)return;
+    var av=(cache.agg||{}).available||{}; if(!av.last)return;
+    var to=av.last, d=new Date(av.last+'T00:00:00');
+    d.setDate(d.getDate()-29);
+    var from=d.toISOString().slice(0,10);
+    if(av.first&&from<av.first)from=av.first;
+    setRange(from,to,null);
   });
   document.getElementById('hoursbar').addEventListener('click',function(e){
     var b=e.target.closest('[data-hb]'); if(!b)return;
