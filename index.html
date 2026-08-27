@@ -324,6 +324,86 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .hrbar{height:8px;border-radius:4px;background:var(--bd);display:block}
   .hrwrap{overflow-x:auto}
   .hrnote{font-size:12px;color:var(--tx3);margin:10px 0 0;line-height:1.55}
+  /* 22 התצוגות של מסך השעות. הצבע מסמן משמעות אחת בלבד — שיא או חולשה —
+     ולעולם לא גודל: גודל נקרא מאורך, לא מגוון. */
+  .hdsvg{display:block;width:100%;height:auto;margin:2px 0}
+  .hdax{font-size:10.5px;fill:var(--tx3)}
+  .hdaxb{font-size:11px;fill:var(--tx2);font-weight:600}
+  .hdlbl{font-size:11px;fill:var(--tx);font-weight:600}
+  .hdbar{fill:var(--line2)}
+  .hdbar.hi{fill:var(--bd)}
+  .hdbar.lo{fill:var(--tx3)}
+  .hdbase{stroke:var(--line2);stroke-width:1;fill:none}
+  .hddash{stroke:var(--line2);stroke-width:1;stroke-dasharray:3 3;fill:none}
+  .hdghost{fill:none;stroke:var(--line2);stroke-width:1.2}
+  .hdband{fill:var(--accentSoft)}
+  .hddot{fill:var(--tx3)}
+  .hddot.hi{fill:var(--bd)}
+  .hddotm{fill:var(--tx3);opacity:.75}
+  .hdline{fill:none;stroke:var(--line2);stroke-width:1.4}
+  .hdline.hi{stroke:var(--bd);stroke-width:2.2}
+  .hdhill{fill:var(--surface);stroke:var(--line2);stroke-width:1.4}
+  .hdhill.hi{fill:var(--accentSoft);stroke:var(--bd)}
+  .hdslot{fill:var(--surface)}
+  .hdh1{fill:var(--accentSoft)}
+  .hdh2{fill:var(--bd);opacity:.75}
+  .hdring{fill:none;stroke:var(--line);stroke-width:1}
+  .hdseg{fill:var(--line2)}
+  .hdseg.hi{fill:var(--bd)}
+  .hdclockv{font-size:24px;font-weight:800;fill:var(--tx)}
+  .hdslope{stroke:var(--line2);stroke-width:1.2}
+  .hdslope.hi{stroke:var(--bd);stroke-width:1.8}
+  .hdlead{font-size:18px;font-weight:600;line-height:1.45;margin:2px 0 10px}
+  .hdlead b{color:var(--okfg)}
+  .hdbig{font-size:32px;font-weight:800;line-height:1.1;margin:0 0 4px;font-variant-numeric:tabular-nums}
+  .hdblk{margin:0 0 14px}
+  .hdrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13.5px}
+  .hdrow span{font-size:11.5px;color:var(--tx3);font-variant-numeric:tabular-nums}
+  .hdrow2{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:7px 0;
+    border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
+  .hdrow2.hi{font-weight:700}
+  .hdsub{font-size:11px;color:var(--tx3);margin-top:3px}
+  .hdcard{border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin:0 0 10px;font-size:13.5px}
+  .hdcard .t{font-size:15px;font-weight:700;margin-bottom:4px}
+  .hdcard .s{font-size:11.5px;color:var(--tx3);margin-top:4px}
+  .hdodd td{background:var(--accentSoft)}
+  .hdwarn{margin-top:10px;background:var(--wbg);color:var(--wfg);border-radius:10px;
+    padding:10px 12px;font-size:13px;line-height:1.55}
+  .hdrec{display:flex;gap:9px;align-items:flex-start;background:var(--accentSoft);
+    border-radius:12px;padding:12px 13px;font-size:15px;line-height:1.5}
+  .hdrec .dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--bd);margin-top:8px}
+  .hddays{line-height:1;margin-top:8px}
+  .hdday{display:inline-block;width:5px;height:9px;border-radius:1px;margin-inline-end:2px;
+    border:1px solid var(--line);background:transparent}
+  .hdday.on{background:var(--line2)}
+  .hdrk{display:flex;align-items:center;gap:6px;height:26px;font-size:12px}
+  .hdrk .k{width:44px;flex:none;color:var(--tx2)}
+  .hdrk .ax{flex:1;min-width:0;position:relative;height:12px}
+  .hdrk .ax i{position:absolute;inset-inline-start:0;top:5px;height:2px;background:var(--line2)}
+  .hdrk .ax u{position:absolute;top:1px;width:10px;height:10px;border-radius:50%;background:var(--tx3)}
+  .hdrk .ax u.hi{background:var(--bd)}
+  .hdrk .ax u.lo{background:var(--wfg)}
+  .hdrk .v{width:40px;flex:none;text-align:start;font-variant-numeric:tabular-nums}
+  .hdrk .v.off{color:transparent}
+  .hdwin{display:flex;align-items:center;gap:8px;min-height:28px;font-size:12px}
+  .hdwin .k{width:46px;flex:none;color:var(--tx2)}
+  .hdwin .s{flex:1;line-height:1}
+  .hdwin .v{flex:none;font-size:11.5px;color:var(--tx3)}
+  .hdsq{display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--bd);margin-inline-end:3px}
+  .hdev{display:flex;align-items:center;gap:6px;height:30px;font-size:12px}
+  .hdev .k{width:42px;flex:none;color:var(--tx2)}
+  .hdev .ax{flex:1;min-width:0}
+  .hdev .ax i{display:block;height:9px;border-radius:2px}
+  .hdev .ax i.t3{background:var(--bd)}
+  .hdev .ax i.t2{background:var(--line2)}
+  .hdev .ax i.t1{background:repeating-linear-gradient(90deg,var(--line2) 0 2px,transparent 2px 5px)}
+  .hdev .v{width:36px;flex:none;text-align:start;font-variant-numeric:tabular-nums}
+  .hdev .v.off{color:transparent}
+  .hdev .s{width:74px;flex:none;line-height:1;white-space:nowrap;overflow:hidden}
+  .hdev .n{width:18px;flex:none;font-size:10.5px;color:var(--tx3);text-align:start}
+  .hdtick{display:inline-block;width:2px;height:9px;margin-inline-end:1px;
+    vertical-align:middle;background:var(--line2)}
+  .ltr{direction:ltr;unicode-bidi:isolate;font-variant-numeric:tabular-nums}
   /* הסברי שיטה — רק לדורון. גוף הדף מקבל isowner רק אחרי ש-/api/meta ענה,
      ולכן ברירת המחדל היא מוסתר: הסבר שמהבהב לרגע אצל מי שאסור לו לראותו
      גרוע בדיוק כמו הסבר שנשאר על המסך. */
@@ -595,7 +675,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     <button type="button" class="chip" data-d="sector" aria-pressed="false">מגזר</button>
     <button type="button" class="chip" data-d="source" aria-pressed="false">מקור הגעה</button>
   </div>
-  <div class="dimbar" id="hoursbar" style="display:none" role="group" aria-label="בחירת סניף">
+  <div class="dimbar" id="hoursbar" style="display:none" role="group" aria-label="בחירת סניף ותצוגה">
+    <select id="hdsel" class="prodsel" aria-label="בחירת תצוגה"></select>
+    <span class="dimsep"></span>
     <button type="button" class="chip on" data-hb="" aria-pressed="true">כל הסניפים</button>
     <button type="button" class="chip" data-hb="101" aria-pressed="false">נתניה</button>
     <button type="button" class="chip" data-hb="102" aria-pressed="false">ראשל&quot;צ</button>
@@ -761,6 +843,12 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   // ומתאפס ברגע שחוזרים לרמת הדגם.
   var prodQ='', prodLevel='model', prodFam='', prodSort='s', prodModel=null, prodQTimer=null;
   var hrBranch='';   // '' = כל הסניפים
+  // הבחירה נשמרת בדפדפן שלו: מסך שחוזר לברירת מחדל בכל כניסה אינו מסך
+  // שאפשר להתנסות בו.
+  var hrDesign=(function(){try{return localStorage.getItem('hrDesign')||'cur';}catch(e){return 'cur';}})();
+  var hrOne='';      // הסניף שנבחר בתוך תצוגה של סניף בודד
+  var hrDow=4;       // יום השבוע בתצוגה 12
+  var hrHour=12;     // השעה בתצוגה 13
   var DIMH={fam:'קטגוריות',part:'מוצרים',city:'ערים',sector:'מגזר',source:'מקור הגעה'};
   var SECN={'חילו.':'חילוני','חר.':'חרדי','ד.לא.':'דתי לאומי','רוס':'דובר רוסית','ע.ר':'המגזר הערבי','אחר':'אחר','לקוח מרחוק':'לקוח מרחוק','הזמנת שרות':'הזמנת שירות'};
   function dimName(k){if(dimKind==='sector')return SECN[k]||k;return k;}
@@ -816,7 +904,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(view==='cancels')return state.from+'|'+state.to+'|CX'+(cxOrd?('|O|'+cxOrd):(cxSel?('|'+cxSel.t+'|'+cxSel.k):''));
     if(view==='comp')return state.from+'|'+state.to+'|CP'+(cpSel?('|'+cpSel):'');
     if(view==='dow')return state.from+'|'+state.to+'|DW';
-    if(view==='hours')return state.from+'|'+state.to+'|HR|'+hrBranch;
+    if(view==='hours')return state.from+'|'+state.to+'|HR|'+hrBranch;   // התצוגה אינה חלק מהמפתח: היא ציור, לא שאילתה
     if(view==='products')return state.from+'|'+state.to+'|PR|'+prodLevel+'|'+prodSort+'|'+prodFam+'|'+(prodModel||'')+'|'+prodQ;
     // בקרת מחירים אינה תלויה בטווח התאריכים: היא בודקת את מצב המחירים עכשיו
     // מול מה שכבר נמכר. מפתח קבוע = לא נטען מחדש בכל שינוי תאריך
@@ -2875,13 +2963,701 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       rangeLbl(state.from,state.to)+' · כניסות לסניף'+(hrBranch?(' · '+(HRB[hrBranch]||hrBranch)):' · כל הסניפים');
     document.getElementById('builtlbl').textContent=META.last_sync?('עודכן '+META.last_sync):'';
   }
+  // ---------- 22 תצוגות לאותם נתונים ----------
+  // דורון ביקש להתנסות בכולן במסך עצמו לפני שיחליט. הבחירה נשמרת בדפדפן
+  // שלו, כך שכל כניסה חוזרת לתצוגה שבה היה.
+  //
+  // שעות הפתיחה נלקחו מאתר דיוואני (vdivani.co.il/סניפים) ב-28.8.2026, ולא
+  // נגזרות מהמונה: מונה מלמד רק מתי נכנס מישהו, ולכן שעה פתוחה שאיש לא נכנס
+  // בה נראית ממנו כמו שעה סגורה. ההבחנה הזו היא ההבדל בין "אף אחד לא בא"
+  // לבין "היה סגור", וזה בדיוק ההבדל שדורון צריך לראות.
+  var HROPEN={
+    '102':{wd:[9,22],   fr:[9,15],   sa:[20.67,23]},  // ראשל"צ
+    '101':{wd:[9,22],   fr:[9,15],   sa:[20.67,23]},  // נתניה
+    '106':{wd:[9.5,21], fr:[9,14.5], sa:[20.67,23]},  // ירושלים תלפיות
+    '107':{wd:[9,22],   fr:[9,14],   sa:[20.67,23]},  // בית שמש
+    '105':{wd:[9,21],   fr:[9,15],   sa:[20.67,23]}   // חיפה
+  };
+  function hrWin(b,dw){
+    var o=HROPEN[b]; if(!o)return null;
+    return dw===6?o.sa:(dw===5?o.fr:o.wd);
+  }
+  // שעת השעון hr פתוחה אם היא חופפת ולו בחלקה לחלון הפתיחה
+  function hrOpen(b,dw,hr){
+    var w=hrWin(b,dw); if(!w)return false;
+    return hr+1>w[0] && hr<w[1];
+  }
+  function hrOpenAny(ctx,dw,hr){
+    for(var i=0;i<ctx.bc.length;i++)if(hrOpen(ctx.bc[i],dw,hr))return true;
+    return false;
+  }
+
+  var HRDESIGNS=[
+    ['cur',      '0 · מפת החום (מה שיש היום)'],
+    ['headline', '1 · התשובה במשפט אחד'],
+    ['ribbon',   '2 · חמישה פסי יום'],
+    ['peakline', '3 · מתי כל סניף מגיע לשיא'],
+    ['ranked',   '4 · שעות מסודרות מהחזקה לחלשה'],
+    ['shift',    '5 · מה לעשות מחר בכל סניף'],
+    ['peaktable','6 · טבלת שעות שיא'],
+    ['dayparts', '7 · היום בארבעה חלקים'],
+    ['share',    '8 · איזה חלק מהיום כל שעה מחזיקה'],
+    ['cycle',    '9 · כל יום בנפרד, שעה־שעה'],
+    ['wins',     '10 · בכמה ימים כל שעה ניצחה'],
+    ['halfday',  '11 · עד איזו שעה עובר חצי מהיום'],
+    ['weekday',  '12 · יום אחד בכל פעם'],
+    ['strip',    '13 · שעה אחת, יום־יום'],
+    ['card',     '14 · כרטיס סניף מלא'],
+    ['evidence', '15 · כמה ימים מאחורי כל שורה'],
+    ['ridge',    '16 · גבעות היום'],
+    ['horizon',  '17 · כל הרשת בפס אחד'],
+    ['clock',    '18 · היום כשעון'],
+    ['split',    '19 · האם התבנית חוזרת על עצמה'],
+    ['record',   '20 · שורת הבוקר'],
+    ['vsSales',  '21 · מבקרים מול הזמנות (חסום)']
+  ];
+
+  // ---------- עזרי ציור ----------
+  var HW=358;
+  function hrTxt(x,y,s,cls,anchor){
+    return '<text x="'+x+'" y="'+y+'" class="'+(cls||'hdax')+'" text-anchor="'+(anchor||'middle')
+      +'" direction="ltr">'+s+'</text>';
+  }
+  function hrRect(x,y,w,h,cls,extra){
+    return '<rect x="'+x.toFixed(2)+'" y="'+y.toFixed(2)+'" width="'+Math.max(0,w).toFixed(2)
+      +'" height="'+Math.max(0,h).toFixed(2)+'" class="'+(cls||'')+'"'+(extra||'')+'></rect>';
+  }
+  function hrSvg(w,h,inner){
+    return '<svg viewBox="0 0 '+w+' '+h+'" width="100%" class="hdsvg" role="img">'+inner+'</svg>';
+  }
+  function hhs(h){return (h<10?'0':'')+h;}
+  function hrN(t){return '<span class="ltr">'+t+'</span>';}
+
+  // ---------- הקשר החישוב ----------
+  // נבנה פעם אחת לכל רינדור. כל תצוגה מקבלת אותו ולא ניגשת ל-cache בעצמה.
+  function hrCtx(a){
+    var ctx={raw:a};
+    var brs=(a.branches||[]).filter(function(x){return HROPEN[x.b];});
+    ctx.bc=brs.map(function(x){return x.b;});                 // לפי נפח, יורד
+    ctx.nm=function(b){return HRB[b]||b;};
+    ctx.tot={}; brs.forEach(function(x){ctx.tot[x.b]=x.v;});
+    ctx.days=a.days_list||[];
+    ctx.dow=ctx.days.map(function(d){return new Date(d+'T00:00:00').getDay();});
+    ctx.ND=ctx.days.length;
+    ctx.HRS=[]; for(var h=8;h<=22;h++)ctx.HRS.push(h);
+
+    // V[b][dayIdx][hr]
+    ctx.V={}; ctx.bc.forEach(function(b){ctx.V[b]={};});
+    (a.daily||[]).forEach(function(r){
+      var b=r[0]; if(!ctx.V[b])return;
+      (ctx.V[b][r[1]]=ctx.V[b][r[1]]||{})[r[2]]=r[3];
+    });
+    ctx.REP={};
+    ctx.bc.forEach(function(b){ctx.REP[b]={};(((a.reported||{})[b])||[]).forEach(function(i){ctx.REP[b][i]=1;});});
+
+    // סדרת שעות לסניף מתוך cells — מכסה את כל הטווח, גם מעבר לתקרת 90 הימים
+    var cellsBy={};
+    (a.cells||[]).forEach(function(c){
+      if(!ctx.V[c.b])return;
+      var k=c.b+'|'+c.hr;
+      if(!cellsBy[k])cellsBy[k]={hr:c.hr,tot:0,days:0};
+      if(!hrOpen(c.b,c.dw,c.hr))return;      // מחוץ לשעות הפתיחה — לא נספר בסדרה
+      cellsBy[k].tot+=c.v; cellsBy[k].days+=c.days;
+    });
+    ctx.series=function(b){
+      var out=[];
+      ctx.HRS.forEach(function(h){
+        var c=cellsBy[b+'|'+h];
+        if(c&&c.tot>0)out.push({hr:h,tot:c.tot,days:c.days});
+      });
+      return out;
+    };
+    ctx.chain=function(){
+      var acc={};
+      ctx.bc.forEach(function(b){ctx.series(b).forEach(function(s){acc[s.hr]=(acc[s.hr]||0)+s.tot;});});
+      return ctx.HRS.filter(function(h){return acc[h];}).map(function(h){return {hr:h,tot:acc[h]};});
+    };
+    ctx.peak=function(b){
+      var s=ctx.series(b); if(!s.length)return null;
+      return s.reduce(function(m,x){return x.tot>m.tot?x:m;},s[0]);
+    };
+    // שעות הפתיחה של יום חול רגיל (ראשון עד חמישי). כל שאלה על "השעה החלשה"
+    // נענית עליהן בלבד — אחרת התשובה תמיד 22:00, שפתוחה במוצ"ש בלבד.
+    ctx.wdSeries=function(b){
+      return ctx.series(b).filter(function(x){return hrOpen(b,1,x.hr);});
+    };
+    ctx.low=function(b){
+      var s=ctx.wdSeries(b); if(!s.length)s=ctx.series(b);
+      if(!s.length)return null;
+      return s.reduce(function(m,x){return x.tot<m.tot?x:m;},s[0]);
+    };
+    ctx.PK={}; ctx.bc.forEach(function(b){var p=ctx.peak(b); ctx.PK[b]=p?p.hr:null;});
+    ctx.byPeak=ctx.bc.slice().filter(function(b){return ctx.PK[b]!=null;})
+                 .sort(function(x,y){return ctx.PK[x]-ctx.PK[y]||ctx.tot[y]-ctx.tot[x];});
+    ctx.main=ctx.bc[0];
+    // הסניף שהשיא שלו הכי רחוק מהחציון — מסודר כך שלא ייבלע באמצע הרשימה
+    var pk=ctx.byPeak.map(function(b){return ctx.PK[b];}).sort(function(a2,b2){return a2-b2;});
+    var med=pk.length?pk[Math.floor(pk.length/2)]:0;
+    ctx.odd=ctx.byPeak.reduce(function(m,b){
+      return Math.abs(ctx.PK[b]-med)>Math.abs(ctx.PK[m]-med)?b:m;},ctx.byPeak[0]);
+    // ערכי יום-יום בשעה מסוימת
+    ctx.dayVals=function(b,h){
+      var out=[];
+      for(var i=0;i<ctx.ND;i++){
+        if(!ctx.REP[b][i])continue;
+        if(!hrOpen(b,ctx.dow[i],h))continue;
+        out.push({i:i,v:(ctx.V[b][i]||{})[h]||0});
+      }
+      return out;
+    };
+    ctx.dowDays=function(w){var n=0;for(var i=0;i<ctx.ND;i++)if(ctx.dow[i]===w)n++;return n;};
+    return ctx;
+  }
+
+  var HD={};
+
+  HD.cur=function(ctx,a){
+    var grid=a.grid||[], hs=a.hours||[];
+    var mx=0; grid.forEach(function(c){if(c.per_day>mx)mx=c.per_day;});
+    var byHr={}; grid.forEach(function(c){(byHr[c.hr]=byHr[c.hr]||{})[c.dw]=c;});
+    var hours=Object.keys(byHr).map(Number).sort(function(x,y){return x-y;});
+    var peakHr=hs.slice().sort(function(x,y){return y.per_day-x.per_day;})[0];
+    var h='<div class="hrwrap"><table class="hrgrid"><thead><tr><th class="hrhr">שעה</th>';
+    for(var d=0;d<7;d++)h+='<th>'+HRDOW[d]+'</th>';
+    h+='<th>ליום</th></tr></thead><tbody>';
+    hours.forEach(function(hr){
+      var isPeak=peakHr&&hr===peakHr.hr;
+      h+='<tr><td class="hrhr">'+hhmm(hr)+'</td>';
+      for(var d=0;d<7;d++){
+        var c=byHr[hr][d];
+        if(!c){h+='<td><span class="hrcell mut">—</span></td>';continue;}
+        var op=mx>0?(0.06+0.80*(c.per_day/mx)):0;
+        h+='<td><span class="hrcell" style="background:rgba(13,150,104,'+op.toFixed(2)+')'
+          +(op>0.55?';color:#fff':'')+'">'+(c.per_day>=1?Math.round(c.per_day):'')+'</span></td>';
+      }
+      var tot=hs.filter(function(x){return x.hr===hr;})[0];
+      h+='<td><span class="hrcell'+(isPeak?' hrpeak':'')+'" style="font-weight:600">'
+        +(tot?Math.round(tot.per_day):'')+'</span></td></tr>';
+    });
+    return h+'</tbody></table></div>';
+  };
+
+  HD.headline=function(ctx){
+    var most=ctx.byPeak.filter(function(b){return b!==ctx.odd;});
+    if(!most.length)return '<div class="empty">אין מספיק סניפים בתקופה שנבחרה.</div>';
+    var lo=Math.min.apply(null,most.map(function(b){return ctx.PK[b];}));
+    var hi=Math.max.apply(null,most.map(function(b){return ctx.PK[b];}));
+    return '<p class="hdlead">'+(most.length===1?'סניף אחד מגיע':(most.length+' סניפים מגיעים'))
+      +' לשיא '+(lo===hi?('ב־<b>'+hrN(hhmm(lo))+'</b>'):('בין <b>'+hrN(hhmm(lo))+'</b> ל־<b>'+hrN(hhmm(hi))+'</b>'))
+      +'. '+esc(ctx.nm(ctx.odd))+' לבד — שיא ב־<b>'+hrN(hhmm(ctx.PK[ctx.odd]))+'</b>.</p>';
+  };
+
+  HD.ribbon=function(ctx){
+    var CH=ctx.chain(), chMax=Math.max.apply(null,CH.map(function(x){return x.tot;}))||1, out='';
+    ctx.byPeak.forEach(function(b){
+      var s=ctx.series(b); if(!s.length)return;
+      var mx=Math.max.apply(null,s.map(function(x){return x.tot;}));
+      var pk=ctx.peak(b), lw=ctx.low(b), n=s.length, cw=HW/n, H=40, g='', gp='';
+      if(!lw)lw={hr:-1};
+      s.forEach(function(x,i){
+        var hgt=H*(x.tot/mx);
+        g+=hrRect(i*cw+0.75,H-hgt,cw-1.5,hgt,'hdbar'+(x.hr===pk.hr?' hi':(x.hr===lw.hr?' lo':'')));
+        var cf=CH.filter(function(c){return c.hr===x.hr;})[0];
+        gp+=(i?'L':'M')+(i*cw+cw/2).toFixed(1)+' '+(H-H*((cf?cf.tot:0)/chMax)).toFixed(1)+' ';
+      });
+      out+='<div class="hdblk"><div class="hdrow"><b>'+esc(ctx.nm(b))+'</b><span>'+nf(ctx.tot[b])+' כניסות</span></div>'
+        +hrSvg(HW,H+1,'<path class="hdghost" d="'+gp+'"></path>'+g
+          +'<line x1="0" y1="'+H+'" x2="'+HW+'" y2="'+H+'" class="hdbase"></line>')
+        +'<div class="hdsub">שיא '+hrN(hhmm(pk.hr))+' · הכי חלש '+hrN(hhmm(lw.hr))+'</div></div>';
+    });
+    return out+'<div class="hrnote">מסודרים לפי שעת השיא · הקו האפור מאחור = צורת כל הרשת</div>';
+  };
+
+  HD.peakline=function(ctx){
+    var H=152,PAD=8,aw=HW-2*PAD,h0=9,h1=22;
+    function X(h){return PAD+aw*(Math.max(h0,Math.min(h1,h))-h0)/(h1-h0);}
+    var g='<line x1="'+PAD+'" y1="'+(H-26)+'" x2="'+(HW-PAD)+'" y2="'+(H-26)+'" class="hdbase"></line>';
+    for(var h=h0;h<=h1;h+=2)g+=hrTxt(X(h),H-10,hhs(h));
+    var ys=[16,42,68,94,118];
+    ctx.byPeak.forEach(function(b,i){
+      if(i>=ys.length)return;
+      var s=ctx.series(b), tot=s.reduce(function(m,x){return m+x.tot;},0);
+      var srt=s.slice().sort(function(x,y){return y.tot-x.tot;}), acc=0, core=[];
+      for(var k=0;k<srt.length;k++){core.push(srt[k].hr);acc+=srt[k].tot;if(acc>=tot/2)break;}
+      var c0=Math.min.apply(null,core), c1=Math.max.apply(null,core)+1, y=ys[i];
+      g+=hrRect(X(c0),y-7,X(c1)-X(c0),14,'hdband',' rx="7"');
+      g+='<circle cx="'+X(ctx.PK[b]+0.5).toFixed(1)+'" cy="'+y+'" r="5" class="hddot'
+        +(b===ctx.odd?' hi':'')+'"></circle>';
+      g+='<text x="'+(X(c1)+6).toFixed(1)+'" y="'+(y+4)+'" class="hdlbl" text-anchor="start">'
+        +esc(ctx.nm(b))+'</text>';
+      g+='<line x1="'+X(ctx.PK[b]+0.5).toFixed(1)+'" y1="'+(y+6)+'" x2="'+X(ctx.PK[b]+0.5).toFixed(1)
+        +'" y2="'+(H-26)+'" class="hddash"></line>';
+    });
+    return hrSvg(HW,H,g)+'<div class="hrnote">ציר שעות אחד · הרצועה = השעות שמחזיקות חצי מהיום</div>';
+  };
+
+  HD.ranked=function(ctx){
+    var b=hrPick(ctx), s=ctx.series(b).slice().sort(function(x,y){return y.tot-x.tot;});
+    if(!s.length)return '<div class="empty">אין נתונים לסניף שנבחר.</div>';
+    var mx=s[0].tot, out='';
+    s.forEach(function(x,i){
+      var edge=i<3||i>=s.length-3, w=100*(x.tot/mx);
+      out+='<div class="hdrk"><span class="k">'+hrN(hhmm(x.hr))+'</span>'
+        +'<span class="ax"><i style="width:'+w.toFixed(1)+'%"></i>'
+        +'<u style="inset-inline-start:calc('+w.toFixed(1)+'% - 5px)" class="'
+        +(i===0?'hi':(i===s.length-1?'lo':''))+'"></u></span>'
+        +'<span class="v'+(edge?'':' off')+'">'+nf(x.tot)+'</span></div>';
+    });
+    return hrBranchTabs(ctx,b)+out+'<div class="hrnote">מסודר לפי סך כניסות, לא לפי סדר השעה. מספרים לשלוש העליונות ולשלוש התחתונות.</div>';
+  };
+
+  // שעות מקובצות לרצפים. 12:00 ו-18:00 אינן "12:00 עד 19:00" — הן שני
+  // חלונות נפרדים, וזה בדיוק ההבדל בין המלצת משמרת לבין "תסגרו את החנות".
+  function hrRuns(hrs){
+    var a=hrs.slice().sort(function(x,y){return x-y;}), out=[], i;
+    for(i=0;i<a.length;i++){
+      if(out.length&&a[i]===out[out.length-1][1]+1)out[out.length-1][1]=a[i];
+      else out.push([a[i],a[i]]);
+    }
+    return out;
+  }
+  function hrRunTxt(hrs){
+    return hrRuns(hrs).map(function(r){
+      return hrN(hhmm(r[0]))+'–'+hrN(hhmm(r[1]+1));
+    }).join(' · ');
+  }
+
+  HD.shift=function(ctx){
+    var out='';
+    ctx.bc.forEach(function(b){
+      var wd=ctx.wdSeries(b); if(wd.length<4)return;
+      var byTot=wd.slice().sort(function(x,y){return y.tot-x.tot;});
+      var n=Math.min(3,Math.floor(wd.length/3));
+      var strong=byTot.slice(0,n).map(function(x){return x.hr;});
+      var weak=byTot.slice(-n).map(function(x){return x.hr;});
+      out+='<div class="hdcard"><div class="t">'+esc(ctx.nm(b))+'</div>'
+        +'<div>לחזק: <b>'+hrRunTxt(strong)+'</b></div>'
+        +'<div>אפשר לצמצם: <b>'+hrRunTxt(weak)+'</b></div>'
+        +'<div class="s">'+nf(n)+' השעות החזקות ו-'+nf(n)+' החלשות בימי חול · נמדד על '
+        +nf(ctx.raw.days||0)+' ימים · לפי תנועה, לא לפי מכירות</div></div>';
+    });
+    return out+'<div class="hrnote">שעות שאינן צמודות מוצגות כשני חלונות נפרדים ולא כטווח אחד.</div>';
+  };
+
+  HD.peaktable=function(ctx){
+    var t='<div class="tw"><table><thead><tr><th class="nm">סניף</th><th>שיא</th>'
+      +'<th>הכי חלש</th><th>כניסות</th></tr></thead><tbody>';
+    ctx.byPeak.forEach(function(b){
+      var lw=ctx.low(b);
+      t+='<tr'+(b===ctx.odd?' class="hdodd"':'')+'><td class="nm">'+esc(ctx.nm(b))+'</td>'
+        +'<td style="font-weight:600">'+hhmm(ctx.PK[b])+'</td>'
+        +'<td class="mut">'+(lw?hhmm(lw.hr):'—')+'</td><td>'+nf(ctx.tot[b])+'</td></tr>';
+    });
+    return t+'</tbody></table></div><div class="hrnote">מסודר לפי שעת השיא — הסניף החריג נופל בקצה ולא באמצע.</div>';
+  };
+
+  HD.dayparts=function(ctx){
+    var BL=[['בוקר',9,12],['צהריים',12,15],['אחה"צ',15,18],['ערב',18,23]], out='';
+    ctx.bc.forEach(function(b){
+      var s=ctx.series(b); if(!s.length)return;
+      var vals=BL.map(function(x){
+        return s.filter(function(o){return o.hr>=x[1]&&o.hr<x[2];})
+                .reduce(function(m,o){return m+o.tot;},0);});
+      var mx=Math.max.apply(null,vals)||1, H=92, cw=HW/4, g='';
+      vals.forEach(function(v,i){
+        var hgt=(H-14)*(v/mx);
+        g+=hrRect(i*cw+7,H-hgt,cw-14,hgt,'hdbar'+(v===mx?' hi':''));
+        g+=hrTxt(i*cw+cw/2,H-hgt-5,nf(v),'hdaxb');
+      });
+      g+='<line x1="0" y1="'+H+'" x2="'+HW+'" y2="'+H+'" class="hdbase"></line>';
+      BL.forEach(function(x,i){g+=hrTxt(i*cw+cw/2,H+15,x[0]);});
+      out+='<div class="hdblk"><div class="hdrow"><b>'+esc(ctx.nm(b))+'</b></div>'+hrSvg(HW,H+20,g)+'</div>';
+    });
+    return out+'<div class="hrnote">גבולות הבלוקים נקבעו על ידי, לא על ידך — תגיד אם הם צריכים לזוז.</div>';
+  };
+
+  HD.share=function(ctx){
+    var out='';
+    ctx.bc.forEach(function(b){
+      var s=ctx.series(b); if(!s.length)return;
+      var tot=s.reduce(function(m,x){return m+x.tot;},0), H=52, n=s.length, cw=HW/n;
+      var even=100/n, cap=20;
+      var top=s.slice().sort(function(x,y){return y.tot-x.tot;}).slice(0,2)
+               .map(function(x){return x.hr;}), g='';
+      s.forEach(function(x,i){
+        var p=100*x.tot/tot, hgt=H*Math.min(1,p/cap);
+        g+=hrRect(i*cw+0.75,H-hgt,cw-1.5,hgt,'hdbar'+(top.indexOf(x.hr)>=0?' hi':''));
+        if(top.indexOf(x.hr)>=0)g+=hrTxt(i*cw+cw/2,H-hgt-4,p.toFixed(0)+'%','hdaxb');
+      });
+      var ey=H-H*even/cap;
+      g+='<line x1="0" y1="'+ey.toFixed(1)+'" x2="'+HW+'" y2="'+ey.toFixed(1)+'" class="hddash"></line>';
+      g+='<line x1="0" y1="'+H+'" x2="'+HW+'" y2="'+H+'" class="hdbase"></line>';
+      out+='<div class="hdblk"><div class="hdrow"><b>'+esc(ctx.nm(b))+'</b><span>'+nf(ctx.tot[b])+' כניסות</span></div>'
+        +hrSvg(HW,H+12,g)+'</div>';
+    });
+    return out+'<div class="hrnote">אותו סולם לכל הסניפים · הקו המקווקו = חלק שווה. כששעה עולה, כל השאר יורדות אפילו אם לא השתנו.</div>';
+  };
+
+  HD.cycle=function(ctx){
+    var b=hrPick(ctx), s=ctx.series(b);
+    if(!s.length)return hrBranchTabs(ctx,b)+'<div class="empty">אין נתונים לסניף שנבחר.</div>';
+    var n=s.length, cw=HW/n, H=100, mx=0;
+    var cols=s.map(function(x){
+      var dv=ctx.dayVals(b,x.hr);
+      dv.forEach(function(o){if(o.v>mx)mx=o.v;});
+      return {hr:x.hr,dv:dv};
+    });
+    if(!mx)mx=1;
+    var g='';
+    cols.forEach(function(c,i){
+      var band=Math.min(19,cw-5), x0=i*cw+(cw-band)/2;
+      c.dv.forEach(function(o,k){
+        var cx=x0+(c.dv.length>1?band*k/(c.dv.length-1):band/2);
+        g+='<circle cx="'+cx.toFixed(1)+'" cy="'+(H-H*o.v/mx).toFixed(1)+'" r="2.2" class="hddotm"></circle>';
+      });
+    });
+    g+='<line x1="0" y1="'+H+'" x2="'+HW+'" y2="'+H+'" class="hdbase"></line>';
+    cols.forEach(function(c,i){if(c.hr%3===0)g+=hrTxt(i*cw+cw/2,H+14,hhs(c.hr));});
+    return hrBranchTabs(ctx,b)+hrSvg(HW,H+20,g)
+      +'<div class="hrnote">נקודה אחת = יום אחד שנמדד, בלי ממוצע. פיזור אנכי רחב = שעה שקופצת מיום ליום.'+hrCapNote(ctx)+'</div>';
+  };
+
+  HD.wins=function(ctx){
+    var b=hrPick(ctx), win={}, tot=0;
+    for(var i=0;i<ctx.ND;i++){
+      if(!ctx.REP[b][i])continue;
+      var best=null,bv=-1;
+      for(var k=0;k<ctx.HRS.length;k++){
+        var h=ctx.HRS[k];
+        if(!hrOpen(b,ctx.dow[i],h))continue;
+        var v=(ctx.V[b][i]||{})[h]||0;
+        if(v>bv){bv=v;best=h;}
+      }
+      if(best==null||bv<=0)continue;
+      (win[best]=win[best]||[]).push(i); tot++;
+    }
+    var rows=Object.keys(win).map(Number).sort(function(x,y){return win[y].length-win[x].length;});
+    if(!rows.length)return hrBranchTabs(ctx,b)+'<div class="empty">אין ימים מדודים לסניף שנבחר.</div>';
+    var out='';
+    rows.forEach(function(h){
+      var c=win[h].length, sq='';
+      for(var i=0;i<c;i++)sq+='<i class="hdsq"></i>';
+      out+='<div class="hdwin"><span class="k">'+hrN(hhmm(h))+'</span><span class="s">'+sq+'</span>'
+        +'<span class="v">'+hrN(c+'/'+tot)+'</span></div>';
+    });
+    return hrBranchTabs(ctx,b)+out
+      +'<div class="hrnote">ריבוע אחד = יום אחד אמיתי. פיזור על שורות רבות = לסניף אין שעת שיא יציבה.'+hrCapNote(ctx)+'</div>';
+  };
+
+  HD.halfday=function(ctx){
+    var H=128,PAD=30,aw=HW-PAD-6,h0=9,h1=23;
+    function X(h){return PAD+aw*(Math.max(h0,Math.min(h1,h))-h0)/(h1-h0);}
+    function Y(p){return H-(H-18)*p;}
+    var g='<line x1="'+PAD+'" y1="'+Y(0.5)+'" x2="'+HW+'" y2="'+Y(0.5)+'" class="hddash"></line>'
+      +'<line x1="'+PAD+'" y1="'+H+'" x2="'+HW+'" y2="'+H+'" class="hdbase"></line>'
+      +hrTxt(PAD-6,Y(0)+4,'0','hdax','end')+hrTxt(PAD-6,Y(0.5)+4,'50%','hdax','end')
+      +hrTxt(PAD-6,Y(1)+4,'100%','hdax','end');
+    var notes=[];
+    ctx.byPeak.forEach(function(b){
+      var s=ctx.series(b), tot=s.reduce(function(m,x){return m+x.tot;},0);
+      if(!tot)return;
+      var acc=0, cross=null, d='';
+      s.forEach(function(x,i){
+        var p0=acc/tot; acc+=x.tot; var p1=acc/tot;
+        d+=(i?'L':'M')+X(x.hr).toFixed(1)+' '+Y(p0).toFixed(1)+' L'+X(x.hr+1).toFixed(1)+' '+Y(p1).toFixed(1)+' ';
+        if(cross===null&&p1>=0.5)cross=x.hr+1;
+      });
+      var odd=b===ctx.odd;
+      g+='<path d="'+d+'" class="hdline'+(odd?' hi':'')+'"></path>';
+      if(odd&&cross!=null)g+='<circle cx="'+X(cross).toFixed(1)+'" cy="'+Y(0.5).toFixed(1)+'" r="4" class="hddot hi"></circle>';
+      notes.push([b,cross]);
+    });
+    for(var h=h0;h<=h1;h+=3)g+=hrTxt(X(h),H+14,hhs(h));
+    var rows='';
+    notes.forEach(function(x){
+      rows+='<div class="hdrow2'+(x[0]===ctx.odd?' hi':'')+'"><span>'+esc(ctx.nm(x[0]))
+        +'</span><span>חצי מהיום עד '+hrN(hhmm(x[1]))+'</span></div>';
+    });
+    return hrSvg(HW,H+20,g)+rows
+      +'<div class="hrnote">קו מצטבר לא קופץ מרעש של יום בודד. מחיר: לא רואים בכלל את הגובה.</div>';
+  };
+
+  HD.weekday=function(ctx){
+    var b=hrPick(ctx), w=hrDow;
+    var chips='<div class="subchips">';
+    for(var k=0;k<7;k++){
+      var win=hrWin(b,k); if(!win)continue;
+      chips+='<button type="button" class="chip'+(k===w?' on':'')+'" data-hdw="'+k+'">'+HRDOW[k]+'</button>';
+    }
+    chips+='</div>';
+    var s=[], nd=0;
+    ctx.HRS.forEach(function(h){
+      if(!hrOpen(b,w,h))return;
+      var t=0, dd=0;
+      for(var i=0;i<ctx.ND;i++){
+        if(ctx.dow[i]!==w||!ctx.REP[b][i])continue;
+        dd++; t+=((ctx.V[b][i]||{})[h]||0);
+      }
+      nd=Math.max(nd,dd);
+      s.push({hr:h,tot:t});
+    });
+    if(!s.length)return hrBranchTabs(ctx,b)+chips+'<div class="empty">הסניף סגור ביום הזה.</div>';
+    var mx=Math.max.apply(null,s.map(function(x){return x.tot;}))||1, n=s.length, cw=HW/n, H=84, g='';
+    s.forEach(function(x,i){
+      var hgt=H*(x.tot/mx);
+      g+=hrRect(i*cw+1,H-hgt,cw-2,hgt,'hdbar'+(x.tot===mx?' hi':''));
+    });
+    g+='<line x1="0" y1="'+H+'" x2="'+HW+'" y2="'+H+'" class="hdbase"></line>';
+    s.forEach(function(x,i){if(x.hr%2===0)g+=hrTxt(i*cw+cw/2,H+14,hhs(x.hr));});
+    return hrBranchTabs(ctx,b)+chips
+      +'<div class="hdrow"><b>יום '+HRDOW[w]+'</b><span>'+nf(nd)+' ימים נמדדו</span></div>'
+      +hrSvg(HW,H+20,g)
+      +'<div class="hrnote">'+(nd<10?('נמדד על '+nf(nd)+' ימים בלבד — עוד מוקדם להחליט לפי זה.')
+        :('בסיס של '+nf(nd)+' ימים.'))+hrCapNote(ctx)+'</div>';
+  };
+
+  HD.strip=function(ctx){
+    var b=hrPick(ctx), s=ctx.series(b);
+    if(!s.length)return hrBranchTabs(ctx,b)+'<div class="empty">אין נתונים לסניף שנבחר.</div>';
+    if(s.filter(function(x){return x.hr===hrHour;}).length===0)hrHour=ctx.PK[b];
+    var chips='<div class="subchips">';
+    s.forEach(function(x){
+      chips+='<button type="button" class="chip'+(x.hr===hrHour?' on':'')+'" data-hdh="'+x.hr+'">'
+        +hrN(hhs(x.hr))+'</button>';
+    });
+    chips+='</div>';
+    var dv=ctx.dayVals(b,hrHour);
+    if(!dv.length)return hrBranchTabs(ctx,b)+chips+'<div class="empty">אין ימים מדודים לשעה הזו.</div>';
+    var mx=Math.max.apply(null,dv.map(function(x){return x.v;}))||1, H=100, PAD=16;
+    function X(v){return PAD+(HW-2*PAD)*(v/mx);}
+    var stack={}, g='<line x1="'+PAD+'" y1="'+(H-24)+'" x2="'+(HW-PAD)+'" y2="'+(H-24)+'" class="hdbase"></line>';
+    for(var t=0;t<=4;t++){
+      var v=mx*t/4;
+      g+='<line x1="'+X(v).toFixed(1)+'" y1="'+(H-28)+'" x2="'+X(v).toFixed(1)+'" y2="'+(H-24)+'" class="hdbase"></line>'
+        +hrTxt(X(v),H-8,String(Math.round(v)));
+    }
+    dv.forEach(function(o){
+      var k=Math.round(o.v); stack[k]=(stack[k]||0)+1;
+      g+='<circle cx="'+X(o.v).toFixed(1)+'" cy="'+(H-32-(stack[k]-1)*13)+'" r="5.5" class="hddot"></circle>';
+    });
+    var vals=dv.map(function(x){return x.v;}).sort(function(a2,b2){return a2-b2;});
+    return hrBranchTabs(ctx,b)+chips
+      +'<div class="hdrow"><b>'+hrN(hhmm(hrHour))+'</b><span>'+nf(dv.length)+' ימים</span></div>'
+      +hrSvg(HW,H,g)
+      +'<div class="hrnote">כל נקודה היא יום שנמדד, בלי שום חישוב באמצע: '
+      +vals.map(function(v){return hrN(v);}).join(' · ')+hrCapNote(ctx)+'</div>';
+  };
+
+  HD.card=function(ctx){
+    var b=hrPick(ctx), s=ctx.series(b);
+    if(!s.length)return hrBranchTabs(ctx,b)+'<div class="empty">אין נתונים לסניף שנבחר.</div>';
+    var mx=Math.max.apply(null,s.map(function(x){return x.tot;}));
+    var pk=ctx.peak(b), lw=ctx.low(b);
+    var CH=ctx.chain(), chMax=Math.max.apply(null,CH.map(function(x){return x.tot;}))||1;
+    var n=s.length, cw=HW/n, H=104, TOP=14, g='', gp='';
+    s.forEach(function(x,i){
+      var hgt=H*(x.tot/mx);
+      g+=hrRect(i*cw+1,TOP+H-hgt,cw-2,hgt,'hdbar'+(x.hr===pk.hr?' hi':(x.hr===lw.hr?' lo':'')));
+      if(x.hr===pk.hr||x.hr===lw.hr)g+=hrTxt(i*cw+cw/2,TOP+H-hgt-4,hhs(x.hr),'hdaxb');
+      var cf=CH.filter(function(c){return c.hr===x.hr;})[0];
+      gp+=(i?'L':'M')+(i*cw+cw/2).toFixed(1)+' '+(TOP+H-H*((cf?cf.tot:0)/chMax)).toFixed(1)+' ';
+    });
+    g+='<line x1="0" y1="'+(TOP+H)+'" x2="'+HW+'" y2="'+(TOP+H)+'" class="hdbase"></line>';
+    var strip='', rep=0;
+    for(var i=0;i<ctx.ND;i++){var on=!!ctx.REP[b][i];if(on)rep++;strip+='<i class="hdday'+(on?' on':'')+'"></i>';}
+    return hrBranchTabs(ctx,b)
+      +'<p class="hdlead">'+esc(ctx.nm(b))+' חזק סביב <b>'+hrN(hhmm(pk.hr))+'</b>, חלש ב־'+hrN(hhmm(lw.hr))+'.</p>'
+      +'<div class="hdbig">'+hrN(hhmm(pk.hr))+'</div>'
+      +hrSvg(HW,TOP+H+2,'<path class="hdghost" d="'+gp+'"></path>'+g)
+      +'<div class="hddays">'+strip+'</div>'
+      +'<div class="hrnote">'+nf(rep)+' ימים נמדדו מתוך '+nf(ctx.ND)+' · הקו האפור מאחור = צורת כל הרשת'+hrCapNote(ctx)+'</div>';
+  };
+
+  HD.evidence=function(ctx){
+    var b=hrPick(ctx), s=ctx.series(b);
+    if(!s.length)return hrBranchTabs(ctx,b)+'<div class="empty">אין נתונים לסניף שנבחר.</div>';
+    var mx=Math.max.apply(null,s.map(function(x){return x.tot;})), out='';
+    s.forEach(function(x){
+      var n=x.days, tier=n>=18?3:(n>=10?2:1), sq='';
+      for(var i=0;i<Math.min(n,24);i++)sq+='<i class="hdtick"></i>';
+      out+='<div class="hdev"><span class="k">'+hrN(hhmm(x.hr))+'</span>'
+        +'<span class="ax"><i class="t'+tier+'" style="width:'+(100*x.tot/mx).toFixed(1)+'%"></i></span>'
+        +'<span class="v'+(tier===3?'':' off')+'">'+nf(x.tot)+'</span>'
+        +'<span class="s">'+sq+'</span><span class="n">'+nf(n)+'</span></div>';
+    });
+    return hrBranchTabs(ctx,b)+out
+      +'<div class="hrnote">מקל אחד = יום אחד שנמדד. 18 ימים ומעלה — פס מלא עם מספר · 10–17 — פס אפור · פחות מ-10 — מקווקו ובלי טענה. <b>המדרגות האלה הן סף שקבעתי, לא שלך.</b></div>';
+  };
+
+  HD.ridge=function(ctx){
+    var H=60,GAP=34,n=ctx.HRS.length,cw=HW/n;
+    var list=ctx.byPeak.slice().reverse();
+    var tot=H+GAP*(list.length-1)+46, g='';
+    list.forEach(function(b,k){
+      var s=ctx.series(b); if(!s.length)return;
+      var mx=Math.max.apply(null,s.map(function(x){return x.tot;}));
+      var base=14+GAP*k+H;
+      var d='M'+(ctx.HRS.indexOf(s[0].hr)*cw+cw/2).toFixed(1)+' '+base+' ';
+      s.forEach(function(x){d+='L'+(ctx.HRS.indexOf(x.hr)*cw+cw/2).toFixed(1)+' '+(base-H*x.tot/mx).toFixed(1)+' ';});
+      d+='L'+(ctx.HRS.indexOf(s[s.length-1].hr)*cw+cw/2).toFixed(1)+' '+base+' Z';
+      g+='<path d="'+d+'" class="hdhill'+(b===ctx.odd?' hi':'')+'"></path>'
+        +'<text x="'+(HW-2)+'" y="'+(base-3)+'" class="hdlbl" text-anchor="end">'+esc(ctx.nm(b))+'</text>';
+    });
+    ctx.HRS.forEach(function(h,i){if(h%3===0)g+=hrTxt(i*cw+cw/2,tot-6,hhs(h));});
+    return hrSvg(HW,tot,g)
+      +'<div class="hrnote">כל סניף על הסולם של עצמו · חופפות בכוונה. שני שיאים ביום נקראים מיד כשתי גבעות.</div>';
+  };
+
+  HD.horizon=function(ctx){
+    var BH=22,GAP=6,n=ctx.HRS.length,cw=HW/n;
+    var tot=ctx.byPeak.length*BH+(ctx.byPeak.length-1)*GAP+20, g='';
+    ctx.byPeak.forEach(function(b,k){
+      var s=ctx.series(b); if(!s.length)return;
+      var mx=Math.max.apply(null,s.map(function(x){return x.tot;})), half=mx/2, y0=k*(BH+GAP);
+      g+=hrRect(0,y0,HW,BH,'hdslot',' rx="4"');
+      s.forEach(function(x){
+        var i=ctx.HRS.indexOf(x.hr);
+        var lowV=Math.min(x.tot,half), hiV=Math.max(0,x.tot-half);
+        g+=hrRect(i*cw+0.5,y0+BH-BH*lowV/half,cw-1,BH*lowV/half,'hdh1');
+        if(hiV>0)g+=hrRect(i*cw+0.5,y0+BH-BH*hiV/half,cw-1,BH*hiV/half,'hdh2');
+      });
+      g+='<text x="'+(HW-4)+'" y="'+(y0+14)+'" class="hdlbl" text-anchor="end">'+esc(ctx.nm(b))+'</text>';
+    });
+    ctx.HRS.forEach(function(h,i){if(h%3===0)g+=hrTxt(i*cw+cw/2,tot-4,hhs(h));});
+    return hrSvg(HW,tot,g)
+      +'<div class="hrnote">שתי מדרגות · הכהה = החצי העליון של אותו סניף. הצפוף בסט — כל הרשת בלי גלילה.</div>';
+  };
+
+  HD.clock=function(ctx){
+    var b=hrPick(ctx), s=ctx.series(b);
+    if(!s.length)return hrBranchTabs(ctx,b)+'<div class="empty">אין נתונים לסניף שנבחר.</div>';
+    var mx=Math.max.apply(null,s.map(function(x){return x.tot;}));
+    var SZ=324,cx=SZ/2,cy=SZ/2,r0=62,r1=132,A0=-100,SPAN=290,step=SPAN/s.length;
+    var pk=ctx.peak(b), g='';
+    [r0+(r1-r0)/3,r0+2*(r1-r0)/3].forEach(function(rr){
+      g+='<circle cx="'+cx+'" cy="'+cy+'" r="'+rr.toFixed(1)+'" class="hdring"></circle>';
+    });
+    s.forEach(function(x,i){
+      var a0=(A0+i*step+1.6)*Math.PI/180, a1=(A0+(i+1)*step-1.6)*Math.PI/180;
+      var rr=r0+(r1-r0)*(x.tot/mx);
+      function P(ang,rad){return (cx+rad*Math.cos(ang)).toFixed(1)+' '+(cy+rad*Math.sin(ang)).toFixed(1);}
+      g+='<path class="hdseg'+(x.hr===pk.hr?' hi':'')+'" d="M'+P(a0,r0)+' L'+P(a0,rr)
+        +' A'+rr+' '+rr+' 0 0 1 '+P(a1,rr)+' L'+P(a1,r0)+' A'+r0+' '+r0+' 0 0 0 '+P(a0,r0)+' Z"></path>';
+      if(x.hr%3===0){
+        var am=(A0+(i+0.5)*step)*Math.PI/180;
+        g+='<text x="'+(cx+(r1+13)*Math.cos(am)).toFixed(1)+'" y="'+(cy+(r1+13)*Math.sin(am)+4).toFixed(1)
+          +'" class="hdax" text-anchor="middle" direction="ltr">'+hhs(x.hr)+'</text>';
+      }
+    });
+    g+='<text x="'+cx+'" y="'+(cy-2)+'" text-anchor="middle" class="hdclockv" direction="ltr">'+hhmm(pk.hr)+'</text>'
+      +'<text x="'+cx+'" y="'+(cy+18)+'" text-anchor="middle" class="hdax">שעת השיא</text>';
+    return hrBranchTabs(ctx,b)+hrSvg(SZ,SZ,g)
+      +'<div class="hrnote">שעות הפתיחה בלבד על הקשת. יפה לתלייה בסניף — קידוד בזווית הוא מהחלשים שנמדדו, לא לקבלת החלטה.</div>';
+  };
+
+  HD.split=function(ctx){
+    var half=Math.floor(ctx.ND/2);
+    if(half<3)return '<div class="empty">צריך לפחות שישה ימים כדי לפצל לשתי מחציות.</div>';
+    function rank(b,lo,hi){
+      var acc={};
+      ctx.HRS.forEach(function(h){
+        var t=0,any=false;
+        for(var i=lo;i<hi;i++){
+          if(!ctx.REP[b][i]||!hrOpen(b,ctx.dow[i],h))continue;
+          any=true; t+=((ctx.V[b][i]||{})[h]||0);
+        }
+        if(any)acc[h]=t;
+      });
+      return Object.keys(acc).map(Number).sort(function(x,y){return acc[y]-acc[x];});
+    }
+    var same=0, seen=0, out='';
+    ctx.bc.forEach(function(b){
+      var r1=rank(b,0,half), r2=rank(b,half,ctx.ND);
+      if(!r1.length||!r2.length)return;
+      seen++; if(r1[0]===r2[0])same++;
+      var rows=r1.slice(0,6), H=108, LX=56, RX=HW-56, g='';
+      rows.forEach(function(h){
+        var i1=r1.indexOf(h), i2=r2.indexOf(h);
+        if(i2<0)return;
+        var y1=10+i1*16, y2=10+i2*16, moved=i1!==i2;
+        g+='<line x1="'+LX+'" y1="'+y1+'" x2="'+RX+'" y2="'+y2+'" class="hdslope'+(moved?' hi':'')+'"></line>'
+          +'<text x="'+(LX-5)+'" y="'+(y1+4)+'" class="hdax" text-anchor="end" direction="ltr">'+hhs(h)+'</text>'
+          +'<text x="'+(RX+5)+'" y="'+(y2+4)+'" class="hdax" text-anchor="start" direction="ltr">'+hhs(h)+'</text>';
+      });
+      g+=hrTxt(LX,H-4,'ימים 1–'+half)+hrTxt(RX,H-4,'ימים '+(half+1)+'–'+ctx.ND);
+      out+='<div class="hdblk"><div class="hdrow"><b>'+esc(ctx.nm(b))+'</b><span>שיא '
+        +hrN(hhs(r1[0]))+' → '+hrN(hhs(r2[0]))+' · '+(r1[0]===r2[0]?'יציב':'השתנה')+'</span></div>'
+        +hrSvg(HW,H,g)+'</div>';
+    });
+    return '<p class="hdlead">ב־'+nf(same)+' מתוך '+nf(seen)+' סניפים שעת השיא נשארה זהה בין המחצית הראשונה לשנייה.</p>'
+      +out+'<div class="hrnote">מבחן במקום משפט אזהרה.'+hrCapNote(ctx)+'</div>';
+  };
+
+  HD.record=function(ctx){
+    if(ctx.ND<2)return '<div class="empty">צריך לפחות שני ימים.</div>';
+    var last=ctx.ND-1, best=null;
+    ctx.bc.forEach(function(b){
+      if(!ctx.REP[b][last])return;
+      ctx.HRS.forEach(function(h){
+        if(!hrOpen(b,ctx.dow[last],h))return;
+        var v=(ctx.V[b][last]||{})[h]||0; if(!v)return;
+        var prev=0;
+        for(var i=0;i<last;i++)if(ctx.REP[b][i])prev=Math.max(prev,(ctx.V[b][i]||{})[h]||0);
+        if(v>prev&&(!best||v-prev>best.gap))best={b:b,h:h,v:v,prev:prev,gap:v-prev};
+      });
+    });
+    var line=best
+      ? ('ב־'+hrN(hhmm(best.h))+' ב'+esc(ctx.nm(best.b))+' — <b>'+nf(best.v)
+         +' כניסות</b>, הכי גבוה שנמדד בסניף עד היום (הקודם היה '+nf(best.prev)+').')
+      : 'לא נשבר אף שיא.';
+    var hist='';
+    for(var k=1;k<=5;k++){
+      var d=ctx.ND-k; if(d<0)break;
+      var t=0;
+      ctx.bc.forEach(function(b){ctx.HRS.forEach(function(h){t+=((ctx.V[b][d]||{})[h]||0);});});
+      hist+='<div class="hdrow2"><span>'+heShort(ctx.days[d])+' · יום '+HRDOW[ctx.dow[d]]+'</span>'
+        +'<span>'+nf(t)+' כניסות</span></div>';
+    }
+    return '<div class="hdrec"><span class="dot"></span><span>'+(ctx.days[last]?heShort(ctx.days[last])+' — ':'')+line+'</span></div>'
+      +hist+'<div class="hrnote">אפשר לשלוח את השורה הזו כהתראה בכל בוקר.'+hrCapNote(ctx)+'</div>';
+  };
+
+  HD.vsSales=function(ctx){
+    var b=hrPick(ctx), s=ctx.series(b);
+    if(!s.length)return hrBranchTabs(ctx,b)+'<div class="empty">אין נתונים לסניף שנבחר.</div>';
+    var mx=Math.max.apply(null,s.map(function(x){return x.tot;})), n=s.length, cw=HW/n, H=76, g='';
+    s.forEach(function(x,i){g+=hrRect(i*cw+1,H-H*(x.tot/mx),cw-2,H*(x.tot/mx),'hdbar');});
+    g+='<line x1="0" y1="'+H+'" x2="'+HW+'" y2="'+H+'" class="hdbase"></line>';
+    s.forEach(function(x,i){if(x.hr%3===0)g+=hrTxt(i*cw+cw/2,H+14,hhs(x.hr));});
+    return hrBranchTabs(ctx,b)+hrSvg(HW,H+20,g)
+      +'<div class="hdwarn"><b>הסימן של ההזמנות לא מצויר — אין לו נתון.</b><br>'
+      +'פריוריטי אינה רושמת שעה על הזמנה.</div>';
+  };
+
+  // ---------- בוררים משותפים ----------
+  function hrPick(ctx){
+    if(hrBranch&&ctx.V[hrBranch])return hrBranch;
+    if(hrOne&&ctx.V[hrOne])return hrOne;
+    return ctx.main;
+  }
+  function hrBranchTabs(ctx,cur){
+    if(hrBranch)return '';                 // כבר נבחר סניף בסרגל למעלה
+    var h='<div class="subchips">';
+    ctx.bc.forEach(function(b){
+      h+='<button type="button" class="chip'+(b===cur?' on':'')+'" data-hdb="'+b+'">'+esc(ctx.nm(b))+'</button>';
+    });
+    return h+'</div>';
+  }
+  function hrCapNote(ctx){
+    return ctx.raw.daily_capped
+      ? (' <b>הפירוט היומי מוגבל ל-90 הימים האחרונים</b> (מ-'+heShort(ctx.raw.daily_from)+'); הסיכומים מכסים את כל הטווח.')
+      : '';
+  }
+
   function renderHours(a){
-    if(cache.dev||(a&&a.dev)){stage.innerHTML=devBoxHTML();return;}
     a=a||{};
-    var grid=a.grid||[], hs=a.hours||[], cv=a.coverage||{};
+    var grid=a.grid||[];
     if(!grid.length){
-      // המסך נפתח על "היום" בברירת מחדל, ולנתוני קאונטרייט יש פיגור מובנה של
-      // יום — דוח של יום מגיע למחרת בבוקר. ריק אינו תקלה, אבל ריק בלי הסבר כן.
       var av=a.available||{};
       var h0='<div class="empty">אין נתוני כניסות לתקופה שנבחרה.';
       if(av.last){
@@ -2894,53 +3670,20 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       stage.innerHTML=h0+'</div>';
       return;
     }
-    var mx=0; grid.forEach(function(c){if(c.per_day>mx)mx=c.per_day;});
-    var byHr={}; grid.forEach(function(c){(byHr[c.hr]=byHr[c.hr]||{})[c.dw]=c;});
-    var hours=Object.keys(byHr).map(Number).sort(function(x,y){return x-y;});
-    var peakHr=hs.slice().sort(function(x,y){return y.per_day-x.per_day;})[0];
+    var ctx=hrCtx(a);
+    var fn=HD[hrDesign]||HD.cur;
+    var body;
+    try{ body=fn(ctx,a); }
+    catch(e){ body='<div class="empty">התצוגה הזו נכשלה על הנתונים הנוכחיים. בחר תצוגה אחרת.</div>'; }
 
-    var h='<div class="hrwrap"><table class="hrgrid"><thead><tr><th class="hrhr">שעה</th>';
-    for(var d=0;d<7;d++)h+='<th>'+HRDOW[d]+'</th>';
-    h+='<th>ליום</th></tr></thead><tbody>';
-    hours.forEach(function(hr){
-      var isPeak=peakHr&&hr===peakHr.hr;
-      h+='<tr><td class="hrhr">'+hhmm(hr)+'</td>';
-      for(var d=0;d<7;d++){
-        var c=byHr[hr][d];
-        if(!c){h+='<td><span class="hrcell mut">—</span></td>';continue;}
-        // עוצמה = שקיפות. תא של יום אחד ותא של ארבעה נראים אחרת רק במספר, לא בצבע.
-        var op=mx>0?(0.06+0.80*(c.per_day/mx)):0;
-        var dark=op>0.45;
-        h+='<td><span class="hrcell" style="background:rgba(13,150,104,'+op.toFixed(3)+');'
-          +(dark?'color:#fff;font-weight:600':'')+'" title="'+HRDOW[d]+' '+hhmm(hr)+' · '
-          +nf(c.v)+' כניסות ב-'+nf(c.days)+' ימים">'+(c.per_day>=1?Math.round(c.per_day):'')+'</span></td>';
-      }
-      var tot=hs.filter(function(x){return x.hr===hr;})[0];
-      h+='<td><span class="hrcell'+(isPeak?' hrpeak':'')+'" style="font-weight:600">'
-        +(tot?Math.round(tot.per_day):'')+'</span></td></tr>';
-    });
-    h+='</tbody></table></div>';
-
-    // שיא לכל סניף — התשובה הישירה ל"זה משתנה מסניף לסניף"
-    if((a.branches||[]).length>1){
-      h+='<div class="pcsec"><h3>השעה החזקה בכל סניף</h3><div class="tw"><table><thead><tr>'
-        +'<th class="nm">סניף</th><th>שעת שיא</th><th>כניסות בתקופה</th></tr></thead><tbody>';
-      (a.branches||[]).forEach(function(b){
-        h+='<tr><td class="nm">'+esc(HRB[b.b]||b.b)+'</td><td style="font-weight:600">'
-          +hhmm(b.peak)+'</td><td>'+nf(b.v)+'</td></tr>';
-      });
-      h+='</tbody></table></div></div>';
-    }
-
-    var wd=cv.per_weekday||{}, minD=99;
+    var cv=a.coverage||{}, wd=cv.per_weekday||{}, minD=99;
     for(var k in wd){if(wd[k]<minD)minD=wd[k];}
-    // שתי שורות ולא אחת. הראשונה נשארת לכולם כי בלעדיה המסך נקרא כמכירות,
-    // והשנייה — למה אין שעה בפריוריטי ומה ביקשנו — היא הנמקה שלי ולא של הצוות.
-    h+='<div class="hrnote"><b>המספר בתא = כניסות ליום באותה שעה.</b> '
-      +'ריק = פחות מכניסה אחת ליום. <b>המדד הוא כניסות לסניף, לא מכירות.</b><br>'
+    var h=body;
+    h+='<div class="hrnote"><b>המדד הוא כניסות לסניף, לא מכירות.</b> '
       +'נמדדו '+nf(cv.days||0)+' ימים, מ-'+heShort(cv.first||'')+' עד '+heShort(cv.last||'')
       +(minD<99?(' — כל יום בשבוע מיוצג על ידי '+nf(minD)+' ימים לפחות.'):'')
-      +'</div>';
+      +'<br>שעות הפתיחה לפי אתר דיוואני (28.08.2026). שעה מחוץ להן אינה מוצגת, '
+      +'ו"השעה החלשה" נמדדת על שעות יום חול בלבד — 22:00 פתוחה במוצ"ש בלבד.</div>';
     h+='<div class="hrnote ownernote">פריוריטי אינה רושמת שעה על הזמנה — נבדקו כל 162 '
       +'שדות ההזמנה על חמש שנים שונות. ביקשנו לפתוח את הישויות שמחזיקות זאת.'
       +(minD<99?(' <b>זה בסיס צר; הדפוס יתייצב ככל שייצברו שבועות.</b>'):'')
@@ -3197,6 +3940,29 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(av.first&&from<av.first)from=av.first;
     setRange(from,to,null);
   });
+  (function(){
+    var sel=document.getElementById('hdsel');
+    sel.innerHTML=HRDESIGNS.map(function(d){
+      return '<option value="'+d[0]+'">'+esc(d[1])+'</option>';}).join('');
+    if(!HD[hrDesign])hrDesign='cur';
+    sel.value=hrDesign;
+    sel.addEventListener('change',function(){
+      hrDesign=sel.value;
+      try{localStorage.setItem('hrDesign',hrDesign);}catch(e){}
+      // אין קריאה לשרת: אותם נתונים בדיוק, ציור אחר
+      if(cache.agg)renderHours(cache.agg);
+    });
+  })();
+  // בוררים שחיים בתוך התצוגה עצמה (סניף, יום, שעה) — ציור מחדש בלבד
+  stage.addEventListener('click',function(e){
+    var t=e.target.closest('[data-hdb],[data-hdw],[data-hdh]');
+    if(!t||view!=='hours')return;
+    if(t.hasAttribute('data-hdb'))hrOne=t.getAttribute('data-hdb');
+    if(t.hasAttribute('data-hdw'))hrDow=parseInt(t.getAttribute('data-hdw'),10);
+    if(t.hasAttribute('data-hdh'))hrHour=parseInt(t.getAttribute('data-hdh'),10);
+    e.stopPropagation();
+    if(cache.agg)renderHours(cache.agg);
+  },true);
   document.getElementById('hoursbar').addEventListener('click',function(e){
     var b=e.target.closest('[data-hb]'); if(!b)return;
     var v=b.getAttribute('data-hb')||''; if(v===hrBranch)return;
