@@ -295,6 +295,17 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .dimbar .chip.on{background:var(--accentSoft);border-color:var(--bd);color:var(--okfg);font-weight:600}
   .dimsep{width:1px;height:22px;background:var(--line2);margin:0 4px}
   .subchips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+  /* לוח השעות. הצבע הוא עוצמה בלבד — ירוק אחד בשקיפות משתנה, בלי סקאלת
+     קשת שמחייבת מקרא ומטעה את העין. */
+  .hrgrid{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+  .hrgrid th{font-weight:600;color:var(--tx2);padding:5px 2px;text-align:center;font-size:11.5px}
+  .hrgrid td{padding:0;text-align:center;height:30px;border:1px solid var(--bg)}
+  .hrcell{display:block;height:30px;line-height:30px;border-radius:4px;font-variant-numeric:tabular-nums}
+  .hrhr{color:var(--tx2);font-weight:600;font-size:11.5px;width:44px;white-space:nowrap}
+  .hrpeak{outline:2px solid var(--bd);outline-offset:-2px;font-weight:700}
+  .hrbar{height:8px;border-radius:4px;background:var(--bd);display:block}
+  .hrwrap{overflow-x:auto}
+  .hrnote{font-size:12px;color:var(--tx3);margin:10px 0 0;line-height:1.55}
   .prodq{font-family:inherit;font-size:14px;padding:9px 13px;min-height:40px;border-radius:999px;
     border:1px solid var(--line2);background:var(--bg);color:var(--tx);flex:1 1 210px;max-width:340px}
   .prodq:focus{outline:2px solid var(--bd);outline-offset:1px}
@@ -509,6 +520,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         <div class="navgroup"><svg class="gico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l3.5-3.5 3 3L21 7"/></svg><span>מכירות</span></div>
         <button type="button" data-v="agents" class="on" aria-pressed="true"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1"/><circle cx="9" cy="7.5" r="3.2"/><path d="M22 19v-1a4 4 0 0 0-3-3.87"/><path d="M16 3.3a4 4 0 0 1 0 7.4"/></svg><span class="rlbl">סוכנים</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="branches" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.6-4.4A1 1 0 0 1 5.5 4h13a1 1 0 0 1 .9.6L21 9"/><path d="M4.5 9v9a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V9"/><path d="M3 9h18"/><path d="M9.5 20v-5h5v5"/></svg><span class="rlbl">סניפים</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
+        <button type="button" data-v="hours" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><path d="M12 7.2V12l3.2 2"/></svg><span class="rlbl">שעות חזקות וחלשות</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="products" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 7.5L12 3.2 3.5 7.5v9L12 20.8l8.5-4.3v-9z"/><path d="M3.5 7.5L12 11.8l8.5-4.3"/><path d="M12 11.8v9"/></svg><span class="rlbl">מוצרים</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <div class="navgroup"><svg class="gico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="8.5" r="5.3"/><path d="M13.8 6.1a5.3 5.3 0 1 1 0 10.6"/></svg><span>כספים ושירות</span></div>
         <button type="button" data-v="cash" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2.4"/><circle cx="12" cy="12" r="2.6"/><path d="M6 12h.02M18 12h.02"/></svg><span class="rlbl">מזומן</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
@@ -551,6 +563,14 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     <button type="button" class="chip" data-d="city" aria-pressed="false">ערים</button>
     <button type="button" class="chip" data-d="sector" aria-pressed="false">מגזר</button>
     <button type="button" class="chip" data-d="source" aria-pressed="false">מקור הגעה</button>
+  </div>
+  <div class="dimbar" id="hoursbar" style="display:none" role="group" aria-label="בחירת סניף">
+    <button type="button" class="chip on" data-hb="" aria-pressed="true">כל הסניפים</button>
+    <button type="button" class="chip" data-hb="101" aria-pressed="false">נתניה</button>
+    <button type="button" class="chip" data-hb="102" aria-pressed="false">ראשל&quot;צ</button>
+    <button type="button" class="chip" data-hb="105" aria-pressed="false">חיפה</button>
+    <button type="button" class="chip" data-hb="106" aria-pressed="false">ירושלים</button>
+    <button type="button" class="chip" data-hb="107" aria-pressed="false">בית שמש</button>
   </div>
   <div class="dimbar" id="prodbar" style="display:none" role="group" aria-label="חיפוש וסינון מוצרים">
     <input type="search" id="prodq" class="prodq" autocomplete="off"
@@ -709,6 +729,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   // מסך המוצרים. prodModel מוחזק בנפרד מ-prodFam: הוא נקבע רק בצלילה משורה,
   // ומתאפס ברגע שחוזרים לרמת הדגם.
   var prodQ='', prodLevel='model', prodFam='', prodSort='s', prodModel=null, prodQTimer=null;
+  var hrBranch='';   // '' = כל הסניפים
   var DIMH={fam:'קטגוריות',part:'מוצרים',city:'ערים',sector:'מגזר',source:'מקור הגעה'};
   var SECN={'חילו.':'חילוני','חר.':'חרדי','ד.לא.':'דתי לאומי','רוס':'דובר רוסית','ע.ר':'המגזר הערבי','אחר':'אחר','לקוח מרחוק':'לקוח מרחוק','הזמנת שרות':'הזמנת שירות'};
   function dimName(k){if(dimKind==='sector')return SECN[k]||k;return k;}
@@ -764,6 +785,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(view==='cancels')return state.from+'|'+state.to+'|CX'+(cxOrd?('|O|'+cxOrd):(cxSel?('|'+cxSel.t+'|'+cxSel.k):''));
     if(view==='comp')return state.from+'|'+state.to+'|CP'+(cpSel?('|'+cpSel):'');
     if(view==='dow')return state.from+'|'+state.to+'|DW';
+    if(view==='hours')return state.from+'|'+state.to+'|HR|'+hrBranch;
     if(view==='products')return state.from+'|'+state.to+'|PR|'+prodLevel+'|'+prodSort+'|'+prodFam+'|'+(prodModel||'')+'|'+prodQ;
     // בקרת מחירים אינה תלויה בטווח התאריכים: היא בודקת את מצב המחירים עכשיו
     // מול מה שכבר נמכר. מפתח קבוע = לא נטען מחדש בכל שינוי תאריך
@@ -817,6 +839,8 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
            :view==='pctrl'?('/api/pricecontrol')
            :view==='likey'?('/api/likeyactivity?d_from='+state.from+'&d_to='+state.to+'&bucket='+lkBucket)
            :view==='dow'?('/api/dow?d_from='+state.from+'&d_to='+state.to)
+           :view==='hours'?('/api/hours?d_from='+state.from+'&d_to='+state.to
+              +(hrBranch?'&branch='+encodeURIComponent(hrBranch):''))
            :view==='products'?('/api/products?d_from='+state.from+'&d_to='+state.to
               +'&level='+prodLevel+'&sort='+prodSort
               +(prodFam?'&fam='+encodeURIComponent(prodFam):'')
@@ -2782,6 +2806,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(view==='comp'){renderCompMeta();renderComp(cache.agg);return;}
     if(view==='dow'){renderDowMeta();renderDow(cache.agg);return;}
     if(view==='products'){renderProductsMeta();renderProducts(cache.agg);return;}
+    if(view==='hours'){renderHoursMeta();renderHours(cache.agg);return;}
     if(view==='pctrl'){renderPctrlMeta();renderPctrl(cache.agg);return;}
     if(view==='likey'){renderLikeyMeta();renderLikey(cache.agg);return;}
     if(view==='ins'){renderInsMeta();renderInsStage();return;}
@@ -2792,6 +2817,78 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     // אחרת היא נשארת תלויה מתחת לאריחים של מסך שאין לה בו משמעות
     var kp=document.getElementById('kpipct');if(kp)kp.innerHTML='';
     var R=ROOT();if(view==='cash'){renderCashKpis(R);}else if(view==='collect'){renderCollectKpis(R);}else if(view==='dim'){renderDimKpis(R);}else{renderKpis(R);}renderMeta(R);renderStage(R);}
+
+  // ---------- מסך השעות ----------
+  var HRB={'101':'נתניה','102':'ראשל"צ','103':'אתר וטלפוני','105':'חיפה','106':'ירושלים','107':'בית שמש'};
+  var HRDOW=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+  function hhmm(h){return (h<10?'0':'')+h+':00';}
+  function renderHoursMeta(){
+    var a=cache.agg||{}, cv=a.coverage||{}, hs=a.hours||[];
+    var top=hs.slice().sort(function(x,y){return y.per_day-x.per_day;})[0];
+    var low=hs.filter(function(x){return x.per_day>=1;}).sort(function(x,y){return x.per_day-y.per_day;})[0];
+    document.getElementById('kpis').innerHTML=
+      '<div class="kpi"><div class="l">כניסות</div><div class="v">'+nf(a.visitors||0)+'</div></div>'
+      +'<div class="kpi"><div class="l">ימים שנמדדו</div><div class="v">'+nf(a.days||0)+'</div></div>'
+      +'<div class="kpi"><div class="l">השעה החזקה</div><div class="v">'+(top?hhmm(top.hr):'—')+'</div></div>'
+      +'<div class="kpi"><div class="l">החלשה שעדיין פתוחה</div><div class="v">'+(low?hhmm(low.hr):'—')+'</div></div>';
+    document.getElementById('sellbl').textContent=
+      rangeLbl(state.from,state.to)+' · כניסות לסניף'+(hrBranch?(' · '+(HRB[hrBranch]||hrBranch)):' · כל הסניפים');
+    document.getElementById('builtlbl').textContent=META.last_sync?('עודכן '+META.last_sync):'';
+  }
+  function renderHours(a){
+    if(cache.dev||(a&&a.dev)){stage.innerHTML=devBoxHTML();return;}
+    a=a||{};
+    var grid=a.grid||[], hs=a.hours||[], cv=a.coverage||{};
+    if(!grid.length){stage.innerHTML='<div class="empty">אין נתוני כניסות לתקופה שנבחרה.</div>';return;}
+    var mx=0; grid.forEach(function(c){if(c.per_day>mx)mx=c.per_day;});
+    var byHr={}; grid.forEach(function(c){(byHr[c.hr]=byHr[c.hr]||{})[c.dw]=c;});
+    var hours=Object.keys(byHr).map(Number).sort(function(x,y){return x-y;});
+    var peakHr=hs.slice().sort(function(x,y){return y.per_day-x.per_day;})[0];
+
+    var h='<div class="hrwrap"><table class="hrgrid"><thead><tr><th class="hrhr">שעה</th>';
+    for(var d=0;d<7;d++)h+='<th>'+HRDOW[d]+'</th>';
+    h+='<th>ליום</th></tr></thead><tbody>';
+    hours.forEach(function(hr){
+      var isPeak=peakHr&&hr===peakHr.hr;
+      h+='<tr><td class="hrhr">'+hhmm(hr)+'</td>';
+      for(var d=0;d<7;d++){
+        var c=byHr[hr][d];
+        if(!c){h+='<td><span class="hrcell mut">—</span></td>';continue;}
+        // עוצמה = שקיפות. תא של יום אחד ותא של ארבעה נראים אחרת רק במספר, לא בצבע.
+        var op=mx>0?(0.06+0.80*(c.per_day/mx)):0;
+        var dark=op>0.45;
+        h+='<td><span class="hrcell" style="background:rgba(13,150,104,'+op.toFixed(3)+');'
+          +(dark?'color:#fff;font-weight:600':'')+'" title="'+HRDOW[d]+' '+hhmm(hr)+' · '
+          +nf(c.v)+' כניסות ב-'+nf(c.days)+' ימים">'+(c.per_day>=1?Math.round(c.per_day):'')+'</span></td>';
+      }
+      var tot=hs.filter(function(x){return x.hr===hr;})[0];
+      h+='<td><span class="hrcell'+(isPeak?' hrpeak':'')+'" style="font-weight:600">'
+        +(tot?Math.round(tot.per_day):'')+'</span></td></tr>';
+    });
+    h+='</tbody></table></div>';
+
+    // שיא לכל סניף — התשובה הישירה ל"זה משתנה מסניף לסניף"
+    if((a.branches||[]).length>1){
+      h+='<div class="pcsec"><h3>השעה החזקה בכל סניף</h3><div class="tw"><table><thead><tr>'
+        +'<th class="nm">סניף</th><th>שעת שיא</th><th>כניסות בתקופה</th></tr></thead><tbody>';
+      (a.branches||[]).forEach(function(b){
+        h+='<tr><td class="nm">'+esc(HRB[b.b]||b.b)+'</td><td style="font-weight:600">'
+          +hhmm(b.peak)+'</td><td>'+nf(b.v)+'</td></tr>';
+      });
+      h+='</tbody></table></div></div>';
+    }
+
+    var wd=cv.per_weekday||{}, minD=99;
+    for(var k in wd){if(wd[k]<minD)minD=wd[k];}
+    h+='<div class="hrnote"><b>המספר בתא = כניסות ליום באותה שעה.</b> '
+      +'ריק = פחות מכניסה אחת ליום.<br>'
+      +'<b>המדד הוא כניסות לסניף, לא מכירות.</b> פריוריטי אינה רושמת שעה על הזמנה — '
+      +'נבדקו כל 162 שדות ההזמנה על חמש שנים שונות. ביקשנו לפתוח את הישויות שמחזיקות זאת.<br>'
+      +'נמדדו '+nf(cv.days||0)+' ימים, מ-'+heShort(cv.first||'')+' עד '+heShort(cv.last||'')
+      +(minD<99?(' — כל יום בשבוע מיוצג על ידי '+nf(minD)+' ימים לפחות. <b>זה בסיס צר; הדפוס יתייצב ככל שייצברו שבועות.</b>'):'')
+      +'</div>';
+    stage.innerHTML=h;
+  }
 
   // ---------- מסך המוצרים ----------
   function prodFamOptions(list){
@@ -3010,7 +3107,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(v!=='cancels'){cxSel=null;cxOrd=null;}
     if(v!=='comp')cpSel=null;
     view=v;
-    var H1={agents:'ביצועי סוכנים',branches:'מכירות לפי סניפים',cash:'תקבולים במזומן',service:'פעילות שירות',collect:'מקדמות והנחות',dim:'פילוח מכירות',branchsrc:'מקורות הגעה לסניף',baskets:'סל מכירות ממוצע ללקוח',cannib:'קניבליזציה — תמהיל ערוצים',mdown:'מוריד כסף',cancels:'אחוז ביטולים',comp:'פיצויים ללקוחות',dow:'ימים חזקים בשבוע',products:'מוצרים',ins:'תובנות'};
+    var H1={agents:'ביצועי סוכנים',branches:'מכירות לפי סניפים',cash:'תקבולים במזומן',service:'פעילות שירות',collect:'מקדמות והנחות',dim:'פילוח מכירות',branchsrc:'מקורות הגעה לסניף',baskets:'סל מכירות ממוצע ללקוח',cannib:'קניבליזציה — תמהיל ערוצים',mdown:'מוריד כסף',cancels:'אחוז ביטולים',comp:'פיצויים ללקוחות',dow:'ימים חזקים בשבוע',products:'מוצרים',hours:'שעות חזקות וחלשות',ins:'תובנות'};
     document.getElementById('h1t').textContent=H1[v]||H1.agents;
     var bs=document.querySelectorAll('#seg button');
     for(var i=0;i<bs.length;i++){var on=bs[i].getAttribute('data-v')===v;bs[i].classList.toggle('on',on);bs[i].setAttribute('aria-pressed',on?'true':'false');}
@@ -3018,6 +3115,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     document.getElementById('phbar').style.display=(v==='branches')?'flex':'none';
     document.getElementById('insbar').style.display=(v==='ins')?'flex':'none';
     document.getElementById('prodbar').style.display=(v==='products')?'flex':'none';
+    document.getElementById('hoursbar').style.display=(v==='hours')?'flex':'none';
     if(v!=='ins'){var sb3=document.getElementById('selbtn');sb3.style.opacity='';sb3.style.pointerEvents='';sb3.title='';}
     if(META&&state.from)apply();
   }
@@ -3030,6 +3128,14 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   });
   document.getElementById('seg').addEventListener('click',function(e){
     var b=e.target.closest('[data-v]');if(b)setView(b.getAttribute('data-v'));
+  });
+  document.getElementById('hoursbar').addEventListener('click',function(e){
+    var b=e.target.closest('[data-hb]'); if(!b)return;
+    var v=b.getAttribute('data-hb')||''; if(v===hrBranch)return;
+    hrBranch=v;
+    var all=this.querySelectorAll('[data-hb]');
+    for(var i=0;i<all.length;i++){var on=all[i]===b;all[i].classList.toggle('on',on);all[i].setAttribute('aria-pressed',on?'true':'false');}
+    if(META&&state.from)apply();
   });
   document.getElementById('prodbar').addEventListener('click',function(e){
     var lv=e.target.closest('[data-pl]'), so=e.target.closest('[data-ps]');

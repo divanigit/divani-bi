@@ -265,7 +265,8 @@ _NP_STRIP = {
     "/api/range": _np_range,
     "/api/dim": _np_dimtree,
     "/api/tree": _np_dimtree,
-    "/api/products": _np_dimtree,   # same shape: agg.rows[].p, agg.total_p, agg.rest.p
+    "/api/products": _np_dimtree,
+    "/api/hours": None,             # כניסות בלבד — אין בו שום שדה רווח   # same shape: agg.rows[].p, agg.total_p, agg.rest.p
     "/api/segdrill": _np_dimtree,
     "/api/agentreport": _np_agentreport,
     "/api/panel": None,
@@ -1701,6 +1702,29 @@ def api_products(request: Request, d_from: str = "", d_to: str = "",
                                  "p_fam": fam or None, "p_model": model or None,
                                  "p_sort": sort, "p_limit": max(1, min(lim, 500))})
     return JSONResponse({"mode": "products", "agg": agg or {}})
+
+
+@app.get("/api/hours")
+def api_hours(request: Request, d_from: str = "", d_to: str = "", branch: str = ""):
+    """שעות חזקות וחלשות לפי סניף.
+
+    המדד הוא כניסות לסניף ולא מכירות, ולא במקרה: פריוריטי אינה רושמת שעה על
+    הזמנה. נסרקו כל 162 שדות ההזמנה על הזמנות מ-2017, 2020, 2023, 2025 ו-2026 —
+    אין ולו שדה אחד עם שעת יום. שתי הישויות שיכולות להחזיק אותה,
+    ORDERS_CHANGE_LOG ו-ORDSTATUSLOG, עונות "לא ניתן להפעיל API למסך זה".
+    """
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    f, t = _parse_date(d_from), _parse_date(d_to)
+    if not f or not t:
+        return JSONResponse({"error": "bad dates"}, status_code=400)
+    if f > t:
+        f, t = t, f
+    if len(branch) > 20:
+        return JSONResponse({"error": "bad branch"}, status_code=400)
+    agg = sb_rpc("bi_hours", {"p_from": f.isoformat(), "p_to": t.isoformat(),
+                              "p_branch": branch or None})
+    return JSONResponse({"mode": "hours", "agg": agg or {}})
 
 
 @app.get("/api/segdrill")
