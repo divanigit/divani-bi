@@ -211,8 +211,16 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .srsvg{width:100%;height:auto;display:block}
   .srbar{fill:var(--bd)}
   .srbar.neg{fill:var(--dfg)}
-  .srbar.part{opacity:.42}
+  /* קווקוו, לא חיוורון. עמודה חיוורת נראית כמו עמודה פחות חשובה. */
+  .srbar.part{fill:url(#srhatch)}
+  .srhl{stroke:var(--bd);stroke-width:2.6}
+  .srhbg{fill:var(--accentSoft)}
+  .srdot.part{fill:var(--bg);stroke:var(--bd);stroke-width:1.6}
+  .srline.part{stroke-dasharray:3 3}
   .srbar.on{fill:var(--tx)}
+  /* עמודה חלקית שנבחרה שומרת על הקווקוו — אחרת הלחיצה מוחקת בדיוק את הסימן
+     שבגללו לחצו עליה. */
+  .srbar.part.on{fill:url(#srhatch);stroke:var(--tx);stroke-width:1.6}
   .srhit{fill:transparent;cursor:pointer}
   .srline{fill:none;stroke:var(--bd);stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}
   .srdot{fill:var(--bd)}
@@ -224,6 +232,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .srpick b{font-weight:600}
   .srpick span{font-variant-numeric:tabular-nums;unicode-bidi:plaintext}
   .srnote{font-size:11px;color:var(--tx3);margin-top:6px}
+  .srpart{font-size:11px;color:var(--wfg);background:var(--wbg);border-radius:999px;padding:2px 8px;margin-inline-start:8px}
   .srwait{font-size:13px;color:var(--tx2);text-align:center;padding:26px 6px}
   @media print{.dnum{box-shadow:none}.dnum::after{display:none}}
   .shead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
@@ -2652,6 +2661,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     return !!j.partial_last||(!!td&&String(j.to||'')>=td);
   }
   function srIsPart(j,i,n){return (i===0&&srPF(j))||(i===n-1&&srPL(j));}
+  // מה שכתוב כשלוחצים על עמודה מקווקוות. בעברית של בן אדם, לא "תקופה חלקית".
+  var SR_PART={d:'היום עוד לא נגמר',w:'השבוע עוד לא נגמר',m:'החודש עוד לא נגמר'};
+  function srPartTxt(j){return SR_PART[j.bucket]||'התקופה עוד לא נגמרה';}
   // קו המגמה הוא חישוב, ולכן הוא רץ רק על דליים מלאים. הפאנל כבר אומר שדלי חלקי
   // אינו בר השוואה, ורגרסיה שמשקללת אותו כמו דלי מלא סותרת בדיוק את מה שנכתב מעליה.
   function srTrend2(j){
@@ -2721,12 +2733,13 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var T=srTrend2(j), hasT=!!T, on=(srTrend&&hasT);
     var tools='<div class="srtools"><button type="button" id="srtg"'+(hasT?'':' disabled')
       +' class="'+(on?'on':'')+'" aria-pressed="'+(on?'true':'false')+'">קו מגמה</button></div>';
+    // ההסבר יורד מתחת לגרף ועולה רק בלחיצה על העמודה עצמה. דורון, 27.8.2026:
+    // "להוריד את הטקסט ובמקומו לצייר את העמודה האחרונה מקווקוות".
     var pickTxt=(srPick>=0&&rows[srPick])
       ? '<b>'+esc(srLbl(rows[srPick].t,j.bucket))+'</b><span>'+esc(srFmt(rows[srPick].v==null?null:Number(rows[srPick].v),j))+'</span>'
+        +(srIsPart(j,srPick,n)?'<span class="srpart">'+esc(srPartTxt(j))+'</span>':'')
       : '';
     var note='';
-    if(srPF(j))note+='<div class="srnote">התקופה הראשונה חלקית.</div>';
-    if(srPL(j))note+='<div class="srnote">'+((!j.partial_last&&j.bucket==='d')?'היום עוד לא נגמר.':'התקופה האחרונה חלקית.')+'</div>';
     if(on&&T.skipped)note+='<div class="srnote">קו המגמה לא כולל תקופות חלקיות.</div>';
     srBody.innerHTML=head+tot+tools+srChart(j,on?T:null)
       +'<div class="sraxis"><span>'+esc(srLbl(rows[0].t,j.bucket))+'</span><span>'+esc(srLbl(rows[n-1].t,j.bucket))+'</span></div>'
@@ -2750,7 +2763,11 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     function Y(y){return PT+ph*(hi-y)/(hi-lo);}
     function X(i2){return W*(i2+0.5)/n;}
     var y0=Y(0),bw=Math.max(1.4,(W/n)*0.72);
-    var s='<svg class="srsvg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(j.bucket_label||'')+'">';
+    var s='<svg class="srsvg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(j.bucket_label||'')+'">'
+      // patternUnits בקואורדינטות המשתמש — הפסים גדלים עם הגרף ולא נמרחים בטלפון
+      +'<defs><pattern id="srhatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">'
+      +'<rect class="srhbg" width="6" height="6"></rect>'
+      +'<line class="srhl" x1="0" y1="0" x2="0" y2="6"></line></pattern></defs>';
     if(lo<0)s+='<line class="srzero" x1="0" y1="'+y0.toFixed(2)+'" x2="'+W+'" y2="'+y0.toFixed(2)+'"></line>';
     if(j.kind==='ratio'){
       // יחס בלי מכנה בדלי הוא לא אפס — הקו נקטע שם ואין נקודה
@@ -2760,8 +2777,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         d+=(pen?'L':'M')+X(i).toFixed(2)+' '+Y(v[i]).toFixed(2)+' ';pen=true;
       }
       s+='<path class="srline" d="'+d+'" vector-effect="non-scaling-stroke"></path>';
+      // בגרף יחס אין עמודה לקווקו, ולכן הנקודה החלקית נשארת חלולה — אותה אמירה
       for(i=0;i<n;i++)if(v[i]!=null)
-        s+='<circle class="srdot'+(srPick===i?' on':'')+'" cx="'+X(i).toFixed(2)+'" cy="'+Y(v[i]).toFixed(2)+'" r="'+(srPick===i?3:2)+'"></circle>';
+        s+='<circle class="srdot'+(srIsPart(j,i,n)?' part':'')+(srPick===i?' on':'')
+          +'" cx="'+X(i).toFixed(2)+'" cy="'+Y(v[i]).toFixed(2)+'" r="'+(srPick===i?3.4:2.4)+'"></circle>';
     }else{
       for(i=0;i<n;i++){
         var val=v[i]==null?0:v[i],yv=Y(val),yt=Math.min(yv,y0),hh=Math.abs(yv-y0);
@@ -2777,7 +2796,8 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         +' L'+X(T.i1).toFixed(2)+' '+Y(Number(T.y1)).toFixed(2)+'" vector-effect="non-scaling-stroke"></path>';
     for(i=0;i<n;i++)
       s+='<rect class="srhit" data-sri="'+i+'" x="'+(W*i/n).toFixed(2)+'" y="0" width="'+(W/n).toFixed(2)+'" height="'+H+'"><title>'
-        +esc(srLbl(rows[i].t,j.bucket))+' · '+esc(srFmt(v[i],j))+'</title></rect>';
+        +esc(srLbl(rows[i].t,j.bucket))+' · '+esc(srFmt(v[i],j))
+        +(srIsPart(j,i,n)?' · '+esc(srPartTxt(j)):'')+'</title></rect>';
     return s+'</svg>';
   }
 
