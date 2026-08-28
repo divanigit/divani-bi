@@ -2411,6 +2411,42 @@ def _read_slip(ordname: str, filenum: int):
     return out
 
 
+def _transfer_receipts(ords: list):
+    """כמה כסף כבר קיבל קבלת העברה על כל הזמנה. מחזיר {ordname: סכום}.
+
+    זה הלב של החישוב מאז 28.8.2026. עד אז הקוד השווה את האסמכתא ל־PRIO_BALANCE
+    והניח שיתרה פתוחה פירושה שההעברה טרם נרשמה. ההנחה שגויה, וזו הדוגמה של דורון:
+    לקוח קנה ב־10,000, העביר 5,000, וקיבל קבלה על ה־5,000. היתרה נשארת 5,000 —
+    אבל אלה כסף שלא שולם, לא כסף שהגיע בלי קבלה. הרשימה הציגה אותו כהעברה ממתינה,
+    וכך כל מקדמה תקינה נראתה כתקלה: ב־28.8.2026, 15 מתוך 17 השורות היו רעש.
+    ההכרעה: משווים אסמכתאות מול קבלות, והיתרה אינה נכנסת לחישוב כלל.
+
+    מחזיר None אם הקריאה נכשלה — אז אסור להמשיך: בלי הקבלות היינו חוזרים בדיוק
+    להתנהגות השגויה ומציגים כל מקדמה כהעברה חסרה."""
+    out = {}
+    if not ords:
+        return out
+    fin = urllib.parse.quote("סופית")
+    CH = 60                       # keep the URL inside any gateway limit
+    for i in range(0, len(ords), CH):
+        chunk = [o for o in ords[i:i + CH] if o]
+        if not chunk:
+            continue
+        try:
+            rows = sb_select("bi_receipt_pays?select=ordname,amount"
+                             f"&kind=eq.transfer&status=eq.{fin}"
+                             "&ordname=in.(" + ",".join(chunk) + ")")
+        except Exception as e:
+            print("transfer-receipt lookup failed:", repr(e)[:200], flush=True)
+            return None
+        for r in (rows or []):
+            try:
+                out[r["ordname"]] = out.get(r["ordname"], 0.0) + float(r["amount"] or 0)
+            except (TypeError, ValueError):
+                continue
+    return out
+
+
 def _scan_pending_transfers():
     today = dt.datetime.now(IL).date()
     orders = {}
@@ -2525,15 +2561,40 @@ def _scan_pending_transfers():
             if (c["udate"] or "") > g["up"]:
                 g["up"] = c["udate"] or ""
 
+    # ---- אסמכתאות פחות קבלות (הכרעת דורון 28.8.2026) ----
+    # התקרה לכל הזמנה היא כמה מהאסמכתאות שלה עוד לא קיבלו קבלת העברה — ולא
+    # היתרה הפתוחה. יתרה פתוחה היא כסף שהלקוח לא שילם; היא לא מעידה דבר על
+    # קבלות. ראה _transfer_receipts.
+    slips_total = {}
+    for g in groups.values():
+        for on in g["orders"]:
+            slips_total[on] = slips_total.get(on, 0.0) + g["amt"]
+    rcpt = _transfer_receipts(list(slips_total))
+    if rcpt is None:
+        return                    # אין קבלות -> אין חישוב. הרשימה הקודמת נשארת.
+    # אגורה בודדת אינה כסף: הפרשי עיגול בפריוריטי מגיעים עד 0.02 ש"ח, ואסמכתא
+    # שנקראה כ־5,169 מול קבלה של 5,170 היא אותה העברה.
+    EPS = 1.0
+    cap = {}
+    for on, tot in slips_total.items():
+        left_over = round(tot - rcpt.get(on, 0.0), 2)
+        if left_over <= EPS:
+            cap[on] = 0.0
+            continue
+        # היתרה כבר אינה הקריטריון — אבל היא עדיין גבול עליון סביר לכמה מהעברה
+        # אחת לזקוף להזמנה מסוימת, כששני צילומים תלויים על שתי הזמנות של אותו
+        # לקוח (אלקובי אילנה, 27.8.2026: 2,948 + 4,586 על שתי הזמנות). בלי זה
+        # כל הסכום נזקף לראשונה והשנייה יוצאת אפס.
+        cap[on] = min(left_over, orders[on]["bal"])
+
     credit, lastup, nslips = {}, {}, {}
     for g in groups.values():
         left = g["amt"]
-        for on in sorted(g["orders"], key=lambda o: -g["orders"][o]):
+        for on in sorted(g["orders"], key=lambda o: -cap.get(o, 0.0)):
             if left <= 0:
                 break
-            # never more than what this order still owes: the rest of the
-            # transfer was already receipted and is in the cash report already
-            take = min(g["orders"][on] - credit.get(on, 0), left)
+            # never more than what this order's slips still lack a receipt for
+            take = min(cap.get(on, 0.0) - credit.get(on, 0), left)
             if take <= 0:
                 continue
             credit[on] = credit.get(on, 0) + take
