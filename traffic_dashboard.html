@@ -759,12 +759,15 @@ window.owlBuildNav = function(asIdo){
     if (it[2] === 'profit' && role.noprofit) return;
     h += '<a href="/?v=' + it[0] + '">' + it[1] + '</a>';
   });
+  // The agent report is open to every logged-in user and its profit figures
+  // are stripped server-side, so hiding it here would make the preview show
+  // something the real page does not.
+  h += '<div class="owlg">ניתוח</div>'
+     + '<a href="/agent-report">ניתוח ביצועי נציגים וסניפים</a>';
   if (!role.noprofit) {
-    h += '<div class="owlg">ניתוח</div>'
-       + '<a href="/agent-report">ניתוח ביצועי נציגים וסניפים</a>';
+    h += '<div class="owlsys"><div class="st">מערכת ניטור ואנליטיקת פרסום</div>'
+       + '<div class="owlcur" aria-current="page">תמהיל מקורות התנועה</div></div>';
   }
-  h += '<div class="owlsys"><div class="st">מערכת ניטור ואנליטיקת פרסום</div>'
-     + '<div class="owlcur" aria-current="page">תמהיל מקורות התנועה</div></div>';
   document.getElementById('owllist').innerHTML = h;
 };
 owlBuildNav(false);
