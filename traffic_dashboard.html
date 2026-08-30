@@ -22,6 +22,45 @@
     --shadow:0 1px 2px rgba(0,0,0,.5),0 6px 18px rgba(0,0,0,.35);
   }
 }
+/* ---------- OWL: תפריט המערכת ---------- */
+.owlbar{display:flex;align-items:center;gap:10px;margin:0 0 12px}
+.owlham{flex:none;width:44px;height:44px;display:grid;place-items:center;
+  border:1px solid var(--line2);background:var(--surface);color:var(--tx);
+  border-radius:12px;cursor:pointer}
+.owlham svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round}
+.owlham:hover{border-color:var(--brand)}
+.owlham:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.owlnow{min-width:0;display:flex;flex-direction:column;line-height:1.25}
+.owlnow .k{font-size:10.5px;color:var(--tx3);display:flex;align-items:center;gap:5px}
+.owlnow .k i{width:6px;height:6px;border-radius:50%;background:var(--brand);display:inline-block}
+.owlnow .v{font-size:14px;font-weight:700;color:var(--tx);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.owlov{position:fixed;inset:0;z-index:120;background:rgba(10,14,17,.5);display:none}
+.owlov.on{display:block}
+.owlsheet{position:absolute;inset-inline-start:0;top:0;bottom:0;width:min(340px,88vw);
+  background:var(--surface);border-inline-end:1px solid var(--line);
+  box-shadow:var(--shadow);overflow-y:auto;padding:14px 14px 30px;
+  display:flex;flex-direction:column;gap:4px}
+.owlhead{display:flex;align-items:center;justify-content:space-between;
+  gap:10px;margin:0 0 8px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.owlhead b{font-size:16px}
+.owlx{width:38px;height:38px;display:grid;place-items:center;border:0;background:none;
+  color:var(--tx2);border-radius:10px;cursor:pointer}
+.owlx svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+.owlx:hover{background:var(--bg);color:var(--tx)}
+.owlx:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.owlg{font-size:10.5px;font-weight:700;letter-spacing:.09em;color:var(--tx3);
+  margin:12px 0 4px;padding-inline-start:4px}
+.owlsheet a,.owlcur{display:flex;align-items:center;gap:9px;min-height:44px;
+  padding:9px 11px;border-radius:11px;font-size:14.5px;color:var(--tx);
+  text-decoration:none;border:1px solid transparent}
+.owlsheet a:hover{background:var(--bg);border-color:var(--line)}
+.owlsheet a:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
+.owlcur{background:var(--brand);color:#fff;font-weight:700;cursor:default}
+@media (prefers-color-scheme:dark){.owlcur{color:#06201c}}
+.owlsys{margin-top:14px;border:1px solid var(--line2);border-radius:13px;padding:11px}
+.owlsys .st{font-size:13px;font-weight:700;margin:0 0 2px}
+.owlsys .ss{font-size:11px;color:var(--tx3);margin:0 0 8px}
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
 body{
@@ -139,6 +178,28 @@ td.name{white-space:normal;min-width:104px}
 </head>
 <body>
 <div class="wrap">
+
+  <div class="owlbar">
+    <button type="button" class="owlham" id="owlham" aria-label="פתיחת תפריט המערכת"
+            aria-haspopup="dialog" aria-expanded="false" aria-controls="owlsheet">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 7h17"/><path d="M3.5 12h17"/><path d="M3.5 17h17"/></svg>
+    </button>
+    <div class="owlnow">
+      <span class="k"><i></i>דוח נוכחי</span>
+      <span class="v">תמהיל מקורות התנועה</span>
+    </div>
+  </div>
+
+  <div class="owlov" id="owlov">
+    <nav class="owlsheet" id="owlsheet" role="dialog" aria-modal="true" aria-label="דוחות">
+      <div class="owlhead"><b>דוחות</b>
+        <button type="button" class="owlx" id="owlx" aria-label="סגירה">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div id="owllist"></div>
+    </nav>
+  </div>
 
   <header class="hd">
     <div class="t">
@@ -562,6 +623,67 @@ if (OWNERDATA) {
   $('noticeOwner').textContent = ' ' + OWNERDATA.notice_more;
 }
 /*ENDOWNER*/
+
+/* ---------- OWL: תפריט המערכת ---------- */
+/* הפריטים מובילים ל-/?v=<מסך>. אין כאן החלפת מסך פנימית — זה מסמך נפרד,
+   וניסיון לחקות את ה-SPA היה מייצר שני מקורות אמת לאותה ניווט. */
+var OWLNAV = [
+  ['g', 'מכירות'],
+  ['agents',   'סוכנים'],
+  ['branches', 'סניפים'],
+  ['hours',    'שעות חזקות וחלשות'],
+  ['products', 'מוצרים'],
+  ['g', 'כספים ושירות'],
+  ['cash',    'מזומן'],
+  ['collect', 'מקדמות'],
+  ['service', 'שירות'],
+  ['pctrl',   'בקרת מחירים'],
+  ['g', 'אנליטיקה'],
+  ['branchsrc', 'מקורות הגעה'],
+  ['dim',       'פילוח'],
+  ['mdown',     'מוריד כסף', 'profit'],
+  ['cancels',   'אחוז ביטולים'],
+  ['comp',      'פיצויים'],
+  ['dow',       'ימים חזקים בשבוע'],
+  ['ins',       'תובנות']
+];
+
+(function(){
+  var role = (window.OWL_ROLE || {});
+  var h = '';
+  OWLNAV.forEach(function(it){
+    if (it[0] === 'g') { h += '<div class="owlg">' + it[1] + '</div>'; return; }
+    // כלל קבוע: המשתמש ללא רווח אינו רואה מסך שמציג רווח, לא בכסף ולא באחוזים.
+    if (it[2] === 'profit' && role.noprofit) return;
+    h += '<a href="/?v=' + it[0] + '">' + it[1] + '</a>';
+  });
+  if (!role.noprofit) {
+    h += '<div class="owlg">ניתוח</div>'
+       + '<a href="/agent-report">ניתוח ביצועי נציגים וסניפים</a>';
+  }
+  h += '<div class="owlsys"><div class="st">מערכת ניטור ואנליטיקת פרסום</div>'
+     + '<div class="ss">גוגל אנליטיקס · תנועה לאתר · פרסום</div>'
+     + '<div class="owlcur" aria-current="page">תמהיל מקורות התנועה</div></div>';
+  document.getElementById('owllist').innerHTML = h;
+
+  var ov = document.getElementById('owlov'), ham = document.getElementById('owlham');
+  function open(){
+    ov.classList.add('on'); ham.setAttribute('aria-expanded', 'true');
+    document.body.style.overflow = 'hidden';
+    var a = ov.querySelector('a'); if (a) a.focus();
+  }
+  function close(){
+    ov.classList.remove('on'); ham.setAttribute('aria-expanded', 'false');
+    document.body.style.overflow = ''; ham.focus();
+  }
+  ham.addEventListener('click', open);
+  document.getElementById('owlx').addEventListener('click', close);
+  ov.addEventListener('click', function(e){ if (e.target === ov) close(); });
+  // המקלדת: Escape סוגר את התפריט לפני שהוא מגיע לחלון ההסתייגויות
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && ov.classList.contains('on')) { e.stopPropagation(); close(); }
+  }, true);
+})();
 
 /* ---------- chips ---------- */
 function buildChips(){

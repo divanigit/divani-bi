@@ -1471,6 +1471,12 @@ def traffic(request: Request):
         # את הגרף לא נכון.
         if not _is_admin(request):
             html = _OWNER_BLOCK.sub("", html)
+        # התפריט צריך לדעת מי מסתכל. הדף אינו מנחש ואינו שואל — התפקיד מוזרק
+        # כאן, כדי שכלל הרווח יחול גם על ממשק שאינו המסך הראשי.
+        role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s};</script>' % (
+            "true" if _is_noprofit(request) else "false",
+            "true" if _is_admin(request) else "false")
+        html = html.replace("</head>", role + "\n</head>", 1)
         return HTMLResponse(html)
     except Exception:
         return HTMLResponse("<div dir='rtl' style='font-family:sans-serif;padding:40px'>"
