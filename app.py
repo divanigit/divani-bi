@@ -1436,8 +1436,18 @@ def agent_report(request: Request):
     except Exception:
         return HTMLResponse("<div dir='rtl' style='font-family:sans-serif;padding:40px'>הדמו לא נמצא.</div>",
                             status_code=404)
+    # ההסברים כבר הוסתרו כאן בצד הלקוח, אבל display:none הוא הסתרה ולא
+    # מניעה: הטקסט נשלח בכל מקרה. בדיקה חיה בתור עידו הראתה שהמילה "רווחיות"
+    # והסף "מעל 45 אחוז" — כלומר רווח באחוזים — מגיעים אליו בגוף התשובה.
+    # עכשיו הבלוק נמחק בשרת, כמו בלוח התנועה.
+    if not _is_admin(request):
+        body = _OWNER_BLOCK.sub("", body)
+    role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s};</script>' % (
+        "true" if _is_noprofit(request) else "false",
+        "true" if _is_admin(request) else "false")
     head = ('<!DOCTYPE html><meta charset="utf-8">'
-            '<meta name="viewport" content="width=device-width,initial-scale=1">\n')
+            '<meta name="viewport" content="width=device-width,initial-scale=1">\n'
+            + role + '\n')
     return HTMLResponse(head + body)
 
 
