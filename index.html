@@ -745,9 +745,11 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg>
       שאלה חופשית
     </button>
+<!--OWNER-->
     <button type="button" class="rfr" id="viewasbtn" title="בחירת תצוגה" aria-label="בחירת תצוגה" aria-haspopup="dialog" aria-expanded="false" style="display:none;padding:8px 11px">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
     </button>
+<!--/OWNER-->
     <button type="button" class="rfr" id="rfr" title="רענון נתונים מפריוריטי עכשיו">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
       רענן עכשיו
@@ -827,6 +829,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   <div class="askhint ownernote">התשובות מחושבות ישירות מנתוני פריוריטי שבענן. דוח מוצלח אפשר לקבע בהמשך כדוח קבוע. <span id="asktotal"></span></div>
   <div id="asklog"></div>
 </div>
+<!--OWNER-->
 <div id="vaovl" style="position:fixed;inset:0;background:rgba(10,18,14,.45);z-index:130;display:none"></div>
 <div id="vasheet" role="dialog" aria-modal="true" aria-label="בחירת תצוגה">
   <div class="shead">
@@ -839,6 +842,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     <button type="button" class="varow" data-va="ido" role="radio" aria-checked="false"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>עידו אהרון</span></button>
   </div>
 </div>
+<!--/OWNER-->
 <div id="srovl"></div>
 <div id="srsheet" role="dialog" aria-modal="true" aria-labelledby="srtitle">
   <div class="shead">
@@ -852,9 +856,8 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
 <script>
 (function(){
   var PREVIEW_KEY='divani_preview_user';
-  // '' = my own view · 'user' = a regular user · 'ido' = עידו אהרון.
+  // '' = my own view | 'user' = a regular user | 'ido' = the no-profit role.
   // an old on/off value ('1') is read as 'user', so a preview left on yesterday is not silently dropped.
-  var PREV_NAMES={user:'משתמש רגיל',ido:'עידו אהרון'};
   function prevMode(){try{var v=localStorage.getItem(PREVIEW_KEY);if(!v)return '';return (v==='user'||v==='ido')?v:'user';}catch(e){return '';}}
   function prevSet(m){try{if(m==='user'||m==='ido')localStorage.setItem(PREVIEW_KEY,m);else localStorage.removeItem(PREVIEW_KEY);}catch(e){}}
   function prevGet(){return prevMode()!=='';}
@@ -4175,7 +4178,8 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   function askOpen(){askSheet.classList.add('on');askOvl.classList.add('on');setTimeout(function(){document.getElementById('askq').focus();},50);}
   function askClose(){askSheet.classList.remove('on');askOvl.classList.remove('on');}
   document.getElementById('askbtn').addEventListener('click',askOpen);
-  /* ---- בחירת תצוגה — רשימה ולא מתג דליקה/כיבוי: ייתוספו עוד סוגי משתמשים ---- */
+/*OWNER*/
+  /* ---- the owner's view-as picker ---- */
   function vaPaint(){
     var rows=document.querySelectorAll('#vasheet [data-va]');
     for(var i=0;i<rows.length;i++){
@@ -4186,7 +4190,12 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   }
   function vaIsOpen(){var s=document.getElementById('vasheet');return !!s&&s.style.display==='block';}
   function vaRows(){return [].slice.call(document.querySelectorAll('#vasheet [data-va]'));}
-  function vaOpen(){vaPaint();document.getElementById('vaovl').style.display='block';document.getElementById('vasheet').style.display='block';
+  function vaOpen(){
+    // the whole control is deleted from the response for anyone who is not
+    // the admin, so nothing here may assume the elements exist
+    var ov=document.getElementById('vaovl'), sh=document.getElementById('vasheet');
+    if(!ov||!sh)return;
+    vaPaint();ov.style.display='block';sh.style.display='block';
     var b=document.getElementById('viewasbtn');if(b)b.setAttribute('aria-expanded','true');
     // it says aria-modal, so it has to behave like one: focus goes inside, and comes back on close
     var r=vaRows(),f=null;
@@ -4242,6 +4251,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       var m=prevMode(); if(m!==previewAs){vaApply(m);vaPaint();}
     });
   })();
+/*ENDOWNER*/
   (function(){var n=document.getElementById('nrepbtn');if(n)n.addEventListener('click',function(){location.href='/agent-report';});})();
   (function(){var t=document.getElementById('trafficbtn');if(t)t.addEventListener('click',function(){location.href='/traffic';});})();
 

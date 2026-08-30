@@ -1601,10 +1601,17 @@ def index(request: Request):
     if not _logged_in(request):
         return RedirectResponse("/login", status_code=303)
     hdr = {"Cache-Control": "no-cache, must-revalidate"}
-    if not _is_noprofit(request):
+    admin, np = _is_admin(request), _is_noprofit(request)
+    if admin and not np:
         return FileResponse(INDEX, media_type="text/html; charset=utf-8", headers=hdr)
     with open(INDEX, encoding="utf-8") as f:
-        html = _NOPROFIT_BLOCK.sub("", f.read())
+        html = f.read()
+    # הכלי "רואה כמו" הוא של הבעלים בלבד. עד עכשיו הוא נשלח לכולם והוסתר
+    # ב-style.display; הסתרה אינה מניעה.
+    if not admin:
+        html = _OWNER_BLOCK.sub("", html)
+    if np:
+        html = _NOPROFIT_BLOCK.sub("", html)
     return HTMLResponse(html, headers=hdr)
 
 
