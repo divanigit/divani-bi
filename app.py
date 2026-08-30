@@ -1457,7 +1457,7 @@ def agent_report(request: Request):
     head = ('<!DOCTYPE html><meta charset="utf-8">'
             '<meta name="viewport" content="width=device-width,initial-scale=1">\n'
             + role + '\n')
-    return HTMLResponse(head + body)
+    return HTMLResponse(head + body, headers={"Cache-Control": "no-cache, must-revalidate"})
 
 
 # הגושים מסומנים בקובץ עצמו, כדי שאפשר יהיה להוסיף עוד הסבר לבעלים
@@ -1496,7 +1496,9 @@ def traffic(request: Request):
             "true" if _is_noprofit(request) else "false",
             "true" if _is_admin(request) else "false")
         html = html.replace("</head>", role + "\n</head>", 1)
-        return HTMLResponse(html)
+        # בלי הכותרת הזו הדפדפן מחזיק את העמוד וממשיך להציג גרסה ישנה.
+        # דורון דיווח על באנר שכבר נמחק מהקוד — זו היתה הסיבה.
+        return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
     except Exception:
         return HTMLResponse("<div dir='rtl' style='font-family:sans-serif;padding:40px'>"
                             "לוח התנועה לא נמצא.</div>", status_code=404)

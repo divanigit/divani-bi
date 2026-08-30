@@ -62,11 +62,13 @@
   text-decoration:none;border:1px solid transparent}
 .owlsheet a:hover{background:var(--bg);border-color:var(--line)}
 .owlsheet a:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
-.owlcur{background:var(--brand);color:#fff;font-weight:700;cursor:default}
-@media (prefers-color-scheme:dark){.owlcur{color:#06201c}}
-.owlsys{margin-top:14px;border:1px solid var(--line2);border-radius:13px;padding:11px}
-.owlsys .st{font-size:13px;font-weight:700;margin:0 0 2px}
-.owlsys .ss{font-size:11px;color:var(--tx3);margin:0 0 8px}
+.owlcur{background:#111;color:#fff;font-weight:700;cursor:default;border-color:#111}
+@media (prefers-color-scheme:dark){
+  .owlcur{background:#e9efeb;color:#0f1512;border-color:#e9efeb}
+}
+/* אותו עיצוב כמו בתפריט של הלוח הראשי: קו הפרדה, שם המערכת, כפתור שחור. */
+.owlsys{margin-top:8px;padding-top:10px;border-top:1px solid var(--line)}
+.owlsys .st{font-size:11px;font-weight:700;color:var(--tx3);letter-spacing:.09em;padding:2px 4px 6px}
 /* ---------- זהות: לוגו דיוואני, וסימן OWL לצידו ---------- */
 .hdr{display:flex;align-items:flex-start;justify-content:space-between;margin:0 0 6px}
 
@@ -107,9 +109,11 @@
   border:1px solid var(--line2);background:var(--surface);color:var(--tx2);border-radius:11px}
 .vaeye svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;
   stroke-linecap:round;stroke-linejoin:round}
-.vaeye:hover{border-color:var(--sys);color:var(--sys)}
-.vaeye:focus-visible{outline:2px solid var(--sys);outline-offset:2px}
-.vaeye.on{background:var(--sys);border-color:var(--sys);color:#fff}
+.vaeye:hover{border-color:#a3271f;color:#a3271f}
+.vaeye:focus-visible{outline:2px solid #a3271f;outline-offset:2px}
+/* אותו אדום כמו כפתור בחירת התצוגה בלוח הראשי (--dfg) */
+.vaeye.on{background:#a3271f;border-color:#a3271f;color:#fff}
+@media (prefers-color-scheme:dark){.vaeye.on{background:#f0968f;border-color:#f0968f;color:#2e1614}}
 .vaovl{position:fixed;inset:0;z-index:140;background:rgba(10,14,17,.5);display:none}
 .vaovl.on{display:block}
 .vasheet{position:absolute;inset-inline:0;bottom:0;background:var(--bg);
@@ -760,7 +764,6 @@ window.owlBuildNav = function(asIdo){
        + '<a href="/agent-report">ניתוח ביצועי נציגים וסניפים</a>';
   }
   h += '<div class="owlsys"><div class="st">מערכת ניטור ואנליטיקת פרסום</div>'
-     + '<div class="ss">גוגל אנליטיקס · תנועה לאתר · פרסום</div>'
      + '<div class="owlcur" aria-current="page">תמהיל מקורות התנועה</div></div>';
   document.getElementById('owllist').innerHTML = h;
 };
