@@ -388,6 +388,12 @@ td.name{white-space:normal;min-width:104px}
         <span>משתמש רגיל<span class="sub">דב, שרון, איתמר, חיים</span></span></button>
       <button type="button" class="varow" data-va="ido" role="radio" aria-checked="false"><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
         <span>עידו אהרון<span class="sub">אינו רואה את המסך הזה כלל</span></span></button>
+      <button type="button" class="varow" data-va="user-video" role="radio" aria-checked="false">
+        <svg class="chk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+        <span>משתמש רגיל — לסרטון<span class="sub">בלי העין, להקלטת מסך</span></span></button>
+      <button type="button" class="varow" data-va="ido-video" role="radio" aria-checked="false">
+        <svg class="chk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+        <span>עידו אהרון — לסרטון<span class="sub">בלי העין, להקלטת מסך</span></span></button>
     </div>
   </div>
 </div>
@@ -813,20 +819,24 @@ owlBuildNav(false);
 (function(){
   if (!(window.OWL_ROLE || {}).owner) return;
   var KEY = 'divani_preview_user';
+  var OK = ['user', 'ido', 'user-video', 'ido-video'];
   function get(){ try { var v = localStorage.getItem(KEY);
-    return (v === 'user' || v === 'ido') ? v : ''; } catch (e) { return ''; } }
+    return OK.indexOf(v) >= 0 ? v : ''; } catch (e) { return ''; } }
   function set(m){ try { if (m) localStorage.setItem(KEY, m); else localStorage.removeItem(KEY); } catch (e) {} }
 
   var ovl = document.getElementById('vaovl'), btn = document.getElementById('vaeye');
 
   function apply(){
-    var m = get();
-    document.body.classList.toggle('as-user', m === 'user');
-    document.body.classList.toggle('as-ido',  m === 'ido');
+    var m = get(), base = m.replace('-video', '');
+    document.body.classList.toggle('as-user', base === 'user');
+    document.body.classList.toggle('as-ido',  base === 'ido');
+    // in the video modes the eye goes too, so a screen recording shows exactly
+    // what they have and nothing more
+    btn.style.display = /-video$/.test(m) ? 'none' : '';
     btn.classList.toggle('on', m !== '');
     // בלי כיתוב. הוא בחר מהרשימה, ולכן הוא יודע מה בחר — העין הדלוקה והשורה
     // המסומנת הן כל הסימון שצריך.
-    if (window.owlBuildNav) window.owlBuildNav(m === 'ido');
+    if (window.owlBuildNav) window.owlBuildNav(base === 'ido');
     paint();
   }
   function paint(){
@@ -852,6 +862,17 @@ owlBuildNav(false);
   document.addEventListener('keydown', function(e){
     if (e.key === 'Escape' && ovl.classList.contains('on')) { e.stopPropagation(); close(); }
   }, true);
+  // The way back out of a video mode cannot be on screen - it would appear in
+  // the recording. A one-second press on the system logo restores his own view.
+  (function(el){
+    if (!el) return;
+    var t = null, clear = function(){ if (t) { clearTimeout(t); t = null; } };
+    el.addEventListener('pointerdown', function(){
+      clear();
+      t = setTimeout(function(){ if (!get()) return; set(''); apply(); }, 1000);
+    });
+    ['pointerup','pointerleave','pointercancel'].forEach(function(k){ el.addEventListener(k, clear); });
+  })(document.querySelector('.owllogo'));
   // חזרה למסך מלשונית אחרת שבה שונתה התצוגה
   window.addEventListener('storage', function(e){ if (e.key === KEY) apply(); });
   window.addEventListener('pageshow', apply);

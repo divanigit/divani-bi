@@ -113,6 +113,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   #viewasbtn svg{width:17px;height:17px}
   #viewasbtn.on{background:var(--bg);border-color:var(--dfg);color:var(--dfg)}
   #viewasbtn.on svg{color:var(--dfg)}
+  .vasub{display:block;font-size:11.5px;font-weight:400;color:var(--tx3);margin-top:1px}
   #vasheet{position:fixed;right:0;left:0;bottom:0;z-index:131;background:var(--bg);border-radius:18px 18px 0 0;border:1px solid var(--line);border-bottom:0;box-shadow:0 -12px 40px rgba(0,0,0,.25);padding:14px 16px calc(18px + env(safe-area-inset-bottom));display:none;max-height:80vh;overflow-y:auto}
   @media (min-width:640px){#vasheet{left:50%;right:auto;transform:translateX(-50%);width:420px;bottom:auto;top:14vh;border-radius:18px;border-bottom:1px solid var(--line)}}
   .varow{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:12px 13px;margin:0 0 8px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--tx);font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;text-align:start}
@@ -840,6 +841,8 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     <button type="button" class="varow" data-va="" role="radio" aria-checked="false"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>התצוגה שלי</span></button>
     <button type="button" class="varow" data-va="user" role="radio" aria-checked="false"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>משתמש רגיל</span></button>
     <button type="button" class="varow" data-va="ido" role="radio" aria-checked="false"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>עידו אהרון</span></button>
+    <button type="button" class="varow" data-va="user-video" role="radio" aria-checked="false"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>משתמש רגיל — לסרטון<span class="vasub">בלי העין, להקלטת מסך</span></span></button>
+    <button type="button" class="varow" data-va="ido-video" role="radio" aria-checked="false"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>עידו אהרון — לסרטון<span class="vasub">בלי העין, להקלטת מסך</span></span></button>
   </div>
 </div>
 <!--/OWNER-->
@@ -858,8 +861,11 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   var PREVIEW_KEY='divani_preview_user';
   // '' = my own view | 'user' = a regular user | 'ido' = the no-profit role.
   // an old on/off value ('1') is read as 'user', so a preview left on yesterday is not silently dropped.
-  function prevMode(){try{var v=localStorage.getItem(PREVIEW_KEY);if(!v)return '';return (v==='user'||v==='ido')?v:'user';}catch(e){return '';}}
-  function prevSet(m){try{if(m==='user'||m==='ido')localStorage.setItem(PREVIEW_KEY,m);else localStorage.removeItem(PREVIEW_KEY);}catch(e){}}
+  var PREV_OK=['user','ido','user-video','ido-video'];
+  function prevMode(){try{var v=localStorage.getItem(PREVIEW_KEY);if(!v)return '';return PREV_OK.indexOf(v)>=0?v:'user';}catch(e){return '';}}
+  // 'לסרטון' מסתיר גם את העין, כדי שהקלטת מסך לא תראה פקד שאינו קיים אצלם
+  function prevVideo(){return /-video$/.test(previewAs);}
+  function prevSet(m){try{if(PREV_OK.indexOf(m)>=0)localStorage.setItem(PREVIEW_KEY,m);else localStorage.removeItem(PREVIEW_KEY);}catch(e){}}
   function prevGet(){return prevMode()!=='';}
   // previewAs starts empty on purpose and is filled in only once we know who is logged in.
   // The key is stored per browser, not per person: it survives logout and the next login.
@@ -872,7 +878,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(META&&!META.owner)prevSet('');       // not the owner: clear a preview left from an earlier login
   }
   // no profit numbers: the עידו role on the server, or the owner previewing that role
-  function noProfit(){return previewAs==='ido'||!!(META&&META.noprofit);}
+  function noProfit(){return previewAs==='ido'||previewAs==='ido-video'||!!(META&&META.noprofit);}
   // #notice מקבל display מפורש מהקוד, ולכן CSS לבדו לא היה עוצר אותו.
   // כל ארבעת המסכים שכותבים אליו עוברים דרך כאן.
   function isOwnerView(){return document.body.classList.contains('isowner');}
@@ -4207,6 +4213,17 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     document.getElementById('vaovl').style.display='none';document.getElementById('vasheet').style.display='none';
     var b=document.getElementById('viewasbtn');
     if(b){b.setAttribute('aria-expanded','false');if(b.focus)try{b.focus();}catch(e){}}}
+  function vaEscape(el){
+    if(!el)return;
+    var t=null, clear=function(){ if(t){clearTimeout(t);t=null;} };
+    var start=function(){ clear(); t=setTimeout(function(){
+      if(!previewAs)return;
+      prevSet(''); vaApply(''); vaPaint();
+      if(typeof toast==='function')toast('חזרת לתצוגה שלך');
+    },1000); };
+    el.addEventListener('pointerdown',start);
+    ['pointerup','pointerleave','pointercancel'].forEach(function(k){el.addEventListener(k,clear);});
+  }
   function vaApply(m){
     previewAs=m; previewUser=(previewAs!==''); applyOwnerUI();
     // המסך "מי עובד בלייקי" סגור לכל מי שאינו דורון, ולכן גם בתצוגה של מישהו אחר
@@ -4220,6 +4237,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   }
   (function(){
     var v=document.getElementById('viewasbtn'); if(v)v.addEventListener('click',vaOpen);
+    // In the video modes the eye is gone on purpose, so the way back cannot be
+    // on screen either - it would show up in the recording. A one-second press
+    // on the system logo restores the owner's own view.
+    vaEscape(document.querySelector('.owllogo'));
     var sh=document.getElementById('vasheet');
     if(sh)sh.addEventListener('click',function(e){
       var r=e.target.closest('[data-va]'); if(r){vaPick(r.getAttribute('data-va'));return;}
@@ -4549,7 +4570,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var ns=document.getElementById('navsys'); if(ns)ns.style.display=noProfit()?'none':'';
     // the eye stays on screen for the owner in every state — it is the only way back to his own view
     var vb=document.getElementById('viewasbtn');
-    if(vb){ vb.style.display=owner?'':'none';
+    if(vb){ vb.style.display=(owner&&!prevVideo())?'':'none';
             vb.classList.toggle('on',prev);
             vb.title='בחירת תצוגה'; }
     // words, not colour: the owner must never have to guess whose view he is looking at
