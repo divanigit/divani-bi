@@ -411,6 +411,15 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   body.isowner .ownernote{display:block}
   span.ownernote{display:none}
   body.isowner span.ownernote{display:inline}
+  /* כלל קבוע (דורון, 30.8.2026): הסבר שיטה — איך מספר חושב, למה נבחרה
+     ברירת מחדל, מה עוד פתוח — הוא דיון בינו לביני ואינו מוצג לאף משתמש
+     אחר. ההסתרה היא ברירת המחדל של כל מחלקות ההערות, כדי שהסבר חדש
+     יירש אותה בלי שמישהו יצטרך לזכור. מה שכן נחוץ לכולם מסומן ב-forall:
+     הוראות הפעלה, ואזהרה שהרשימה קוצצה. */
+  .hrnote,.pcnote,.cbnote,.srnote{display:none}
+  body.isowner .hrnote,body.isowner .pcnote,
+  body.isowner .cbnote,body.isowner .srnote{display:block}
+  .hrnote.forall,.pcnote.forall,.cbnote.forall,.srnote.forall{display:block}
   .prodq{font-family:inherit;font-size:14px;padding:9px 13px;min-height:40px;border-radius:999px;
     border:1px solid var(--line2);background:var(--bg);color:var(--tx);flex:1 1 210px;max-width:340px}
   .prodq:focus{outline:2px solid var(--bd);outline-offset:1px}
@@ -837,6 +846,16 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   }
   // no profit numbers: the עידו role on the server, or the owner previewing that role
   function noProfit(){return previewAs==='ido'||!!(META&&META.noprofit);}
+  // #notice מקבל display מפורש מהקוד, ולכן CSS לבדו לא היה עוצר אותו.
+  // כל ארבעת המסכים שכותבים אליו עוברים דרך כאן.
+  function isOwnerView(){return document.body.classList.contains('isowner');}
+  function noticeSet(nt,msgs,html){
+    if(!nt)return;
+    if(!isOwnerView()||!msgs.length){nt.style.display='none';nt.textContent='';return;}
+    nt.style.display='block';
+    if(html)nt.innerHTML=msgs.map(function(x){return '<div>'+esc(x)+'</div>';}).join('');
+    else nt.textContent=msgs.join(' ');
+  }
   // what a screen that is closed to this user shows — one wording everywhere
   function devBoxHTML(){return '<div class="cbdev"><b>בפיתוח, יעלה בקרוב</b></div>';}
   var dimPath={grp:null,fam:null,model:null}, dimSeg=null, dimSort=null, insParetoN=25;
@@ -1736,6 +1755,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   }
 
   function renderInsStage(){
+    // דורון, 30.8.2026: הקטגוריה נשארת אצל עידו, התוכן לא. "בפיתוח" ולא
+    // הסתרה — הוא ביקש במפורש שיראה שיש כאן משהו, ולא שייעלם לו פריט מהתפריט.
+    if(noProfit()){stage.innerHTML=devBoxHTML();return;}
     var a=cache.agg||{};
     if(cache.mode==='cmp'){renderCmp(a,cache.agg2||{});return;}
     if(cache.panel==='pairdrill'&&insDrill){renderPairDrill(a);return;}
@@ -1959,7 +1981,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       var Rq=cache.mode==='dim'?(cache.agg||{}):{};
       if(Rq.qcov!=null&&Rq.qcov<100)msgs.push('נתוני כמות קיימים כרגע עבור '+Rq.qcov+' אחוז מהשורות בתקופה — המילוי ההיסטורי בעיצומו.');
     }
-    if(msgs.length){nt.style.display='block';nt.textContent=msgs.join(' ');}else{nt.style.display='none';}
+    noticeSet(nt,msgs);
     var hintEl=document.getElementById('hint');
     if(cache.mode==='lines'){hintEl.textContent='הקש על שורה כדי לצלול · גלול הצידה לעוד עמודות';hintEl.style.display='block';}
     else if(cache.mode==='cashlines'){hintEl.textContent='הקש על סניף לפירוט קבלות · סה"כ מזומן = מזומן + העברות + שיקים לא דחויים';hintEl.style.display='block';}
@@ -1987,7 +2009,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(insPanel==='alerts')msgs.push('השוואת השבועיים האחרונים מול ממוצע שנים־עשר השבועות שקדמו; מוצגות רק חריגות מהותיות.');
     if(insPanel==='selfcheck')msgs.push('שני הסכומים המרכזיים מחושבים בשני מסלולים בלתי תלויים ומושווים עד האגורה; שאר הבדיקות הן ספי כיסוי וטריות מול יעד.');
     if((insPanel==='newret'||insPanel==='basket')&&insDim[insPanel]==='sector'&&state.from<'2025-01-01')msgs.push('תיוג מגזר מלא רק מלקוחות שנוצרו משנת 2025.');
-    if(msgs.length){nt.style.display='block';nt.textContent=msgs.join(' ');}else{nt.style.display='none';}
+    noticeSet(nt,msgs);
     document.getElementById('hint').style.display='none';
     var fixed=(insPanel==='trend'||insPanel==='alerts'||insPanel==='selfcheck'||insPanel==='contrib');
     var sb2=document.getElementById('selbtn');
@@ -2093,7 +2115,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(cxOrd||cxSel){nt.style.display='none';return;}
     msgs.push('ביטולים נרשמים גם חודשים אחרי מועד ההזמנה, ולכן ככל שהתקופה קרובה יותר האחוז המוצג נמוך מהאחוז הסופי.');
     if(cxScope==='branch'&&state.from<'2024-03-01')msgs.push('שיוך הזמנות לסניפים קיים בפריוריטי רק מתחילת 2024 (במלואו מסוף פברואר) — הזמנות מוקדמות יותר מופיעות תחת "ללא שיוך סניף".');
-    nt.style.display='block';nt.textContent=msgs.join(' ');
+    noticeSet(nt,msgs);
   }
   function renderCancels(agg){
     agg=agg||{};
@@ -2285,10 +2307,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       if(mt.money_down_sales!=null)msgs.push('מסך "מוריד כסף" באותה תקופה: '+ils(mt.money_down_sales)+' נציגי מכירות · '+ils(mt.money_down_total||0)+' הכול.');
       if(mt.over100_orders)msgs.push('ב־'+nf(mt.over100_orders)+' הזמנות הכסף שירד גדול משווי המסמך.');
     }
-    if(msgs.length){
-      nt.style.display='block';
-      nt.innerHTML=msgs.map(function(s){return '<div>'+esc(s)+'</div>';}).join('');
-    }else{nt.style.display='none';}
+    noticeSet(nt,msgs,true);
   }
   // הטור חייב להסתכם לכרטיס שמעליו. מה שלא נכנס לאף שורה מקבל שורה משלו במקום להיעלם.
   function cpFoot(T,sc,so,sv,sn){
@@ -3756,13 +3775,13 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         +'<td>'+(r.unit==null?'—':ils(r.unit))+'</td>'
         +'<td>'+nf(r.n||0)+'</td><td>'+nf(r.c||0)+'</td></tr>';
     }).join('');
-    var rest=a.rest?('<div class="pcnote">מוצגים '+nf(a.shown||0)+' מתוך '+nf(a.matched||0)
+    var rest=a.rest?('<div class="pcnote forall">מוצגים '+nf(a.shown||0)+' מתוך '+nf(a.matched||0)
       +'. השאר — '+nf(a.rest.cnt)+' פריטים, '+ils(a.rest.s||0)+'. צמצם עם חיפוש או סינון כדי לראות אותם.</div>'):'';
     var z=(a.total_q0||0)
       ? '<div class="pcnote ownernote">"מהן ללא חיוב" = יחידות בשורות במחיר אפס — בדים, תוספות ופריטי חבילה '
         + 'שמחירם מגולם במוצר הראשי. הן נספרות בכמות, ולכן הכמות כאן גדולה ממספר המוצרים שנמכרו בתשלום. '
         + 'מחיר ליחידה מחושב על היחידות שחויבו בלבד.</div>' : '';
-    var hint=(part?'':'<div class="pcnote">לחיצה על שורה פותחת את המק"טים של אותו דגם.</div>')+z;
+    var hint=(part?'':'<div class="pcnote forall">לחיצה על שורה פותחת את המק"טים של אותו דגם.</div>')+z;
     stage.innerHTML=crumb+'<div class="tw"><table><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>'+rest+hint;
   }
 
@@ -3918,7 +3937,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     for(var i=0;i<bs.length;i++){var on=bs[i].getAttribute('data-v')===v;bs[i].classList.toggle('on',on);bs[i].setAttribute('aria-pressed',on?'true':'false');}
     document.getElementById('dimbar').style.display=(v==='dim')?'flex':'none';
     document.getElementById('phbar').style.display=(v==='branches')?'flex':'none';
-    document.getElementById('insbar').style.display=(v==='ins')?'flex':'none';
+    document.getElementById('insbar').style.display=(v==='ins'&&!noProfit())?'flex':'none';
     document.getElementById('prodbar').style.display=(v==='products')?'flex':'none';
     document.getElementById('hoursbar').style.display=(v==='hours')?'flex':'none';
     if(v!=='ins'){var sb3=document.getElementById('selbtn');sb3.style.opacity='';sb3.style.pointerEvents='';sb3.title='';}

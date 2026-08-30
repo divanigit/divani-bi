@@ -284,7 +284,11 @@ _NP_STRIP = {
     "/api/pending": None,
     "/api/refresh": None,
 }
-_NP_BLOCK = {"/api/moneydown", "/api/flags", "/api/flag", "/api/ask"}
+# התובנות מוצגות לעידו כ"בפיתוח" (דורון, 30.8.2026), ולכן גם הנתונים
+# עצמם לא נמשכים: מסך שכתוב עליו "בפיתוח" ובכל זאת מוריד נתונים הוא
+# מסך שמשקר על עצמו.
+_NP_BLOCK = {"/api/moneydown", "/api/flags", "/api/flag", "/api/ask",
+             "/api/pareto", "/api/panel", "/api/insights"}
 # נתיבים שלגבי המשתמש ללא רווח אינם קיימים כלל. dev:true היה מספר לו
 # שיש מסך והוא ייפתח בהמשך; 404 לא מספר כלום.
 _NP_HIDE = {"/api/pricecontrol"}
