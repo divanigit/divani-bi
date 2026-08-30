@@ -1580,12 +1580,21 @@ td.ip{font-variant-numeric:tabular-nums;color:var(--ink2);direction:ltr;text-ali
     return HTMLResponse(html)
 
 
+# שמות מסך שמזכירים רווח. אינם מספר ואינם אחוז, אבל הכלל הוא ללא יוצא מן
+# הכלל, והסתרה ב-CSS אינה מניעה.
+_NOPROFIT_BLOCK = re.compile(r"<!--NOPROFIT-->.*?<!--/NOPROFIT-->", re.S)
+
+
 @app.get("/")
 def index(request: Request):
     if not _logged_in(request):
         return RedirectResponse("/login", status_code=303)
-    return FileResponse(INDEX, media_type="text/html; charset=utf-8",
-                        headers={"Cache-Control": "no-cache, must-revalidate"})
+    hdr = {"Cache-Control": "no-cache, must-revalidate"}
+    if not _is_noprofit(request):
+        return FileResponse(INDEX, media_type="text/html; charset=utf-8", headers=hdr)
+    with open(INDEX, encoding="utf-8") as f:
+        html = _NOPROFIT_BLOCK.sub("", f.read())
+    return HTMLResponse(html, headers=hdr)
 
 
 def _parse_date(s: str):
@@ -1746,6 +1755,11 @@ def api_products(request: Request, d_from: str = "", d_to: str = "",
     if level not in ("model", "part"):
         level = "model"
     if sort not in ("s", "q", "n", "pm"):
+        sort = "s"
+    # "pm" הוא מיון לפי אחוז רווח. הסינון מוציא את המספר מהתשובה, אבל הסדר
+    # עצמו עדיין מדרג לפי רווח — ודירוג הוא רווח, גם בלי להדפיס אותו.
+    # החסימה כאן ולא רק בהסתרת השבב: כתובת שמורה עם sort=pm עוקפת כל הסתרה.
+    if sort == "pm" and _is_noprofit(request):
         sort = "s"
     if max(len(q), len(fam), len(model)) > 120:
         return JSONResponse({"error": "bad key"}, status_code=400)
