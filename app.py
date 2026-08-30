@@ -285,6 +285,9 @@ _NP_STRIP = {
     "/api/refresh": None,
 }
 _NP_BLOCK = {"/api/moneydown", "/api/flags", "/api/flag", "/api/ask"}
+# נתיבים שלגבי המשתמש ללא רווח אינם קיימים כלל. dev:true היה מספר לו
+# שיש מסך והוא ייפתח בהמשך; 404 לא מספר כלום.
+_NP_HIDE = {"/api/pricecontrol"}
 
 # key names that can only mean profit — a second net under the per-endpoint strippers.
 # "p" is deliberately absent: in the agent report it is a mix percentage, not profit.
@@ -309,6 +312,8 @@ async def _np_gate(request: Request, call_next):
     path = request.url.path
     if not (path.startswith("/api/") and _is_noprofit(request)):
         return await call_next(request)        # everybody else: nothing changes
+    if path in _NP_HIDE:
+        return JSONResponse({"detail": "Not Found"}, status_code=404)
     if path in _NP_BLOCK or path not in _NP_STRIP:
         return JSONResponse({"dev": True})
     resp = await call_next(request)
@@ -2147,6 +2152,11 @@ def api_pricecontrol(request: Request):
     לאחרים כ"בפיתוח" ולא בנתונים חלקיים."""
     if not _logged_in(request):
         return JSONResponse({"error": "auth"}, status_code=401)
+    # דורון, 30.8.2026: "עידו אהרון לא צריך לראות. תנטרל את כל המסך הזה ממנו".
+    # 404 ולא "בפיתוח": "בפיתוח" מסגיר שהמסך קיים ויעלה, וזו בדיוק הידיעה
+    # שאין להעביר. אותה הכרעה כמו במסך הלייקי.
+    if _is_noprofit(request):
+        raise HTTPException(status_code=404)
     if not _is_admin(request):
         return JSONResponse({"dev": True})
     agg = sb_rpc("bi_price_control", {"p_limit": 40})
