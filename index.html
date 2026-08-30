@@ -863,7 +863,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   // an old on/off value ('1') is read as 'user', so a preview left on yesterday is not silently dropped.
   var PREV_OK=['user','ido','user-video','ido-video'];
   function prevMode(){try{var v=localStorage.getItem(PREVIEW_KEY);if(!v)return '';return PREV_OK.indexOf(v)>=0?v:'user';}catch(e){return '';}}
-  // 'לסרטון' מסתיר גם את העין, כדי שהקלטת מסך לא תראה פקד שאינו קיים אצלם
+  // the '-video' variants also drop the picker itself
   function prevVideo(){return /-video$/.test(previewAs);}
   function prevSet(m){try{if(PREV_OK.indexOf(m)>=0)localStorage.setItem(PREVIEW_KEY,m);else localStorage.removeItem(PREVIEW_KEY);}catch(e){}}
   function prevGet(){return prevMode()!=='';}
