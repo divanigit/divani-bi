@@ -107,10 +107,12 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .selbtn svg{width:16px;height:16px;color:var(--bd);flex:none}
   .selbtn .car{width:12px;height:12px;color:var(--tx3)}
   .rfr{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:8px 12px;border:1px solid var(--line2);border-radius:12px;background:var(--bg);color:var(--tx2);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer}
-  #viewasbtn.on{background:var(--dfg);border-color:var(--dfg);color:#fff;font-weight:700}
-  #viewasbtn.on svg{color:#fff}
-  #viewaslbl{display:none;align-items:center;min-height:44px;padding:8px 12px;border:1px solid var(--dfg);border-radius:12px;background:var(--bg);color:var(--dfg);font-size:12.5px;font-weight:700;white-space:nowrap}
-  #viewaslbl.on{display:inline-flex}
+  /* חצי גודל, בלי ריבוע צבוע. בבחירה רק האייקון עצמו אדום — הכפתור
+     נשאר כפתור ולא כתם. */
+  #viewasbtn{min-height:0;padding:5px 6px;border-radius:9px}
+  #viewasbtn svg{width:17px;height:17px}
+  #viewasbtn.on{background:var(--bg);border-color:var(--dfg);color:var(--dfg)}
+  #viewasbtn.on svg{color:var(--dfg)}
   #vasheet{position:fixed;right:0;left:0;bottom:0;z-index:131;background:var(--bg);border-radius:18px 18px 0 0;border:1px solid var(--line);border-bottom:0;box-shadow:0 -12px 40px rgba(0,0,0,.25);padding:14px 16px calc(18px + env(safe-area-inset-bottom));display:none;max-height:80vh;overflow-y:auto}
   @media (min-width:640px){#vasheet{left:50%;right:auto;transform:translateX(-50%);width:420px;bottom:auto;top:14vh;border-radius:18px;border-bottom:1px solid var(--line)}}
   .varow{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:12px 13px;margin:0 0 8px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--tx);font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;text-align:start}
@@ -746,7 +748,6 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     <button type="button" class="rfr" id="viewasbtn" title="בחירת תצוגה" aria-label="בחירת תצוגה" aria-haspopup="dialog" aria-expanded="false" style="display:none;padding:8px 11px">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
     </button>
-    <span id="viewaslbl"></span>
     <button type="button" class="rfr" id="rfr" title="רענון נתונים מפריוריטי עכשיו">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
       רענן עכשיו
@@ -4542,9 +4543,8 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
             vb.classList.toggle('on',prev);
             vb.title='בחירת תצוגה'; }
     // words, not colour: the owner must never have to guess whose view he is looking at
-    var vl=document.getElementById('viewaslbl');
-    if(vl){ vl.classList.toggle('on',prev);
-            vl.textContent=prev?('רואה כמו: '+(PREV_NAMES[previewAs]||'')):''; }
+    // בלי כיתוב. הוא בחר מהרשימה, והעין הדלוקה היא כל הסימון שצריך;
+    // אם ירצה לדעת איזו תצוגה — הוא פותח את הרשימה ורואה מה מסומן.
     // stays hidden until we actually know who this is. It used to ship visible and be
     // un-hidden here even when META was still null, so during a cold start it was tappable.
     var md=document.getElementById('mdownbtn'); if(md)md.style.display=(META&&!noProfit())?'':'none';
