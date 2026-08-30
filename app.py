@@ -1441,6 +1441,12 @@ def agent_report(request: Request):
     return HTMLResponse(head + body)
 
 
+# הגושים מסומנים בקובץ עצמו, כדי שאפשר יהיה להוסיף עוד הסבר לבעלים
+# בלי לגעת בשרת שוב.
+_OWNER_BLOCK = re.compile(r"<!--OWNER-->.*?<!--/OWNER-->"
+                          r"|/\*OWNER\*/.*?/\*ENDOWNER\*/", re.S)
+
+
 @app.get("/traffic")
 def traffic(request: Request):
     """מערכת ניטור ואנליטיקת פרסום — תנועה לאתר מגוגל אנליטיקס.
@@ -1457,7 +1463,15 @@ def traffic(request: Request):
         return RedirectResponse("/", status_code=303)
     try:
         with open(os.path.join(HERE, "traffic_dashboard.html"), encoding="utf-8") as f:
-            return HTMLResponse(f.read())
+            html = f.read()
+        # ההתדיינות עם דורון — למה ברירת מחדל היא ברירת מחדל, מה עוד פתוח,
+        # ואזהרות הניסוח — נמחקת מהתשובה עצמה ולא מוסתרת ב-CSS. מחלקה מוסתרת
+        # היא הסתרה ולא מניעה: כל אחד פותח כלי מפתחים ורואה אותה.
+        # העובדה על הנתון (0.77 אחוז בלי מדיום) נשארת לכולם — בלעדיה קוראים
+        # את הגרף לא נכון.
+        if not _is_admin(request):
+            html = _OWNER_BLOCK.sub("", html)
+        return HTMLResponse(html)
     except Exception:
         return HTMLResponse("<div dir='rtl' style='font-family:sans-serif;padding:40px'>"
                             "לוח התנועה לא נמצא.</div>", status_code=404)
