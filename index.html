@@ -3020,8 +3020,15 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   function hhmm(h){return (h<10?'0':'')+h+':00';}
   function renderHoursMeta(){
     var a=cache.agg||{}, cv=a.coverage||{}, hs=a.hours||[];
-    var top=hs.slice().sort(function(x,y){return y.per_day-x.per_day;})[0];
-    var low=hs.filter(function(x){return x.per_day>=1;}).sort(function(x,y){return x.per_day-y.per_day;})[0];
+    // הכרטיסים חייבים לעבור את אותו סינון כמו הגרפים. בלעדיו הופיעה כאן
+    // "השעה החלשה" 08:00 בסניף שנפתח ב-09:00 — המסך סתר את עצמו.
+    var ctx0={bc:hrBranch?[hrBranch]:Object.keys(HRB).filter(function(b){return hrWin(b,0);})};
+    var opened=hs.filter(function(x){
+      return x.hr==null||x.dw==null?hrOpenAnyHour(ctx0,x.hr):hrOpenAny(ctx0,x.dw,x.hr);});
+    if(!opened.length)opened=hs;
+    var top=opened.slice().sort(function(x,y){return y.per_day-x.per_day;})[0];
+    var low=opened.filter(function(x){return x.per_day>=1;})
+                  .sort(function(x,y){return x.per_day-y.per_day;})[0];
     document.getElementById('kpis').innerHTML=
       '<div class="kpi"><div class="l">כניסות</div><div class="v">'+nf(a.visitors||0)+'</div></div>'
       +'<div class="kpi"><div class="l">ימים שנמדדו</div><div class="v">'+nf(a.days||0)+'</div></div>'
@@ -3046,7 +3053,11 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     '107':{wd:[9,22],   fr:[9,14],   sa:[20.67,23]},  // בית שמש
     '105':{wd:[9,21],   fr:[9,15],   sa:[20.67,23]}   // חיפה
   };
+  // השעות מגיעות מ-/api/meta, שנקרא אותן מהטבלה שמתעדכנת כל לילה מהאתר.
+  // הטבלה המודפסת שלמעלה נשארת רק כרשת ביטחון לרגע שבו התשובה טרם הגיעה.
   function hrWin(b,dw){
+    var live=(META&&META.hours)?META.hours[b]:null;
+    if(live&&live[dw])return live[dw];
     var o=HROPEN[b]; if(!o)return null;
     return dw===6?o.sa:(dw===5?o.fr:o.wd);
   }
@@ -3057,6 +3068,12 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   }
   function hrOpenAny(ctx,dw,hr){
     for(var i=0;i<ctx.bc.length;i++)if(hrOpen(ctx.bc[i],dw,hr))return true;
+    return false;
+  }
+  // שורות שאין בהן יום בשבוע — סיכום שעה על פני כל הימים. פתוחה אם היא
+  // פתוחה ולו ביום אחד של יום חול; מוצ"ש לבדו אינו הופך שעה ל"פתוחה".
+  function hrOpenAnyHour(ctx,hr){
+    for(var dw=0;dw<=5;dw++)if(hrOpenAny(ctx,dw,hr))return true;
     return false;
   }
 
@@ -3750,7 +3767,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     h+='<div class="hrnote"><b>המדד הוא כניסות לסניף, לא מכירות.</b> '
       +'נמדדו '+nf(cv.days||0)+' ימים, מ-'+heShort(cv.first||'')+' עד '+heShort(cv.last||'')
       +(minD<99?(' — כל יום בשבוע מיוצג על ידי '+nf(minD)+' ימים לפחות.'):'')
-      +'<br>שעות הפתיחה לפי אתר דיוואני (28.08.2026). שעה מחוץ להן אינה מוצגת, '
+      +'<br>שעות הפתיחה נקראות מאתר דיוואני כל לילה. שעה מחוץ להן אינה מוצגת, '
       +'ו"השעה החלשה" נמדדת על שעות יום חול בלבד — 22:00 פתוחה במוצ"ש בלבד.</div>';
     h+='<div class="hrnote ownernote">פריוריטי אינה רושמת שעה על הזמנה — נבדקו כל 162 '
       +'שדות ההזמנה על חמש שנים שונות. ביקשנו לפתוח את הישויות שמחזיקות זאת.'

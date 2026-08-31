@@ -1661,8 +1661,14 @@ def api_meta(request: Request):
     mx = mm.get("max")
     if mx and mx < today:
         mx = today
+    # שעות הפתיחה החיות, כדי שמסך השעות לא יחזיק טבלה מודפסת שמתיישנת.
+    # הן נקראות מהאתר כל לילה על ידי ingest_branch_hours.py.
+    if not _state.get("hours") or time.time() - _state.get("hours_at", 0) > 3600:
+        _state["hours"] = sb_rpc("bi_hours_now", {}) or {}
+        _state["hours_at"] = time.time()
     return JSONResponse({"min": mm.get("min"), "max": mx,
                          "today": today,
+                         "hours": _state["hours"],
                          "last_sync": _state["last_sync"],
                          "last_rc": _state["last_rc"],
                          "refresh_minutes": REFRESH_MINUTES,
