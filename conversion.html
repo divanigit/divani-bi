@@ -69,15 +69,15 @@ body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--font);
 .owlx svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
 .owlg{font-size:10.5px;font-weight:700;letter-spacing:.09em;color:var(--tx3);
   margin:12px 4px 5px;text-transform:uppercase}
-.owlsheet a,.owlcur{background:#111;color:#fff;font-weight:700;border-color:#111}
-.owlcur:hover{background:#000;border-color:#000}
-@media (prefers-color-scheme:dark){
-  .owlcur,.owlcur:hover{background:#e9efeb;color:#0f1512;border-color:#e9efeb}
-}
+.owlsheet a,.owlcur{display:flex;align-items:center;gap:9px;min-height:44px;
+  padding:9px 11px;border-radius:11px;text-decoration:none;color:var(--tx);
+  font-size:15px;border:1px solid transparent}
 .owlsheet a:hover{background:var(--surface);border-color:var(--line)}
-.owlcur{background:#111;color:#fff;font-weight:700;cursor:default;border-color:#111}
-@media (prefers-color-scheme:dark){.owlcur{background:#e9efeb;color:#0f1512;border-color:#e9efeb}}
-
+/* שחור = אני נמצא כאן. המשמעות היחידה של השחור בתפריט. */
+.owlcur{background:#111;color:#fff;font-weight:700;border-color:#111;cursor:default}
+@media (prefers-color-scheme:dark){
+  .owlcur{background:#e9efeb;color:#0f1512;border-color:#e9efeb}
+}
 /* ---------- כותרת המסך ---------- */
 h1{font-size:clamp(23px,5.4vw,31px);font-weight:800;margin:4px 0 2px;letter-spacing:-.01em}
 .sub{font-size:13.5px;color:var(--tx2);margin:0 0 14px}
@@ -109,6 +109,12 @@ h1{font-size:clamp(23px,5.4vw,31px);font-weight:800;margin:4px 0 2px;letter-spac
 .kpi.hero .v{color:var(--brand)}
 
 /* ---------- הפירוק ---------- */
+.cmphead{display:flex;align-items:center;justify-content:space-between;
+  gap:10px;flex-wrap:wrap;margin:0 0 8px}
+.cmphead .seg button{min-height:40px;padding:0 13px;font-size:13.5px}
+.cmpdates{font-size:14px;color:var(--tx2);margin:0 0 12px;
+  font-variant-numeric:tabular-nums}
+.cmpdates b{color:var(--tx);font-weight:700}
 .split{display:flex;gap:10px;flex-wrap:wrap}
 .half{flex:1 1 210px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 13px}
 .half .t{font-size:12.5px;color:var(--tx3);margin:0 0 4px}
@@ -203,9 +209,15 @@ tfoot td{border-top:2px solid var(--line2);font-weight:800;background:var(--bg)}
   <div class="kpis" id="kpis"></div>
 
   <section class="card" id="whyCard">
-    <div class="eyebrow">מה השתנה מהתקופה הקודמת</div>
+    <div class="cmphead">
+      <div class="eyebrow" style="margin:0">השוואה</div>
+      <div class="seg" id="segCmp" role="group" aria-label="מול איזו תקופה">
+        <button type="button" data-c="prev" class="on">התקופה שלפני</button>
+        <button type="button" data-c="year">אשתקד</button>
+      </div>
+    </div>
+    <p class="cmpdates" id="cmpDates"></p>
     <div class="split" id="why"></div>
-    <p class="note" id="whyNote"></p>
   </section>
 
   <section class="card">
@@ -305,11 +317,16 @@ var DOW = ['ראשון','שני','שלישי','רביעי','חמישי','שיש�
 var BR = { '101':'נתניה', '102':'ראשל״צ', '105':'חיפה', '106':'ירושלים', '107':'בית שמש' };
 var COL = { '102':'#2563eb', '101':'#0d9668', '107':'#ea580c', '106':'#7c3aed', '105':'#0891b2' };
 
-var state = { view:'branch', from:null, to:null, preset:'m1', off:{}, grain:'w' };
+var state = { view:'branch', from:null, to:null, preset:'m1', off:{}, grain:'w', cmp:'prev' };
 var DATA = null, PREV = null;
 
 function iso(d){ return d.toISOString().slice(0,10); }
 function shift(days){ var d = new Date(); d.setDate(d.getDate() + days); return d; }
+function lastYear(d){
+  var p = String(d).split('-'), y = (+p[0] - 1);
+  if (p[1] === '02' && p[2] === '29') return y + '-02-28';
+  return y + '-' + p[1] + '-' + p[2];
+}
 function heDate(s){ var p = String(s).slice(0,10).split('-'); return p[2] + '.' + p[1]; }
 
 var PRESETS = [
@@ -344,16 +361,25 @@ var REQ = 0;
 function load(){
   var my = ++REQ;
   $('sub').textContent = 'טוען…';
-  var span = (new Date(state.to) - new Date(state.from)) / 86400000 + 1;
-  var pf = iso(new Date(new Date(state.from) - span * 86400000));
-  var pt = iso(new Date(new Date(state.from) - 86400000));
+  /* "התקופה שלפני" = אותו מספר ימים, מיד לפני. "אשתקד" = אותם תאריכים
+     בדיוק, שנה אחורה. 29 בפברואר בשנה מעוברת יורד ל-28. */
+  var pf, pt;
+  if (state.cmp === 'year') {
+    pf = lastYear(state.from); pt = lastYear(state.to);
+  } else {
+    var span = (new Date(state.to) - new Date(state.from)) / 86400000 + 1;
+    pf = iso(new Date(new Date(state.from) - span * 86400000));
+    pt = iso(new Date(new Date(state.from) - 86400000));
+  }
   var want = { from: state.from, to: state.to };
   Promise.all([
     fetch('/api/conversion?d_from=' + want.from + '&d_to=' + want.to, {cache:'no-store'}).then(ok),
     fetch('/api/conversion?d_from=' + pf + '&d_to=' + pt, {cache:'no-store'}).then(ok)
   ]).then(function(r){
     if (my !== REQ) return;                       // תשובה של בקשה שכבר לא רלוונטית
-    DATA = r[0]; PREV = r[1]; DATA.__from = want.from; DATA.__to = want.to;
+    DATA = r[0]; PREV = r[1];
+    DATA.__from = want.from; DATA.__to = want.to;
+    DATA.__pf = pf; DATA.__pt = pt;
     render();
   }).catch(function(e){
     if (my !== REQ || e === 0) return;
@@ -403,17 +429,19 @@ function render(){
 
   /* --- הפירוק: תנועה מול סגירה --- */
   var dv = pct(now.parties, was.parties), dc = pct(now.conv, was.conv), db = pct(now.buyers, was.buyers);
-  if (was.days === 0) {
-    $('whyCard').style.display = 'none';
-  } else {
-    $('whyCard').style.display = '';
-    $('why').innerHTML =
-      half('נכנסו', dv, NF.format(was.parties) + ' ← ' + NF.format(now.parties) + ' קבוצות') +
-      half('קנו', db, NF.format(was.buyers) + ' ← ' + NF.format(now.buyers) + ' לקוחות') +
-      half('יחס המרה', dc, (was.conv||0).toFixed(1) + '% ← ' + (now.conv||0).toFixed(1) + '%');
-    $('whyNote').textContent = 'ההשוואה היא מול ' + was.days
-      + ' ימי פתיחה בתקופה הקודמת, באותו אורך.';
-  }
+  $('whyCard').style.display = '';
+  /* כשהשנה שונה היא חייבת להיכתב, אחרת "אשתקד" נקרא כאילו משווים תקופה
+     לעצמה — אותם יום וחודש בדיוק. */
+  var yNow = String(DATA.__from).slice(0, 4), yWas = String(DATA.__pf).slice(0, 4);
+  var withY = function(d){ return heDate(d) + (yNow === yWas ? '' : '.' + String(d).slice(2, 4)); };
+  $('cmpDates').innerHTML = was.days === 0
+    ? 'אין נתונים בתקופה שנבחרה להשוואה (' + withY(DATA.__pf) + ' – ' + withY(DATA.__pt) + ').'
+    : '<b>' + withY(DATA.__from) + ' – ' + withY(DATA.__to) + '</b> מול <b>'
+      + withY(DATA.__pf) + ' – ' + withY(DATA.__pt) + '</b>';
+  $('why').innerHTML = was.days === 0 ? '' :
+    half('נכנסו', dv, NF.format(was.parties) + ' ← ' + NF.format(now.parties) + ' קבוצות') +
+    half('קנו', db, NF.format(was.buyers) + ' ← ' + NF.format(now.buyers) + ' לקוחות') +
+    half('יחס המרה', dc, (was.conv||0).toFixed(1) + '% ← ' + (now.conv||0).toFixed(1) + '%');
 
   state.view === 'dow' ? tableDow(days) : tableBranch(days, (PREV && PREV.days) || []);
   drawChart(days);
@@ -782,6 +810,12 @@ function drawFlags(days){
 }
 
 /* ---------- הפעלה ---------- */
+$('segCmp').querySelectorAll('[data-c]').forEach(function(b){
+  b.addEventListener('click', function(){
+    $('segCmp').querySelectorAll('[data-c]').forEach(function(x){ x.classList.remove('on'); });
+    b.classList.add('on'); state.cmp = b.getAttribute('data-c'); load();
+  });
+});
 $('segView').querySelectorAll('[data-v]').forEach(function(b){
   b.addEventListener('click', function(){
     $('segView').querySelectorAll('[data-v]').forEach(function(x){ x.classList.remove('on'); });

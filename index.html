@@ -75,15 +75,22 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .seg .rchk{width:18px;height:18px;color:var(--bd);opacity:0;margin-inline-start:auto;transition:opacity .16s}
   .seg .rext{width:17px;height:17px;color:var(--tx3);margin-inline-start:auto}
   .seg button:hover{background:var(--surface)}
-  .seg button.on{background:var(--accentSoft);color:var(--okfg);font-weight:700}
-  .seg button.on .rico{color:var(--bd)}
-  .seg button.on .rchk{opacity:1}
-  .seg button.on::before{content:"";position:absolute;right:0;top:50%;transform:translateY(-50%);width:3.5px;height:24px;border-radius:0 4px 4px 0;background:var(--bd)}
+  /* שחור = אני נמצא כאן. אותו סימון בדיוק בשלושת התפריטים, לפי
+     הכלל שדורון קבע. הפס הצבעוני בצד ירד: הוא היה סימון שני לאותו
+     דבר, ובמקרה גם התבנית שהבדיקה העיצובית מסמנת כתבנית של מכונה. */
+  .seg button.on{background:#111;color:#fff;font-weight:700}
+  .seg button.on .rico{color:#fff}
+  .seg button.on .rchk{opacity:1;color:#fff}
+  @media (prefers-color-scheme:dark){
+    .seg button.on{background:#e9efeb;color:#0f1512}
+    .seg button.on .rico,.seg button.on .rchk{color:#0f1512}
+  }
   .navgroup.sep{margin-top:8px;padding-top:14px;border-top:1px solid var(--line)}
   .navgroup{display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;color:var(--tx3);letter-spacing:.05em;padding:12px 14px 4px}
   .navgroup .gico{width:15px;height:15px;flex:none}
   .navdiv{height:1px;background:var(--line);margin:8px 14px}
-  .navext{color:var(--bd)}
+  /* קישור למסך אחר נראה ככל פריט; החץ שעליו הוא הסימון. שום צבע
+     בתפריט אינו מתחרה בשחור, שמשמעותו היחידה היא המיקום הנוכחי. */
   /* The advertising category in the menu: a rule above it, no box, black button. */
   /* קטגוריית ניטור הפרסום. אין רקע ואין מסגרת — קו הפרדה מעליה, שם המערכת,
      וכפתור שחור עם כיתוב לבן. אותו עיצוב בדיוק בתפריט של לוח התנועה. */
@@ -91,14 +98,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .navsys .syshead{display:flex;align-items:center;gap:8px;padding:2px 14px 6px}
   .navsys .sysmark{width:19px;height:19px;flex:none;color:var(--tx2)}
   .navsys .systitle{font-size:11px;font-weight:700;color:var(--tx3);letter-spacing:.09em}
-  .navsys button{min-height:44px;background:#111;color:#fff;border-radius:11px;margin:0 4px}
-  .navsys button .rico{color:#fff}
-  .navsys button:hover{background:#000}
-  @media (prefers-color-scheme:dark){
-    .navsys button{background:#e9efeb;color:#0f1512}
-    .navsys button .rico{color:#0f1512}
-    .navsys button:hover{background:#fff}
-  }
+  /* קישור למסך אחר אינו "אני נמצא כאן", ולכן הוא נראה ככל פריט בתפריט.
+     השחור שמור לפריט הנוכחי בלבד. */
+  .navsys button{min-height:44px;margin:0 4px}
   body.navlock{overflow:hidden}
   .notice{font-size:12px;color:var(--wfg);margin:6px 2px 0;display:none}
   .notice div+div{margin-top:3px}
