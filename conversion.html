@@ -69,14 +69,14 @@ body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--font);
 .owlx svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
 .owlg{font-size:10.5px;font-weight:700;letter-spacing:.09em;color:var(--tx3);
   margin:12px 4px 5px;text-transform:uppercase}
-.owlsheet a,.owlcur{display:flex;align-items:center;gap:9px;min-height:44px;
-  padding:9px 11px;border-radius:11px;text-decoration:none;color:var(--tx);
-  font-size:15px;border:1px solid transparent}
+.owlsheet a,.owlcur{background:#111;color:#fff;font-weight:700;border-color:#111}
+.owlcur:hover{background:#000;border-color:#000}
+@media (prefers-color-scheme:dark){
+  .owlcur,.owlcur:hover{background:#e9efeb;color:#0f1512;border-color:#e9efeb}
+}
 .owlsheet a:hover{background:var(--surface);border-color:var(--line)}
 .owlcur{background:#111;color:#fff;font-weight:700;cursor:default;border-color:#111}
 @media (prefers-color-scheme:dark){.owlcur{background:#e9efeb;color:#0f1512;border-color:#e9efeb}}
-.owlsys{margin-top:8px;padding-top:10px;border-top:1px solid var(--line)}
-.owlsys .st{font-size:11px;font-weight:700;color:var(--tx3);letter-spacing:.09em;padding:2px 4px 6px}
 
 /* ---------- כותרת המסך ---------- */
 h1{font-size:clamp(23px,5.4vw,31px);font-weight:800;margin:4px 0 2px;letter-spacing:-.01em}
@@ -278,10 +278,10 @@ window.owlBuildNav = function(){
   });
   h += '<div class="owlg">ניתוח</div>'
      + '<a href="/agent-report">ניתוח ביצועי נציגים וסניפים</a>'
-     + '<div class="owlcur" aria-current="page">יחס המרה</div>';
+     + '<a href="/conversion" class="owlcur" aria-current="page">יחס המרה</a>';
   if (!role.noprofit) {
-    h += '<div class="owlsys"><div class="st">מערכת ניטור ואנליטיקת פרסום</div>'
-       + '<a href="/traffic">תמהיל מקורות התנועה</a></div>';
+    h += '<div class="owlg">מערכת ניטור ואנליטיקת פרסום</div>'
+       + '<a href="/traffic">תמהיל מקורות התנועה</a>';
   }
   document.getElementById('owllist').innerHTML = h;
 };
@@ -337,16 +337,28 @@ function setPreset(k){
   buildQuick(); load();
 }
 
+/* מנעול בקשה. בלעדיו תשובה של תקופה קודמת יכולה לחזור אחרונה ולדרוס את
+   הנתונים, בזמן שהכותרת והשבבים כבר מציגים תקופה אחרת — המסך מכריז על
+   שלושים יום ומראה שבוע. */
+var REQ = 0;
 function load(){
+  var my = ++REQ;
   $('sub').textContent = 'טוען…';
   var span = (new Date(state.to) - new Date(state.from)) / 86400000 + 1;
   var pf = iso(new Date(new Date(state.from) - span * 86400000));
   var pt = iso(new Date(new Date(state.from) - 86400000));
+  var want = { from: state.from, to: state.to };
   Promise.all([
-    fetch('/api/conversion?d_from=' + state.from + '&d_to=' + state.to, {cache:'no-store'}).then(ok),
+    fetch('/api/conversion?d_from=' + want.from + '&d_to=' + want.to, {cache:'no-store'}).then(ok),
     fetch('/api/conversion?d_from=' + pf + '&d_to=' + pt, {cache:'no-store'}).then(ok)
-  ]).then(function(r){ DATA = r[0]; PREV = r[1]; render(); })
-   .catch(function(){ $('sub').textContent = 'שגיאה בטעינת הנתונים.'; });
+  ]).then(function(r){
+    if (my !== REQ) return;                       // תשובה של בקשה שכבר לא רלוונטית
+    DATA = r[0]; PREV = r[1]; DATA.__from = want.from; DATA.__to = want.to;
+    render();
+  }).catch(function(e){
+    if (my !== REQ || e === 0) return;
+    $('sub').textContent = 'שגיאה בטעינת הנתונים.';
+  });
 }
 function ok(r){ if (r.status === 401) { location.href = '/login'; throw 0; }
   if (!r.ok) throw new Error('http ' + r.status); return r.json(); }
@@ -370,7 +382,9 @@ function render(){
   if (!days.length) { $('sub').textContent = 'אין נתונים בתקופה שנבחרה.'; return; }
   var now = agg(days), was = agg((PREV && PREV.days) || []);
 
-  $('sub').textContent = heDate(state.from) + ' – ' + heDate(state.to)
+  /* התאריכים נלקחים מהתשובה עצמה ולא מהמצב, כדי שהכותרת לעולם לא תתאר
+     תקופה אחרת מזו שהמספרים מגיעים ממנה. */
+  $('sub').textContent = heDate(DATA.__from || state.from) + ' – ' + heDate(DATA.__to || state.to)
     + ' · המדד: לקוחות שפתחו הזמנה מתוך קבוצות שנכנסו'
     + ' · הספירה מהפתיחה עד שעתיים אחרי הסגירה';
 
