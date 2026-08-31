@@ -133,6 +133,16 @@ tfoot td{border-top:2px solid var(--line2);font-weight:800;background:var(--bg)}
 .muted{color:var(--tx3)}
 
 /* ---------- ימים חריגים ---------- */
+.chart{width:100%;height:auto;display:block}
+.ax{font-size:10.5px}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:11px}
+.lg{display:inline-flex;align-items:center;gap:8px;font:inherit;font-size:14px;
+  min-height:44px;padding:0 16px;border:1.5px solid var(--line2);border-radius:99px;
+  background:var(--bg);color:var(--tx3);cursor:pointer;font-weight:600}
+.lg.on{border-color:currentColor;color:inherit;font-weight:700}
+.lg:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.lg i{width:10px;height:10px;border-radius:50%;background:currentColor;display:block;opacity:.3}
+.lg.on i{opacity:1}
 .flags{display:flex;flex-direction:column;gap:8px}
 .fl{display:flex;gap:10px;align-items:flex-start;background:var(--bg);
   border:1px solid var(--line);border-radius:11px;padding:10px 12px}
@@ -193,7 +203,7 @@ tfoot td{border-top:2px solid var(--line2);font-weight:800;background:var(--bg)}
   <div class="kpis" id="kpis"></div>
 
   <section class="card" id="whyCard">
-    <div class="eyebrow">למה המכירות זזו</div>
+    <div class="eyebrow">מה השתנה מהתקופה הקודמת</div>
     <div class="split" id="why"></div>
     <p class="note" id="whyNote"></p>
   </section>
@@ -222,6 +232,13 @@ tfoot td{border-top:2px solid var(--line2);font-weight:800;background:var(--bg)}
     <svg class="chart" id="chart2" role="img" aria-label="קבוצות שנכנסו מול לקוחות שקנו"></svg>
     <p class="note">שני הגורמים שמרכיבים את ההמרה, על אותו ציר זמן.
       כשהקווים מתרחקים — ההמרה יורדת. כשהם מתקרבים — היא עולה.</p>
+  </section>
+
+  <section class="card" id="siteCard">
+    <div class="eyebrow">האתר — כמה מהגולשים הזמינו</div>
+    <div class="kpis" id="siteKpis" style="margin:0 0 12px"></div>
+    <svg class="chart" id="chart3" role="img" aria-label="המרת האתר לפי חודש"></svg>
+    <p class="note" id="siteNote"></p>
   </section>
 
   <section class="card">
@@ -377,14 +394,11 @@ function render(){
   } else {
     $('whyCard').style.display = '';
     $('why').innerHTML =
-      half('כמה קבוצות נכנסו', dv, NF.format(was.parties) + ' ← ' + NF.format(now.parties)) +
-      half('איזה אחוז מהן קנה', dc, (was.conv||0).toFixed(1) + '% ← ' + (now.conv||0).toFixed(1) + '%') +
-      half('כמה לקוחות קנו', db, NF.format(was.buyers) + ' ← ' + NF.format(now.buyers));
-    var who = (dv == null || dc == null) ? '' :
-      (Math.abs(dv) > Math.abs(dc)
-        ? 'השינוי בקונים בא בעיקר מ<b>כמות האנשים שנכנסה</b>, לא מאיכות הסגירה.'
-        : 'השינוי בקונים בא בעיקר מ<b>אחוז הסגירה</b>, לא מכמות האנשים.');
-    $('whyNote').innerHTML = who + ' ההשוואה היא מול ' + was.days + ' ימי פתיחה בתקופה שלפני, באותו אורך.';
+      half('נכנסו', dv, NF.format(was.parties) + ' ← ' + NF.format(now.parties) + ' קבוצות') +
+      half('קנו', db, NF.format(was.buyers) + ' ← ' + NF.format(now.buyers) + ' לקוחות') +
+      half('יחס המרה', dc, (was.conv||0).toFixed(1) + '% ← ' + (now.conv||0).toFixed(1) + '%');
+    $('whyNote').textContent = 'ההשוואה היא מול ' + was.days
+      + ' ימי פתיחה בתקופה הקודמת, באותו אורך.';
   }
 
   state.view === 'dow' ? tableDow(days) : tableBranch(days, (PREV && PREV.days) || []);
@@ -643,6 +657,84 @@ function drawChart2(days){
 }
 
 /* ---------- ימים חריגים ---------- */
+/* ---------- האתר ---------- */
+/* מקור אחר וקצב אחר: הסשנים מגיעים מייצוא ידני של גוגל אנליטיקס שיושב
+   בלוח התנועה, ולכן הם נגמרים היכן שהייצוא נגמר ולא היום. גרף נפרד גם
+   בגלל סדר הגודל — האתר ממיר באלפיות האחוז והסניפים בעשרות. */
+var SITE = null;
+function loadSite(){
+  fetch('/api/siteconv', {cache:'no-store'})
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(j){ if (!j || !j.months || !j.months.length) return; SITE = j; drawSite(); })
+    .catch(function(){});
+}
+function drawSite(){
+  if (!SITE) { $('siteCard').style.display = 'none'; return; }
+  var m = SITE.months, last = m[m.length - 1], first = m[0];
+  var totS = 0, totO = 0;
+  m.forEach(function(x){ totS += x.sessions; totO += x.orders; });
+  var best = m.reduce(function(a, b){ return (b.conv || 0) > (a.conv || 0) ? b : a; });
+  var worst = m.reduce(function(a, b){ return (b.conv || 9) < (a.conv || 9) ? b : a; });
+
+  $('siteKpis').innerHTML = [
+    ['hero', 'המרת האתר', last.conv == null ? '—' : last.conv.toFixed(3) + '%', last.label],
+    ['', 'גולשים', NF.format(last.sessions), SITE.measure],
+    ['', 'הזמינו', NF.format(last.orders), 'הזמנות'],
+    ['', 'החודש הכי טוב', (best.conv || 0).toFixed(3) + '%', best.label]
+  ].map(function(k){
+    return '<div class="kpi ' + k[0] + '"><div class="k">' + k[1] + '</div><div class="v">'
+      + k[2] + '</div><div class="n">' + k[3] + '</div></div>';
+  }).join('');
+
+  var svg = $('chart3');
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  var W = Math.max(300, svg.parentNode.clientWidth || 320), H = W < 500 ? 200 : 235;
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  svg.setAttribute('width', W); svg.setAttribute('height', H);
+  var cLine = css('--line'), cTx3 = css('--tx3'), cBrand = css('--brand');
+
+  var padT = 14, padB = 30, padR = 46, padL = 10;
+  var pw = W - padR - padL, ph = H - padT - padB, n = m.length;
+  var top = Math.max.apply(null, m.map(function(x){ return x.conv || 0; })) * 1.18 || 0.05;
+  var xOf = function(i){ return n === 1 ? padL + pw/2 : (W - padR - i * (pw / (n - 1))); };
+  var yOf = function(v){ return padT + (1 - v / top) * ph; };
+
+  m.forEach(function(x, i){
+    if (!x.partial) return;
+    var half = n === 1 ? pw/2 : (pw / (n - 1)) / 2;
+    svg.appendChild(svgEl('rect', { x:Math.max(padL, xOf(i) - half), y:padT,
+      width:Math.max(2, half*2), height:ph, fill:cTx3, opacity:.10 }));
+  });
+  for (var g = 0; g <= 4; g++) {
+    var v = top * g / 4, y = yOf(v);
+    svg.appendChild(svgEl('line', { x1:padL, y1:y, x2:W-padR, y2:y, stroke:cLine, 'stroke-width':1 }));
+    var t = svgEl('text', { x:W-padR+5, y:y+4, 'font-size':10.5, fill:cTx3, 'class':'ax' });
+    t.textContent = v.toFixed(3) + '%'; svg.appendChild(t);
+  }
+  var pts = m.map(function(x, i){ return [xOf(i), yOf(x.conv || 0)]; });
+  svg.appendChild(svgEl('path', { fill:'none', stroke:cBrand, 'stroke-width':2.4,
+    'stroke-linejoin':'round', 'stroke-linecap':'round',
+    d: pts.map(function(p, i){ return (i ? 'L ' : 'M ') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ') }));
+  pts.forEach(function(p){ svg.appendChild(svgEl('circle', { cx:p[0], cy:p[1], r:3.2, fill:cBrand })); });
+  m.forEach(function(x, i){
+    if (n > 8 && i % 2) return;
+    var t = svgEl('text', { x:xOf(i), y:H-10, 'font-size':10.5, fill:cTx3,
+      'text-anchor':'middle', 'class':'ax' });
+    t.textContent = x.label.replace(' 2026', ''); svg.appendChild(t);
+  });
+
+  var drop = (best.conv && worst.conv) ? (best.conv / worst.conv) : null;
+  $('siteNote').innerHTML =
+    'הזמנה אחת לכל ' + NF.format(Math.round(last.sessions / Math.max(1, last.orders)))
+    + ' גולשים ב' + last.label + '. '
+    + (drop && drop >= 1.5
+        ? '<b>' + best.label + ' היה פי ' + drop.toFixed(1) + ' טוב יותר מ' + worst.label + '.</b> ' : '')
+    + 'הגולשים נספרים בייצוא ידני מגוגל אנליטיקס, והוא נגמר ב־'
+    + heDate(SITE.source_to) + ' — לא היום. '
+    + 'הרצועה האפורה = חודש שאינו מלא. הנתון פר חודש בלבד, כי זה הפירוט שיש במקור.';
+}
+
+/* ---------- ימים חריגים ---------- */
 function drawFlags(days){
   var by = {};
   days.forEach(function(d){ if (d.open && d.conv != null && d.visitors >= 15)
@@ -684,7 +776,8 @@ $('segView').querySelectorAll('[data-v]').forEach(function(b){
   });
 });
 window.addEventListener('resize', function(){
-  if (!DATA) return; drawChart(DATA.days); drawChart2(DATA.days);
+  if (DATA) { drawChart(DATA.days); drawChart2(DATA.days); }
+  if (SITE) drawSite();
 });
 $('segGrain').querySelectorAll('[data-g]').forEach(function(b){
   b.addEventListener('click', function(){
@@ -694,6 +787,7 @@ $('segGrain').querySelectorAll('[data-g]').forEach(function(b){
   });
 });
 setPreset('m1');
+loadSite();
 </script>
 </body>
 </html>

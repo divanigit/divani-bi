@@ -1,0 +1,14 @@
+series / חודש / סהכ / טיקטוק  -> list[8] {"s": 44314, "sh": 15.3332, "dv": true, "cc": false, "cs": null, "cp": null, "csp": null}
+series / חודש / סהכ / גוגל  -> list[8] {"s": 153475, "sh": 53.1043, "dv": true, "cc": false, "cs": null, "cp": null, "csp": null}
+series / חודש / סהכ / פייסבוק  -> list[8] {"s": 64447, "sh": 22.2995, "dv": true, "cc": false, "cs": null, "cp": null, "csp": null}
+series / חודש / סהכ / אינסטגרם  -> list[8] {"s": 12989, "sh": 4.4944, "dv": true, "cc": false, "cs": null, "cp": null, "csp": null}
+series / חודש / סהכ / ישיר  -> list[8] {"s": 6910, "sh": 2.3909, "dv": true, "cc": false, "cs": null, "cp": null, "csp": null}
+series / חודש / סהכ / מנועי חיפוש אחרים  -> list[8] {"s": 393, "sh": 0.136, "dv": true, "cc": false, "cs": null, "cp": null, "csp": null}
+series / חודש / ממומן / טיקטוק  -> list[8] {"s": 44214, "sh": 15.2986, "dv": true, "cc": false, "cs": null, "cp": null, "csp": null}
+series / חודש / ממומן / גוגל  -> list[8] {"s": 144094, "sh": 49.8583, "dv": true, "cc": false, "cs": null, "cp": null, "csp": null}
+series / חודש / ממומן / פייסבוק  -> list[8] {"s": 60030, "sh": 20.7711, "dv": true, "cc": false, "cs": null, "cp": null, "csp": null}
+series / חודש / ממומן / אינסטגרם  -> list[8] {"s": 10973, "sh": 3.7968, "dv": true, "cc": false, "cs": null, "cp": null, "csp": null}
+series / חודש / ממומן / ישיר  -> list[8] {"s": 0, "sh": 0.0, "dv": false, "cc": false, "cs": null, "cp": null, "csp": null}
+series / חודש / ממומן / מנועי חיפוש אחרים  -> list[8] {"s": 4, "sh": 0.0014, "dv": false, "cc": false, "cs": null, "cp": null, "csp": null}
+series / חודש / אורגני/ישיר / טיקטוק  -> list[8] {"s": 100, "sh": 0.0346, "dv": true, "cc": false, "cs": null, "cp": null, "csp": null}
+series / חודש / אורגני/ישיר / גוגל  -> list[8] {"s": 9381, "sh": 3.2459, "dv": true, "cc": false, "cs": null, "cp": null, "csp": null}
