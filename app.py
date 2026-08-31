@@ -2188,7 +2188,7 @@ def api_hygiene(request: Request):
     if not _logged_in(request):
         return JSONResponse({"error": "auth"}, status_code=401)
     try:
-        return JSONResponse(sb_rpc("bi_hygiene_open", {"p_days": 120}) or {})
+        return JSONResponse(sb_rpc("bi_hygiene_open", {"p_days": 400}) or {})
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=502)
 
