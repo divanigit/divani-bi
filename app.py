@@ -270,6 +270,7 @@ _NP_STRIP = {
     # יחס המרה: כניסות, קבוצות, קונים ומכירות סניף. אפס שדות רווח,
     # ולכן אין מה לסנן — כמו מסך השעות. הקו האדום של עידו הוא רווח גולמי.
     "/api/conversion": None,
+    "/api/hygiene": None,
     "/api/siteconv": None,        # סשנים, הזמנות אתר ומכירות אתר. אין רווח.
     "/api/segdrill": _np_dimtree,
     "/api/agentreport": _np_agentreport,
@@ -2171,57 +2172,25 @@ def api_siteconv(request: Request):
                          "source_to": hi})
 
 
-@app.get("/api/siteconv")
-def api_siteconv(request: Request):
-    """המרת האתר: הזמנות אתר חלקי סשנים, לפי חודש.
 
-    הסשנים נקראים מלוח התנועה עצמו ולא מעותק שני, כדי שלא יהיו שני
-    מספרים לאותו נתון. המכנה הוא רק ערוצים מסוג 'פלטפורמה' — 'מטא' היא
-    צירוף של פייסבוק ואינסטגרם, וספירתה מכפילה את הסך.
 
-    מגבלה שנאמרת בתשובה עצמה: הקובץ הוא ייצוא ידני מגוגל אנליטיקס, ולכן
-    הוא נגמר איפה שהייצוא האחרון נגמר — לא היום.
+@app.get("/api/hygiene")
+def api_hygiene(request: Request):
+    """Zero-entry days that the weekly check could not explain.
+
+    The screen shows a footfall-based conversion rate, so a day the counter
+    missed is not a quiet gap - it is a denominator that never existed, silently
+    dragging that day's rate toward zero. This is what lets the screen say so.
+
+    Answers with what was checked and when, not only with findings, so an empty
+    list reads as "checked, nothing open" rather than as silence.
     """
     if not _logged_in(request):
         return JSONResponse({"error": "auth"}, status_code=401)
     try:
-        with open(os.path.join(HERE, "traffic_dashboard.html"), encoding="utf-8") as f:
-            raw = f.read()
-        m = re.search(r"^const DATA = (\{.*\});\s*$", raw, re.M)
-        d = json.loads(m.group(1))
-    except Exception:
-        return JSONResponse({"months": [], "note": "לא ניתן לקרוא את נתוני התנועה"})
-
-    names = [p["name"] for p in d["platforms"] if p.get("kind") == "פלטפורמה"]
-    node = d["series"]["חודש"]["סהכ"]
-    mons = d["periods"]["חודש"]
-    sess = []
-    for i in range(len(mons)):
-        s = 0
-        for n in names:
-            arr = node.get(n) or []
-            if i < len(arr):
-                s += (arr[i].get("s") or 0)
-        sess.append(s)
-
-    lo = mons[0]["period_start"]
-    hi = mons[-1]["period_end"]
-    rows = sb_rpc("bi_site_orders", {"p_from": lo, "p_to": hi}) or []
-    by = {r["ym"]: r for r in rows}
-
-    out = []
-    for i, mo in enumerate(mons):
-        ym = mo["period_start"][:7]
-        r = by.get(ym) or {}
-        o = int(r.get("orders") or 0)
-        out.append({
-            "ym": ym, "label": mo["period_label"], "sessions": sess[i],
-            "orders": o, "sales": int(r.get("sales") or 0),
-            "conv": round(o / sess[i] * 100, 4) if sess[i] else None,
-            "partial": bool(mo.get("is_partial")), "note": mo.get("partial_note") or "",
-        })
-    return JSONResponse({"months": out, "measure": d["meta"].get("measure_short", "סשנים"),
-                         "source_to": hi})
+        return JSONResponse(sb_rpc("bi_hygiene_open", {"p_days": 120}) or {})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=502)
 
 
 @app.get("/api/conversion")

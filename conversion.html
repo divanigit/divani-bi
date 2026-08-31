@@ -121,6 +121,20 @@ h1{font-size:clamp(23px,5.4vw,31px);font-weight:800;margin:4px 0 2px;letter-spac
 .cmpdates{font-size:14px;color:var(--tx2);margin:0 0 12px;
   font-variant-numeric:tabular-nums}
 .cmpdates b{color:var(--tx);font-weight:700}
+.hyg{background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:var(--r);
+  padding:13px 15px;margin:0 0 16px}
+.hygtop{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.hygttl{font-weight:700;font-size:15px;color:var(--warn-tx)}
+.hygx{font:inherit;font-size:13.5px;font-weight:600;color:var(--warn-tx);cursor:pointer;
+  background:transparent;border:1px solid var(--warn-line);border-radius:9px;
+  min-height:36px;padding:0 13px}
+.hygx:hover{background:rgba(0,0,0,.04)}
+.hygsub{font-size:13.5px;color:var(--warn-tx);margin:6px 0 0;line-height:1.55}
+.hyglist{list-style:none;margin:11px 0 0;padding:11px 0 0;font-size:13.5px;
+  color:var(--warn-tx);border-top:1px solid var(--warn-line);
+  font-variant-numeric:tabular-nums}
+.hyglist li{padding:3px 0}
+.hyglist b{font-weight:700}
 .split{display:flex;gap:10px;flex-wrap:wrap}
 .half{flex:1 1 210px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 13px}
 .half .t{font-size:12.5px;color:var(--tx3);margin:0 0 4px}
@@ -200,6 +214,15 @@ tfoot td{border-top:2px solid var(--line2);font-weight:800;background:var(--bg)}
 
   <h1>כמה מהנכנסים קונים</h1>
   <p class="sub" id="sub">טוען…</p>
+
+  <div class="hyg" id="hyg" hidden>
+    <div class="hygtop">
+      <span class="hygttl" id="hygTtl"></span>
+      <button type="button" class="hygx" id="hygMore">הצג</button>
+    </div>
+    <p class="hygsub" id="hygSub"></p>
+    <ul class="hyglist" id="hygList" hidden></ul>
+  </div>
 
   <section class="card">
     <div class="eyebrow">התקופה</div>
@@ -454,6 +477,7 @@ function sign(x, digits){ if (x == null) return '—';
   return (x >= 0 ? '+' : '−') + Math.abs(x).toFixed(digits == null ? 1 : digits) + '%'; }
 
 function render(){
+  paintHyg();                        /* the warning follows the range on screen */
   var days = (DATA && DATA.days) || [];
   if (!days.length) { $('sub').textContent = 'אין נתונים בתקופה שנבחרה.'; return; }
   var now = agg(days), was = agg((PREV && PREV.days) || []);
@@ -759,6 +783,42 @@ function drawChart2(days){
    בלוח התנועה, ולכן הם נגמרים היכן שהייצוא נגמר ולא היום. גרף נפרד גם
    בגלל סדר הגודל — האתר ממיר באלפיות האחוז והסניפים בעשרות. */
 var SITE = null;
+var HYG = null;
+function loadHyg(){
+  fetch('/api/hygiene', {cache:'no-store'})
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(j){ if (j && !j.error) { HYG = j; paintHyg(); } })
+    .catch(function(){});
+}
+function paintHyg(){
+  var box = $('hyg');
+  if (!HYG || !HYG.days || !HYG.days.length || !DATA) { box.hidden = true; return; }
+  var f = DATA.__from, t = DATA.__to;
+  var inRange = HYG.days.filter(function(x){ return x.d >= f && x.d <= t; });
+  if (!inRange.length) { box.hidden = true; return; }
+
+  var dates = {};
+  inRange.forEach(function(x){ dates[x.d] = 1; });
+  var nd = Object.keys(dates).length;
+
+  box.hidden = false;
+  $('hygTtl').textContent = nd === 1
+    ? 'יום אחד בתקופה הזו נספר חלקית'
+    : nd + ' ימים בתקופה הזו נספרו חלקית';
+  $('hygSub').textContent = 'באותם ימים המונה לא דיווח בסניף שמופיע לידם. '
+    + 'הם נכללים בחישוב עם אפס נכנסים, ולכן יחס ההמרה של התקופה יוצא נמוך '
+    + 'ממה שהיה באמת.';
+  $('hygList').innerHTML = inRange.slice(0, 40).map(function(x){
+    return '<li><b>' + heDate(x.d) + '</b> · ' + (BR[x.branch] || x.branch) + ' · '
+      + (x.verdict === 'missing' ? 'לא נמצאה ספירה' : 'נספרו אפס נכנסים') + '</li>';
+  }).join('');
+}
+$('hygMore').addEventListener('click', function(){
+  var l = $('hygList');
+  l.hidden = !l.hidden;
+  $('hygMore').textContent = l.hidden ? 'הצג' : 'הסתר';
+});
+
 function loadSite(){
   fetch('/api/siteconv', {cache:'no-store'})
     .then(function(r){ return r.ok ? r.json() : null; })
@@ -901,6 +961,7 @@ $('segGrain').querySelectorAll('[data-g]').forEach(function(b){
 });
 setPreset('d30');
 loadSite();
+loadHyg();
 </script>
 </body>
 </html>
