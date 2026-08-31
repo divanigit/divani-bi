@@ -276,7 +276,7 @@ tfoot td{border-top:2px solid var(--line2);font-weight:800;background:var(--bg)}
 
   <section class="card">
     <div class="eyebrow">תנועה מול קונים</div>
-    <svg class="chart" id="chart2" role="img" aria-label="קבוצות שנכנסו מול לקוחות שקנו"></svg>
+    <svg class="chart" id="chart2" role="img" aria-label="מבקרים מול לקוחות שקנו"></svg>
     <p class="note">שני הגורמים שמרכיבים את ההמרה, על אותו ציר זמן.
       כשהקווים מתרחקים — ההמרה יורדת. כשהם מתקרבים — היא עולה.</p>
   </section>
@@ -484,14 +484,14 @@ function render(){
   /* התאריכים נלקחים מהתשובה עצמה ולא מהמצב, כדי שהכותרת לעולם לא תתאר
      תקופה אחרת מזו שהמספרים מגיעים ממנה. */
   $('sub').textContent = heDate(DATA.__from || state.from) + ' – ' + heDate(DATA.__to || state.to)
-    + ' · המדד: לקוחות שפתחו הזמנה מתוך קבוצות שנכנסו'
+    + ' · המדד: לקוחות שפתחו הזמנה מתוך המבקרים'
     + ' · הספירה מהפתיחה עד שעתיים אחרי הסגירה';
 
   /* --- כרטיסים --- */
   $('kpis').innerHTML = [
     ['hero','יחס המרה', now.conv == null ? '—' : now.conv.toFixed(1) + '%',
       was.conv == null ? '' : 'קודם ' + was.conv.toFixed(1) + '%'],
-    ['','קבוצות שנכנסו', NF.format(now.parties), NF.format(now.visitors) + ' כניסות'],
+    ['','מבקרים', NF.format(now.parties), NF.format(now.visitors) + ' כניסות בדלת'],
     ['','לקוחות שקנו', NF.format(now.buyers), NF.format(now.orders) + ' הזמנות'],
     ['','ימי פתיחה', NF.format(now.days), 'בתקופה']
   ].map(function(k){
@@ -512,7 +512,7 @@ function render(){
     : '<b>' + withY(DATA.__from) + ' – ' + withY(DATA.__to) + '</b> מול <b>'
       + withY(DATA.__pf) + ' – ' + withY(DATA.__pt) + '</b>';
   $('why').innerHTML = was.days === 0 ? '' :
-    half('נכנסו', dv, NF.format(was.parties) + ' ← ' + NF.format(now.parties) + ' קבוצות') +
+    half('נכנסו', dv, NF.format(was.parties) + ' ← ' + NF.format(now.parties) + ' מבקרים') +
     half('קנו', db, NF.format(was.buyers) + ' ← ' + NF.format(now.buyers) + ' לקוחות') +
     half('יחס המרה', dc, (was.conv||0).toFixed(1) + '% ← ' + (now.conv||0).toFixed(1) + '%');
 
@@ -520,7 +520,8 @@ function render(){
   drawChart(days);
   drawChart2(days);
   drawFlags(days);
-  $('foot').textContent = 'המקור: קאונטרייט (כניסות) ופריוריטי (הזמנות) · '
+  $('foot').textContent = 'מבקר = שתי כניסות בדלת. '
+    + 'המקור: קאונטרייט (כניסות) ופריוריטי (הזמנות) · '
     + 'שעות הפתיחה נקראות כל לילה מאתר דיוואני · העדכון האחרון מגיע ביום שאחרי.';
 }
 function half(t, d, w){
@@ -548,7 +549,7 @@ function tableBranch(days, prevDays){
   rows.sort(function(x, y){ return (y.a.conv || 0) - (x.a.conv || 0); });
   var best = Math.max.apply(null, rows.map(function(r){ return r.a.conv || 0; })) || 1;
 
-  $('tbl').tHead.innerHTML = '<tr><th class="nm">סניף</th><th>קבוצות שנכנסו</th>'
+  $('tbl').tHead.innerHTML = '<tr><th class="nm">סניף</th><th>מבקרים</th>'
     + '<th>לקוחות שקנו</th><th>הזמנות</th><th>המרה</th>'
     + '<th>שינוי מהתקופה הקודמת</th></tr>';
   $('tbl').tBodies[0].innerHTML = rows.map(function(r){
@@ -762,7 +763,7 @@ function drawChart2(days){
     t.textContent = txt; svg.appendChild(t);
   }
   lbl(W - padR + 5, padT + 10, NF.format(maxP), cTx2);
-  lbl(W - padR + 5, H - 10, 'קבוצות', cTx2);
+  lbl(W - padR + 5, H - 10, 'מבקרים', cTx2);
   lbl(padL - 5, padT + 10, NF.format(maxB), cBrand, 'end');
   lbl(padL - 5, H - 10, 'קנו', cBrand, 'end');
   [0, n - 1].filter(function(v, i, a){ return a.indexOf(v) === i && v >= 0; })
@@ -912,7 +913,7 @@ function drawFlags(days){
       + f.d.conv.toFixed(1) + '% המרה, '
       + (f.dir === 'low' ? 'מתחת' : 'מעל') + ' לטווח הרגיל שלו ('
       + Math.max(0, f.lo).toFixed(1) + '–' + f.hi.toFixed(1) + '%). '
-      + NF.format(Math.round(f.d.visitors/2)) + ' קבוצות, ' + f.d.buyers + ' קנו.</span></div>';
+      + NF.format(Math.round(f.d.visitors/2)) + ' מבקרים, ' + f.d.buyers + ' קנו.</span></div>';
   }).join('');
 }
 
