@@ -4213,17 +4213,42 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     document.getElementById('vaovl').style.display='none';document.getElementById('vasheet').style.display='none';
     var b=document.getElementById('viewasbtn');
     if(b){b.setAttribute('aria-expanded','false');if(b.focus)try{b.focus();}catch(e){}}}
+  function vaOut(){
+    if(!previewAs)return;
+    prevSet(''); vaApply(''); vaPaint();
+    if(typeof toast==='function')toast('חזרת לתצוגה שלך');
+  }
+  // Three ways out, because the recording modes hide the control itself and a
+  // single gesture that fails on a phone means being locked out of the tool.
   function vaEscape(el){
     if(!el)return;
-    var t=null, clear=function(){ if(t){clearTimeout(t);t=null;} };
-    var start=function(){ clear(); t=setTimeout(function(){
-      if(!previewAs)return;
-      prevSet(''); vaApply(''); vaPaint();
-      if(typeof toast==='function')toast('חזרת לתצוגה שלך');
-    },1000); };
-    el.addEventListener('pointerdown',start);
-    ['pointerup','pointerleave','pointercancel'].forEach(function(k){el.addEventListener(k,clear);});
+    el.style.touchAction='manipulation';
+    el.style.webkitTouchCallout='none';
+    el.style.userSelect='none';
+    // 1. long press. pointercancel is NOT treated as a cancel: on a phone the
+    //    browser fires it when it starts its own long-press gesture, which is
+    //    exactly when this timer must survive.
+    var t=null, stop=function(){ if(t){clearTimeout(t);t=null;} };
+    el.addEventListener('pointerdown',function(){ stop(); t=setTimeout(vaOut,900); });
+    ['pointerup','pointerleave'].forEach(function(k){el.addEventListener(k,stop);});
+    el.addEventListener('contextmenu',function(e){e.preventDefault();});
+    // 2. three taps. Nothing in the browser competes with a tap.
+    var n=0, tt=null;
+    el.addEventListener('click',function(){
+      n++; clearTimeout(tt);
+      if(n>=3){ n=0; vaOut(); return; }
+      tt=setTimeout(function(){n=0;},1200);
+    });
   }
+  // 3. ?me=1 — works on any device, and it is the way back when there is
+  //    nothing on screen left to press.
+  (function(){
+    try{
+      if(!/[?&]me=1/.test(location.search))return;
+      localStorage.removeItem(PREVIEW_KEY);
+      history.replaceState(null,'',location.pathname);
+    }catch(e){}
+  })();
   function vaApply(m){
     previewAs=m; previewUser=(previewAs!==''); applyOwnerUI();
     // המסך "מי עובד בלייקי" סגור לכל מי שאינו דורון, ולכן גם בתצוגה של מישהו אחר

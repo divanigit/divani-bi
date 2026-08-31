@@ -866,13 +866,31 @@ owlBuildNav(false);
   // the recording. A one-second press on the system logo restores his own view.
   (function(el){
     if (!el) return;
-    var t = null, clear = function(){ if (t) { clearTimeout(t); t = null; } };
-    el.addEventListener('pointerdown', function(){
-      clear();
-      t = setTimeout(function(){ if (!get()) return; set(''); apply(); }, 1000);
+    el.style.touchAction = 'manipulation';
+    el.style.webkitTouchCallout = 'none';
+    el.style.userSelect = 'none';
+    var out = function(){ if (!get()) return; set(''); apply(); };
+    // pointercancel is NOT a cancel here: on a phone the browser fires it when
+    // it starts its own long-press gesture, which is when this must survive.
+    var t = null, stop = function(){ if (t) { clearTimeout(t); t = null; } };
+    el.addEventListener('pointerdown', function(){ stop(); t = setTimeout(out, 900); });
+    ['pointerup','pointerleave'].forEach(function(k){ el.addEventListener(k, stop); });
+    el.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+    var n = 0, tt = null;
+    el.addEventListener('click', function(){
+      n++; clearTimeout(tt);
+      if (n >= 3) { n = 0; out(); return; }
+      tt = setTimeout(function(){ n = 0; }, 1200);
     });
-    ['pointerup','pointerleave','pointercancel'].forEach(function(k){ el.addEventListener(k, clear); });
   })(document.querySelector('.owllogo'));
+  // ?me=1 works on any device, and is the way back when nothing is left to press
+  try{
+    if (/[?&]me=1/.test(location.search)) {
+      localStorage.removeItem(KEY);
+      history.replaceState(null, '', location.pathname);
+      apply();
+    }
+  }catch(e){}
   // חזרה למסך מלשונית אחרת שבה שונתה התצוגה
   window.addEventListener('storage', function(e){ if (e.key === KEY) apply(); });
   window.addEventListener('pageshow', apply);
