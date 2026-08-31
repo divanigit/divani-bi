@@ -823,6 +823,15 @@ owlBuildNav(false);
   function get(){ try { var v = localStorage.getItem(KEY);
     return OK.indexOf(v) >= 0 ? v : ''; } catch (e) { return ''; } }
   function set(m){ try { if (m) localStorage.setItem(KEY, m); else localStorage.removeItem(KEY); } catch (e) {} }
+  // ?me=1 restores his own view on any device, and is the way back when the
+  // recording modes have left nothing on screen to press. It must run BEFORE
+  // anything reads the stored mode.
+  try{
+    if (/[?&]me=1/.test(location.search)) {
+      set('');
+      history.replaceState(null, '', location.pathname);
+    }
+  }catch(e){}
 
   var ovl = document.getElementById('vaovl'), btn = document.getElementById('vaeye');
 
@@ -883,14 +892,6 @@ owlBuildNav(false);
       tt = setTimeout(function(){ n = 0; }, 1200);
     });
   })(document.querySelector('.owllogo'));
-  // ?me=1 works on any device, and is the way back when nothing is left to press
-  try{
-    if (/[?&]me=1/.test(location.search)) {
-      localStorage.removeItem(KEY);
-      history.replaceState(null, '', location.pathname);
-      apply();
-    }
-  }catch(e){}
   // חזרה למסך מלשונית אחרת שבה שונתה התצוגה
   window.addEventListener('storage', function(e){ if (e.key === KEY) apply(); });
   window.addEventListener('pageshow', apply);

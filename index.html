@@ -862,6 +862,18 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   // '' = my own view | 'user' = a regular user | 'ido' = the no-profit role.
   // an old on/off value ('1') is read as 'user', so a preview left on yesterday is not silently dropped.
   var PREV_OK=['user','ido','user-video','ido-video'];
+/*OWNER*/
+  // ?me=1 restores his own view on any device, and is the way back when the
+  // recording modes have left nothing on screen to press. It has to run BEFORE
+  // anything reads the stored mode, which is why it sits here and not with the
+  // rest of the picker code.
+  (function(){ try{
+    if(!/[?&]me=1/.test(location.search))return;
+    localStorage.removeItem(PREVIEW_KEY);
+    history.replaceState(null,'',location.pathname);
+  }catch(e){} })();
+/*ENDOWNER*/
+
   function prevMode(){try{var v=localStorage.getItem(PREVIEW_KEY);if(!v)return '';return PREV_OK.indexOf(v)>=0?v:'user';}catch(e){return '';}}
   // the '-video' variants also drop the picker itself
   function prevVideo(){return /-video$/.test(previewAs);}
@@ -4240,15 +4252,6 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       tt=setTimeout(function(){n=0;},1200);
     });
   }
-  // 3. ?me=1 — works on any device, and it is the way back when there is
-  //    nothing on screen left to press.
-  (function(){
-    try{
-      if(!/[?&]me=1/.test(location.search))return;
-      localStorage.removeItem(PREVIEW_KEY);
-      history.replaceState(null,'',location.pathname);
-    }catch(e){}
-  })();
   function vaApply(m){
     previewAs=m; previewUser=(previewAs!==''); applyOwnerUI();
     // המסך "מי עובד בלייקי" סגור לכל מי שאינו דורון, ולכן גם בתצוגה של מישהו אחר
