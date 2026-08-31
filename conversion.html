@@ -132,15 +132,6 @@ tfoot td{border-top:2px solid var(--line2);font-weight:800;background:var(--bg)}
 .gap{font-size:12px;font-weight:700}
 .muted{color:var(--tx3)}
 
-/* ---------- גרף ---------- */
-.chart{width:100%;height:auto;display:block}
-.legend{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
-.lg{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;padding:5px 10px;
-  border:1px solid var(--line2);border-radius:99px;background:var(--bg);cursor:pointer;
-  color:var(--tx2);font-family:inherit}
-.lg.on{border-color:currentColor;font-weight:700}
-.lg i{width:9px;height:9px;border-radius:50%;background:currentColor;display:block}
-
 /* ---------- ימים חריגים ---------- */
 .flags{display:flex;flex-direction:column;gap:8px}
 .fl{display:flex;gap:10px;align-items:flex-start;background:var(--bg);
@@ -214,10 +205,23 @@ tfoot td{border-top:2px solid var(--line2);font-weight:800;background:var(--bg)}
   </section>
 
   <section class="card">
-    <div class="eyebrow">המרה יום אחר יום</div>
+    <div class="eyebrow">יחס ההמרה לאורך הזמן</div>
+    <div class="ctlrow" style="margin:0 0 10px">
+      <div class="seg" id="segGrain" role="group" aria-label="פירוט">
+        <button type="button" data-g="w" class="on">שבועי</button>
+        <button type="button" data-g="d">יומי</button>
+      </div>
+    </div>
     <svg class="chart" id="chart" role="img" aria-label="יחס המרה לאורך התקופה"></svg>
     <div class="legend" id="legend"></div>
-    <p class="note">הרצועה האפורה = יום סגור או יום בלי ספירה. אינו מוחלק ואינו נספר.</p>
+    <p class="note" id="chartNote"></p>
+  </section>
+
+  <section class="card">
+    <div class="eyebrow">תנועה מול קונים</div>
+    <svg class="chart" id="chart2" role="img" aria-label="קבוצות שנכנסו מול לקוחות שקנו"></svg>
+    <p class="note">שני הגורמים שמרכיבים את ההמרה, על אותו ציר זמן.
+      כשהקווים מתרחקים — ההמרה יורדת. כשהם מתקרבים — היא עולה.</p>
   </section>
 
   <section class="card">
@@ -284,7 +288,7 @@ var DOW = ['ראשון','שני','שלישי','רביעי','חמישי','שיש�
 var BR = { '101':'נתניה', '102':'ראשל״צ', '105':'חיפה', '106':'ירושלים', '107':'בית שמש' };
 var COL = { '102':'#2563eb', '101':'#0d9668', '107':'#ea580c', '106':'#7c3aed', '105':'#0891b2' };
 
-var state = { view:'branch', from:null, to:null, preset:'m1', off:{} };
+var state = { view:'branch', from:null, to:null, preset:'m1', off:{}, grain:'w' };
 var DATA = null, PREV = null;
 
 function iso(d){ return d.toISOString().slice(0,10); }
@@ -385,6 +389,7 @@ function render(){
 
   state.view === 'dow' ? tableDow(days) : tableBranch(days, (PREV && PREV.days) || []);
   drawChart(days);
+  drawChart2(days);
   drawFlags(days);
   $('foot').textContent = 'המקור: קאונטרייט (כניסות) ופריוריטי (הזמנות) · '
     + 'שעות הפתיחה נקראות כל לילה מאתר דיוואני · העדכון האחרון מגיע ביום שאחרי.';
@@ -472,67 +477,97 @@ function tableDow(days){
 }
 
 /* ---------- גרף ---------- */
+/* יום עם מעט כניסות אינו נושא שיעור: חמש כניסות ושבעה קונים הם 700 אחוז,
+   ומספר כזה מותח את הציר ומוחק את כל השאר. הסף קובע מי מצייר קו — לא מי
+   נספר. הכניסות והקונים של אותם ימים נספרים בכל מספר אחר במסך. */
+var MIN_V = 16;
+
+/* ---------- גרפים ---------- */
+function svgEl(t, a){ var e = document.createElementNS('http://www.w3.org/2000/svg', t);
+  for (var k in a) e.setAttribute(k, a[k]); return e; }
+function css(v){ return getComputedStyle(document.body).getPropertyValue(v).trim(); }
+
+function buckets(days, grain){
+  var key = function(d){
+    if (grain === 'd') return d.d;
+    var dt = new Date(d.d + 'T00:00:00');
+    dt.setDate(dt.getDate() - dt.getDay());
+    return dt.toISOString().slice(0, 10);
+  };
+  var order = [], seen = {}, cell = {};
+  days.forEach(function(d){ var k = key(d); if (!seen[k]) { seen[k] = 1; order.push(k); } });
+  order.sort();
+  days.forEach(function(d){
+    if (!d.open) return;
+    var k = key(d) + '|' + d.branch;
+    var c = cell[k] = cell[k] || { v:0, b:0 };
+    c.v += d.visitors; c.b += d.buyers;
+  });
+  return { order: order, cell: cell, key: key };
+}
+
 function drawChart(days){
   var svg = $('chart');
   while (svg.firstChild) svg.removeChild(svg.firstChild);
-  var W = Math.max(300, svg.parentNode.clientWidth || 320), H = W < 500 ? 210 : 250;
+  var W = Math.max(300, svg.parentNode.clientWidth || 320), H = W < 500 ? 215 : 255;
   svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
   svg.setAttribute('width', W); svg.setAttribute('height', H);
-  var cs = getComputedStyle(document.body);
-  var cLine = cs.getPropertyValue('--line').trim(), cTx3 = cs.getPropertyValue('--tx3').trim();
+  var cLine = css('--line'), cTx3 = css('--tx3');
 
-  var dates = [], seen = {};
-  days.forEach(function(d){ if (!seen[d.d]) { seen[d.d] = 1; dates.push(d.d); } });
-  dates.sort();
+  var bk = buckets(days, state.grain), order = bk.order, cell = bk.cell;
   var brs = Object.keys(BR).filter(function(b){ return !state.off[b]
     && days.some(function(d){ return d.branch === b && d.open; }); });
 
-  var padT = 12, padB = 26, padR = 38, padL = 8;
+  var padT = 12, padB = 26, padR = 40, padL = 8;
   var pw = W - padR - padL, ph = H - padT - padB;
-  var vals = [];
-  days.forEach(function(d){ if (d.open && d.conv != null) vals.push(d.conv); });
-  var top = Math.max(5, Math.ceil((Math.max.apply(null, vals.concat([5])) * 1.15) / 5) * 5);
-  var n = dates.length;
-  var xOf = function(k){ return n === 1 ? padL + pw/2 : (W - padR - k * (pw / (n - 1))); };
-  var yOf = function(v){ return padT + (1 - v / top) * ph; };
-  function el(t, a){ var e = document.createElementNS('http://www.w3.org/2000/svg', t);
-    for (var k in a) e.setAttribute(k, a[k]); return e; }
 
-  // רצועות של ימים סגורים
-  var closedAll = {};
-  dates.forEach(function(dt){
-    var rows = days.filter(function(d){ return d.d === dt; });
-    closedAll[dt] = rows.length > 0 && rows.every(function(d){ return !d.open || d.visitors === 0; });
-  });
-  dates.forEach(function(dt, k){
-    if (!closedAll[dt]) return;
-    var half = n === 1 ? pw/2 : (pw / (n - 1)) / 2;
-    svg.appendChild(el('rect', { x:Math.max(padL, xOf(k) - half), y:padT,
-      width:Math.max(2, half*2), height:ph, fill:cTx3, opacity:.10 }));
+  var solid = [];
+  order.forEach(function(k){ brs.forEach(function(b){
+    var c = cell[k + '|' + b];
+    if (c && c.v >= MIN_V) solid.push(c.b / (c.v / 2) * 100); }); });
+  var top = Math.max(10, Math.ceil((Math.max.apply(null, solid.concat([10])) * 1.15) / 5) * 5);
+
+  var n = order.length;
+  var xOf = function(i){ return n === 1 ? padL + pw / 2 : (W - padR - i * (pw / (n - 1))); };
+  var yOf = function(v){ return padT + (1 - Math.min(v, top) / top) * ph; };
+
+  var closed = {};
+  order.forEach(function(k){ closed[k] = true; });
+  days.forEach(function(d){ if (d.open && d.visitors > 0) closed[bk.key(d)] = false; });
+  order.forEach(function(k, i){
+    if (!closed[k]) return;
+    var half = n === 1 ? pw / 2 : (pw / (n - 1)) / 2;
+    svg.appendChild(svgEl('rect', { x:Math.max(padL, xOf(i) - half), y:padT,
+      width:Math.max(2, half * 2), height:ph, fill:cTx3, opacity:.10 }));
   });
   for (var g = 0; g <= 4; g++) {
     var v = top * g / 4, y = yOf(v);
-    svg.appendChild(el('line', { x1:padL, y1:y, x2:W-padR, y2:y, stroke:cLine, 'stroke-width':1 }));
-    var tx = el('text', { x:W-padR+5, y:y+4, 'font-size':10.5, fill:cTx3 });
-    tx.textContent = v.toFixed(0) + '%'; svg.appendChild(tx);
+    svg.appendChild(svgEl('line', { x1:padL, y1:y, x2:W - padR, y2:y,
+      stroke:cLine, 'stroke-width':1 }));
+    var t = svgEl('text', { x:W - padR + 5, y:y + 4, 'font-size':10.5, fill:cTx3, 'class':'ax' });
+    t.textContent = v.toFixed(0) + '%'; svg.appendChild(t);
   }
   brs.forEach(function(b){
     var pts = [];
-    dates.forEach(function(dt, k){
-      var r = days.filter(function(d){ return d.d === dt && d.branch === b; })[0];
-      if (r && r.open && r.conv != null) pts.push([xOf(k), yOf(r.conv)]);
+    order.forEach(function(k, i){
+      var c = cell[k + '|' + b];
+      if (!c || c.v < MIN_V) return;
+      pts.push([xOf(i), yOf(c.b / (c.v / 2) * 100)]);
     });
     if (!pts.length) return;
-    var path = pts.map(function(p, i){ return (i ? 'L ' : 'M ') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ');
-    svg.appendChild(el('path', { d:path, fill:'none', stroke:COL[b], 'stroke-width':2,
-      'stroke-linejoin':'round', 'stroke-linecap':'round' }));
-    if (n <= 20) pts.forEach(function(p){
-      svg.appendChild(el('circle', { cx:p[0], cy:p[1], r:2.6, fill:COL[b] })); });
+    svg.appendChild(svgEl('path', { fill:'none', stroke:COL[b], 'stroke-width':2,
+      'stroke-linejoin':'round', 'stroke-linecap':'round',
+      d: pts.map(function(p, i){
+        return (i ? 'L ' : 'M ') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ') }));
+    if (n <= 18) pts.forEach(function(p){
+      svg.appendChild(svgEl('circle', { cx:p[0], cy:p[1], r:2.8, fill:COL[b] })); });
   });
-  [0, Math.floor((n-1)/2), n-1].filter(function(v, i, a){ return a.indexOf(v) === i && v >= 0; })
-    .forEach(function(k){
-      var t = el('text', { x:xOf(k), y:H-8, 'font-size':10.5, fill:cTx3, 'text-anchor':'middle' });
-      t.textContent = heDate(dates[k]); svg.appendChild(t);
+  [0, Math.floor((n - 1) / 2), n - 1]
+    .filter(function(v, i, a){ return a.indexOf(v) === i && v >= 0; })
+    .forEach(function(i){
+      var t = svgEl('text', { x:xOf(i), y:H - 8, 'font-size':10.5, fill:cTx3,
+        'text-anchor':'middle', 'class':'ax' });
+      t.textContent = heDate(order[i]); svg.appendChild(t);
     });
 
   $('legend').innerHTML = Object.keys(BR).map(function(b){
@@ -545,6 +580,66 @@ function drawChart(days){
       state.off[b] = !state.off[b]; drawChart(days);
     });
   });
+
+  var thin = 0, tot = 0;
+  days.forEach(function(d){ if (!d.open) return; tot++; if (d.visitors < MIN_V) thin++; });
+  $('chartNote').innerHTML = 'הרצועה האפורה = ' + (state.grain === 'd' ? 'יום' : 'שבוע')
+    + ' סגור או בלי ספירה. אינו מוחלק ואינו נספר.'
+    + (thin ? ' <b>' + thin + ' מתוך ' + tot + ' ימי פתיחה</b> היו עם פחות מ־' + MIN_V
+        + ' כניסות ואינם מציירים קו — יום כזה אינו נושא אחוז. '
+        + 'הכניסות והקונים שלהם נספרים בכל מספר אחר במסך.' : '');
+}
+
+function drawChart2(days){
+  var svg = $('chart2');
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  var W = Math.max(300, svg.parentNode.clientWidth || 320), H = W < 500 ? 190 : 225;
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  svg.setAttribute('width', W); svg.setAttribute('height', H);
+  var cLine = css('--line'), cTx3 = css('--tx3'),
+      cBrand = css('--brand'), cTx2 = css('--tx2');
+
+  var bk = buckets(days, state.grain), order = bk.order;
+  var P = [], B = [];
+  order.forEach(function(k){
+    var v = 0, b = 0;
+    Object.keys(BR).forEach(function(br){
+      var c = bk.cell[k + '|' + br]; if (c) { v += c.v; b += c.b; } });
+    P.push(Math.round(v / 2)); B.push(b);
+  });
+  var padT = 14, padB = 30, padR = 44, padL = 44;
+  var pw = W - padR - padL, ph = H - padT - padB, n = order.length;
+  var maxP = Math.max.apply(null, P.concat([1])), maxB = Math.max.apply(null, B.concat([1]));
+  var xOf = function(i){ return n === 1 ? padL + pw / 2 : (W - padR - i * (pw / (n - 1))); };
+  var yP = function(v){ return padT + (1 - v / (maxP * 1.12)) * ph; };
+  var yB = function(v){ return padT + (1 - v / (maxB * 1.12)) * ph; };
+
+  for (var g = 0; g <= 3; g++) {
+    var y = padT + ph * g / 3;
+    svg.appendChild(svgEl('line', { x1:padL, y1:y, x2:W - padR, y2:y,
+      stroke:cLine, 'stroke-width':1 }));
+  }
+  function line(arr, yf, col, dash){
+    svg.appendChild(svgEl('path', { fill:'none', stroke:col, 'stroke-width':2,
+      'stroke-linejoin':'round', 'stroke-linecap':'round', 'stroke-dasharray': dash || 'none',
+      d: arr.map(function(v, i){
+        return (i ? 'L ' : 'M ') + xOf(i).toFixed(1) + ' ' + yf(v).toFixed(1); }).join(' ') }));
+    if (n <= 18) arr.forEach(function(v, i){
+      svg.appendChild(svgEl('circle', { cx:xOf(i), cy:yf(v), r:2.6, fill:col })); });
+  }
+  line(P, yP, cTx2, '6 4');
+  line(B, yB, cBrand);
+  function lbl(x, y, txt, col, anchor){
+    var t = svgEl('text', { x:x, y:y, 'font-size':10.5, fill:col, 'class':'ax' });
+    if (anchor) t.setAttribute('text-anchor', anchor);
+    t.textContent = txt; svg.appendChild(t);
+  }
+  lbl(W - padR + 5, padT + 10, NF.format(maxP), cTx2);
+  lbl(W - padR + 5, H - 10, 'קבוצות', cTx2);
+  lbl(padL - 5, padT + 10, NF.format(maxB), cBrand, 'end');
+  lbl(padL - 5, H - 10, 'קנו', cBrand, 'end');
+  [0, n - 1].filter(function(v, i, a){ return a.indexOf(v) === i && v >= 0; })
+    .forEach(function(i){ lbl(xOf(i), H - 10, heDate(order[i]), cTx3, 'middle'); });
 }
 
 /* ---------- ימים חריגים ---------- */
@@ -588,7 +683,16 @@ $('segView').querySelectorAll('[data-v]').forEach(function(b){
     if (DATA) render();
   });
 });
-window.addEventListener('resize', function(){ if (DATA) drawChart(DATA.days); });
+window.addEventListener('resize', function(){
+  if (!DATA) return; drawChart(DATA.days); drawChart2(DATA.days);
+});
+$('segGrain').querySelectorAll('[data-g]').forEach(function(b){
+  b.addEventListener('click', function(){
+    $('segGrain').querySelectorAll('[data-g]').forEach(function(x){ x.classList.remove('on'); });
+    b.classList.add('on'); state.grain = b.getAttribute('data-g');
+    if (DATA) { drawChart(DATA.days); drawChart2(DATA.days); }
+  });
+});
 setPreset('m1');
 </script>
 </body>
