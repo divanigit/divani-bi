@@ -155,7 +155,6 @@ tfoot td{border-top:2px solid var(--line2);font-weight:800;background:var(--bg)}
 .bar{display:block;height:5px;border-radius:3px;background:var(--brandSoft);margin-top:4px;
   position:relative;overflow:hidden}
 .bar i{position:absolute;inset-block:0;inset-inline-start:0;background:var(--brand);display:block}
-.gap{font-size:12px;font-weight:700}
 .muted{color:var(--tx3)}
 
 /* ---------- ימים חריגים ---------- */
@@ -542,41 +541,34 @@ function tableBranch(days, prevDays){
     return { b:b, a:a, p:p };
   }).filter(function(r){ return r.a.days > 0; });
 
-  // צפוי לפי התנועה: כמה היו קונים אילו המיר כמו הרשת
-  var tot = agg(days);
-  rows.forEach(function(r){
-    r.expected = tot.conv == null ? null : Math.round(r.a.parties * tot.conv / 100);
-    r.gap = r.expected == null ? null : r.a.buyers - r.expected;
-  });
+  /* אין כאן עמודת "צפוי לפי הרשת", ולא בטעות. סניף מול ממוצע הרשת מניח
+     שהסניפים מחליפים זה את זה, והם לא: הקהל שונה, התאמת המוצרים אליו שונה,
+     והתחרות בכל גאוגרפיה שונה. פער מול הממוצע היה מודד הרכב ולא ביצועים.
+     ההשוואה היחידה שמחזיקה היא סניף מול עצמו לאורך זמן — עמודת "שינוי". */
   rows.sort(function(x, y){ return (y.a.conv || 0) - (x.a.conv || 0); });
   var best = Math.max.apply(null, rows.map(function(r){ return r.a.conv || 0; })) || 1;
 
   $('tbl').tHead.innerHTML = '<tr><th class="nm">סניף</th><th>קבוצות שנכנסו</th>'
-    + '<th>לקוחות שקנו</th><th>הזמנות</th><th>המרה</th><th>שינוי</th>'
-    + '<th>לקוחות מעל או מתחת לממוצע הרשת</th></tr>';
+    + '<th>לקוחות שקנו</th><th>הזמנות</th><th>המרה</th>'
+    + '<th>שינוי מהתקופה הקודמת</th></tr>';
   $('tbl').tBodies[0].innerHTML = rows.map(function(r){
     var d = pct(r.a.conv, r.p.conv);
-    var g = r.gap;
     return '<tr><td class="nm">' + (BR[r.b] || r.b) + '</td>'
       + '<td>' + NF.format(r.a.parties) + '</td>'
       + '<td>' + NF.format(r.a.buyers) + '</td>'
       + '<td class="muted">' + NF.format(r.a.orders) + '</td>'
       + '<td><b>' + (r.a.conv == null ? '—' : r.a.conv.toFixed(1) + '%') + '</b>'
       + '<span class="bar"><i style="width:' + Math.round((r.a.conv || 0) / best * 100) + '%"></i></span></td>'
-      + '<td class="' + (d == null ? 'muted' : d >= 0 ? 'up' : 'dn') + '">' + sign(d) + '</td>'
-      + '<td class="gap ' + (g == null ? 'muted' : g >= 0 ? 'up' : 'dn') + '">'
-      + (g == null ? '—' : (g >= 0 ? '+' : '−') + NF.format(Math.abs(g))) + '</td></tr>';
+      + '<td class="' + (d == null ? 'muted' : d >= 0 ? 'up' : 'dn') + '">'
+      + sign(d) + '</td></tr>';
   }).join('');
   var t = agg(days);
   $('tbl').tFoot.innerHTML = '<tr><td class="nm">כל הרשת</td><td>' + NF.format(t.parties)
     + '</td><td>' + NF.format(t.buyers) + '</td><td>' + NF.format(t.orders) + '</td><td>'
-    + (t.conv || 0).toFixed(1) + '%</td><td colspan="2"></td></tr>';
+    + (t.conv || 0).toFixed(1) + '%</td><td></td></tr>';
   $('tblNote').innerHTML = '<b>לקוחות</b> אינו <b>הזמנות</b>: לקוח אחד יכול לפתוח '
     + 'יותר מהזמנה אחת. ההמרה נמדדת בלקוחות.<br>'
-    + 'העמודה האחרונה עונה על שאלה אחת: <b>אם הסניף הזה היה ממיר כמו הרשת, '
-    + 'כמה לקוחות היו קונים בו — וכמה קנו בפועל.</b> '
-    + 'מספר חיובי = קנו יותר ממה שהתנועה שלו מבטיחה. שלילי = פחות. '
-    + 'זה מונע מסניף גדול להיראות גרוע רק כי נכנסים אליו יותר אנשים.';
+    + 'עמודת <b>שינוי</b> משווה כל סניף לעצמו בתקופה הקודמת.';
 }
 
 /* ---------- טבלת ימים בשבוע ---------- */
