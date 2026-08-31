@@ -267,6 +267,9 @@ _NP_STRIP = {
     "/api/tree": _np_dimtree,
     "/api/products": _np_dimtree,
     "/api/hours": None,             # כניסות בלבד — אין בו שום שדה רווח   # same shape: agg.rows[].p, agg.total_p, agg.rest.p
+    # יחס המרה: כניסות, קבוצות, קונים ומכירות סניף. אפס שדות רווח,
+    # ולכן אין מה לסנן — כמו מסך השעות. הקו האדום של עידו הוא רווח גולמי.
+    "/api/conversion": None,
     "/api/segdrill": _np_dimtree,
     "/api/agentreport": _np_agentreport,
     "/api/panel": None,
