@@ -270,6 +270,7 @@ _NP_STRIP = {
     # יחס המרה: כניסות, קבוצות, קונים ומכירות סניף. אפס שדות רווח,
     # ולכן אין מה לסנן — כמו מסך השעות. הקו האדום של עידו הוא רווח גולמי.
     "/api/conversion": None,
+    "/api/siteconv": None,        # סשנים, הזמנות אתר ומכירות אתר. אין רווח.
     "/api/segdrill": _np_dimtree,
     "/api/agentreport": _np_agentreport,
     "/api/panel": None,
