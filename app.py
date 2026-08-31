@@ -1466,6 +1466,27 @@ _OWNER_BLOCK = re.compile(r"<!--OWNER-->.*?<!--/OWNER-->"
                           r"|/\*OWNER\*/.*?/\*ENDOWNER\*/", re.S)
 
 
+@app.get("/conversion")
+def conversion(request: Request):
+    """מסך יחס ההמרה. אותה תבנית כמו לוח התנועה: מסמך שלם, תפריט OWL משלו.
+    אין בו רווח, ולכן אין כאן חסימה מעבר להתחברות."""
+    if not _logged_in(request):
+        return RedirectResponse("/login", status_code=303)
+    try:
+        with open(os.path.join(HERE, "conversion.html"), encoding="utf-8") as f:
+            html = f.read()
+    except Exception:
+        return HTMLResponse("<div dir='rtl' style='font-family:sans-serif;padding:40px'>"
+                            "המסך לא נמצא.</div>", status_code=404)
+    if not _is_admin(request):
+        html = _OWNER_BLOCK.sub("", html)
+    role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s};</script>' % (
+        "true" if _is_noprofit(request) else "false",
+        "true" if _is_admin(request) else "false")
+    html = html.replace("</head>", role + chr(10) + "</head>", 1)
+    return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
+
+
 @app.get("/traffic")
 def traffic(request: Request):
     """מערכת ניטור ואנליטיקת פרסום — תנועה לאתר מגוגל אנליטיקס.
@@ -2085,6 +2106,28 @@ def api_agentreport(request: Request, d_from: str = "", d_to: str = ""):
     branches = sb_rpc("bi_agent_report", {"p_from": f.isoformat(), "p_to": t.isoformat()})
     baskets = sb_rpc("bi_agent_baskets", {"p_from": f.isoformat(), "p_to": t.isoformat()})
     return JSONResponse({"branches": branches or [], "baskets": baskets or []})
+
+
+@app.get("/api/conversion")
+def api_conversion(request: Request, d_from: str = "", d_to: str = ""):
+    """יחס המרה — כניסות בחלון הפתיחה מול לקוחות שקנו.
+
+    הכרעות דורון, 31.8.2026:
+      · קונה = לקוח שפתח הזמנה באותו יום.
+      · כניסות חלקי 2 = קבוצות קנייה. רוב הלקוחות מגיעים בזוגות.
+      · חלון הספירה = משעת הפתיחה עד שעתיים אחרי הסגירה.
+
+    אין כאן שום שדה רווח, ולכן המסך פתוח לכל מי שמחובר.
+    """
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    f, t = _parse_date(d_from), _parse_date(d_to)
+    if not f or not t:
+        return JSONResponse({"error": "bad dates"}, status_code=400)
+    if f > t:
+        f, t = t, f
+    agg = sb_rpc("bi_conversion", {"p_from": f.isoformat(), "p_to": t.isoformat()})
+    return JSONResponse(agg or {"days": [], "meta": {}})
 
 
 @app.get("/api/baskets")
