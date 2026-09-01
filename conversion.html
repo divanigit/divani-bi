@@ -121,6 +121,8 @@ h1{font-size:clamp(23px,5.4vw,31px);font-weight:800;margin:4px 0 2px;letter-spac
 .cmpdates{font-size:14px;color:var(--tx2);margin:0 0 12px;
   font-variant-numeric:tabular-nums}
 .cmpdates b{color:var(--tx);font-weight:700}
+.cut{font-size:13.5px;line-height:1.55;color:var(--warn-tx);background:var(--warn-bg);
+  border:1px solid var(--warn-line);border-radius:11px;padding:10px 13px;margin:0 0 14px}
 .hyg{background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:var(--r);
   padding:13px 15px;margin:0 0 16px}
 .hygtop{display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -213,6 +215,7 @@ tfoot td{border-top:2px solid var(--line2);font-weight:800;background:var(--bg)}
 
   <h1>כמה מהנכנסים קונים</h1>
   <p class="sub" id="sub">טוען…</p>
+  <p class="cut" id="cut" hidden></p>
 
   <div class="hyg" id="hyg" hidden>
     <div class="hygtop">
@@ -363,6 +366,10 @@ function lastYear(d){
   if (p[1] === '02' && p[2] === '29') return y + '-02-28';
   return y + '-' + p[1] + '-' + p[2];
 }
+function heDateY(s){
+  var p = String(s).slice(0,10).split('-');
+  return p[2] + '.' + p[1] + '.' + p[0];
+}
 function heDate(s){ var p = String(s).slice(0,10).split('-'); return p[2] + '.' + p[1]; }
 
 /* אותן תקופות שכבר קיימות בלוח הראשי, כדי שאותה מילה תמיד תיתן אותו טווח. */
@@ -450,7 +457,10 @@ function load(){
   ]).then(function(r){
     if (my !== REQ) return;                       // תשובה של בקשה שכבר לא רלוונטית
     DATA = r[0]; PREV = r[1];
-    DATA.__from = want.from; DATA.__to = want.to;
+    /* הטווח שנמדד בפועל, ולא זה שהתבקש: השרת חותך את היום האחרון כל עוד
+       דוח התנועה שלו טרם הגיע, והכותרת חייבת לתאר את מה שנמדד. */
+    DATA.__from = want.from;
+    DATA.__to = (DATA.meta && DATA.meta.to_used) || want.to;
     DATA.__pf = pf; DATA.__pt = pt;
     render();
   }).catch(function(e){
@@ -478,7 +488,15 @@ function sign(x, digits){ if (x == null) return '—';
 function render(){
   paintHyg();                        /* the warning follows the range on screen */
   var days = (DATA && DATA.days) || [];
-  if (!days.length) { $('sub').textContent = 'אין נתונים בתקופה שנבחרה.'; return; }
+  var M = (DATA && DATA.meta) || {};
+  if (!days.length) {
+    $('sub').textContent = M.complete_through && state.to > M.complete_through
+      ? 'עדיין אין דוח תנועה לתקופה שבחרת. הנתונים מלאים עד '
+        + heDateY(M.complete_through) + '.'
+      : 'אין נתונים בתקופה שנבחרה.';
+    $('kpis').innerHTML = ''; $('whyCard').style.display = 'none';
+    return;
+  }
   var now = agg(days), was = agg((PREV && PREV.days) || []);
 
   /* התאריכים נלקחים מהתשובה עצמה ולא מהמצב, כדי שהכותרת לעולם לא תתאר
@@ -486,6 +504,16 @@ function render(){
   $('sub').textContent = heDate(DATA.__from || state.from) + ' – ' + heDate(DATA.__to || state.to)
     + ' · המדד: לקוחות שפתחו הזמנה מתוך המבקרים'
     + ' · הספירה מהפתיחה עד שעתיים אחרי הסגירה';
+
+  /* היום האחרון בטבלה תמיד חלקי: קובץ קאונטרייט מגיע ב-09:25 למחרת וסופר עד
+     אותו רגע. 31.8 הראה 17 נכנסים בכל הרשת מול 563 יום קודם — לא צניחה בתנועה
+     אלא יום שבקושי התחיל כשנמדד. הוא מוצא מהחישוב, וזה נאמר. */
+  $('cut').hidden = !M.capped;
+  if (M.capped) {
+    $('cut').textContent = 'התקופה שביקשת נגמרת ב-' + heDateY(M.to)
+      + ', אבל דוח התנועה מגיע רק למחרת בבוקר. כל המספרים כאן הם עד '
+      + heDateY(M.complete_through) + ' בלבד.';
+  }
 
   /* --- כרטיסים --- */
   $('kpis').innerHTML = [
