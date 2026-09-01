@@ -2154,14 +2154,14 @@ def api_siteconv(request: Request):
     names = [p["name"] for p in d["platforms"] if p.get("kind") == "פלטפורמה"]
     node = d["series"]["חודש"]["סהכ"]
     mons = d["periods"]["חודש"]
-    sess = []
-    for i in range(len(mons)):
-        s = 0
-        for n in names:
-            arr = node.get(n) or []
-            if i < len(arr):
-                s += (arr[i].get("s") or 0)
-        sess.append(s)
+    # לכל ערוץ הסדרה שלו, כדי שכיבוי ערוץ יהיה חשבון על נתון שכבר בידיים
+    # ולא בקשה חדשה לשרת בכל לחיצה.
+    per = {}
+    for n in names:
+        arr = node.get(n) or []
+        per[n] = [int((arr[i].get("s") or 0) if i < len(arr) else 0)
+                  for i in range(len(mons))]
+    sess = [sum(per[n][i] for n in names) for i in range(len(mons))]
 
     lo = mons[0]["period_start"]
     hi = mons[-1]["period_end"]
@@ -2179,8 +2179,18 @@ def api_siteconv(request: Request):
             "conv": round(o / sess[i] * 100, 4) if sess[i] else None,
             "partial": bool(mo.get("is_partial")), "note": mo.get("partial_note") or "",
         })
-    return JSONResponse({"months": out, "measure": d["meta"].get("measure_short", "סשנים"),
-                         "source_to": hi})
+    return JSONResponse({
+        "months": out,
+        "measure": d["meta"].get("measure_short", "סשנים"),
+        "source_to": hi,
+        "channels": [{"name": n, "sessions": per[n]} for n in names],
+        # קבוצות שאינן ערוץ בפני עצמו אלא צירוף של ערוצים קיימים. בלי זה
+        # "מטא" הייתה נספרת גם היא וגם שני חלקיה, והתנועה הייתה מוכפלת.
+        "groups": [{"name": p["name"], "of": ["פייסבוק", "אינסטגרם"]}
+                   for p in d["platforms"] if p.get("kind") == "צירוף"],
+        # ההזמנות אינן נושאות ערוץ: bi_site_orders סופרת את סניף 103 בלבד.
+        # לכן כיבוי ערוץ מקטין את המכנה ולא את המונה, והמסך חייב לומר זאת.
+        "orders_have_channel": False})
 
 
 

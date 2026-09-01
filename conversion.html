@@ -202,6 +202,19 @@ th{font-size:11.5px;font-weight:700;color:var(--tx3);background:var(--bg);
 td.nm,th.nm{text-align:start;font-weight:600;white-space:normal}
 tbody tr:last-child td{border-bottom:0}
 tfoot td{border-top:2px solid var(--line2);font-weight:800;background:var(--bg)}
+/* שבב ערוץ: דלוק = נספר. כבוי מקבל קו חוצה ולא רק צבע חיוור, כדי שהמצב
+   ייקרא גם בלי הבחנת גוונים. */
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{font:inherit;font-size:13.5px;min-height:38px;padding:0 12px;cursor:pointer;
+  border:1px solid var(--line2);border-radius:999px;background:var(--bg);
+  color:var(--tx);display:inline-flex;align-items:center;gap:7px}
+.chip .dot{width:8px;height:8px;border-radius:50%;background:var(--brand);flex:none}
+.chip.off{color:var(--tx3);text-decoration:line-through;border-color:var(--line)}
+.chip.off .dot{background:var(--line2)}
+.chip:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
+.chip.all{font-weight:700}
+.cwarn{font-size:13px;line-height:1.55;color:var(--warn-tx);background:var(--warn-bg);
+  border:1px solid var(--warn-line);border-radius:11px;padding:9px 12px;margin:10px 0 0}
 .dlt{display:block;font-size:11.5px;font-weight:700;margin-top:3px}
 .dlt.muted{color:var(--tx3);font-weight:400}
 .bar{display:block;height:5px;border-radius:3px;background:var(--brandSoft);margin-top:4px;
@@ -333,7 +346,10 @@ tfoot td{border-top:2px solid var(--line2);font-weight:800;background:var(--bg)}
 
   <section class="card" id="siteCard">
     <div class="eyebrow">האתר — כמה מהגולשים הזמינו</div>
-    <div class="kpis" id="siteKpis" style="margin:0 0 12px"></div>
+    <div class="eyebrow next">ערוצים שנספרים</div>
+    <div class="chips" id="siteChans"></div>
+    <p class="cwarn" id="siteWarn" hidden></p>
+    <div class="kpis" id="siteKpis" style="margin:12px 0"></div>
     <svg class="chart" id="chart3" role="img" aria-label="המרת האתר לפי חודש"></svg>
     <p class="note" id="siteNote"></p>
   </section>
@@ -1017,20 +1033,93 @@ $('hygMore').addEventListener('click', function(){
 function loadSite(){
   fetch('/api/siteconv', {cache:'no-store'})
     .then(function(r){ return r.ok ? r.json() : null; })
-    .then(function(j){ if (!j || !j.months || !j.months.length) return; SITE = j; drawSite(); })
+    .then(function(j){ if (!j || !j.months || !j.months.length) return;
+      SITE = j; buildChans(); drawSite(); })
     .catch(function(){});
 }
+/* ערוצים שכובו. ריק = הכל נספר, וזה המצב הרגיל של המסך. */
+var CHOFF = {};
+
+function chanNames(){ return (SITE.channels || []).map(function(c){ return c.name; }); }
+function chanOn(){ return chanNames().filter(function(n){ return !CHOFF[n]; }); }
+
+function buildChans(){
+  var box = $('siteChans');
+  if (!SITE || !SITE.channels) { box.innerHTML = ''; return; }
+  var h = SITE.channels.map(function(c){
+    var off = !!CHOFF[c.name];
+    return '<button type="button" class="chip' + (off ? ' off' : '') + '" data-ch="'
+      + c.name + '" aria-pressed="' + (!off) + '"><span class="dot"></span>'
+      + c.name + '</button>';
+  }).join('');
+  /* צירופים: כפתור אחד שמכבה את שני חלקיו יחד. מטא אינה ערוץ בפני עצמה,
+     ולכן היא אינה נספרת לצד פייסבוק ואינסטגרם אלא מפעילה אותם. */
+  (SITE.groups || []).forEach(function(g){
+    var off = g.of.every(function(n){ return CHOFF[n]; });
+    h += '<button type="button" class="chip' + (off ? ' off' : '') + '" data-grp="'
+      + g.of.join('|') + '" aria-pressed="' + (!off) + '"><span class="dot"></span>'
+      + g.name + '</button>';
+  });
+  if (Object.keys(CHOFF).length)
+    h += '<button type="button" class="chip all" data-all="1">להחזיר הכל</button>';
+  box.innerHTML = h;
+  box.querySelectorAll('[data-ch]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var n = b.getAttribute('data-ch');
+      if (CHOFF[n]) delete CHOFF[n]; else CHOFF[n] = 1;
+      buildChans(); drawSite();
+    });
+  });
+  box.querySelectorAll('[data-grp]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var parts = b.getAttribute('data-grp').split('|');
+      var allOff = parts.every(function(n){ return CHOFF[n]; });
+      parts.forEach(function(n){ if (allOff) delete CHOFF[n]; else CHOFF[n] = 1; });
+      buildChans(); drawSite();
+    });
+  });
+  box.querySelectorAll('[data-all]').forEach(function(b){
+    b.addEventListener('click', function(){ CHOFF = {}; buildChans(); drawSite(); });
+  });
+}
+
 function drawSite(){
   if (!SITE) { $('siteCard').style.display = 'none'; return; }
-  var m = SITE.months, last = m[m.length - 1], first = m[0];
+  /* הסשנים נבנים מהערוצים הדלוקים בלבד. ההזמנות נשארות במלואן — אין להן
+     ערוץ — ולכן כשמשהו כבוי המספר אינו עוד המרה של התנועה שנשארה. */
+  var offN = chanNames().filter(function(n){ return CHOFF[n]; });
+  var on = chanOn();
+  var m = SITE.months.map(function(x, i){
+    if (!SITE.channels || !offN.length) return x;
+    var sv = 0;
+    SITE.channels.forEach(function(c){ if (!CHOFF[c.name]) sv += (c.sessions[i] || 0); });
+    return { ym:x.ym, label:x.label, sessions:sv, orders:x.orders, sales:x.sales,
+             conv: sv ? x.orders / sv * 100 : null,
+             partial:x.partial, note:x.note };
+  });
+  var filtered = offN.length > 0;
+  var last = m[m.length - 1], first = m[0];
   var totS = 0, totO = 0;
   m.forEach(function(x){ totS += x.sessions; totO += x.orders; });
   var best = m.reduce(function(a, b){ return (b.conv || 0) > (a.conv || 0) ? b : a; });
   var worst = m.reduce(function(a, b){ return (b.conv || 9) < (a.conv || 9) ? b : a; });
 
+  $('siteWarn').hidden = !filtered;
+  if (filtered) {
+    $('siteWarn').innerHTML = '<b>' + offN.join(' · ') + '</b> ' +
+      (offN.length === 1 ? 'הוצא' : 'הוצאו') + ' מהספירה. '
+      + 'שים לב: <b>ההזמנות אינן נושאות ערוץ</b> — באתר נרשם סניף 103 בלבד, '
+      + 'בלי מאיפה הגיע הגולש. לכן הורדת ערוץ מקטינה את הגולשים ולא את '
+      + 'ההזמנות, והאחוז כאן אינו ההמרה של התנועה שנשארה אלא '
+      + '<b>כל הזמנות האתר חלקי הגולשים שהשארת</b>.';
+  }
+
   $('siteKpis').innerHTML = [
-    ['hero', 'המרת האתר', last.conv == null ? '—' : last.conv.toFixed(3) + '%', last.label],
-    ['', 'גולשים', NF.format(last.sessions), SITE.measure],
+    ['hero', filtered ? 'הזמנות חלקי הגולשים שנשארו' : 'המרת האתר',
+      last.conv == null ? '—' : last.conv.toFixed(3) + '%', last.label],
+    ['', 'גולשים', NF.format(last.sessions),
+      filtered ? SITE.measure + ' · ' + on.length + ' מתוך ' + chanNames().length + ' ערוצים'
+               : SITE.measure],
     ['', 'הזמינו', NF.format(last.orders), 'הזמנות'],
     ['', 'החודש הכי טוב', (best.conv || 0).toFixed(3) + '%', best.label]
   ].map(function(k){
