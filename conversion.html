@@ -74,9 +74,10 @@ body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--font);
   font-size:15px;border:1px solid transparent}
 .owlsheet a:hover{background:var(--surface);border-color:var(--line)}
 /* שחור = אני נמצא כאן. המשמעות היחידה של השחור בתפריט. */
-.owlcur{background:#111;color:#fff;font-weight:700;border-color:#111;cursor:default}
+.owlcur,.owlsheet a.owlcur{background:#111;color:#fff;font-weight:700;
+  border-color:#111;cursor:default}
 @media (prefers-color-scheme:dark){
-  .owlcur{background:#e9efeb;color:#0f1512;border-color:#e9efeb}
+  .owlcur,.owlsheet a.owlcur{background:#e9efeb;color:#0f1512;border-color:#e9efeb}
 }
 /* ---------- כותרת המסך ---------- */
 h1{font-size:clamp(23px,5.4vw,31px);font-weight:800;margin:4px 0 2px;letter-spacing:-.01em}
@@ -302,7 +303,7 @@ tfoot td{border-top:2px solid var(--line2);font-weight:800;background:var(--bg)}
 
 <div class="owlov" id="owlov">
   <div class="owlsheet" role="dialog" aria-modal="true" aria-label="תפריט">
-    <div class="owlhead"><b>דוחות</b>
+    <div class="owlhead"><b>תפריט</b>
       <button type="button" class="owlx" id="owlx" aria-label="סגירה">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg>
       </button>
@@ -313,26 +314,46 @@ tfoot td{border-top:2px solid var(--line2);font-weight:800;background:var(--bg)}
 
 <script>
 /* ---------- תפריט OWL ---------- */
-window.owlBuildNav = function(){
-  var role = (window.OWL_ROLE || {});
-  var items = [['agents','ביצועי סוכנים'],['branches','מכירות לפי סניפים'],
-    ['hours','שעות חזקות וחלשות'],['products','מוצרים'],['cash','תקבולים במזומן'],
-    ['collect','מקדמות והנחות'],['service','פעילות שירות'],
-    ['pctrl','בקרת מחירים','profit'],['branchsrc','מקורות הגעה'],['dim','פילוח מכירות'],
-    ['mdown','מוריד כסף','profit'],['cancels','אחוז ביטולים'],['comp','פיצויים ללקוחות'],
-    ['dow','ימים חזקים בשבוע'],['ins','תובנות']];
-  var h = '<div class="owlg">דוחות</div>';
-  items.forEach(function(it){
-    if (it[2] === 'profit' && role.noprofit) return;
-    h += '<a href="/?v=' + it[0] + '">' + it[1] + '</a>';
+window.OWL_NAV = [
+  ['g', 'מכירות'],
+  ['v', 'agents',    'סוכנים'],
+  ['v', 'branches',  'סניפים'],
+  ['v', 'hours',     'שעות חזקות וחלשות'],
+  ['v', 'products',  'מוצרים'],
+  ['g', 'כספים ושירות'],
+  ['v', 'cash',      'מזומן'],
+  ['v', 'collect',   'מקדמות'],
+  ['v', 'service',   'שירות'],
+  ['v', 'pctrl',     'בקרת מחירים', 'profit'],
+  ['g', 'אנליטיקה'],
+  ['v', 'branchsrc', 'מקורות הגעה'],
+  ['v', 'dim',       'פילוח'],
+  ['v', 'mdown',     'מוריד כסף', 'profit'],
+  ['v', 'cancels',   'אחוז ביטולים'],
+  ['v', 'comp',      'פיצויים'],
+  ['v', 'dow',       'ימים חזקים בשבוע'],
+  ['v', 'ins',       'תובנות'],
+  ['g', 'ניתוח'],
+  ['a', '/agent-report', 'ניתוח ביצועי נציגים וסניפים'],
+  ['a', '/conversion',   'יחס המרה'],
+  ['g', 'מערכת ניטור ואנליטיקת פרסום', 'profit'],
+  ['a', '/traffic',      'תמהיל מקורות התנועה', 'profit']
+];
+window.OWL_HERE = '/conversion';
+window.owlBuildNav = function(asNoProfit){
+  /* asNoProfit נמסר על ידי העין כשמסתכלים דרך תפקיד אחר; בטעינה רגילה הוא
+     חסר, ואז התפקיד נלקח ממה שהשרת הזריק. */
+  var np = (asNoProfit != null) ? asNoProfit : (window.OWL_ROLE || {}).noprofit;
+  var h = '', pend = null;
+  window.OWL_NAV.forEach(function(it){
+    if (it[it.length - 1] === 'profit' && np) return;
+    if (it[0] === 'g') { pend = it[1]; return; }
+    if (pend) { h += '<div class="owlg">' + pend + '</div>'; pend = null; }
+    var href = it[0] === 'a' ? it[1] : '/?v=' + it[1];
+    h += href === window.OWL_HERE
+      ? '<a href="' + href + '" class="owlcur" aria-current="page">' + it[2] + '</a>'
+      : '<a href="' + href + '">' + it[2] + '</a>';
   });
-  h += '<div class="owlg">ניתוח</div>'
-     + '<a href="/agent-report">ניתוח ביצועי נציגים וסניפים</a>'
-     + '<a href="/conversion" class="owlcur" aria-current="page">יחס המרה</a>';
-  if (!role.noprofit) {
-    h += '<div class="owlg">מערכת ניטור ואנליטיקת פרסום</div>'
-       + '<a href="/traffic">תמהיל מקורות התנועה</a>';
-  }
   document.getElementById('owllist').innerHTML = h;
 };
 owlBuildNav();
