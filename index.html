@@ -273,8 +273,12 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .srzero{stroke:var(--line2);stroke-width:1}
   .srtrend{fill:none;stroke:var(--tx3);stroke-width:1.6}
   /* המספר שמעל העמודה. באלפים, כי בשקלים מלאים הוא רחב מהעמודה עצמה ונדרס
-     בשכנה. היחידה נאמרת פעם אחת מתחת לגרף ולא ליד כל מספר. */
-  .srval{fill:var(--tx3);font-size:7.5px;font-weight:600;text-anchor:middle;font-variant-numeric:tabular-nums}
+     בשכנה. היחידה נאמרת פעם אחת מתחת לגרף ולא ליד כל מספר.
+     הגודל הוא ביחידות ה-viewBox וה-SVG נמתח לרוחב המגירה, ולכן שני ערכים:
+     בטלפון המגירה ברוחב המסך והיחס קרוב לאחד, ובמסך רחב היא 520 והיחס 1.43.
+     שניהם נוחתים על כ-11 פיקסל בפועל, הרצפה לטקסט תווית בנייד. */
+  .srval{fill:var(--tx3);font-size:11.5px;font-weight:600;text-anchor:middle;font-variant-numeric:tabular-nums}
+  @media (min-width:640px){.srval{font-size:8px}}
   .srval.on{fill:var(--tx)}
   .sraxis{direction:ltr;display:flex;justify-content:space-between;font-size:10.5px;color:var(--tx3);margin-top:5px}
   .srpick{min-height:34px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12.5px;border-top:1px solid var(--line);margin-top:8px;padding-top:9px}
@@ -2843,8 +2847,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   // תצוגת האחוז. srBucket — דלי שנבחר ביד; ריק פירושו הדלי שהשרת גזר מאורך התקופה.
   var srReq=null, srDen=null, srShare=false, srBucket='';
   var SR_BK={d:'יומי',w:'שבועי',m:'חודשי'};
-  // מעל הצפיפות הזאת אין מקום למספר מעל עמודה, ואז עדיף בלי — הערך נשאר בלחיצה.
-  var SR_LBL_MAX=14;
+  // רוחב הציור, ורוחב תו בגופן התווית — שניהם ביחידות ה-viewBox. רוחב התו
+  // נמדד על ספרות טבלאיות, שבהן כל הספרות ברוחב אחיד.
+  var SR_W=340, SR_LBL_CH=11.5*0.6;
   var SR_MONEY={sales:1,profit:1,svc_sales:1,cash_mz:1,cash_hv:1,cash_sk:1,cash_ot:1,cash_tot:1,
     collect_net:1,collect_gross:1,collect_paid:1,collect_disc:1,dim_sales:1,dim_profit:1,
     md_total:1,md_total_all:1,md_noreason:1,md_noreason_all:1,cx_money:1,cx_sales:1};
@@ -2905,7 +2910,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var tot=(den&&den.total!=null&&Number(den.total)>0&&num.total!=null)
       ? 100*Number(num.total)/Number(den.total) : null;
     return {measure:num.measure,kind:'share',additive:false,rows:rows,total:tot,
-            bucket:num.bucket,bucket_label:(num.bucket_label||'')+' · אחוז מהמחזור',
+            bucket:num.bucket,bucket_label:(num.bucket_label||'')+' · אחוז מכלל המכירות',
             partial_first:num.partial_first,partial_last:num.partial_last,to:num.to};
   }
   // מה שמצויר בפועל: או המספרים כמו שהם, או היחס שלהם למחזור.
@@ -2923,6 +2928,19 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(!SR_MONEY[j.measure])return nf(x);
     var k=x/1000;
     return Math.abs(k)>=10?nf(k):(Math.round(k*10)/10).toFixed(1);
+  }
+  // האם יש מקום לתייג את כל העמודות. לא מספר קבוע של דליים אלא רוחב אמיתי:
+  // התווית הרחבה ביותר מול הרוחב שעמודה אחת מקבלת. הכול או כלום — כשמספר אחד
+  // נעלם מרוב צפיפות, מי שקורא סופר עמודות ומייחס את המספר לעמודה הלא נכונה.
+  function srLblsFit(j){
+    var rows=(j&&j.rows)||[],n=rows.length,i,w=0,t;
+    if(!n||j.kind==='ratio')return false;
+    for(i=0;i<n;i++){
+      if(rows[i].v==null)continue;
+      t=srBarLbl(rows[i].v,j);
+      if(t.length>w)w=t.length;
+    }
+    return w>0&&(w*SR_LBL_CH+3)<=(SR_W/n);
   }
   function srLbl(t,b){
     if(b==='m')return MONTHS[parseInt(t.slice(5,7),10)-1]+' '+t.slice(0,4);
@@ -3003,7 +3021,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var tools='<div class="srtools"><button type="button" id="srtg"'+(hasT?'':' disabled')
       +' class="'+(on?'on':'')+'" aria-pressed="'+(on?'true':'false')+'">קו מגמה</button>'
       +(srCanShare()?('<button type="button" id="srsh" class="'+(srShare?'on':'')
-        +'" aria-pressed="'+(srShare?'true':'false')+'">אחוז מהמחזור</button>'):'')
+        +'" aria-pressed="'+(srShare?'true':'false')+'">אחוז מכלל המכירות</button>'):'')
       +'</div>'+bk;
     // ההסבר יורד מתחת לגרף ועולה רק בלחיצה על העמודה עצמה. דורון, 27.8.2026:
     // "להוריד את הטקסט ובמקומו לצייר את העמודה האחרונה מקווקוות".
@@ -3013,10 +3031,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       : '';
     var note='';
     // היחידה נאמרת פעם אחת, מתחת לגרף. ליד כל עמודה היא הייתה תופסת את מקום המספר.
-    if(n<=SR_LBL_MAX&&j.kind!=='ratio'&&j.kind!=='share'&&SR_MONEY[j.measure])
+    if(srLblsFit(j)&&j.kind!=='share'&&SR_MONEY[j.measure])
       note+='<div class="srnote">המספרים מעל העמודות באלפי ₪.</div>';
     if(srShare)
-      note+='<div class="srnote">כל עמודה היא חלקו של הפלח מהמחזור של אותה תקופה, ולא סכום בשקלים. ירידה כאן היא ירידה בנתח גם אם הכסף עלה.</div>';
+      note+='<div class="srnote">כל עמודה היא חלקו של הפלח מכלל המכירות באותה תקופה, ולא סכום בשקלים. ירידה כאן היא ירידה בנתח גם אם הכסף עלה. הבסיס לפני מע"מ, בשני צדי החישוב.</div>';
     if(on&&T.skipped)note+='<div class="srnote">קו המגמה לא כולל תקופות חלקיות.</div>';
     srBody.innerHTML=head+tot+tools+srChart(j,on?T:null)
       +'<div class="sraxis"><span>'+esc(srLbl(rows[0].t,j.bucket))+'</span><span>'+esc(srLbl(rows[n-1].t,j.bucket))+'</span></div>'
@@ -3027,7 +3045,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var rows=j.rows||[],n=rows.length,i;
     // הריפוד העליון פותח מקום למספר שמעל העמודה הגבוהה. בלעדיו הוא נדחק אל
     // הקצה ונצמד למסגרת. בגרף יחס אין עמודות ואין מספרים, ולכן גם אין מה לפנות.
-    var W=340,H=134,PT=(j.kind!=='ratio'&&(j.rows||[]).length<=SR_LBL_MAX)?17:9,PB=3;
+    var W=SR_W,H=134,PT=srLblsFit(j)?17:9,PB=3;
     var v=[],mx=0,mn=0,x;
     for(i=0;i<n;i++){x=rows[i].v==null?null:Number(rows[i].v);v.push(x);
       if(x==null)continue;if(x>mx)mx=x;if(x<mn)mn=x;}
@@ -3071,13 +3089,14 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       }
       // הערך מעל העמודה, כשיש מספיק רוחב לכולם. חלקית — כי כשמספר אחד נעלם
       // מרוב צפיפות, מי שקורא סופר את העמודות ומייחס את המספר לעמודה הלא נכונה.
-      if(n<=SR_LBL_MAX){
+      if(srLblsFit(j)){
         for(i=0;i<n;i++){
           if(v[i]==null)continue;
           var lb=srBarLbl(v[i],j);if(!lb)continue;
           // מתחת לעמודה שלילית ומעליה בחיובית; לעולם לא מחוץ למסגרת העליונה.
-          var ty=v[i]<0?(Y(v[i])+7.6):(Y(v[i])-3);
-          if(ty<7)ty=7;if(ty>H-1)ty=H-1;
+          // הרווחים גדלו עם הגופן — קו הבסיס חייב להשאיר מקום לגובה האות.
+          var ty=v[i]<0?(Y(v[i])+10.5):(Y(v[i])-3.5);
+          if(ty<9.5)ty=9.5;if(ty>H-1)ty=H-1;
           s+='<text class="srval'+(srPick===i?' on':'')+'" x="'+X(i).toFixed(2)
             +'" y="'+ty.toFixed(2)+'">'+esc(lb)+'</text>';
         }
