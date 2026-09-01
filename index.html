@@ -279,6 +279,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
      שניהם נוחתים על כ-11 פיקסל בפועל, הרצפה לטקסט תווית בנייד. */
   .srval{fill:var(--tx3);font-size:11.5px;font-weight:600;text-anchor:middle;font-variant-numeric:tabular-nums}
   @media (min-width:640px){.srval{font-size:8px}}
+  /* תווית הציר מתחת לעמודה. אותו חשבון מתיחה בדיוק כמו .srval. */
+  .srax{fill:var(--tx3);font-size:11.5px;text-anchor:middle}
+  @media (min-width:640px){.srax{font-size:8px}}
   .srval.on{fill:var(--tx)}
   .sraxis{direction:ltr;display:flex;justify-content:space-between;font-size:10.5px;color:var(--tx3);margin-top:5px}
   .srpick{min-height:34px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12.5px;border-top:1px solid var(--line);margin-top:8px;padding-top:9px}
@@ -2946,6 +2949,22 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     }
     return w>0&&(w*SR_LBL_CH+3)<=(SR_W/n);
   }
+  /* ראשי תיבות לחודש, שתי אותיות וגרש. שלוש היכן ששתיים אינן מבדילות:
+     יוני מול יולי, אוגוסט מול אוקטובר. */
+  var SR_MON=['ינ\u05f3','פב\u05f3','מר\u05f3','אפ\u05f3','מא\u05f3','יונ\u05f3',
+              'יול\u05f3','אוג\u05f3','ספ\u05f3','אוק\u05f3','נוב\u05f3','דצ\u05f3'];
+  function srTick(t,b){
+    if(!t)return '';
+    if(b==='m')return SR_MON[parseInt(t.slice(5,7),10)-1]||'';
+    return String(parseInt(t.slice(8,10),10))+'.'+String(parseInt(t.slice(5,7),10));
+  }
+  /* אותו מבחן רוחב כמו לתוויות הערך, ומאותה סיבה: הכול או כלום. */
+  function srTicksFit(j){
+    var rows=(j&&j.rows)||[],n=rows.length,i,w=0,t;
+    if(!n)return false;
+    for(i=0;i<n;i++){t=srTick(rows[i].t,j.bucket);if(t.length>w)w=t.length;}
+    return w>0&&(w*SR_LBL_CH+3)<=(SR_W/n);
+  }
   function srLbl(t,b){
     if(b==='m')return MONTHS[parseInt(t.slice(5,7),10)-1]+' '+t.slice(0,4);
     if(b==='w')return 'שבוע '+heDate(t);
@@ -3049,7 +3068,8 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var rows=j.rows||[],n=rows.length,i;
     // הריפוד העליון פותח מקום למספר שמעל העמודה הגבוהה. בלעדיו הוא נדחק אל
     // הקצה ונצמד למסגרת. בגרף יחס אין עמודות ואין מספרים, ולכן גם אין מה לפנות.
-    var W=SR_W,H=134,PT=srLblsFit(j)?17:9,PB=3;
+    var tick=srTicksFit(j);
+    var W=SR_W,H=134,PT=srLblsFit(j)?17:9,PB=tick?15:3;
     var v=[],mx=0,mn=0,x;
     for(i=0;i<n;i++){x=rows[i].v==null?null:Number(rows[i].v);v.push(x);
       if(x==null)continue;if(x>mx)mx=x;if(x<mn)mn=x;}
@@ -3106,6 +3126,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         }
       }
     }
+    if(tick)
+      for(i=0;i<n;i++)
+        s+='<text class="srax" x="'+X(i).toFixed(2)+'" y="'+(H-3.5).toFixed(2)+'">'
+          +esc(srTick(rows[i].t,j.bucket))+'</text>';
     if(T)   // רק מעל הדליים שנכנסו לחישוב — קו שנמתח מעל דלי חלקי מחזיר את אותה סתירה
       s+='<path class="srtrend" d="M'+X(T.i0).toFixed(2)+' '+Y(Number(T.y0)).toFixed(2)
         +' L'+X(T.i1).toFixed(2)+' '+Y(Number(T.y1)).toFixed(2)+'" vector-effect="non-scaling-stroke"></path>';
@@ -3193,9 +3217,15 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var wrows=whole.rows||[];
 
     var sTot=Number(site.total)||0, aTot=Number(whole.total)||0;
-    var last=rows[rows.length-1], lastW=wrows[wrows.length-1]||{};
-    var lastPct=(lastW.v!=null&&Number(lastW.v)>0&&last.v!=null)
-      ? 100*Number(last.v)/Number(lastW.v) : null;
+    /* התקופה האחרונה יכולה להיות בת יום אחד, ואז כרטיס שמכריז אותה כחודש
+       משקר. בגרף היא מקווקוות ונקראת נכון; כרטיס אינו נושא קווקוו, ולכן
+       הוא נסוג לתקופה השלמה האחרונה ואומר זאת בהערה. */
+    var li=rows.length-1, part=srIsPart(site,li,rows.length);
+    if(part&&li>0)li--;
+    var last=rows[li], lw={}, wi;
+    for(wi=0;wi<wrows.length;wi++)if(wrows[wi].t===last.t)lw=wrows[wi];
+    var lastPct=(lw.v!=null&&Number(lw.v)>0&&last.v!=null)
+      ? 100*Number(last.v)/Number(lw.v) : null;
     document.getElementById('kpis').innerHTML=
       '<div class="kpi"><div class="l">'+(siteShare?'נתח האתר בתקופה':'מכירות האתר בתקופה')+'</div>'
       +'<div class="v">'+(siteShare?(aTot>0?srPct1(100*sTot/aTot):'—'):ils(sTot))+'</div></div>'
@@ -3220,6 +3250,8 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         +'ירידה כאן היא ירידה בנתח גם אם הכסף עלה. הבסיס לפני מע"מ, בשני צדי החישוב.'
       : 'המספרים מעל העמודות באלפי ₪.';
     note+=' הזמנות לפי תאריך ההזמנה, לא אספקות.';
+    if(part)note+=' התקופה האחרונה עדיין לא הסתיימה — היא מקווקוות בגרף '
+      +'ואינה הכרטיס שלמעלה.';
     if(siteTrend&&T&&T.skipped)note+=' קו המגמה לא כולל תקופות חלקיות.';
 
     var wv={};
