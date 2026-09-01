@@ -2404,15 +2404,18 @@ def _pending_db():
     """הרשימה כפי שהיא במסד. עד 24.8.26 היא חיה רק ב-_state של התהליך, ולכן כל
     אתחול של Render מחק אותה, לא הייתה היסטוריה, והבדיקה האוטומטית של סוף היום
     לא יכלה לקרוא אותה בכלל (אין לה סיסמה לאתר — /api/pending החזיר לה 401)."""
-    rows = sb_select("bi_pending_transfers?select=ordname,cust,branch,balance,"
-                     "amount,slip_date,n_slips,last_seen"
-                     "&cleared_at=is.null&order=slip_date.asc&limit=500")
+    # דרך RPC ולא בחירת עמודות ישירה, כי צריך גם את תאריך ההזמנה — והוא
+    # אינו בטבלה אלא בשורות ההזמנה.
+    rows = sb_rpc("bi_pending_open", {}) or []
     out, seen_at = [], ""
     for r in rows:
         out.append({"o": r.get("ordname"), "c": r.get("cust") or "",
                     "b": r.get("branch") or "",
                     "bal": float(r.get("balance") or 0),
-                    "d": (r.get("slip_date") or "")[:10],
+                    # d = התאריך שהמסך סופר לפיו: ההזמנה, ובהיעדרה השובר.
+                    # sd נשאר לתצוגה, כי הוא מה שכתוב על האסמכתא.
+                    "d": ((r.get("ord_date") or r.get("slip_date") or "")[:10]),
+                    "sd": (r.get("slip_date") or "")[:10],
                     "show": float(r.get("amount") or 0),
                     "n": int(r.get("n_slips") or 1)})
         if (r.get("last_seen") or "") > seen_at:
