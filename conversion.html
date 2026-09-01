@@ -325,16 +325,6 @@ tfoot td{border-top:2px solid var(--line2);font-weight:800;background:var(--bg)}
     <p class="note" id="chartNote"></p>
   </section>
 
-  <section class="card">
-    <div class="eyebrow">כמה נכנסו וכמה מהם קנו</div>
-    <svg class="chart" id="chart2" role="img" aria-label="מבקרים וכמה מהם קנו"></svg>
-    <div class="legend" id="lg2"></div>
-    <p class="note">גובה העמודה הוא כמה מבקרים נכנסו. החלק המלא הוא כמה מהם
-      קנו, והאחוז שמעליה הוא היחס ביניהם. הגרף שלמעלה מראה את היחס לבדו —
-      כאן רואים גם את הגודל, שהאחוז מסתיר: 12 אחוז על מאתיים מבקרים
-      ו-12 אחוז על אלפיים אינם אותו שבוע.</p>
-  </section>
-
   <section class="card" id="siteCard">
     <div class="eyebrow">האתר — כמה מהגולשים הזמינו</div>
     <div class="kpis" id="siteKpis" style="margin:0 0 12px"></div>
@@ -679,10 +669,10 @@ function clearAll(){
   t.tHead.innerHTML = ''; t.tBodies[0].innerHTML = ''; t.tFoot.innerHTML = '';
   $('tblNote').innerHTML = '';
   $('tblTitle').textContent = '';
-  ['chart', 'chart2'].forEach(function(id){
+  ['chart'].forEach(function(id){
     var g = $(id); while (g && g.firstChild) g.removeChild(g.firstChild);
   });
-  ['legend', 'lg2', 'flags'].forEach(function(id){ if ($(id)) $(id).innerHTML = ''; });
+  ['legend', 'flags'].forEach(function(id){ if ($(id)) $(id).innerHTML = ''; });
   if ($('chartNote')) $('chartNote').textContent = '';
 }
 
@@ -759,7 +749,6 @@ function render(){
 
   state.view === 'dow' ? tableDow(days) : tableBranch(days, (PREV && PREV.days) || []);
   drawChart(days);
-  drawChart2(days);
   drawFlags(days);
   $('foot').textContent = 'מבקר = שתי כניסות בדלת. '
     + 'המקור: קאונטרייט (כניסות) ופריוריטי (הזמנות) · '
@@ -959,77 +948,6 @@ function drawChart(days){
         + 'הכניסות והקונים שלהם נספרים בכל מספר אחר במסך.' : '');
 }
 
-function drawChart2(days){
-  var svg = $('chart2');
-  while (svg.firstChild) svg.removeChild(svg.firstChild);
-  var W = Math.max(300, svg.parentNode.clientWidth || 320), H = W < 500 ? 200 : 235;
-  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
-  svg.setAttribute('width', W); svg.setAttribute('height', H);
-  var cLine = css('--line'), cTx3 = css('--tx3'),
-      cBrand = css('--brand'), cSoft = css('--brandSoft'), cTx2 = css('--tx2');
-
-  var bk = buckets(days, state.grain), order = bk.order;
-  var V = [], B = [];
-  order.forEach(function(k){
-    var v = 0, b = 0;
-    Object.keys(BR).forEach(function(br){
-      var c = bk.cell[k + '|' + br]; if (c) { v += c.v; b += c.b; } });
-    V.push(Math.round(v / 2)); B.push(b);
-  });
-
-  var padT = 22, padB = 26, padR = 10, padL = 46;
-  var pw = W - padR - padL, ph = H - padT - padB, n = order.length;
-  if (!n) return;
-  var maxV = Math.max.apply(null, V.concat([1]));
-  /* גובה אחד לשניהם. זו כל הנקודה: החלק המלא הוא באמת החלק שקנה, ולכן
-     אפשר לקרוא את היחס מהעין ולא רק מהמספר. */
-  var yOf = function(v){ return padT + (1 - v / (maxV * 1.14)) * ph; };
-  var step = pw / n, bw = Math.min(46, step * 0.62);
-  /* מימין לשמאל, כמו כל שאר המסך. */
-  var xOf = function(i){ return W - padR - (i + 0.5) * step - bw / 2; };
-
-  for (var g = 0; g <= 3; g++) {
-    var y = padT + ph * g / 3;
-    svg.appendChild(svgEl('line', { x1:padL, y1:y, x2:W - padR, y2:y,
-      stroke:cLine, 'stroke-width':1 }));
-    var val = Math.round(maxV * 1.14 * (1 - g / 3));
-    var t = svgEl('text', { x:padL - 7, y:y + 3.5, 'font-size':10.5, fill:cTx3,
-      'text-anchor':'end', 'class':'ax' });
-    t.textContent = NF.format(val); svg.appendChild(t);
-  }
-
-  V.forEach(function(v, i){
-    var x = xOf(i), b = B[i];
-    var hv = padT + ph - yOf(v), hb = padT + ph - yOf(b);
-    svg.appendChild(svgEl('rect', { x:x, y:yOf(v), width:bw, height:Math.max(hv, 0),
-      rx:4, fill:cSoft }));
-    svg.appendChild(svgEl('rect', { x:x, y:yOf(b), width:bw, height:Math.max(hb, 0),
-      rx:4, fill:cBrand }));
-    /* האחוז נכתב רק כשיש לו מקום. בטווח ארוך העמודות צרות מדי והמספר
-       היה נדרס על שכנו. */
-    if (v > 0 && step >= 34) {
-      var t2 = svgEl('text', { x:x + bw / 2, y:yOf(v) - 6, 'font-size':10.5,
-        fill:cTx2, 'text-anchor':'middle', 'class':'ax' });
-      t2.textContent = (b / v * 100).toFixed(1) + '%';
-      svg.appendChild(t2);
-    }
-  });
-
-  /* הציר נושא תאריכים בלבד. שמות הסדרות עברו למקראה — הם ישבו כאן באותו
-     גובה של התאריכים ודרסו אותם. */
-  var every = Math.ceil(n / (W < 420 ? 3 : 6));
-  order.forEach(function(k, i){
-    if (i % every && i !== n - 1) return;
-    var t = svgEl('text', { x:xOf(i) + bw / 2, y:H - 8, 'font-size':10.5,
-      fill:cTx3, 'text-anchor':'middle', 'class':'ax' });
-    t.textContent = heDate(k); svg.appendChild(t);
-  });
-
-  $('lg2').innerHTML =
-    '<span class="lg" style="cursor:default"><i style="background:' + cSoft + '"></i>נכנסו</span>'
-  + '<span class="lg" style="cursor:default"><i style="background:' + cBrand + '"></i>קנו</span>';
-}
-
 /* ---------- ימים חריגים ---------- */
 /* ---------- האתר ---------- */
 /* מקור אחר וקצב אחר: הסשנים מגיעים מייצוא ידני של גוגל אנליטיקס שיושב
@@ -1202,14 +1120,14 @@ $('segView').querySelectorAll('[data-v]').forEach(function(b){
   });
 });
 window.addEventListener('resize', function(){
-  if (DATA) { drawChart(DATA.days); drawChart2(DATA.days); }
+  if (DATA) { drawChart(DATA.days); }
   if (SITE) drawSite();
 });
 $('segGrain').querySelectorAll('[data-g]').forEach(function(b){
   b.addEventListener('click', function(){
     $('segGrain').querySelectorAll('[data-g]').forEach(function(x){ x.classList.remove('on'); });
     b.classList.add('on'); state.grain = b.getAttribute('data-g');
-    if (DATA) { drawChart(DATA.days); drawChart2(DATA.days); }
+    if (DATA) { drawChart(DATA.days); }
   });
 });
 setPreset('d30');
