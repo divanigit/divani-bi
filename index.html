@@ -109,15 +109,15 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .selbtn svg{width:16px;height:16px;color:var(--bd);flex:none}
   .selbtn .car{width:12px;height:12px;color:var(--tx3)}
   .rfr{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:8px 12px;border:1px solid var(--line2);border-radius:12px;background:var(--bg);color:var(--tx2);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer}
-  /* חצי גודל, בלי ריבוע צבוע. בבחירה רק האייקון עצמו אדום — הכפתור
-     נשאר כפתור ולא כתם. */
+  /*OWNER*//* half size, no filled square. when chosen only the glyph turns red,
+     so the control stays a control and does not become a blot. */
   #viewasbtn{min-height:0;padding:5px 6px;border-radius:9px}
   #viewasbtn svg{width:17px;height:17px}
   #viewasbtn.on{background:var(--bg);border-color:var(--dfg);color:var(--dfg)}
   #viewasbtn.on svg{color:var(--dfg)}
-  .vasub{display:block;font-size:11.5px;font-weight:400;color:var(--tx3);margin-top:1px}
-  #vasheet{position:fixed;right:0;left:0;bottom:0;z-index:131;background:var(--bg);border-radius:18px 18px 0 0;border:1px solid var(--line);border-bottom:0;box-shadow:0 -12px 40px rgba(0,0,0,.25);padding:14px 16px calc(18px + env(safe-area-inset-bottom));display:none;max-height:80vh;overflow-y:auto}
-  @media (min-width:640px){#vasheet{left:50%;right:auto;transform:translateX(-50%);width:420px;bottom:auto;top:14vh;border-radius:18px;border-bottom:1px solid var(--line)}}
+  .vasub{display:block;font-size:11.5px;font-weight:400;color:var(--tx3);margin-top:1px}/*ENDOWNER*/
+  /*OWNER*/#vasheet{position:fixed;right:0;left:0;bottom:0;z-index:131;background:var(--bg);border-radius:18px 18px 0 0;border:1px solid var(--line);border-bottom:0;box-shadow:0 -12px 40px rgba(0,0,0,.25);padding:14px 16px calc(18px + env(safe-area-inset-bottom));display:none;max-height:80vh;overflow-y:auto}
+  @media (min-width:640px){#vasheet{left:50%;right:auto;transform:translateX(-50%);width:420px;bottom:auto;top:14vh;border-radius:18px;border-bottom:1px solid var(--line)}}/*ENDOWNER*/
   .varow{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:12px 13px;margin:0 0 8px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--tx);font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;text-align:start}
   .varow .vachk{width:18px;height:18px;flex:none;color:var(--bd);opacity:0}
   .varow.on{border-color:var(--bd);font-weight:700}
@@ -161,7 +161,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .pctdet .i .p{font-size:15px;font-weight:500;font-variant-numeric:tabular-nums}
   .pctdet .f{font-size:11px;color:var(--tx3);margin-top:8px}
   @media (prefers-reduced-motion:reduce){.pctdown{transition:none}}
-  /* בקרת מחירים — פרקים אחד מתחת לשני, בלי צבע דקורטיבי */
+  /* price panel - sections stacked, no decorative colour */
   .pcsec{margin:0 0 20px}
   .pcsec h3{font-size:13px;font-weight:500;margin:0 0 8px;color:var(--tx2)}
   .pcnote{font-size:12px;color:var(--tx3);margin:0 0 8px;line-height:1.55}
@@ -479,7 +479,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .bspills{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 12px}
   .bspills button{font-family:inherit;font-size:13px;border:1px solid var(--line2);background:var(--surface);color:var(--tx2);padding:8px 14px;min-height:40px;border-radius:999px;cursor:pointer;white-space:nowrap}
   .bspills button.on{background:var(--accentSoft);border-color:var(--bd);color:var(--okfg);font-weight:600}
-  /* מוריד כסף */
+  /* negative-line panel */
   .mdscope{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 10px}
   .mdscope button{font-family:inherit;font-size:12px;border:1px solid var(--line2);background:var(--bg);color:var(--tx2);padding:6px 11px;min-height:36px;border-radius:999px;cursor:pointer}
   .mdscope button.on{border-color:var(--bd);color:var(--tx);font-weight:600}
@@ -974,7 +974,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(view==='dow')return state.from+'|'+state.to+'|DW';
     if(view==='hours')return state.from+'|'+state.to+'|HR|'+hrBranch;   // התצוגה אינה חלק מהמפתח: היא ציור, לא שאילתה
     if(view==='products')return state.from+'|'+state.to+'|PR|'+prodLevel+'|'+prodSort+'|'+prodFam+'|'+(prodModel||'')+'|'+prodQ;
-    // בקרת מחירים אינה תלויה בטווח התאריכים: היא בודקת את מצב המחירים עכשיו
+    // this panel does not depend on the date range: it reads prices as they are now
     // מול מה שכבר נמכר. מפתח קבוע = לא נטען מחדש בכל שינוי תאריך
     if(view==='pctrl')return 'PCTRL';
     if(view==='likey')return state.from+'|'+state.to+'|LK|'+lkBucket;
@@ -2064,7 +2064,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     sb2.style.opacity=fixed?'.45':'';sb2.style.pointerEvents=fixed?'none':'';
     sb2.title=fixed?'הפאנל הזה מחושב על חלון זמן קבוע':'';
   }
-  /* ---- מוריד כסף — כל שורה בהזמנה שסכומה שלילי ---- */
+  /* ---- negative-line panel: every order line whose amount is below zero ---- */
   var mdDes=null, mdScope='sales';
   function nlines(n){return n===1?'שורה אחת':(n+' שורות');}
   function renderMDownMeta(){
@@ -2352,7 +2352,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       if(amb.return_like&&T.comp)msgs.push('מתוך '+ils(T.comp)+' רשומים כהחזרת מוצר '+ils(amb.return_like)
         +' ('+pct1(100*amb.return_like/T.comp)+'). הפירוט המלא במתג "לפי סוג שורה".');
       if(T.net_out!=null)msgs.push('נטו יצאו '+ils(T.net_out)+' ב־'+nf(T.net_out_docs||0)+' מסמכים. ב־'+nf(T.net_zero_docs||0)+' מסמכים הנטו אפס.');
-      if(mt.money_down_sales!=null)msgs.push('מסך "מוריד כסף" באותה תקופה: '+ils(mt.money_down_sales)+' נציגי מכירות · '+ils(mt.money_down_total||0)+' הכול.');
+      /*NOPROFIT*/if(mt.money_down_sales!=null)msgs.push('מסך "מוריד כסף" באותה תקופה: '+ils(mt.money_down_sales)+' נציגי מכירות · '+ils(mt.money_down_total||0)+' הכול.');/*ENDNOPROFIT*/
       if(mt.over100_orders)msgs.push('ב־'+nf(mt.over100_orders)+' הזמנות הכסף שירד גדול משווי המסמך.');
     }
     noticeSet(nt,msgs,true);
@@ -2476,7 +2476,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     while(d<=e&&g<20000){c[d.getDay()]++;d.setDate(d.getDate()+1);g++;}
     return c;
   }
-  // ---------- בקרת מחירים ----------
+  // ---------- price panel ----------
   // המסך אינו תלוי בטווח התאריכים שנבחר: הוא מציג את מצב הבקרה עכשיו — מה נבדק,
   // מה לא תואם, ומה המערכת למדה לבד ממכירות אמיתיות.
   function renderPctrlMeta(){
@@ -3985,7 +3985,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   /* ---- view toggle ---- */
   function setView(v){
     if(v==='mdown'&&(!META||noProfit()))v='agents';   // before META lands we do not yet know
-    // בקרת מחירים חסומה לעידו לגמרי (דורון, 30.8.2026). הכפתור נמחק
+    // this view is blocked for the no-profit role; the button is removed
     // בשרת, וזה מכסה מצב שנשמר בדפדפן מלפני החסימה.
     if(v==='pctrl'&&(!META||noProfit()))v='agents';
     // קישור ישיר אינו דרך עוקפת: למי שאינו דורון המסך פשוט לא נפתח, ובלי
@@ -3996,7 +3996,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(v!=='cancels'){cxSel=null;cxOrd=null;}
     if(v!=='comp')cpSel=null;
     view=v;
-    var H1={agents:'ביצועי סוכנים',branches:'מכירות לפי סניפים',cash:'תקבולים במזומן',service:'פעילות שירות',collect:'מקדמות והנחות',dim:'פילוח מכירות',branchsrc:'מקורות הגעה לסניף',baskets:'סל מכירות ממוצע ללקוח',cannib:'קניבליזציה — תמהיל ערוצים',mdown:'מוריד כסף',cancels:'אחוז ביטולים',comp:'פיצויים ללקוחות',dow:'ימים חזקים בשבוע',products:'מוצרים',hours:'שעות חזקות וחלשות',ins:'תובנות',pctrl:'בקרת מחירים',likey:'מי עובד בלייקי'};
+    var H1={agents:'ביצועי סוכנים',branches:'מכירות לפי סניפים',cash:'תקבולים במזומן',service:'פעילות שירות',collect:'מקדמות והנחות',dim:'פילוח מכירות',branchsrc:'מקורות הגעה לסניף',baskets:'סל מכירות ממוצע ללקוח',cannib:'קניבליזציה — תמהיל ערוצים',/*NOPROFIT*/mdown:'מוריד כסף',/*ENDNOPROFIT*/cancels:'אחוז ביטולים',comp:'פיצויים ללקוחות',dow:'ימים חזקים בשבוע',products:'מוצרים',hours:'שעות חזקות וחלשות',ins:'תובנות',/*NOPROFIT*/pctrl:'בקרת מחירים',/*ENDNOPROFIT*/likey:'מי עובד בלייקי'};
     document.getElementById('h1t').textContent=H1[v]||H1.agents;
     var bs=document.querySelectorAll('#seg button');
     for(var i=0;i<bs.length;i++){var on=bs[i].getAttribute('data-v')===v;bs[i].classList.toggle('on',on);bs[i].setAttribute('aria-pressed',on?'true':'false');}
@@ -4610,18 +4610,18 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
 
   function applyOwnerUI(){
     var owner=!!(META&&META.owner), prev=owner&&previewUser;
-    // גם במצב "רואה כמו" ההסברים נעלמים — אחרת בדיקת התצוגה של דורון
-    // מראה לו מסך שאף אחד אחר לא רואה, וזו בדיוק הבדיקה שהוא בא לעשות.
+    // the explanations go in preview too, or the preview would show a screen
+    // nobody else gets, וזו בדיוק הבדיקה שהוא בא לעשות.
     document.body.classList.toggle('isowner', owner && !prev);
     var ab=document.getElementById('askbtn'); if(ab)ab.style.display=(!!(META&&META.admin)&&!prev)?'':'none';
     // עידו לא רואה את קטגוריית ניטור הפרסום כלל. המסלול /traffic חוסם אותו בשרת,
     // וזה מסיר גם את הכפתור — אחרת הוא לוחץ ומוחזר לדף הבית בלי הסבר.
     var ns=document.getElementById('navsys'); if(ns)ns.style.display=noProfit()?'none':'';
     // the eye stays on screen for the owner in every state — it is the only way back to his own view
-    var vb=document.getElementById('viewasbtn');
+    /*OWNER*/var vb=document.getElementById('viewasbtn');
     if(vb){ vb.style.display=(owner&&!prevVideo())?'':'none';
             vb.classList.toggle('on',prev);
-            vb.title='בחירת תצוגה'; }
+            vb.title='בחירת תצוגה'; }/*ENDOWNER*/
     // words, not colour: the owner must never have to guess whose view he is looking at
     // בלי כיתוב. הוא בחר מהרשימה, והעין הדלוקה היא כל הסימון שצריך;
     // אם ירצה לדעת איזו תצוגה — הוא פותח את הרשימה ורואה מה מסומן.
@@ -4634,9 +4634,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var pmc=document.querySelector('[data-ps="pm"]');
     if(pmc){ pmc.style.display=(META&&!noProfit())?'':'none';
              if(META&&noProfit()&&prodSort==='pm'){prodSort='s';} }
-    // נבדק מול prev ולא רק מול הבעלים: במצב "רואה כמו" המסך הזה חייב להיעלם,
-    // אחרת התצוגה משקרת לדורון בדיוק ברגע שבו הוא בודק מה אחרים רואים. הנתונים עצמם
-    // חסומים בשרת בלאו הכי, אבל כלי בדיקה שמראה דבר שגוי גרוע מכלי בדיקה שאינו קיים.
+    // tested against prev and not only against owner: in preview this screen has
+    // to go, or the preview lies at the exact moment it is being checked. the data
+    // itself is blocked on the server anyway, but a checking tool that shows the
+    // wrong thing is worse than no checking tool at all.
     // המסך הזה לא רק מוסתר — הוא לא קיים אצל אף אחד אחר. דורון (19.8.2026):
     // "אין להציג 'בפיתוח' ואין להציג את המסך הזה לאף אחד חוץ ממני".
     // "בפיתוח" מסגיר שקיים מסך, וכאן גם עצם הקיום אינו לידיעת הצוות.
