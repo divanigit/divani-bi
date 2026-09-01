@@ -2300,6 +2300,15 @@ def api_cash(request: Request, d_from: str = "", d_to: str = ""):
         print("turnover-gross failed:", repr(e)[:200], flush=True)
         gross = None
     pend["gross"] = gross
+    # ...ואותו מחזור מפוצל לסניפים, כדי שכל שורה בטבלה תישא את היחס שלה
+    # ולא רק את השקלים. אותה שמירה: כישלון כאן אינו סוגר את המסך.
+    try:
+        pend["gross_by_branch"] = sb_rpc(
+            "bi_turnover_gross_by_branch",
+            {"p_from": f.isoformat(), "p_to": t.isoformat()}) or {}
+    except Exception as e:
+        print("turnover-by-branch failed:", repr(e)[:200], flush=True)
+        pend["gross_by_branch"] = {}
     if (t - f).days <= MAX_LINE_SPAN_DAYS:
         rows = sb_rpc("bi_cash_lines", {"p_from": f.isoformat(), "p_to": t.isoformat()})
         return JSONResponse({"mode": "cashlines", "rows": rows or [], **pend})

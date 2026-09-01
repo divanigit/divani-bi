@@ -70,6 +70,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .seg{flex:1;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:2px;padding:12px 12px calc(20px + env(safe-area-inset-bottom));margin:0;-webkit-overflow-scrolling:touch}
   .seg button{display:flex;align-items:center;gap:13px;width:100%;min-height:50px;padding:11px 14px;border:none;background:transparent;cursor:pointer;border-radius:13px;color:var(--tx);text-align:start;font-size:15.5px;font-weight:500;font-family:inherit;white-space:nowrap;position:relative;transition:background .16s ease,color .16s ease}
   .seg button svg{flex:none}
+  /* רצפה: לכל אייקון בתפריט יש מידה גם בלי כלל משלו. SVG בלי width ובלי
+     כלל תואם נפרש ל-300 על 150 — כך נולד החץ הענק. סלקטור מחלקה מנצח את
+     סלקטור התגית, ולכן המידות הייעודיות שלמטה ממשיכות לנצח. */
+  .seg svg,.navsys svg,.navgroup svg{width:18px;height:18px;flex:none}
   .seg .rico{width:20px;height:20px;color:var(--tx2);transition:color .16s}
   .seg .rlbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
   .seg .rchk{width:18px;height:18px;color:var(--bd);opacity:0;margin-inline-start:auto;transition:opacity .16s}
@@ -88,6 +92,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .navgroup.sep{margin-top:8px;padding-top:14px;border-top:1px solid var(--line)}
   .navgroup{display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;color:var(--tx3);letter-spacing:.05em;padding:12px 14px 4px}
   .navgroup .gico{width:15px;height:15px;flex:none}
+  .thint{font-size:12.5px;line-height:1.55;color:var(--tx2);margin:9px 2px 0}
   .navdiv{height:1px;background:var(--line);margin:8px 14px}
   /* קישור למסך אחר נראה ככל פריט; החץ שעליו הוא הסימון. שום צבע
      בתפריט אינו מתחרה בשחור, שמשמעותו היחידה היא המיקום הנוכחי. */
@@ -677,7 +682,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         <button type="button" data-v="ins" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 18.5h5"/><path d="M10.5 21.5h3"/><path d="M12 2.8a6 6 0 0 0-3.9 10.5c.75.7 1.1 1.5 1.15 2.5h5.5c.05-1 .4-1.8 1.15-2.5A6 6 0 0 0 12 2.8z"/></svg><span class="rlbl">תובנות</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <div class="navgroup"><svg class="gico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg><span>ניתוח</span></div>
         <button type="button" id="nrepbtn" class="navext" aria-pressed="false" title="ניתוח ביצועי נציגים וסניפים"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 3.5v17h17"/><path d="M7 14.5l4-4 3 3 5.2-6"/></svg><span class="rlbl">ניתוח ביצועי נציגים וסניפים</span><svg class="rext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 16L16 8"/><path d="M9 8h7v7"/></svg></button>
-        <button type="button" id="convbtn" class="navext" aria-pressed="false" title="כמה מהנכנסים קונים"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 3.5v17h17"/><path d="M7 14.5l4-4 3 3 5.2-6"/></svg><span>יחס המרה</span><svg class="rarr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 17L17 7"/><path d="M9 7h8v8"/></svg></button>
+        <button type="button" id="convbtn" class="navext" aria-pressed="false" title="כמה מהנכנסים קונים"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 3.5v17h17"/><path d="M7 14.5l4-4 3 3 5.2-6"/></svg><span>יחס המרה</span><svg class="rext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 17L17 7"/><path d="M9 7h8v8"/></svg></button>
 <!--NOPROFIT-->
         <div class="navsys" id="navsys">
           <div class="syshead">
@@ -1051,7 +1056,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       .then(ok)
       // j.dev = the server refused this screen for this user. It has no agg, so keeping only
       // j.agg threw the refusal away and the screen rendered as a real, empty result.
-      .then(function(j){if(desiredKey()!==key)return;cache.key=key;cache.dev=!!j.dev;cache.mode=j.mode;cache.panel=j.panel||null;cache.rows=j.rows||null;cache.agg=j.agg||null;cache.gross=(j.gross===undefined?null:j.gross);if(j.pending!==undefined){cache.pending=j.pending;cache.pendingAt=j.pending_at;cache.slipcost=j.slipcost||null;}cb();})
+      .then(function(j){if(desiredKey()!==key)return;cache.key=key;cache.dev=!!j.dev;cache.mode=j.mode;cache.panel=j.panel||null;cache.rows=j.rows||null;cache.agg=j.agg||null;cache.gross=(j.gross===undefined?null:j.gross);cache.grossBr=j.gross_by_branch||null;if(j.pending!==undefined){cache.pending=j.pending;cache.pendingAt=j.pending_at;cache.slipcost=j.slipcost||null;}cb();})
       .catch(fail);
   }
 
@@ -1180,7 +1185,11 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       });
       totalRc+=rcs.length;
       var tot=br.mz+br.hv+br.sk;
-      return {n:br.n,rawk:br.raw,mz:br.mz,hv:br.hv,sk:br.sk,ot:br.ot,tot:tot,s:tot,k:rcs};
+      // המחזור של אותו סניף בתקופה, כולל מע"מ. שורת קבלה בודדת אינה מקבלת
+      // מחזור: המחזור קיים ברמת הסניף ולא ברמת הקבלה.
+      var gb=(cache.grossBr||{})[br.raw];
+      return {n:br.n,rawk:br.raw,mz:br.mz,hv:br.hv,sk:br.sk,ot:br.ot,tot:tot,s:tot,
+              gr:(gb==null?null:+gb),k:rcs};
     });
     // הסכומים ב-T נשארים בלי האסמכתאות, כי הכותרת והשורה התחתונה מוסיפות
     // אותן בנפרד. השיבוץ לסניפים הוא רק בעץ עצמו, ולכן אין ספירה כפולה.
@@ -1418,7 +1427,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       return;
     }
     var rows=[];walk(R.k,0,'',rows);
-    var h='<div class="tw"><table><thead><tr><th class="nm">שם</th><th>מזומן</th><th>העברות</th><th>שיקים מזומן</th><th>סה"כ מזומן</th><th>שאר תקבולים</th></tr></thead><tbody>';
+    var h='<div class="tw"><table><thead><tr><th class="nm">שם</th><th>מזומן</th><th>העברות</th><th>שיקים מזומן</th><th>סה"כ מזומן</th><th>שאר תקבולים</th><th>מחזור</th><th>מזומן מהמחזור</th></tr></thead><tbody>';
     rows.forEach(function(it){
       var c=it.c, cls=it.depth===0?'d0':'dn', ind=it.depth*14;
       var ch=it.hasK?chevSvg(!!eT[it.id]):'<span style="width:15px;flex:none"></span>';
@@ -1432,11 +1441,25 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       var d0=(it.depth===0), rk=(c.rawk==null?'':c.rawk);
       // סניף שכל כולו אסמכתא אינו נפתח לגרף — אין לו סדרה יומית בפריוריטי
       function cn(txt,m,lb){return (d0&&!c.onlyPend)?srNum(txt,m,'branch',rk,c.n+' · '+lb):txt;}
-      h+='<tr class="'+cls+(it.hasK?' row':'')+'" '+(it.hasK?'data-t="'+it.id+'" role="button" tabindex="0"':'')+'><td class="nm"><div class="nmc" style="margin-right:'+ind+'px">'+ch+'<div class="nlab'+(it.depth?' rail':'')+'"><div class="t" style="font-weight:'+(it.depth===0?500:400)+'">'+esc(c.n)+'</div>'+sub+'</div></div></td><td>'+cn(ils(c.mz),'cash_mz','מזומן')+'</td><td>'+cn(ils(c.hv),'cash_hv','העברות')+'</td><td>'+cn(ils(c.sk),'cash_sk','שיקים מזומן')+'</td><td style="font-weight:500">'+cn(ils(c.tot),'cash_tot','סה"כ מזומן')+'</td><td class="mut">'+cn(ils(c.ot),'cash_ot','שאר תקבולים')+'</td></tr>';
+      h+='<tr class="'+cls+(it.hasK?' row':'')+'" '+(it.hasK?'data-t="'+it.id+'" role="button" tabindex="0"':'')+'><td class="nm"><div class="nmc" style="margin-right:'+ind+'px">'+ch+'<div class="nlab'+(it.depth?' rail':'')+'"><div class="t" style="font-weight:'+(it.depth===0?500:400)+'">'+esc(c.n)+'</div>'+sub+'</div></div></td><td>'+cn(ils(c.mz),'cash_mz','מזומן')+'</td><td>'+cn(ils(c.hv),'cash_hv','העברות')+'</td><td>'+cn(ils(c.sk),'cash_sk','שיקים מזומן')+'</td><td style="font-weight:500">'+cn(ils(c.tot),'cash_tot','סה"כ מזומן')+'</td><td class="mut">'+cn(ils(c.ot),'cash_ot','שאר תקבולים')+'</td>'
+        // מחזור ויחס — רק בשורת סניף שיש לה מחזור. לשורת קבלה ולסניף בלי
+        // שיוך אין מכנה, ומקף עדיף על מספר שאינו נכון.
+        +'<td class="mut">'+(d0&&c.gr!=null?ils(c.gr):'—')+'</td>'
+        +'<td'+(d0&&c.gr?' style="font-weight:600"':' class="mut"')+'>'
+        +(d0&&c.gr?srPct1(100*(c.tot+(c.pend||0))/c.gr):'—')+'</td></tr>';
     });
     // אין יותר שורת אוסף אחת בתחתית: כל העברה מאומתת יושבת בסניף שלה למעלה
     var pend=pendInRange();
-    h+='</tbody><tfoot><tr><td class="nm">סך הכל</td><td>'+ils(R.mz)+'</td><td>'+ils(R.hv+pend)+'</td><td>'+ils(R.sk)+'</td><td>'+ils(R.tot+pend)+'</td><td>'+ils(R.ot)+'</td></tr></tfoot></table></div>';
+    var gAll=cache.gross;
+    h+='</tbody><tfoot><tr><td class="nm">סך הכל</td><td>'+ils(R.mz)+'</td><td>'+ils(R.hv+pend)+'</td><td>'+ils(R.sk)+'</td><td>'+ils(R.tot+pend)+'</td><td>'+ils(R.ot)+'</td>'
+      +'<td>'+(gAll?ils(gAll):'—')+'</td>'
+      +'<td style="font-weight:600">'+(gAll?srPct1(100*(R.tot+pend)/gAll):'—')+'</td></tr></tfoot>'
+      +'</table></div>'
+      +'<p class="thint">המחזור כולל מע"מ, כמו התקבולים. '
+      +'המזומן מתוארך לפי הקבלה והמחזור לפי ההזמנה — קבלה בתקופה יכולה '
+      +'להיות על מכירה שקדמה לה, ולכן זה קצב הכניסה של המזומן מול המכירות '
+      +'של אותה תקופה ולא חלוקה של אותן עסקאות. '
+      +'שיוך לסניף קיים בפריוריטי מ־2024, ושורה בלי שיוך אינה מקבלת יחס.</p>';
     stage.innerHTML=h;
   }
 
@@ -3863,7 +3886,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       eT={};renderChips();
       // אין חפיפה לנתונים = אין מחזור לתקופה, ולכן גם אין אחוז. בלי האיפוס
       // הזה הרצועה הייתה מציגה אחוז שחושב מול מחזור של תקופה אחרת
-      cache.gross=null;
+      cache.gross=null;cache.grossBr=null;
       if(view==='cash'){var R0={mz:0,hv:0,sk:0,ot:0,tot:0,k:[],orders:0};renderCashKpis(R0);renderMeta(R0);}
       else if(view==='collect'){var R1={s:0,sg:0,r:0,disc:0,ratio:null,dpct:null,k:[],orders:0};renderCollectKpis(R1);renderMeta(R1);}
       else if(view==='dim'){var R2={s:0,q:0,p:0,orders:0,c:0,qcov:null,rest:null,k:[]};renderDimKpis(R2);renderMeta(R2);}
