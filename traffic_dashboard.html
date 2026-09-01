@@ -29,6 +29,12 @@
   }
 }
 /* ---------- OWL: תפריט המערכת ---------- */
+  /* כפתור הייצוא בשורת הכותרת. אותו גודל מגע כמו שאר הכפתורים במסך. */
+  .owlxls{margin-inline-start:auto;display:inline-flex;align-items:center;gap:6px;
+    font-family:inherit;font-size:12.5px;border:1px solid var(--line2);background:var(--bg);
+    color:var(--tx2);padding:7px 12px;min-height:38px;border-radius:999px;cursor:pointer}
+  .owlxls svg{width:16px;height:16px;flex:none}
+  .owlxls:disabled{opacity:.5;cursor:default}
 .owlbar{display:flex;align-items:center;gap:10px;margin:0 0 12px}
 .owlham{flex:none;width:44px;height:44px;display:grid;place-items:center;
   border:1px solid var(--line2);background:var(--surface);color:var(--tx);
@@ -274,6 +280,7 @@ td.name{white-space:normal;min-width:104px}
     <div class="owlnow">
       <span class="v">תמהיל מקורות התנועה</span>
     </div>
+    <button type="button" class="owlxls" id="xlsbtn" title="ייצוא נתוני המסך לאקסל"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.2" y="4" width="17.6" height="16" rx="2.2"/><path d="M3.2 9.6h17.6"/><path d="M9.4 9.6V20"/></svg>אקסל</button>
 <!--OWNER-->
     <button type="button" class="vaeye" id="vaeye" title="בחירת תצוגה"
             aria-label="בחירת תצוגה" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
@@ -1039,5 +1046,113 @@ $('foot').innerHTML = esc(DATA.meta.foot);
 buildChips();
 render();
 </script>
+<script>/*OWLXLSX*/
+/* ייצוא המסך לאקסל. הקוד הזה זהה בכל ארבעת המסכים — qa_xlsx מוודא זאת,
+   כי תיקון באחד מהם היה משאיר את השלושה האחרים מאחור בלי שאיש ישים לב.
+
+   קורא את מה שצויר, לא שואל את השרת מחדש: הקובץ הוא בדיוק המסך שרואים.
+   המספרים נשלחים כמספרים עם סוג ולא כטקסט מעוצב — זו כל הנקודה, שאפשר
+   יהיה לסכם ולמיין אותם בקובץ. */
+(function(){
+  var SKIP='#navov,#owlsheet,.owlsheet,#srsheet,.vaovl,.sheet,.overlay,[hidden]';
+  /* סימני כיווניות אינם חלק מהמספר והם שוברים כל ניתוח שלו. */
+  var MARK=/[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g;
+  function cell(txt){
+    var t=String(txt==null?'':txt).replace(MARK,'').replace(/\s+/g,' ').trim();
+    if(!t||t==='—'||t==='–'||t==='-')return {v:'',t:'s'};
+    /* יום.חודש נראה בדיוק כמו מספר עשרוני. תאריך שהופך ל-31.08 בעמודת
+       מספרים הוא בדיוק סוג הטעות שאיש לא מוצא אחר כך. */
+    if(/^\d{1,2}\.\d{1,2}$/.test(t))return {v:t,t:'s'};
+    var pct=t.indexOf('%')>=0, ils=t.indexOf('\u20aa')>=0;
+    var num=t.replace(/[^\d.\-]/g,'');
+    if(num&&/^-?\d+(\.\d+)?$/.test(num)&&!/[A-Za-z\u0590-\u05FF]/.test(t)){
+      var n=parseFloat(num);
+      if(t.indexOf('-')===0)n=-Math.abs(n);
+      if(pct)return {v:n/100,t:'p'};
+      if(ils)return {v:n,t:'m'};
+      return {v:n,t:'n'};
+    }
+    return {v:t,t:'s'};
+  }
+  function texts(tr){
+    var out=[],c=tr.children,i;
+    for(i=0;i<c.length;i++)out.push(cell(c[i].textContent));
+    return out;
+  }
+  /* שם הגיליון מהכותרת שמעל הטבלה, כדי שקובץ עם כמה טבלאות יהיה קריא. */
+  function tname(tb,n){
+    var p=tb,e,lab='';
+    while(p&&p!==document.body&&!lab){
+      for(e=p.previousElementSibling;e&&!lab;e=e.previousElementSibling)
+        if(/^H[1-3]$/.test(e.tagName)||e.classList.contains('eyebrow'))
+          lab=(e.textContent||'').trim();
+      p=p.parentElement;
+    }
+    return lab?lab.slice(0,28):('\u05d8\u05d1\u05dc\u05d4 '+n);
+  }
+  function grab(){
+    var out=[],tbs=document.querySelectorAll('table'),i,r;
+    for(i=0;i<tbs.length;i++){
+      var tb=tbs[i];
+      if(tb.closest(SKIP))continue;
+      var head=[],rows=[],hr=tb.querySelectorAll('thead tr');
+      if(hr.length){
+        var hc=hr[hr.length-1].children;
+        for(r=0;r<hc.length;r++)head.push((hc[r].textContent||'').replace(MARK,'').trim());
+      }
+      var body=tb.querySelectorAll('tbody tr');
+      for(r=0;r<body.length;r++){
+        var row=texts(body[r]);
+        if(row.length)rows.push(row);
+      }
+      var ft=tb.querySelectorAll('tfoot tr');
+      for(r=0;r<ft.length;r++){
+        var fr=texts(ft[r]);
+        if(fr.length)rows.push(fr);
+      }
+      if(!rows.length)continue;
+      out.push({name:tname(tb,out.length+1),head:head,rows:rows});
+    }
+    return out;
+  }
+  function kpis(){
+    var out=[],ks=document.querySelectorAll('.kpi'),i;
+    for(i=0;i<ks.length&&out.length<24;i++){
+      if(ks[i].closest(SKIP))continue;
+      var l=ks[i].querySelector('.l,.k'),v=ks[i].querySelector('.v');
+      if(l&&v)out.push([(l.textContent||'').trim(),(v.textContent||'').replace(MARK,'').trim()]);
+    }
+    return out;
+  }
+  function title(){
+    var e=document.getElementById('h1t')||document.querySelector('.owlnow .v')
+      ||document.querySelector('h1');
+    return e?(e.textContent||'').trim():'OWL';
+  }
+  function sub(){
+    var e=document.getElementById('sellbl')||document.getElementById('sub');
+    return e?(e.textContent||'').trim():'';
+  }
+  function run(btn){
+    var sheets=grab();
+    if(!sheets.length){alert('\u05d0\u05d9\u05df \u05d8\u05d1\u05dc\u05ea \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05d1\u05de\u05e1\u05da \u05d4\u05d6\u05d4.');return;}
+    if(btn)btn.disabled=true;
+    fetch('/api/xlsx',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({title:title(),sub:sub(),kpis:kpis(),sheets:sheets})})
+      .then(function(r){if(!r.ok)throw new Error('http '+r.status);return r.blob();})
+      .then(function(b){
+        var u=URL.createObjectURL(b),a=document.createElement('a');
+        a.href=u;a.download=(title()||'owl')+'.xlsx';
+        document.body.appendChild(a);a.click();
+        setTimeout(function(){URL.revokeObjectURL(u);a.parentNode.removeChild(a);},600);
+      })
+      .catch(function(){alert('\u05d4\u05d9\u05d9\u05e6\u05d5\u05d0 \u05e0\u05db\u05e9\u05dc. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1.');})
+      .then(function(){if(btn)btn.disabled=false;});
+  }
+  window.owlXlsx=function(){run(document.getElementById('xlsbtn'));};
+  var b=document.getElementById('xlsbtn');
+  if(b)b.addEventListener('click',function(){run(b);});
+})();
+/*ENDOWLXLSX*/</script>
 </body>
 </html>

@@ -38,7 +38,10 @@ import urllib.request
 from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
+                               RedirectResponse, Response)
+
+import xlsx
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 INDEX = os.path.join(HERE, "index.html")
@@ -287,6 +290,9 @@ _NP_STRIP = {
     "/api/hygiene": None,
     "/api/siteconv": None,        # סשנים, הזמנות אתר ומכירות אתר. אין רווח.
     "/api/sitesales": None,       # מכירות בשקלים בשני הצדדים. אין רווח.
+    # הייצוא מחזיר את מה שהלקוח שלח. מה שלא הגיע למסך שלו לא יכול
+    # להגיע לקובץ, ולכן אין כאן מה לסנן בשנית.
+    "/api/xlsx": None,
     "/api/segdrill": _np_dimtree,
     "/api/agentreport": _np_agentreport,
     "/api/panel": None,
@@ -2072,6 +2078,10 @@ def api_series(request: Request, d_from: str = "", d_to: str = "",
 # כאן היה הופך אותו לצלילה כללית שכבר קיימת במגירה.
 SITE_BRANCH = "103"
 
+# תקרות לייצוא. הן לא הגנה מפני זדון אלא מפני מסך אחד גדול מדי שינסה
+# להיבנות בזיכרון של השרת בזמן שכולם עובדים עליו.
+MAX_XLSX_SHEETS, MAX_XLSX_ROWS, MAX_XLSX_COLS = 24, 20000, 60
+
 
 @app.get("/api/sitesales")
 def api_sitesales(request: Request, d_from: str = "", d_to: str = "",
@@ -2100,6 +2110,85 @@ def api_sitesales(request: Request, d_from: str = "", d_to: str = "",
     whole = sb_rpc("bi_series", dict(base, p_dim=None, p_key=None))
     return JSONResponse({"mode": "sitesales",
                          "agg": {"site": site or {}, "all": whole or {}}})
+
+
+@app.post("/api/xlsx")
+async def api_xlsx(request: Request):
+    """המסך שעל המסך, כקובץ אקסל אמיתי.
+
+    דורון, 2.9.2026: "תעשה לי כפתור הדפסת נתונים לאקסל מכל מסך ב-OWL".
+
+    הלקוח שולח את הטבלאות שהוא כבר צייר, ולא שם של מסך שהשרת ישאל מחדש.
+    כך הקובץ הוא בדיוק מה שנראה על המסך — אותם סינונים, אותה תקופה, אותה
+    צלילה — ומסך חדש מקבל ייצוא בלי שורת קוד בשרת. וגם: מה שהתפקיד של
+    המשתמש אינו רואה במסך אינו יכול להגיע לקובץ, כי הוא מעולם לא הגיע
+    לדפדפן שלו.
+
+    המספרים נשלחים כמספרים עם סוג, לא כטקסט מעוצב. זו כל הנקודה — בקובץ
+    אפשר לסכום ולמיין.
+    """
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    raw = await request.body()
+    if len(raw) > 12_000_000:
+        return JSONResponse({"error": "too big"}, status_code=413)
+    try:
+        d = json.loads(raw.decode("utf-8"))
+    except Exception:
+        return JSONResponse({"error": "bad json"}, status_code=400)
+    if not isinstance(d, dict):
+        return JSONResponse({"error": "bad json"}, status_code=400)
+
+    title = str(d.get("title") or "OWL")[:120]
+    sub = str(d.get("sub") or "")[:200]
+    stamp = dt.datetime.now(IL).strftime("%d.%m.%Y %H:%M")
+
+    sheets = []
+    for si, sh in enumerate((d.get("sheets") or [])[:MAX_XLSX_SHEETS]):
+        if not isinstance(sh, dict):
+            continue
+        rows = [[(title, "t")], [(sub + (" · הופק " + stamp), "s")]]
+        # הכרטיסים שמעל הטבלה. רק בגיליון הראשון: הם מתארים את המסך כולו
+        # ולא טבלה מסוימת, וחזרה שלהם בכל גיליון קוראת כאילו הם נמדדו שוב.
+        if si == 0:
+            kp = [k for k in (d.get("kpis") or [])[:24]
+                  if isinstance(k, list) and len(k) >= 2]
+            if kp:
+                rows.append([])
+                for k in kp:
+                    rows.append([(str(k[0])[:120], "h"), (str(k[1])[:120], "s")])
+        rows.append([])
+        head = [str(x)[:120] for x in (sh.get("head") or [])][:MAX_XLSX_COLS]
+        if head:
+            rows.append([(h, "h") for h in head])
+        n = 0
+        for r in (sh.get("rows") or []):
+            if not isinstance(r, list):
+                continue
+            n += 1
+            if n > MAX_XLSX_ROWS:
+                rows.append([("נקטע ב-%d שורות" % MAX_XLSX_ROWS, "s")])
+                break
+            out = []
+            for c in r[:MAX_XLSX_COLS]:
+                if isinstance(c, dict):
+                    out.append((c.get("v"), str(c.get("t") or "s")[:1]))
+                else:
+                    out.append((c, "s"))
+            rows.append(out)
+        w = [max(9.0, min(34.0, 1.15 * len(h) + 4)) for h in head] or None
+        # השם מנוקה בתוך build — שם פסול שם פותח קובץ פגום, ולכן זו אחריותו.
+        sheets.append((sh.get("name") or title, rows, w))
+
+    blob = xlsx.build(sheets)
+    name = re.sub(r'[\\/:*?"<>|]', " ", "OWL " + title + " " + stamp).strip()
+    return Response(
+        blob, media_type="application/vnd.openxmlformats-officedocument."
+                         "spreadsheetml.sheet",
+        headers={"Content-Disposition":
+                 "attachment; filename=owl.xlsx; filename*=UTF-8''"
+                 + urllib.parse.quote(name + ".xlsx"),
+                 "Cache-Control": "no-store"})
 
 
 @app.get("/api/cancelorders")
