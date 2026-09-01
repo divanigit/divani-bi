@@ -317,10 +317,13 @@ tfoot td{border-top:2px solid var(--line2);font-weight:800;background:var(--bg)}
   </section>
 
   <section class="card">
-    <div class="eyebrow">תנועה מול קונים</div>
-    <svg class="chart" id="chart2" role="img" aria-label="מבקרים מול לקוחות שקנו"></svg>
-    <p class="note">שני הגורמים שמרכיבים את ההמרה, על אותו ציר זמן.
-      כשהקווים מתרחקים — ההמרה יורדת. כשהם מתקרבים — היא עולה.</p>
+    <div class="eyebrow">כמה נכנסו וכמה מהם קנו</div>
+    <svg class="chart" id="chart2" role="img" aria-label="מבקרים וכמה מהם קנו"></svg>
+    <div class="legend" id="lg2"></div>
+    <p class="note">גובה העמודה הוא כמה מבקרים נכנסו. החלק המלא הוא כמה מהם
+      קנו, והאחוז שמעליה הוא היחס ביניהם. הגרף שלמעלה מראה את היחס לבדו —
+      כאן רואים גם את הגודל, שהאחוז מסתיר: 12 אחוז על מאתיים מבקרים
+      ו-12 אחוז על אלפיים אינם אותו שבוע.</p>
   </section>
 
   <section class="card" id="siteCard">
@@ -923,53 +926,72 @@ function drawChart(days){
 function drawChart2(days){
   var svg = $('chart2');
   while (svg.firstChild) svg.removeChild(svg.firstChild);
-  var W = Math.max(300, svg.parentNode.clientWidth || 320), H = W < 500 ? 190 : 225;
+  var W = Math.max(300, svg.parentNode.clientWidth || 320), H = W < 500 ? 200 : 235;
   svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
   svg.setAttribute('width', W); svg.setAttribute('height', H);
   var cLine = css('--line'), cTx3 = css('--tx3'),
-      cBrand = css('--brand'), cTx2 = css('--tx2');
+      cBrand = css('--brand'), cSoft = css('--brandSoft'), cTx2 = css('--tx2');
 
   var bk = buckets(days, state.grain), order = bk.order;
-  var P = [], B = [];
+  var V = [], B = [];
   order.forEach(function(k){
     var v = 0, b = 0;
     Object.keys(BR).forEach(function(br){
       var c = bk.cell[k + '|' + br]; if (c) { v += c.v; b += c.b; } });
-    P.push(Math.round(v / 2)); B.push(b);
+    V.push(Math.round(v / 2)); B.push(b);
   });
-  var padT = 14, padB = 30, padR = 44, padL = 44;
+
+  var padT = 22, padB = 26, padR = 10, padL = 46;
   var pw = W - padR - padL, ph = H - padT - padB, n = order.length;
-  var maxP = Math.max.apply(null, P.concat([1])), maxB = Math.max.apply(null, B.concat([1]));
-  var xOf = function(i){ return n === 1 ? padL + pw / 2 : (W - padR - i * (pw / (n - 1))); };
-  var yP = function(v){ return padT + (1 - v / (maxP * 1.12)) * ph; };
-  var yB = function(v){ return padT + (1 - v / (maxB * 1.12)) * ph; };
+  if (!n) return;
+  var maxV = Math.max.apply(null, V.concat([1]));
+  /* גובה אחד לשניהם. זו כל הנקודה: החלק המלא הוא באמת החלק שקנה, ולכן
+     אפשר לקרוא את היחס מהעין ולא רק מהמספר. */
+  var yOf = function(v){ return padT + (1 - v / (maxV * 1.14)) * ph; };
+  var step = pw / n, bw = Math.min(46, step * 0.62);
+  /* מימין לשמאל, כמו כל שאר המסך. */
+  var xOf = function(i){ return W - padR - (i + 0.5) * step - bw / 2; };
 
   for (var g = 0; g <= 3; g++) {
     var y = padT + ph * g / 3;
     svg.appendChild(svgEl('line', { x1:padL, y1:y, x2:W - padR, y2:y,
       stroke:cLine, 'stroke-width':1 }));
+    var val = Math.round(maxV * 1.14 * (1 - g / 3));
+    var t = svgEl('text', { x:padL - 7, y:y + 3.5, 'font-size':10.5, fill:cTx3,
+      'text-anchor':'end', 'class':'ax' });
+    t.textContent = NF.format(val); svg.appendChild(t);
   }
-  function line(arr, yf, col, dash){
-    svg.appendChild(svgEl('path', { fill:'none', stroke:col, 'stroke-width':2,
-      'stroke-linejoin':'round', 'stroke-linecap':'round', 'stroke-dasharray': dash || 'none',
-      d: arr.map(function(v, i){
-        return (i ? 'L ' : 'M ') + xOf(i).toFixed(1) + ' ' + yf(v).toFixed(1); }).join(' ') }));
-    if (n <= 18) arr.forEach(function(v, i){
-      svg.appendChild(svgEl('circle', { cx:xOf(i), cy:yf(v), r:2.6, fill:col })); });
-  }
-  line(P, yP, cTx2, '6 4');
-  line(B, yB, cBrand);
-  function lbl(x, y, txt, col, anchor){
-    var t = svgEl('text', { x:x, y:y, 'font-size':10.5, fill:col, 'class':'ax' });
-    if (anchor) t.setAttribute('text-anchor', anchor);
-    t.textContent = txt; svg.appendChild(t);
-  }
-  lbl(W - padR + 5, padT + 10, NF.format(maxP), cTx2);
-  lbl(W - padR + 5, H - 10, 'מבקרים', cTx2);
-  lbl(padL - 5, padT + 10, NF.format(maxB), cBrand, 'end');
-  lbl(padL - 5, H - 10, 'קנו', cBrand, 'end');
-  [0, n - 1].filter(function(v, i, a){ return a.indexOf(v) === i && v >= 0; })
-    .forEach(function(i){ lbl(xOf(i), H - 10, heDate(order[i]), cTx3, 'middle'); });
+
+  V.forEach(function(v, i){
+    var x = xOf(i), b = B[i];
+    var hv = padT + ph - yOf(v), hb = padT + ph - yOf(b);
+    svg.appendChild(svgEl('rect', { x:x, y:yOf(v), width:bw, height:Math.max(hv, 0),
+      rx:4, fill:cSoft }));
+    svg.appendChild(svgEl('rect', { x:x, y:yOf(b), width:bw, height:Math.max(hb, 0),
+      rx:4, fill:cBrand }));
+    /* האחוז נכתב רק כשיש לו מקום. בטווח ארוך העמודות צרות מדי והמספר
+       היה נדרס על שכנו. */
+    if (v > 0 && step >= 34) {
+      var t2 = svgEl('text', { x:x + bw / 2, y:yOf(v) - 6, 'font-size':10.5,
+        fill:cTx2, 'text-anchor':'middle', 'class':'ax' });
+      t2.textContent = (b / v * 100).toFixed(1) + '%';
+      svg.appendChild(t2);
+    }
+  });
+
+  /* הציר נושא תאריכים בלבד. שמות הסדרות עברו למקראה — הם ישבו כאן באותו
+     גובה של התאריכים ודרסו אותם. */
+  var every = Math.ceil(n / (W < 420 ? 3 : 6));
+  order.forEach(function(k, i){
+    if (i % every && i !== n - 1) return;
+    var t = svgEl('text', { x:xOf(i) + bw / 2, y:H - 8, 'font-size':10.5,
+      fill:cTx3, 'text-anchor':'middle', 'class':'ax' });
+    t.textContent = heDate(k); svg.appendChild(t);
+  });
+
+  $('lg2').innerHTML =
+    '<span class="lg" style="cursor:default"><i style="background:' + cSoft + '"></i>נכנסו</span>'
+  + '<span class="lg" style="cursor:default"><i style="background:' + cBrand + '"></i>קנו</span>';
 }
 
 /* ---------- ימים חריגים ---------- */
