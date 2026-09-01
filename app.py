@@ -1474,7 +1474,11 @@ _OWNER_BLOCK = re.compile(r"<!--OWNER-->.*?<!--/OWNER-->"
 @app.get("/conversion")
 def conversion(request: Request):
     """מסך יחס ההמרה. אותה תבנית כמו לוח התנועה: מסמך שלם, תפריט OWL משלו.
-    אין בו רווח, ולכן אין כאן חסימה מעבר להתחברות."""
+
+    אין בו שום נתון רווח ולכן הוא פתוח לכל מי שמחובר. אבל הוא נושא את התפריט
+    המשותף, ובו שמות של דוחות שעידו אינו רשאי לפתוח — ולכן הגוף שנשלח אליו
+    עובר את אותו ניקוי כמו בכל מסך אחר.
+    """
     if not _logged_in(request):
         return RedirectResponse("/login", status_code=303)
     try:
@@ -1485,6 +1489,8 @@ def conversion(request: Request):
                             "המסך לא נמצא.</div>", status_code=404)
     if not _is_admin(request):
         html = _OWNER_BLOCK.sub("", html)
+    if _is_noprofit(request):
+        html = _NOPROFIT_BLOCK.sub("", html)
     role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s};</script>' % (
         "true" if _is_noprofit(request) else "false",
         "true" if _is_admin(request) else "false")
@@ -1516,6 +1522,10 @@ def traffic(request: Request):
         # את הגרף לא נכון.
         if not _is_admin(request):
             html = _OWNER_BLOCK.sub("", html)
+        # עידו מופנה מהמסך הזה ממילא. הניקוי כאן הוא שכבה שנייה: אם כלל
+        # החסימה ישתנה אי־פעם, הגוף עדיין לא יישא את מה שאסור לו.
+        if _is_noprofit(request):
+            html = _NOPROFIT_BLOCK.sub("", html)
         # התפריט צריך לדעת מי מסתכל. הדף אינו מנחש ואינו שואל — התפקיד מוזרק
         # כאן, כדי שכלל הרווח יחול גם על ממשק שאינו המסך הראשי.
         role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s};</script>' % (
