@@ -49,7 +49,7 @@ DASH_PASS_ADMIN = os.environ.get("DASH_PASS_ADMIN", "")  # Doron's personal pass
 DASH_PASS_ASK2 = os.environ.get("DASH_PASS_ASK2", "")  # Haim: ask-enabled personal password
 DASH_PASS_DOV = os.environ.get("DASH_PASS_DOV", "")  # Dov (operations mgr): own credential, regular view access
 DASH_PASS_SHARON = os.environ.get("DASH_PASS_SHARON", "")  # Sharon: own credential, regular view access
-DASH_PASS_ITAMAR = os.environ.get("DASH_PASS_ITAMAR", "")  # Itamar: own credential, regular view access
+DASH_PASS_ITAMAR = os.environ.get("DASH_PASS_ITAMAR", "")  # Itamar: own credential, owner rights
 DASH_PASS_IDO = os.environ.get("DASH_PASS_IDO", "")  # עידו אהרון: regular view, without any profit figure
 SB_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SB_KEY = os.environ.get("SUPABASE_SECRET_KEY", "")
@@ -93,6 +93,14 @@ def _admin_token() -> str:
     return hmac.new(DASH_PASS_ADMIN.encode("utf-8"), b"divani-bi-admin-v1", hashlib.sha256).hexdigest()
 
 
+def _itamar_token() -> str:
+    # Owner rights, but keyed on his own password rather than Doron's, so that
+    # clearing DASH_PASS_ITAMAR ends his session instead of leaving him holding
+    # a cookie identical to the admin one.
+    return hmac.new(DASH_PASS_ITAMAR.encode("utf-8"), b"divani-bi-itamar-v1",
+                    hashlib.sha256).hexdigest()
+
+
 def _ask2_token() -> str:
     return hmac.new(DASH_PASS_ASK2.encode("utf-8"), b"divani-bi-ask2-v1", hashlib.sha256).hexdigest()
 
@@ -121,10 +129,16 @@ def _can_ask(request: Request) -> bool:
 
 
 def _is_admin(request: Request) -> bool:
-    if not DASH_PASS_ADMIN:
-        return False
+    # Two credentials carry owner rights, each with its own cookie value. The
+    # empty check per entry is not decoration: an unset env var would otherwise
+    # produce a real digest of the empty key, and anyone able to compute it
+    # would be an owner.
     tok = request.cookies.get(COOKIE_NAME, "")
-    return hmac.compare_digest(tok, _admin_token())
+    if DASH_PASS_ADMIN and hmac.compare_digest(tok, _admin_token()):
+        return True
+    if DASH_PASS_ITAMAR and hmac.compare_digest(tok, _itamar_token()):
+        return True
+    return False
 
 
 def _logged_in(request: Request) -> bool:
@@ -184,14 +198,14 @@ def _identity(p: str):
         return "דב", _session_token()
     if _match(p, DASH_PASS_SHARON):
         return "שרון", _session_token()
-    if _match(p, DASH_PASS_ITAMAR):
-        return "איתמר", _session_token()
     if _match(p, DASH_PASS):
         return "משותף", _session_token()
     if _match(p, DASH_PASS_ASK2):
         return "חיים", _ask2_token()
     if _match(p, DASH_PASS_ADMIN):
         return "אדמין", _admin_token()
+    if _match(p, DASH_PASS_ITAMAR):
+        return "איתמר", _itamar_token()
     return "?", ""
 
 
