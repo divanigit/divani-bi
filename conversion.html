@@ -202,6 +202,8 @@ th{font-size:11.5px;font-weight:700;color:var(--tx3);background:var(--bg);
 td.nm,th.nm{text-align:start;font-weight:600;white-space:normal}
 tbody tr:last-child td{border-bottom:0}
 tfoot td{border-top:2px solid var(--line2);font-weight:800;background:var(--bg)}
+.dlt{display:block;font-size:11.5px;font-weight:700;margin-top:3px}
+.dlt.muted{color:var(--tx3);font-weight:400}
 .bar{display:block;height:5px;border-radius:3px;background:var(--brandSoft);margin-top:4px;
   position:relative;overflow:hidden}
 .bar i{position:absolute;inset-block:0;inset-inline-start:0;background:var(--brand);display:block}
@@ -783,27 +785,45 @@ function tableBranch(days, prevDays){
   rows.sort(function(x, y){ return (y.a.conv || 0) - (x.a.conv || 0); });
   var best = Math.max.apply(null, rows.map(function(r){ return r.a.conv || 0; })) || 1;
 
+  /* יחס ההמרה אומר כמה קנו ולא כמה כסף. שתי העמודות האלה מתרגמות אותו
+     לשקלים: סל ממוצע להזמנה, וכמה שקלים נכנסו על כל מבקר. */
+  function perV(a){ return a.parties > 0 ? a.sales / a.parties : null; }
+  function perO(a){ return a.orders  > 0 ? a.sales / a.orders  : null; }
+  var maxPv = Math.max.apply(null, rows.map(function(r){ return perV(r.a) || 0; })) || 1;
+
   $('tbl').tHead.innerHTML = '<tr><th class="nm">סניף</th><th>מבקרים</th>'
     + '<th>לקוחות שקנו</th><th>הזמנות</th><th>המרה</th>'
-    + '<th>שינוי מהתקופה הקודמת</th></tr>';
+    + '<th>סל ממוצע</th><th>₪ לכל מבקר</th></tr>';
   $('tbl').tBodies[0].innerHTML = rows.map(function(r){
-    var d = pct(r.a.conv, r.p.conv);
+    var dc = pct(r.a.conv, r.p.conv);
+    var pv = perV(r.a), dv = pct(pv, perV(r.p));
+    function delta(x){ return '<span class="dlt ' + (x == null ? 'muted' : x >= 0 ? 'up' : 'dn')
+      + '">' + sign(x) + '</span>'; }
     return '<tr><td class="nm">' + (BR[r.b] || r.b) + '</td>'
       + '<td>' + NF.format(r.a.parties) + '</td>'
       + '<td>' + NF.format(r.a.buyers) + '</td>'
       + '<td class="muted">' + NF.format(r.a.orders) + '</td>'
       + '<td><b>' + (r.a.conv == null ? '—' : r.a.conv.toFixed(1) + '%') + '</b>'
-      + '<span class="bar"><i style="width:' + Math.round((r.a.conv || 0) / best * 100) + '%"></i></span></td>'
-      + '<td class="' + (d == null ? 'muted' : d >= 0 ? 'up' : 'dn') + '">'
-      + sign(d) + '</td></tr>';
+      + '<span class="bar"><i style="width:' + Math.round((r.a.conv || 0) / best * 100) + '%"></i></span>'
+      + delta(dc) + '</td>'
+      + '<td>' + (perO(r.a) == null ? '—' : NF.format(Math.round(perO(r.a)))) + '</td>'
+      + '<td><b>' + (pv == null ? '—' : NF.format(Math.round(pv))) + '</b>'
+      + '<span class="bar"><i style="width:' + Math.round((pv || 0) / maxPv * 100) + '%"></i></span>'
+      + delta(dv) + '</td></tr>';
   }).join('');
   var t = agg(days);
   $('tbl').tFoot.innerHTML = '<tr><td class="nm">כל הרשת</td><td>' + NF.format(t.parties)
     + '</td><td>' + NF.format(t.buyers) + '</td><td>' + NF.format(t.orders) + '</td><td>'
-    + (t.conv || 0).toFixed(1) + '%</td><td></td></tr>';
+    + (t.conv || 0).toFixed(1) + '%</td><td>'
+    + (perO(t) == null ? '—' : NF.format(Math.round(perO(t)))) + '</td><td><b>'
+    + (perV(t) == null ? '—' : NF.format(Math.round(perV(t)))) + '</b></td></tr>';
   $('tblNote').innerHTML = '<b>לקוחות</b> אינו <b>הזמנות</b>: לקוח אחד יכול לפתוח '
     + 'יותר מהזמנה אחת. ההמרה נמדדת בלקוחות.<br>'
-    + 'עמודת <b>שינוי</b> משווה כל סניף לעצמו בתקופה הקודמת.';
+    + '<b>סל ממוצע</b> = שקלים לכל הזמנה. <b>₪ לכל מבקר</b> = שקלים חלקי מבקרים.<br>'
+    + 'שים לב: <b>המרה כפול סל אינו נותן את ₪ לכל מבקר</b> — ההמרה נמדדת '
+    + 'בלקוחות והסל הוא לכל הזמנה, ולקוח אחד יכול לפתוח יותר מהזמנה אחת.<br>'
+    + 'האחוז הקטן מתחת לכל מספר הוא השינוי של אותו סניף מול עצמו בתקופה '
+    + 'הקודמת. שקלים לפני מע״מ.';
 }
 
 /* ---------- טבלת ימים בשבוע ---------- */
