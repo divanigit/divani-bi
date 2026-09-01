@@ -671,16 +671,37 @@ function pct(a, b){ if (b == null || b === 0) return null; return (a - b) / b * 
 function sign(x, digits){ if (x == null) return '—';
   return (x >= 0 ? '+' : '−') + Math.abs(x).toFixed(digits == null ? 1 : digits) + '%'; }
 
+/* כל מה שהרינדור ממלא, במקום אחד — כדי שמסך ריק ייצא ריק באמת. */
+function clearAll(){
+  $('kpis').innerHTML = '';
+  $('whyCard').style.display = 'none';
+  var t = $('tbl');
+  t.tHead.innerHTML = ''; t.tBodies[0].innerHTML = ''; t.tFoot.innerHTML = '';
+  $('tblNote').innerHTML = '';
+  $('tblTitle').textContent = '';
+  ['chart', 'chart2'].forEach(function(id){
+    var g = $(id); while (g && g.firstChild) g.removeChild(g.firstChild);
+  });
+  ['legend', 'lg2', 'flags'].forEach(function(id){ if ($(id)) $(id).innerHTML = ''; });
+  if ($('chartNote')) $('chartNote').textContent = '';
+}
+
 function render(){
   paintHyg();                        /* the warning follows the range on screen */
   var days = (DATA && DATA.days) || [];
   var M = (DATA && DATA.meta) || {};
   if (!days.length) {
-    $('sub').textContent = M.complete_through && state.to > M.complete_through
+    var future = M.complete_through && state.to > M.complete_through;
+    $('sub').textContent = future
       ? 'עדיין אין דוח תנועה לתקופה שבחרת. הנתונים מלאים עד '
         + heDateY(M.complete_through) + '.'
       : 'אין נתונים בתקופה שנבחרה.';
-    $('kpis').innerHTML = ''; $('whyCard').style.display = 'none';
+    /* מנקה את כל מה שהרינדור ממלא. בלי זה נשארים על המסך המספרים של התקופה
+       הקודמת מתחת למשפט שאומר שאין נתונים — מסך שסותר את עצמו, וזה גרוע
+       משתי האפשרויות בנפרד. */
+    clearAll();
+    /* אין מה להסביר על חיתוך: שום דבר לא נחתך, פשוט עוד אין נתון. */
+    if ($('cut')) $('cut').hidden = true;
     return;
   }
   var now = agg(days), was = agg((PREV && PREV.days) || []);
