@@ -839,7 +839,7 @@ owlBuildNav();
    measured by logging in as five different people. */
 (function(){
   if (!(window.OWL_ROLE || {}).owner) return;
-  var KEY = 'divani_preview_user';
+  var KEY = 'owl_v';
   var OK = ['user', 'ido', 'user-video', 'ido-video'];
   function get(){ try { var v = localStorage.getItem(KEY);
     return OK.indexOf(v) >= 0 ? v : ''; } catch (e) { return ''; } }
