@@ -1619,7 +1619,8 @@ td.ip{font-variant-numeric:tabular-nums;color:var(--ink2);direction:ltr;text-ali
 
 # שמות מסך שמזכירים רווח. אינם מספר ואינם אחוז, אבל הכלל הוא ללא יוצא מן
 # הכלל, והסתרה ב-CSS אינה מניעה.
-_NOPROFIT_BLOCK = re.compile(r"<!--NOPROFIT-->.*?<!--/NOPROFIT-->", re.S)
+_NOPROFIT_BLOCK = re.compile(r"<!--NOPROFIT-->.*?<!--/NOPROFIT-->"
+                             r"|/\*NOPROFIT\*/.*?/\*ENDNOPROFIT\*/", re.S)
 
 
 @app.get("/")

@@ -776,11 +776,11 @@ window.OWL_NAV = [
   ['v', 'cash',      'מזומן'],
   ['v', 'collect',   'מקדמות'],
   ['v', 'service',   'שירות'],
-  ['v', 'pctrl',     'בקרת מחירים', 'profit'],
+/*NOPROFIT*/  ['v', 'pctrl',     'בקרת מחירים', 'profit'],/*ENDNOPROFIT*/
   ['g', 'אנליטיקה'],
   ['v', 'branchsrc', 'מקורות הגעה'],
   ['v', 'dim',       'פילוח'],
-  ['v', 'mdown',     'מוריד כסף', 'profit'],
+/*NOPROFIT*/  ['v', 'mdown',     'מוריד כסף', 'profit'],/*ENDNOPROFIT*/
   ['v', 'cancels',   'אחוז ביטולים'],
   ['v', 'comp',      'פיצויים'],
   ['v', 'dow',       'ימים חזקים בשבוע'],
@@ -788,8 +788,8 @@ window.OWL_NAV = [
   ['g', 'ניתוח'],
   ['a', '/agent-report', 'ניתוח ביצועי נציגים וסניפים'],
   ['a', '/conversion',   'יחס המרה'],
-  ['g', 'מערכת ניטור ואנליטיקת פרסום', 'profit'],
-  ['a', '/traffic',      'תמהיל מקורות התנועה', 'profit']
+/*NOPROFIT*/  ['g', 'מערכת ניטור ואנליטיקת פרסום', 'profit'],
+  ['a', '/traffic',      'תמהיל מקורות התנועה', 'profit']/*ENDNOPROFIT*/
 ];
 window.OWL_HERE = '/traffic';
 window.owlBuildNav = function(asNoProfit){
