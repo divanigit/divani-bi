@@ -120,8 +120,16 @@ h1{font-size:clamp(23px,5.4vw,31px);font-weight:800;margin:4px 0 2px;letter-spac
 /* ---------- פקדים ---------- */
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
   padding:14px;margin:0 0 12px;box-shadow:var(--shadow)}
-.eyebrow{font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--tx3);
-  text-transform:uppercase;margin:0 0 9px}
+/* תווית של קבוצת פקדים. --tx3 נתן יחס ניגודיות 2.84 על רקע הכרטיס, מתחת
+   לסף של 4.5 שנדרש לטקסט רגיל, ומדובר ב-11px. ריווח אותיות הוא כלי לטיני:
+   האותיות העבריות משורטטות למרווח שלהן, ופתיחתו מפרקת מילה קצרה. ו-uppercase
+   אינו עושה דבר בעברית. */
+.eyebrow{font-size:12.5px;font-weight:700;color:var(--tx2);margin:0 0 8px;
+  line-height:1.35}
+/* קרבה: התווית שייכת למה שמתחתיה. המרווח מעליה גדול מפי שניים מזה שמתחתיה,
+   וזה מה שקושר אותה לקבוצה בלי לצייר סביבה מסגרת. */
+.eyebrow + .quick,.eyebrow + .ctlrow{margin-top:0}
+.eyebrow.next{margin-top:20px}
 .ctlrow{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
 .seg{display:inline-flex;border:1px solid var(--line2);border-radius:11px;overflow:hidden;
   background:var(--bg)}
@@ -156,8 +164,9 @@ h1{font-size:clamp(23px,5.4vw,31px);font-weight:800;margin:4px 0 2px;letter-spac
 .cmpdates{font-size:14px;color:var(--tx2);margin:0 0 12px;
   font-variant-numeric:tabular-nums}
 .cmpdates b{color:var(--tx);font-weight:700}
-.cut{font-size:13.5px;line-height:1.55;color:var(--warn-tx);background:var(--warn-bg);
-  border:1px solid var(--warn-line);border-radius:11px;padding:10px 13px;margin:0 0 14px}
+/*OWNER*/.cut{font-size:13.5px;line-height:1.55;color:var(--warn-tx);
+  background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:11px;
+  padding:10px 13px;margin:0 0 14px}/*ENDOWNER*/
 .hyg{background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:var(--r);
   padding:13px 15px;margin:0 0 16px}
 .hygtop{display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -254,7 +263,7 @@ tfoot td{border-top:2px solid var(--line2);font-weight:800;background:var(--bg)}
 
   <h1>כמה מהנכנסים קונים</h1>
   <p class="sub" id="sub">טוען…</p>
-  <p class="cut" id="cut" hidden></p>
+  <!--OWNER--><p class="cut" id="cut" hidden></p><!--/OWNER-->
 
   <div class="hyg" id="hyg" hidden>
     <div class="hygtop">
@@ -273,14 +282,14 @@ tfoot td{border-top:2px solid var(--line2);font-weight:800;background:var(--bg)}
       <label>עד <input type="date" id="dTo"></label>
     </div>
 
-    <div class="eyebrow" style="margin-top:16px">להשוות מול</div>
+    <div class="eyebrow next">להשוות מול</div>
     <div class="quick" id="cmpQuick"></div>
     <div class="dates" id="cmpRow">
       <label>מתאריך <input type="date" id="cFrom"></label>
       <label>עד <input type="date" id="cTo"></label>
     </div>
 
-    <div class="eyebrow" style="margin-top:16px">פירוט</div>
+    <div class="eyebrow next">פירוט</div>
     <div class="ctlrow">
       <div class="seg" id="segView" role="group" aria-label="תצוגה">
         <button type="button" data-v="branch" class="on">לפי סניף</button>
@@ -685,11 +694,17 @@ function render(){
   /* היום האחרון בטבלה תמיד חלקי: קובץ קאונטרייט מגיע ב-09:25 למחרת וסופר עד
      אותו רגע. 31.8 הראה 17 נכנסים בכל הרשת מול 563 יום קודם — לא צניחה בתנועה
      אלא יום שבקושי התחיל כשנמדד. הוא מוצא מהחישוב, וזה נאמר. */
-  $('cut').hidden = !M.capped;
-  if (M.capped) {
-    $('cut').textContent = 'התקופה שביקשת נגמרת ב-' + heDateY(M.to)
-      + ', אבל דוח התנועה מגיע רק למחרת בבוקר. כל המספרים כאן הם עד '
-      + heDateY(M.complete_through) + ' בלבד.';
+  /* ההסבר הזה מגיע רק לדורון, ולכן האלמנט עצמו אינו נשלח לאחרים והבדיקה
+     כאן היא על קיומו. הכותרת ממילא נושאת את הטווח שנמדד, כך שאיש אינו רואה
+     תאריך שהמספרים אינם מכסים. */
+  var cut = $('cut');
+  if (cut) {
+    cut.hidden = !M.capped;
+    if (M.capped) {
+      cut.textContent = 'התקופה שביקשת נגמרת ב-' + heDateY(M.to)
+        + ', אבל דוח התנועה מגיע רק למחרת בבוקר. כל המספרים כאן הם עד '
+        + heDateY(M.complete_through) + ' בלבד.';
+    }
   }
 
   /* --- כרטיסים --- */
