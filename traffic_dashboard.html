@@ -133,8 +133,10 @@
 .varow.on .chk{opacity:1}
 .varow .sub{display:block;font-size:11.5px;font-weight:400;color:var(--tx3);margin-top:1px}
 /* בתצוגה מקדימה מוסתר מה שהתפקיד שנבחר אינו מקבל */
-body.as-user #notice,body.as-user #infoBtn,
-body.as-ido  #notice,body.as-ido  #infoBtn{display:none !important}
+/* מסתיר לפי מחלקה ולא לפי מזהים: רשימת מזהים אינה נוסעת בין מסכים, ובדיוק
+   כך מסך ההמרה ירש כלל ששמות שני אלמנטים שאינם קיימים בו. */
+body.as-user .owneronly,body.as-user #infoBtn,
+body.as-ido  .owneronly,body.as-ido  #infoBtn{display:none !important}
 body.as-ido .vahide{display:none !important}
 /*ENDOWNER*/
 *{box-sizing:border-box}
