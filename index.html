@@ -240,7 +240,11 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .srtot{display:flex;align-items:baseline;justify-content:space-between;gap:10px;background:var(--surface);border-radius:10px;padding:8px 11px;margin:0 0 10px}
   .srtot span{font-size:11px;color:var(--tx3)}
   .srtot b{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;unicode-bidi:plaintext}
-  .srtools{margin:0 0 8px}
+  .srtools{margin:0 0 8px;display:flex;flex-wrap:wrap;gap:7px}
+  .srbk{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 10px}
+  .srbk .l{font-size:11px;color:var(--tx3);margin-inline-end:2px}
+  .srbk button{font-family:inherit;font-size:12px;border:1px solid var(--line2);background:var(--bg);color:var(--tx2);padding:7px 13px;min-height:38px;border-radius:999px;cursor:pointer}
+  .srbk button.on{background:var(--accentSoft);border-color:var(--bd);color:var(--okfg);font-weight:600}
   .srtools button{font-family:inherit;font-size:12.5px;border:1px solid var(--line2);background:var(--bg);color:var(--tx2);padding:8px 15px;min-height:40px;border-radius:999px;cursor:pointer}
   .srtools button.on{background:var(--accentSoft);border-color:var(--bd);color:var(--okfg);font-weight:600}
   .srtools button:disabled{opacity:.4;cursor:default}
@@ -263,6 +267,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .srdot.on{fill:var(--tx)}
   .srzero{stroke:var(--line2);stroke-width:1}
   .srtrend{fill:none;stroke:var(--tx3);stroke-width:1.6}
+  /* המספר שמעל העמודה. באלפים, כי בשקלים מלאים הוא רחב מהעמודה עצמה ונדרס
+     בשכנה. היחידה נאמרת פעם אחת מתחת לגרף ולא ליד כל מספר. */
+  .srval{fill:var(--tx3);font-size:7.5px;font-weight:600;text-anchor:middle;font-variant-numeric:tabular-nums}
+  .srval.on{fill:var(--tx)}
   .sraxis{direction:ltr;display:flex;justify-content:space-between;font-size:10.5px;color:var(--tx3);margin-top:5px}
   .srpick{min-height:34px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12.5px;border-top:1px solid var(--line);margin-top:8px;padding-top:9px}
   .srpick b{font-weight:600}
@@ -2808,6 +2816,12 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   var srOvl=document.getElementById('srovl'), srSheet=document.getElementById('srsheet');
   var srBody=document.getElementById('srbody'), srTitle=document.getElementById('srtitle');
   var srSeq=0, srJob=null, srTrend=false, srPick=-1, srBack=null;
+  // srReq — מה נפתח (מדד, פילוח, מפתח). srDen — אותו מדד על כל הרשת, המכנה של
+  // תצוגת האחוז. srBucket — דלי שנבחר ביד; ריק פירושו הדלי שהשרת גזר מאורך התקופה.
+  var srReq=null, srDen=null, srShare=false, srBucket='';
+  var SR_BK={d:'יומי',w:'שבועי',m:'חודשי'};
+  // מעל הצפיפות הזאת אין מקום למספר מעל עמודה, ואז עדיף בלי — הערך נשאר בלחיצה.
+  var SR_LBL_MAX=14;
   var SR_MONEY={sales:1,profit:1,svc_sales:1,cash_mz:1,cash_hv:1,cash_sk:1,cash_ot:1,cash_tot:1,
     collect_net:1,collect_gross:1,collect_paid:1,collect_disc:1,dim_sales:1,dim_profit:1,
     md_total:1,md_total_all:1,md_noreason:1,md_noreason_all:1,cx_money:1,cx_sales:1};
@@ -2823,7 +2837,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   }
   function srFmt(v,j){
     if(v==null)return '—';
-    if(j.kind==='ratio')return srPct1(v);
+    if(j.kind==='ratio'||j.kind==='share')return srPct1(v);
     return SR_MONEY[j.measure]?ils(v):nf(v);
   }
   // דלי חלקי: או שהשרת חתך אותו באמצע, או שהוא נגמר היום — והיום עוד לא נגמר.
@@ -2853,41 +2867,95 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var b=(m*sxy-sx*sy)/den,a=(sy-b*sx)/m;
     return {slope:b,i0:i0,i1:i1,y0:a+b*i0,y1:a+b*i1,n:m,skipped:skip};
   }
+  // אחוז מהמחזור: אותה מדידה בדיוק, פעם על הפלח ופעם על כל הרשת, מחולקת דלי בדלי.
+  // החיבור לפי תאריך ולא לפי מיקום — לסדרה של פלח יכול לחסר דלי שבו לא נמכר כלום,
+  // ואז יישור לפי מיקום היה מחלק כל חודש במחזור של חודש אחר.
+  // מכנה אפס אינו אחוז אפס אלא היעדר מדידה, ולכן הוא null ולא 0.
+  function srShareJob(num,den){
+    var dv={},i,rows=[],dr=(den&&den.rows)||[],nr=(num&&num.rows)||[],d,v;
+    for(i=0;i<dr.length;i++)dv[dr[i].t]=dr[i].v;
+    for(i=0;i<nr.length;i++){
+      d=dv[nr[i].t];v=null;
+      if(d!=null&&Number(d)>0&&nr[i].v!=null)v=100*Number(nr[i].v)/Number(d);
+      rows.push({t:nr[i].t,v:v});
+    }
+    var tot=(den&&den.total!=null&&Number(den.total)>0&&num.total!=null)
+      ? 100*Number(num.total)/Number(den.total) : null;
+    return {measure:num.measure,kind:'share',additive:false,rows:rows,total:tot,
+            bucket:num.bucket,bucket_label:(num.bucket_label||'')+' · אחוז מהמחזור',
+            partial_first:num.partial_first,partial_last:num.partial_last,to:num.to};
+  }
+  // מה שמצויר בפועל: או המספרים כמו שהם, או היחס שלהם למחזור.
+  function srEff(){
+    if(srShare&&srJob&&srDen)return srShareJob(srJob,srDen);
+    return srJob;
+  }
+  // אחוז מהמחזור אפשרי רק לפלח של מדד כספי — ל"כל הרשת" היחס הוא תמיד 100%.
+  function srCanShare(){return !!(srReq&&srReq.d&&SR_MONEY[srReq.m]);}
+  // באלפים לכסף, אחוז ליחס, ומספר שלם לספירות. מתחת ל-10 אלף המספר העגול מאבד
+  // את ההבדל בין 4,200 ל-400, ולכן שם ספרה אחת אחרי הנקודה.
+  function srBarLbl(v,j){
+    var x=Number(v);if(!isFinite(x))return '';
+    if(j.kind==='share'||j.kind==='ratio')return (Math.round(x*10)/10).toFixed(1)+'%';
+    if(!SR_MONEY[j.measure])return nf(x);
+    var k=x/1000;
+    return Math.abs(k)>=10?nf(k):(Math.round(k*10)/10).toFixed(1);
+  }
   function srLbl(t,b){
     if(b==='m')return MONTHS[parseInt(t.slice(5,7),10)-1]+' '+t.slice(0,4);
     if(b==='w')return 'שבוע '+heDate(t);
     return heDate(t);
   }
-  function srOpen(m,d,k,title,from){
-    srJob=null;srTrend=false;srPick=-1;
-    srBack=from||null;
-    srSheet.classList.add('on');srOvl.classList.add('on');
-    try{document.getElementById('srx').focus();}catch(e){}
-    srTitle.textContent=title||'';
-    srBody.innerHTML='<div class="srwait">טוען…</div>';
+  function srUrl(m,d,k,b){
+    return '/api/series?d_from='+state.from+'&d_to='+state.to+'&measure='+encodeURIComponent(m)
+      +(d?('&dim='+encodeURIComponent(d)+'&key='+encodeURIComponent(k==null?'':k)):'')
+      +(b?('&bucket='+encodeURIComponent(b)):'');
+  }
+  function srGet(u){
+    return fetch(u,{cache:'no-store'}).then(function(r){
+      if(r.status===401){location.href='/login';throw 0;}
+      if(!r.ok)throw new Error('http '+r.status);
+      return r.json();
+    });
+  }
+  // האחוז נמדד מול כל הרשת, ולכן הוא שתי קריאות: הפלח והמחזור. שתיהן באותו דלי
+  // מפורש — אחרת די בכך שהשרת יגזור דלי אחר לסדרה אחת כדי שכל היחסים יזוזו.
+  function srLoad(){
+    var q=srReq;if(!q)return;
     var n=++srSeq;
-    var u='/api/series?d_from='+state.from+'&d_to='+state.to+'&measure='+encodeURIComponent(m)
-      +(d?('&dim='+encodeURIComponent(d)+'&key='+encodeURIComponent(k==null?'':k)):'');
-    fetch(u,{cache:'no-store'})
-      .then(function(r){if(r.status===401){location.href='/login';throw 0;}if(!r.ok)throw new Error('http '+r.status);return r.json();})
-      .then(function(j){
+    srBody.innerHTML='<div class="srwait">טוען…</div>';
+    var calls=[srGet(srUrl(q.m,q.d,q.k,srBucket))];
+    if(srShare)calls.push(srGet(srUrl(q.m,'','',srBucket)));
+    Promise.all(calls)
+      .then(function(res){
         if(n!==srSeq)return;
-        if(j.dev){srBody.innerHTML=devBoxHTML();return;}
-        srJob=j.agg||{};srDraw();
+        for(var i=0;i<res.length;i++)if(res[i].dev){srBody.innerHTML=devBoxHTML();return;}
+        srJob=res[0].agg||{};
+        srDen=res[1]?(res[1].agg||{}):null;
+        srDraw();
       })
       .catch(function(e){
         if(n!==srSeq||e===0)return;
         srBody.innerHTML='<div class="srwait">שגיאה בטעינת נתונים.</div>';
       });
   }
+  function srOpen(m,d,k,title,from){
+    srJob=null;srDen=null;srTrend=false;srShare=false;srBucket='';srPick=-1;
+    srReq={m:m,d:d||'',k:k};
+    srBack=from||null;
+    srSheet.classList.add('on');srOvl.classList.add('on');
+    try{document.getElementById('srx').focus();}catch(e){}
+    srTitle.textContent=title||'';
+    srLoad();
+  }
   function srClose(){
-    srSeq++;srJob=null;srSheet.classList.remove('on');srOvl.classList.remove('on');
+    srSeq++;srJob=null;srDen=null;srReq=null;srSheet.classList.remove('on');srOvl.classList.remove('on');
     // חזרה למספר שממנו נפתח — אחרת המיקוד נשאר על אלמנט מוסתר
     if(srBack){try{srBack.focus();}catch(e){}srBack=null;}
   }
 
   function srDraw(){
-    var j=srJob;if(!j)return;
+    var j=srEff();if(!j)return;
     var rows=j.rows||[],n=rows.length,i;
     var head='<div class="srmeta">'+esc(j.bucket_label||'')+' · '+esc(rangeLbl(state.from,state.to))+'</div>';
     // אפס הוא מדידה, לא היעדר נתונים: "לא בוטל כלום" הוא ₪0, ורק סדרה בלי אף דלי
@@ -2896,7 +2964,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     for(i=0;i<n;i++){
       if(rows[i].v==null)continue;
       got=true;
-      if(j.kind==='ratio'||Number(rows[i].v)!==0){any=true;break;}
+      if(j.kind==='ratio'||j.kind==='share'||Number(rows[i].v)!==0){any=true;break;}
     }
     if(!got){srBody.innerHTML=head+'<div class="srwait">אין נתונים בתקופה שנבחרה.</div>';return;}
     if(!any){srBody.innerHTML=head+'<div class="srwait">'+esc(srFmt(0,j))+' בתקופה שנבחרה.</div>';return;}
@@ -2904,8 +2972,16 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var totLbl=(j.kind==='ratio'||j.additive===false)?'בתקופה':'סה"כ';
     var tot='<div class="srtot"><span>'+totLbl+'</span><b>'+srFmt(j.total==null?null:Number(j.total),j)+'</b></div>';
     var T=srTrend2(j), hasT=!!T, on=(srTrend&&hasT);
+    var bkNow=srBucket||j.bucket||'', bk='<div class="srbk"><span class="l">לפי</span>',bi,bks=['d','w','m'];
+    for(bi=0;bi<bks.length;bi++)
+      bk+='<button type="button" data-srb="'+bks[bi]+'"'+(bkNow===bks[bi]?' class="on" aria-pressed="true"':' aria-pressed="false"')
+        +'>'+SR_BK[bks[bi]]+'</button>';
+    bk+='</div>';
     var tools='<div class="srtools"><button type="button" id="srtg"'+(hasT?'':' disabled')
-      +' class="'+(on?'on':'')+'" aria-pressed="'+(on?'true':'false')+'">קו מגמה</button></div>';
+      +' class="'+(on?'on':'')+'" aria-pressed="'+(on?'true':'false')+'">קו מגמה</button>'
+      +(srCanShare()?('<button type="button" id="srsh" class="'+(srShare?'on':'')
+        +'" aria-pressed="'+(srShare?'true':'false')+'">אחוז מהמחזור</button>'):'')
+      +'</div>'+bk;
     // ההסבר יורד מתחת לגרף ועולה רק בלחיצה על העמודה עצמה. דורון, 27.8.2026:
     // "להוריד את הטקסט ובמקומו לצייר את העמודה האחרונה מקווקוות".
     var pickTxt=(srPick>=0&&rows[srPick])
@@ -2913,6 +2989,11 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         +(srIsPart(j,srPick,n)?'<span class="srpart">'+esc(srPartTxt(j))+'</span>':'')
       : '';
     var note='';
+    // היחידה נאמרת פעם אחת, מתחת לגרף. ליד כל עמודה היא הייתה תופסת את מקום המספר.
+    if(n<=SR_LBL_MAX&&j.kind!=='ratio'&&j.kind!=='share'&&SR_MONEY[j.measure])
+      note+='<div class="srnote">המספרים מעל העמודות באלפי ₪.</div>';
+    if(srShare)
+      note+='<div class="srnote">כל עמודה היא חלקו של הפלח מהמחזור של אותה תקופה, ולא סכום בשקלים. ירידה כאן היא ירידה בנתח גם אם הכסף עלה.</div>';
     if(on&&T.skipped)note+='<div class="srnote">קו המגמה לא כולל תקופות חלקיות.</div>';
     srBody.innerHTML=head+tot+tools+srChart(j,on?T:null)
       +'<div class="sraxis"><span>'+esc(srLbl(rows[0].t,j.bucket))+'</span><span>'+esc(srLbl(rows[n-1].t,j.bucket))+'</span></div>'
@@ -2921,7 +3002,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
 
   function srChart(j,T){
     var rows=j.rows||[],n=rows.length,i;
-    var W=340,H=134,PT=9,PB=3;
+    // הריפוד העליון פותח מקום למספר שמעל העמודה הגבוהה. בלעדיו הוא נדחק אל
+    // הקצה ונצמד למסגרת. בגרף יחס אין עמודות ואין מספרים, ולכן גם אין מה לפנות.
+    var W=340,H=134,PT=(j.kind!=='ratio'&&(j.rows||[]).length<=SR_LBL_MAX)?17:9,PB=3;
     var v=[],mx=0,mn=0,x;
     for(i=0;i<n;i++){x=rows[i].v==null?null:Number(rows[i].v);v.push(x);
       if(x==null)continue;if(x>mx)mx=x;if(x<mn)mn=x;}
@@ -2963,6 +3046,19 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
           +'" x="'+(X(i)-bw/2).toFixed(2)+'" y="'+yt.toFixed(2)+'" width="'+bw.toFixed(2)
           +'" height="'+hh.toFixed(2)+'"></rect>';
       }
+      // הערך מעל העמודה, כשיש מספיק רוחב לכולם. חלקית — כי כשמספר אחד נעלם
+      // מרוב צפיפות, מי שקורא סופר את העמודות ומייחס את המספר לעמודה הלא נכונה.
+      if(n<=SR_LBL_MAX){
+        for(i=0;i<n;i++){
+          if(v[i]==null)continue;
+          var lb=srBarLbl(v[i],j);if(!lb)continue;
+          // מתחת לעמודה שלילית ומעליה בחיובית; לעולם לא מחוץ למסגרת העליונה.
+          var ty=v[i]<0?(Y(v[i])+7.6):(Y(v[i])-3);
+          if(ty<7)ty=7;if(ty>H-1)ty=H-1;
+          s+='<text class="srval'+(srPick===i?' on':'')+'" x="'+X(i).toFixed(2)
+            +'" y="'+ty.toFixed(2)+'">'+esc(lb)+'</text>';
+        }
+      }
     }
     if(T)   // רק מעל הדליים שנכנסו לחישוב — קו שנמתח מעל דלי חלקי מחזיר את אותה סתירה
       s+='<path class="srtrend" d="M'+X(T.i0).toFixed(2)+' '+Y(Number(T.y0)).toFixed(2)
@@ -2980,6 +3076,15 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   srBody.addEventListener('click',function(e){
     var t=e.target.closest('#srtg');
     if(t){if(!t.disabled){srTrend=!srTrend;srDraw();}return;}
+    // המכנה נמשך פעם אחת לכל דלי. אחרי שהוא בזיכרון, המעבר בין ₪ לאחוז הוא ציור בלבד.
+    var sh=e.target.closest('#srsh');
+    if(sh){srShare=!srShare;srPick=-1;if(srShare&&!srDen)srLoad();else srDraw();return;}
+    var bkb=e.target.closest('[data-srb]');
+    if(bkb){
+      var nb=bkb.getAttribute('data-srb');
+      if(nb!==(srBucket||(srJob&&srJob.bucket))){srBucket=nb;srPick=-1;srDen=null;srLoad();}
+      return;
+    }
     var h=e.target.closest('[data-sri]');
     if(h){var i=parseInt(h.getAttribute('data-sri'),10);srPick=(srPick===i?-1:i);srDraw();}
   });
