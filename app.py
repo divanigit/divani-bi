@@ -49,7 +49,7 @@ DASH_PASS_ADMIN = os.environ.get("DASH_PASS_ADMIN", "")  # Doron's personal pass
 DASH_PASS_ASK2 = os.environ.get("DASH_PASS_ASK2", "")  # Haim: ask-enabled personal password
 DASH_PASS_DOV = os.environ.get("DASH_PASS_DOV", "")  # Dov (operations mgr): own credential, regular view access
 DASH_PASS_SHARON = os.environ.get("DASH_PASS_SHARON", "")  # Sharon: own credential, regular view access
-DASH_PASS_ITAMAR = os.environ.get("DASH_PASS_ITAMAR", "")  # Itamar: own credential, regular view access
+DASH_PASS_ITAMAR = os.environ.get("DASH_PASS_ITAMAR", "")  # Itamar: own credential, owner rights
 DASH_PASS_IDO = os.environ.get("DASH_PASS_IDO", "")  # עידו אהרון: regular view, without any profit figure
 SB_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SB_KEY = os.environ.get("SUPABASE_SECRET_KEY", "")
@@ -93,6 +93,14 @@ def _admin_token() -> str:
     return hmac.new(DASH_PASS_ADMIN.encode("utf-8"), b"divani-bi-admin-v1", hashlib.sha256).hexdigest()
 
 
+def _itamar_token() -> str:
+    # Owner rights, but keyed on his own password rather than Doron's, so that
+    # clearing DASH_PASS_ITAMAR ends his session instead of leaving him holding
+    # a cookie identical to the admin one.
+    return hmac.new(DASH_PASS_ITAMAR.encode("utf-8"), b"divani-bi-itamar-v1",
+                    hashlib.sha256).hexdigest()
+
+
 def _ask2_token() -> str:
     return hmac.new(DASH_PASS_ASK2.encode("utf-8"), b"divani-bi-ask2-v1", hashlib.sha256).hexdigest()
 
@@ -121,10 +129,16 @@ def _can_ask(request: Request) -> bool:
 
 
 def _is_admin(request: Request) -> bool:
-    if not DASH_PASS_ADMIN:
-        return False
+    # Two credentials carry owner rights, each with its own cookie value. The
+    # empty check per entry is not decoration: an unset env var would otherwise
+    # produce a real digest of the empty key, and anyone able to compute it
+    # would be an owner.
     tok = request.cookies.get(COOKIE_NAME, "")
-    return hmac.compare_digest(tok, _admin_token())
+    if DASH_PASS_ADMIN and hmac.compare_digest(tok, _admin_token()):
+        return True
+    if DASH_PASS_ITAMAR and hmac.compare_digest(tok, _itamar_token()):
+        return True
+    return False
 
 
 def _logged_in(request: Request) -> bool:
@@ -184,14 +198,14 @@ def _identity(p: str):
         return "דב", _session_token()
     if _match(p, DASH_PASS_SHARON):
         return "שרון", _session_token()
-    if _match(p, DASH_PASS_ITAMAR):
-        return "איתמר", _session_token()
     if _match(p, DASH_PASS):
         return "משותף", _session_token()
     if _match(p, DASH_PASS_ASK2):
         return "חיים", _ask2_token()
     if _match(p, DASH_PASS_ADMIN):
         return "אדמין", _admin_token()
+    if _match(p, DASH_PASS_ITAMAR):
+        return "איתמר", _itamar_token()
     return "?", ""
 
 
@@ -2154,14 +2168,14 @@ def api_siteconv(request: Request):
     names = [p["name"] for p in d["platforms"] if p.get("kind") == "פלטפורמה"]
     node = d["series"]["חודש"]["סהכ"]
     mons = d["periods"]["חודש"]
-    sess = []
-    for i in range(len(mons)):
-        s = 0
-        for n in names:
-            arr = node.get(n) or []
-            if i < len(arr):
-                s += (arr[i].get("s") or 0)
-        sess.append(s)
+    # לכל ערוץ הסדרה שלו, כדי שכיבוי ערוץ יהיה חשבון על נתון שכבר בידיים
+    # ולא בקשה חדשה לשרת בכל לחיצה.
+    per = {}
+    for n in names:
+        arr = node.get(n) or []
+        per[n] = [int((arr[i].get("s") or 0) if i < len(arr) else 0)
+                  for i in range(len(mons))]
+    sess = [sum(per[n][i] for n in names) for i in range(len(mons))]
 
     lo = mons[0]["period_start"]
     hi = mons[-1]["period_end"]
@@ -2179,8 +2193,18 @@ def api_siteconv(request: Request):
             "conv": round(o / sess[i] * 100, 4) if sess[i] else None,
             "partial": bool(mo.get("is_partial")), "note": mo.get("partial_note") or "",
         })
-    return JSONResponse({"months": out, "measure": d["meta"].get("measure_short", "סשנים"),
-                         "source_to": hi})
+    return JSONResponse({
+        "months": out,
+        "measure": d["meta"].get("measure_short", "סשנים"),
+        "source_to": hi,
+        "channels": [{"name": n, "sessions": per[n]} for n in names],
+        # קבוצות שאינן ערוץ בפני עצמו אלא צירוף של ערוצים קיימים. בלי זה
+        # "מטא" הייתה נספרת גם היא וגם שני חלקיה, והתנועה הייתה מוכפלת.
+        "groups": [{"name": p["name"], "of": ["פייסבוק", "אינסטגרם"]}
+                   for p in d["platforms"] if p.get("kind") == "צירוף"],
+        # ההזמנות אינן נושאות ערוץ: bi_site_orders סופרת את סניף 103 בלבד.
+        # לכן כיבוי ערוץ מקטין את המכנה ולא את המונה, והמסך חייב לומר זאת.
+        "orders_have_channel": False})
 
 
 
@@ -2290,6 +2314,15 @@ def api_cash(request: Request, d_from: str = "", d_to: str = ""):
         print("turnover-gross failed:", repr(e)[:200], flush=True)
         gross = None
     pend["gross"] = gross
+    # ...ואותו מחזור מפוצל לסניפים, כדי שכל שורה בטבלה תישא את היחס שלה
+    # ולא רק את השקלים. אותה שמירה: כישלון כאן אינו סוגר את המסך.
+    try:
+        pend["gross_by_branch"] = sb_rpc(
+            "bi_turnover_gross_by_branch",
+            {"p_from": f.isoformat(), "p_to": t.isoformat()}) or {}
+    except Exception as e:
+        print("turnover-by-branch failed:", repr(e)[:200], flush=True)
+        pend["gross_by_branch"] = {}
     if (t - f).days <= MAX_LINE_SPAN_DAYS:
         rows = sb_rpc("bi_cash_lines", {"p_from": f.isoformat(), "p_to": t.isoformat()})
         return JSONResponse({"mode": "cashlines", "rows": rows or [], **pend})
@@ -2385,15 +2418,18 @@ def _pending_db():
     """הרשימה כפי שהיא במסד. עד 24.8.26 היא חיה רק ב-_state של התהליך, ולכן כל
     אתחול של Render מחק אותה, לא הייתה היסטוריה, והבדיקה האוטומטית של סוף היום
     לא יכלה לקרוא אותה בכלל (אין לה סיסמה לאתר — /api/pending החזיר לה 401)."""
-    rows = sb_select("bi_pending_transfers?select=ordname,cust,branch,balance,"
-                     "amount,slip_date,n_slips,last_seen"
-                     "&cleared_at=is.null&order=slip_date.asc&limit=500")
+    # דרך RPC ולא בחירת עמודות ישירה, כי צריך גם את תאריך ההזמנה — והוא
+    # אינו בטבלה אלא בשורות ההזמנה.
+    rows = sb_rpc("bi_pending_open", {}) or []
     out, seen_at = [], ""
     for r in rows:
         out.append({"o": r.get("ordname"), "c": r.get("cust") or "",
                     "b": r.get("branch") or "",
                     "bal": float(r.get("balance") or 0),
-                    "d": (r.get("slip_date") or "")[:10],
+                    # d = התאריך שהמסך סופר לפיו: ההזמנה, ובהיעדרה השובר.
+                    # sd נשאר לתצוגה, כי הוא מה שכתוב על האסמכתא.
+                    "d": ((r.get("ord_date") or r.get("slip_date") or "")[:10]),
+                    "sd": (r.get("slip_date") or "")[:10],
                     "show": float(r.get("amount") or 0),
                     "n": int(r.get("n_slips") or 1)})
         if (r.get("last_seen") or "") > seen_at:
