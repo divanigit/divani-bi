@@ -286,6 +286,7 @@ _NP_STRIP = {
     "/api/conversion": None,
     "/api/hygiene": None,
     "/api/siteconv": None,        # סשנים, הזמנות אתר ומכירות אתר. אין רווח.
+    "/api/sitesales": None,       # מכירות בשקלים בשני הצדדים. אין רווח.
     "/api/segdrill": _np_dimtree,
     "/api/agentreport": _np_agentreport,
     "/api/panel": None,
@@ -2065,6 +2066,40 @@ def api_series(request: Request, d_from: str = "", d_to: str = "",
                       "p_measure": m, "p_dim": d,
                       "p_key": (key if d else None), "p_bucket": b})
     return JSONResponse({"mode": "series", "agg": agg or {}})
+
+
+# סניף האתר בפריוריטי. קבוע ולא פרמטר: המסך הזה הוא על האתר, ופרמטר פתוח
+# כאן היה הופך אותו לצלילה כללית שכבר קיימת במגירה.
+SITE_BRANCH = "103"
+
+
+@app.get("/api/sitesales")
+def api_sitesales(request: Request, d_from: str = "", d_to: str = "",
+                  bucket: str = ""):
+    """מכירות האתר, ולצידן כלל המכירות — כדי שהמסך יראה נתח ולא רק שקלים.
+
+    שתי קריאות לאותה פונקציה בדיוק, אחת מסוננת לסניף האתר ואחת בלי סינון.
+    אותה מדידה בשני הצדדים, ולכן חוקי הברזל והמע"מ מתקזזים ביחס עצמו.
+
+    שתיהן באותו דלי מפורש. בלי זה די בכך שהשרת יגזור דלי אחר לסדרה אחת
+    כדי שכל היחסים יזוזו, ואף אחד לא היה רואה את זה במסך.
+    """
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    f, t = _parse_date(d_from), _parse_date(d_to)
+    if not f or not t:
+        return JSONResponse({"error": "bad dates"}, status_code=400)
+    if f > t:
+        f, t = t, f
+    b = (bucket or "").strip().lower() or None
+    if b is not None and b not in ("d", "w", "m"):
+        return JSONResponse({"error": "bad bucket"}, status_code=400)
+    base = {"p_from": f.isoformat(), "p_to": t.isoformat(),
+            "p_measure": "sales", "p_bucket": b}
+    site = sb_rpc("bi_series", dict(base, p_dim="branch", p_key=SITE_BRANCH))
+    whole = sb_rpc("bi_series", dict(base, p_dim=None, p_key=None))
+    return JSONResponse({"mode": "sitesales",
+                         "agg": {"site": site or {}, "all": whole or {}}})
 
 
 @app.get("/api/cancelorders")
