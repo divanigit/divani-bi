@@ -1894,9 +1894,65 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     return '<div class="cmwrap"><div class="cmhead">מחזור וגבייה לפי חודש</div>'+rows
       +'<div class="cmleg">האורך הוא המחזור החודשי · המילוי הוא הכסף שנכנס באותו חודש מההזמנות של אותו חודש</div></div>';
   }
+  // אחוז ההנחה חודש בחודש, כדי שאפשר יהיה להשוות חודש לחודש. המספר בא
+  // מאותה סדרה שנפתחת בלחיצה על ה-KPI של אחוז ההנחה (collect_discpct, דלי
+  // חודשי), ולא מחישוב מקומי — אחרת אותו מסך היה מציג שני אחוזי הנחה שאינם שווים.
+  var cdKey='', cdSeq=0, cdJob=null;
+  function collectDiscLoad(){
+    var key=state.from+'|'+state.to;
+    if(cdKey===key)return;
+    cdKey=key;cdJob=null;
+    var n=++cdSeq;
+    fetch('/api/series?d_from='+state.from+'&d_to='+state.to
+          +'&measure=collect_discpct&bucket=m',{cache:'no-store'})
+      .then(function(r){if(!r.ok)throw 0;return r.json();})
+      .then(function(j){
+        if(n!==cdSeq)return;
+        // j.dev = השרת חסם את המדד למשתמש הזה. אז הבלוק פשוט לא מופיע.
+        cdJob=(j.dev?null:(j.agg||null));
+        if(view==='collect'&&cache.mode==='collect')renderCollectTable(ROOT());
+      })
+      .catch(function(){if(n===cdSeq)cdJob=null;});
+  }
+  // עמודה אחת לכל חודש: האורך הוא אחוז ההנחה, והמספר האחרון הוא השינוי
+  // בנקודות אחוז מהחודש שלפניו — התנודה היא מה שנשאל, לא הרמה לבדה.
+  function collectDiscMonthsHtml(){
+    var j=cdJob;if(!j)return '';
+    var rows=j.rows||[],n=rows.length,got=0,mx=0;
+    rows.forEach(function(r){
+      if(r.v==null)return;
+      got++;var v=Math.abs(Number(r.v)||0);if(v>mx)mx=v;
+    });
+    if(n<2||got<2||!mx)return '';
+    var part=false;
+    var body=rows.map(function(r,i){
+      var v=(r.v==null)?null:Number(r.v);
+      var lbl=MONTHS[parseInt(r.t.slice(5,7),10)-1]+' '+r.t.slice(2,4);
+      var w=(v==null)?1:Math.max(1,100*Math.abs(v)/mx);
+      // ההפרש הוא מול החודש שקדם לו ממש. חודש בלי מכנה אינו אפס ואינו מדלג:
+      // השוואה אל חודש אחור יותר הייתה נקראת כמו שינוי חודשי.
+      var pv=(i>0&&rows[i-1].v!=null)?Number(rows[i-1].v):null;
+      var dl='';
+      if(v!=null&&pv!=null){
+        var d=Math.round((v-pv)*10)/10;
+        dl=(d>0?'+':(d<0?'−':''))+Math.abs(d).toFixed(1);
+      }
+      var pt=srIsPart(j,i,n);if(pt)part=true;
+      return '<div class="cmrow"><span class="cml">'+esc(lbl)+(pt?' *':'')+'</span>'
+        +'<span class="cmbar" style="width:'+w.toFixed(1)+'%"><i style="width:100%"></i></span>'
+        +'<span class="cmv">'+(v==null?'—':srPct1(v))+'</span>'
+        +'<span class="cmp">'+dl+'</span></div>';
+    }).join('');
+    var avg=(j.total==null)?'':' · בכל התקופה '+srPct1(Number(j.total));
+    return '<div class="cmwrap"><div class="cmhead">אחוז הנחה לפי חודש'+esc(avg)+'</div>'+body
+      +'<div class="cmleg">האורך הוא חלק ההנחות מהמחיר המלא של ההזמנות שנכתבו באותו חודש · '
+      +'המספר האחרון הוא השינוי בנקודות אחוז מהחודש שלפניו'
+      +(part?' · חודש שמסומן ב-* טרם הסתיים':'')+'</div></div>';
+  }
   function renderCollectTable(R){
     if(!R.k.length){stage.innerHTML='<div class="empty">אין נתונים בתקופה שנבחרה.</div>';return;}
-    var h=collectMonthsHtml(R)+'<div class="tw"><table><thead><tr><th class="nm">סוכן</th><th>מכירות</th><th>כולל מע"מ</th><th>תקבולים</th><th>יחס מקדמות</th><th>הנחות</th><th>אחוז הנחה</th></tr></thead><tbody>';
+    collectDiscLoad();
+    var h=collectMonthsHtml(R)+collectDiscMonthsHtml()+'<div class="tw"><table><thead><tr><th class="nm">סוכן</th><th>מכירות</th><th>כולל מע"מ</th><th>תקבולים</th><th>יחס מקדמות</th><th>הנחות</th><th>אחוז הנחה</th></tr></thead><tbody>';
     R.k.slice().sort(function(x,y){return y.s-x.s;}).forEach(function(c){
       var rk=(c.rawk==null?'':c.rawk);
       h+='<tr class="d0"><td class="nm"><div class="nmc"><span style="width:15px;flex:none"></span><div class="nlab"><div class="t" style="font-weight:500">'+esc(c.n)+'</div></div></div></td>'+
