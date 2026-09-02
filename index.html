@@ -4374,15 +4374,6 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     document.addEventListener('keydown',function(e){if(e.key==='Escape'&&ov.classList.contains('open'))close();});
     document.getElementById('seg').addEventListener('click',function(e){if(e.target.closest('button'))close();});
   })();
-  document.getElementById('pdfbtn').addEventListener('click',function(){
-    var t=document.getElementById('h1t').textContent;
-    var s=document.getElementById('sellbl').textContent;
-    var now=new Date();
-    var stamp=('0'+now.getDate()).slice(-2)+'.'+('0'+(now.getMonth()+1)).slice(-2)+'.'+now.getFullYear()+' '+('0'+now.getHours()).slice(-2)+':'+('0'+now.getMinutes()).slice(-2);
-    document.getElementById('printtitle').textContent=t;
-    document.getElementById('printsub').textContent=s+' · הופק '+stamp;
-    window.print();
-  });
   document.getElementById('kpis').addEventListener('click',function(e){
     if(view!=='ins'||insPanel!=='pareto')return;
     var pt=e.target.closest('[data-pn]');
@@ -5061,6 +5052,21 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       .catch(function(){alert('\u05d4\u05d9\u05d9\u05e6\u05d5\u05d0 \u05e0\u05db\u05e9\u05dc. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1.');})
       .then(function(){if(btn)btn.disabled=false;});
   }
+  /* PDF. אותה הדפסה בכל המסכים: הכותרת והחותמת נכתבות לתוך שורה שמופיעה
+     בהדפסה בלבד, ואם אין כזו במסך — פשוט מדפיסים. */
+  function stamp(){
+    var n=new Date(),p=function(x){return (x<10?'0':'')+x;};
+    return p(n.getDate())+'.'+p(n.getMonth()+1)+'.'+n.getFullYear()
+      +' '+p(n.getHours())+':'+p(n.getMinutes());
+  }
+  function prt(){
+    var t=document.getElementById('printtitle'),s=document.getElementById('printsub');
+    if(t)t.textContent=title();
+    if(s)s.textContent=sub()+(sub()?' \u00b7 ':'')+'\u05d4\u05d5\u05e4\u05e7 '+stamp();
+    window.print();
+  }
+  var pb=document.getElementById('pdfbtn');
+  if(pb)pb.addEventListener('click',prt);
   window.owlXlsx=function(){run(document.getElementById('xlsbtn'));};
   var b=document.getElementById('xlsbtn');
   if(b)b.addEventListener('click',function(){run(b);});

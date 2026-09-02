@@ -139,7 +139,11 @@
 .crumbs .chip{font-family:inherit;font-size:12px;border:1px solid var(--line2);background:var(--paper);color:var(--ink2);padding:6px 11px;min-height:36px;border-radius:999px;cursor:pointer}
 .crumbs .chip.here{background:var(--brandw);border-color:var(--brand);color:var(--brand);font-weight:600;cursor:default}
   /* כפתור הייצוא בשורת הכותרת. אותו גודל מגע כמו שאר הכפתורים במסך. */
-  .owlxls{margin-inline-start:auto;display:inline-flex;align-items:center;gap:6px;
+  .owlacts{margin-inline-start:auto;display:flex;align-items:center;gap:6px}
+  #printsub{display:none}
+  @media print{#printsub{display:block;font-size:12px;color:#444;border-bottom:2px solid #111;padding:0 0 8px;margin:0 0 12px}
+    .owlacts,.owlxls{display:none !important}}
+  .owlxls{display:inline-flex;align-items:center;gap:6px;
     font-family:inherit;font-size:12.5px;border:1px solid var(--line2);background:var(--bg);
     color:var(--tx2);padding:7px 12px;min-height:38px;border-radius:999px;cursor:pointer}
   .owlxls svg{width:16px;height:16px;flex:none}
@@ -302,13 +306,17 @@
 
   <div class="topbar">
     <h1 class="ptitle">ניתוח ביצועי נציגים וסניפים</h1>
+  <p id="printsub"></p>
     <div class="vtog" id="vtog">
       <button type="button" data-view="agents" class="on">ניתוח נציגים</button>
       <button type="button" data-view="branches">ניתוח סניפים</button>
       <button type="button" data-view="baskets">סל ממוצע חוצה סניפים</button>
     </div>
     <div class="selbar" id="selbar" style="margin:0 0 14px"><button type="button" class="selbtn" id="selbtn" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span id="sellbl">טוען…</span><svg class="car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+    <div class="owlacts">
+    <button type="button" class="owlxls" id="pdfbtn" title="הדפסה או שמירה כ-PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7.5z"/><path d="M14.5 3v4.5H19"/><path d="M8.6 13.5h6.8"/><path d="M8.6 17h4.4"/></svg>PDF</button>
     <button type="button" class="owlxls" id="xlsbtn" title="ייצוא נתוני המסך לאקסל"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.2" y="4" width="17.6" height="16" rx="2.2"/><path d="M3.2 9.6h17.6"/><path d="M9.4 9.6V20"/></svg>אקסל</button>
+    </div>
     </div>
 
     <div class="tog" id="tog">
@@ -964,6 +972,21 @@
       .catch(function(){alert('\u05d4\u05d9\u05d9\u05e6\u05d5\u05d0 \u05e0\u05db\u05e9\u05dc. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1.');})
       .then(function(){if(btn)btn.disabled=false;});
   }
+  /* PDF. אותה הדפסה בכל המסכים: הכותרת והחותמת נכתבות לתוך שורה שמופיעה
+     בהדפסה בלבד, ואם אין כזו במסך — פשוט מדפיסים. */
+  function stamp(){
+    var n=new Date(),p=function(x){return (x<10?'0':'')+x;};
+    return p(n.getDate())+'.'+p(n.getMonth()+1)+'.'+n.getFullYear()
+      +' '+p(n.getHours())+':'+p(n.getMinutes());
+  }
+  function prt(){
+    var t=document.getElementById('printtitle'),s=document.getElementById('printsub');
+    if(t)t.textContent=title();
+    if(s)s.textContent=sub()+(sub()?' \u00b7 ':'')+'\u05d4\u05d5\u05e4\u05e7 '+stamp();
+    window.print();
+  }
+  var pb=document.getElementById('pdfbtn');
+  if(pb)pb.addEventListener('click',prt);
   window.owlXlsx=function(){run(document.getElementById('xlsbtn'));};
   var b=document.getElementById('xlsbtn');
   if(b)b.addEventListener('click',function(){run(b);});

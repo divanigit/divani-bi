@@ -90,7 +90,21 @@ body.as-user .owneronly,body.as-ido .owneronly{display:none !important}
 body.as-ido .vahide{display:none !important}
 /*ENDOWNER*/
   /* כפתור הייצוא בשורת הכותרת. אותו גודל מגע כמו שאר הכפתורים במסך. */
-  .owlxls{margin-inline-start:auto;display:inline-flex;align-items:center;gap:6px;
+  .owlacts{margin-inline-start:auto;display:flex;align-items:center;gap:6px}
+  /* הדפסה. הלוגו כבר בראש הדף, ולכן נחשפת רק שורת החותמת והפקדים נעלמים. */
+  #printsub{display:none}
+  @media print{
+    :root{--bg:#ffffff;--surface:#f4f4f4;--tx:#111;--tx2:#444;--tx3:#777;
+      --line:#ddd;--line2:#bbb}
+    body{background:#fff}
+    .owlbar,.owlacts,.ctlrow,.seg,.quick,.dates,.chips,.owlxls,#pdfbtn,#xlsbtn,
+    #owlsheet,.owlsheet,#navov,.vaovl,.sheet,.overlay,.hamb,.owlham,
+    .hygx,.owlx{display:none !important}
+    #printsub{display:block;font-size:12px;color:#444;border-bottom:2px solid #111;
+      padding:0 0 8px;margin:0 0 12px}
+    .card,section,table{break-inside:avoid;page-break-inside:avoid}
+  }
+  .owlxls{display:inline-flex;align-items:center;gap:6px;
     font-family:inherit;font-size:12.5px;border:1px solid var(--line2);background:var(--bg);
     color:var(--tx2);padding:7px 12px;min-height:38px;border-radius:999px;cursor:pointer}
   .owlxls svg{width:16px;height:16px;flex:none}
@@ -280,7 +294,10 @@ tfoot td{border-top:2px solid var(--line2);font-weight:800;background:var(--bg)}
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 7h17"/><path d="M3.5 12h17"/><path d="M3.5 17h17"/></svg>
     </button>
     <div class="owlnow"><span class="v">יחס המרה</span></div>
-        <button type="button" class="owlxls" id="xlsbtn" title="ייצוא נתוני המסך לאקסל"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.2" y="4" width="17.6" height="16" rx="2.2"/><path d="M3.2 9.6h17.6"/><path d="M9.4 9.6V20"/></svg>אקסל</button>
+        <div class="owlacts">
+    <button type="button" class="owlxls" id="pdfbtn" title="הדפסה או שמירה כ-PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7.5z"/><path d="M14.5 3v4.5H19"/><path d="M8.6 13.5h6.8"/><path d="M8.6 17h4.4"/></svg>PDF</button>
+    <button type="button" class="owlxls" id="xlsbtn" title="ייצוא נתוני המסך לאקסל"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.2" y="4" width="17.6" height="16" rx="2.2"/><path d="M3.2 9.6h17.6"/><path d="M9.4 9.6V20"/></svg>אקסל</button>
+    </div>
 <!--OWNER-->
     <button type="button" class="vaeye" id="vaeye" title="בחירת תצוגה"
             aria-label="בחירת תצוגה" aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
@@ -288,6 +305,7 @@ tfoot td{border-top:2px solid var(--line2);font-weight:800;background:var(--bg)}
   </div>
 
   <h1>כמה מהנכנסים קונים</h1>
+  <p id="printsub"></p>
   <p class="sub" id="sub">טוען…</p>
   <!--OWNER--><p class="cut owneronly" id="cut" hidden></p><!--/OWNER-->
 
@@ -1359,6 +1377,21 @@ loadHyg();
       .catch(function(){alert('\u05d4\u05d9\u05d9\u05e6\u05d5\u05d0 \u05e0\u05db\u05e9\u05dc. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1.');})
       .then(function(){if(btn)btn.disabled=false;});
   }
+  /* PDF. אותה הדפסה בכל המסכים: הכותרת והחותמת נכתבות לתוך שורה שמופיעה
+     בהדפסה בלבד, ואם אין כזו במסך — פשוט מדפיסים. */
+  function stamp(){
+    var n=new Date(),p=function(x){return (x<10?'0':'')+x;};
+    return p(n.getDate())+'.'+p(n.getMonth()+1)+'.'+n.getFullYear()
+      +' '+p(n.getHours())+':'+p(n.getMinutes());
+  }
+  function prt(){
+    var t=document.getElementById('printtitle'),s=document.getElementById('printsub');
+    if(t)t.textContent=title();
+    if(s)s.textContent=sub()+(sub()?' \u00b7 ':'')+'\u05d4\u05d5\u05e4\u05e7 '+stamp();
+    window.print();
+  }
+  var pb=document.getElementById('pdfbtn');
+  if(pb)pb.addEventListener('click',prt);
   window.owlXlsx=function(){run(document.getElementById('xlsbtn'));};
   var b=document.getElementById('xlsbtn');
   if(b)b.addEventListener('click',function(){run(b);});
