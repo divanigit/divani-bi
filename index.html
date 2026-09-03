@@ -751,6 +751,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
            placeholder="חיפוש דגם, תיאור, מק&quot;ט או קטגוריה" aria-label="חיפוש מוצר">
     <select id="prodfam" class="prodsel" aria-label="סינון לפי קטגוריה">
       <option value="">כל הקטגוריות</option>
+      <option value="__sofas__">ספות בלבד</option>
     </select>
     <div class="prodbar-sep"></div>
     <button type="button" class="chip on" data-pl="model" aria-pressed="true">לפי דגם</button>
@@ -4054,7 +4055,8 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   function prodFamOptions(list){
     var sel=document.getElementById('prodfam');
     if(!list||!list.length||sel.getAttribute('data-filled')==='1')return;
-    var h='<option value="">כל הקטגוריות</option>';
+    // "ספות בלבד" אינו שם משפחה בפריוריטי: השרת מאחד עבורו את כל משפחות הספות.
+    var h='<option value="">כל הקטגוריות</option><option value="__sofas__">ספות בלבד</option>';
     for(var i=0;i<list.length;i++)h+='<option value="'+esc(list[i])+'">'+esc(list[i])+'</option>';
     sel.innerHTML=h; sel.value=prodFam; sel.setAttribute('data-filled','1');
   }
@@ -4071,7 +4073,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     }
     document.getElementById('kpis').innerHTML=h;
     var bits=[rangeLbl(state.from,state.to),'הזמנות'];
-    if(prodFam)bits.push('קטגוריה: '+prodFam);
+    if(prodFam)bits.push('קטגוריה: '+(prodFam==='__sofas__'?'ספות בלבד':prodFam));
     if(prodModel)bits.push('דגם: '+prodModel);
     if(prodQ)bits.push('חיפוש: '+prodQ);
     document.getElementById('sellbl').textContent=bits.join(' · ');
@@ -4120,7 +4122,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       ? '<div class="pcnote ownernote">"מהן ללא חיוב" = יחידות בשורות במחיר אפס — בדים, תוספות ופריטי חבילה '
         + 'שמחירם מגולם במוצר הראשי. הן נספרות בכמות, ולכן הכמות כאן גדולה ממספר המוצרים שנמכרו בתשלום. '
         + 'מחיר ליחידה מחושב על היחידות שחויבו בלבד.</div>' : '';
-    var hint=(part?'':'<div class="pcnote forall">לחיצה על שורה פותחת את המק"טים של אותו דגם.</div>')+z;
+    // ספות בלבד: לומר במפורש איזו קטגוריה נכנסה למספר, כדי שלא יצטרכו לנחש.
+    var sf=(a.sofa_fams&&a.sofa_fams.length)
+      ? '<div class="pcnote forall">ספות בלבד = '+a.sofa_fams.map(esc).join(' · ')+'.</div>' : '';
+    var hint=sf+(part?'':'<div class="pcnote forall">לחיצה על שורה פותחת את המק"טים של אותו דגם.</div>')+z;
     stage.innerHTML=crumb+'<div class="tw"><table><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>'+rest+hint;
   }
 
