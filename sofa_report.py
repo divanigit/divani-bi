@@ -1,22 +1,17 @@
 # -*- coding: utf-8 -*-
-"""דוח אקסל: מכירות דגמי הספות בשנה נתונה, דגם אחד לשורה, מהנמכר ביותר ומטה.
+"""ספות בלבד: איחוד כל קטגוריות הספות למסך המוצרים, ודוח אקסל מהמחשב.
 
-הבקשה, 3.9.2026: "תן לי אקסל של המכירות של דגמי הספות ב-2026 לפי שם דגם,
-ממוין מהדגם הנמכר ביותר ומטה".
+הבקשה, 3.9.2026: "רציתי לדעת מה הדגמים שאני הכי הרבה מוכר מהספות". מסך
+המוצרים כבר ממיין דגמים לפי יחידות וכסף, אבל מסנן קטגוריה אחת בכל פעם,
+והספות מפוזרות על כמה משפחות בפריוריטי (פינתיות, תלת-מושביות, נפתחות,
+משפחות "מחולל מק׳טים"). כאן מזהים איזו משפחה היא ספה, שואלים את bi_products
+על כל אחת מהן ומאחדים — וזה מה שהמסך מציג כשבוחרים "ספות בלבד". התשובה
+אומרת במפורש איזו קטגוריה נכנסה, כדי שאף אחד לא יצטרך לנחש מה בתוך המספר.
 
-למה לא מסך המוצרים + כפתור האקסל: שם מסננים קטגוריה אחת בכל פעם, והספות
-מפוזרות על כמה משפחות בפריוריטי (פינתיות, תלת-מושביות, משפחות "מחולל
-מק׳טים"...). כאן אוספים את כולן לקובץ אחד, ומצרפים גיליון שאומר במפורש
-איזו קטגוריה נכנסה ואיזו לא — כדי שאף אחד לא יצטרך לנחש מה יש בתוך המספר.
-
-המספרים מגיעים מאותה שאילתה שמאחורי מסך המוצרים (bi_products ברמת דגם),
-כך שהקובץ והמסך לעולם לא יסתרו זה את זה.
-
-הרצה מהמחשב (עם משתני הסביבה של השרת):
+אותו איחוד משמש גם את ההרצה מהמחשב, שכותבת אקסל בלי שרת:
     SUPABASE_URL=... SUPABASE_SECRET_KEY=... python sofa_report.py --year 2026
     python sofa_report.py --list-fams          # רק להדפיס את הקטגוריות שקיימות
     python sofa_report.py --fam-re 'ספ|פינת'   # לבחור קטגוריות אחרת
-מהדשבורד: /api/sofas.xlsx?year=2026 (מחובר בלבד).
 """
 import argparse
 import datetime as dt
@@ -71,49 +66,76 @@ def paid_units(r):
     return max(0.0, q - q0)
 
 
-def sort_rows(rows):
-    """מהנמכר ביותר ומטה: יחידות בחיוב, אחר כך כל היחידות, אחר כך מחזור."""
-    return sorted(rows, key=lambda r: (-paid_units(r), -float(r.get("q") or 0),
-                                       -float(r.get("s") or 0),
+SORT_KEYS = {
+    "s": lambda r: -float(r.get("s") or 0),
+    "q": lambda r: -float(r.get("q") or 0),
+    "n": lambda r: -float(r.get("n") or 0),
+    "pm": lambda r: -(float(r.get("p") or 0) / float(r.get("s"))) if float(r.get("s") or 0) > 0 else 1.0,
+}
+
+
+def sort_rows(rows, sort="q"):
+    """אותו סדר כמו במסך: הכי הרבה יחידות / כסף / הזמנות / אחוז רווח, ואז
+    כסף ושם כשוברי שוויון."""
+    key = SORT_KEYS.get(sort, SORT_KEYS["q"])
+    return sorted(rows, key=lambda r: (key(r), -float(r.get("s") or 0),
                                        str(r.get("lbl") or r.get("k") or "")))
 
 
-def fetch_products(rpc, d_from, d_to, fam=None, limit=2000):
-    """bi_products ברמת דגם — אותה קריאה שמסך המוצרים עושה."""
+def fetch_products(rpc, d_from, d_to, fam=None, level="model", q=None, model=None,
+                   sort="q", limit=2000):
+    """bi_products — אותה קריאה שמסך המוצרים עושה."""
     return rpc("bi_products", {"p_from": d_from.isoformat(), "p_to": d_to.isoformat(),
-                               "p_level": "model", "p_q": None,
-                               "p_fam": fam, "p_model": None,
-                               "p_sort": "q", "p_limit": limit}) or {}
+                               "p_level": level, "p_q": q or None,
+                               "p_fam": fam, "p_model": model or None,
+                               "p_sort": sort, "p_limit": limit}) or {}
 
 
-def collect(rpc, year, fam_re=DEFAULT_FAM_RE, ex_re=EXCLUDE_FAM_RE, today=None):
-    """מחזיר (שורות ממוינות, קטגוריות שנכללו, קטגוריות שלא, מ-תאריך, עד-תאריך).
+def merge_products(rpc, d_from, d_to, level="model", q=None, model=None, sort="q",
+                   limit=None, fam_re=DEFAULT_FAM_RE, ex_re=EXCLUDE_FAM_RE):
+    """מסך המוצרים עם "ספות בלבד": התשובה באותה צורה של bi_products, מאוחדת
+    על כל קטגוריות הספות, ועם sofa_fams — הקטגוריות שנכנסו.
 
     קריאה אחת בלי סינון נותנת את רשימת הקטגוריות; אחר כך קריאה לכל קטגוריית
-    ספות בנפרד, כדי שתקרת השורות של השאילתה לא תבלע דגם שנמכר מעט.
-    דגם שמופיע בשתי קטגוריות (נמכר גם כספה וגם כהדום, למשל) נספר פעם אחת,
-    תחת הקטגוריה שבה יש לו הכי הרבה כסף — כמו במסך.
+    ספות בנפרד, כדי שתקרת השורות של השאילתה לא תבלע דגם שנמכר מעט. דגם
+    שמופיע בשתי קטגוריות (נמכר גם כספה וגם כהדום, למשל) נספר פעם אחת,
+    תחת הקטגוריה שבה יש לו הכי הרבה כסף — כמו במסך. הסיכומים מחושבים
+    מהשורות המאוחדות, ולכן הם סיכומי הספות ולא סיכומי כל המוצרים.
     """
-    f, t = year_range(year, today)
-    first = fetch_products(rpc, f, t)
-    fams = first.get("families") or sorted({str(r.get("fam") or "")
-                                             for r in (first.get("rows") or [])})
+    first = fetch_products(rpc, d_from, d_to, level=level, q=q, model=model, sort=sort, limit=1)
+    fams = first.get("families") or []
     sofa_fams, other = split_families(fams, fam_re, ex_re)
     sofa_set = set(sofa_fams)
     by_key = {}
     for fam in sofa_fams:
-        for r in (fetch_products(rpc, f, t, fam=fam).get("rows") or []):
+        got = fetch_products(rpc, d_from, d_to, fam=fam, level=level, q=q, model=model, sort=sort)
+        for r in (got.get("rows") or []):
             if not is_sofa_row(r, sofa_set):
                 continue
             k = str(r.get("k") or r.get("lbl") or "")
             if k not in by_key or float(r.get("s") or 0) > float(by_key[k].get("s") or 0):
                 by_key[k] = r
-    # רשת ביטחון: דגם ספה שהקריאה הראשונה ראתה ושום קריאה-לפי-קטגוריה לא החזירה.
-    for r in (first.get("rows") or []):
-        k = str(r.get("k") or r.get("lbl") or "")
-        if is_sofa_row(r, sofa_set) and k not in by_key:
-            by_key[k] = r
-    return sort_rows(by_key.values()), sofa_fams, other, f, t
+    rows = sort_rows(by_key.values(), sort)
+    tot = {"total_s": 0.0, "total_p": 0.0, "total_q": 0.0, "total_q0": 0.0}
+    for r in rows:
+        tot["total_s"] += float(r.get("s") or 0); tot["total_p"] += float(r.get("p") or 0)
+        tot["total_q"] += float(r.get("q") or 0); tot["total_q0"] += float(r.get("q0") or 0)
+    shown = rows if not limit or len(rows) <= limit else rows[:limit]
+    agg = {"level": level, "families": fams, "sofa_fams": sofa_fams, "other_fams": other,
+           "rows": shown, "matched": len(rows), "shown": len(shown), "rest": None}
+    agg.update(tot)
+    if len(shown) < len(rows):
+        tail = rows[len(shown):]
+        agg["rest"] = {"cnt": len(tail), "s": sum(float(r.get("s") or 0) for r in tail),
+                       "p": sum(float(r.get("p") or 0) for r in tail)}
+    return agg
+
+
+def collect(rpc, year, fam_re=DEFAULT_FAM_RE, ex_re=EXCLUDE_FAM_RE, today=None):
+    """מחזיר (שורות ממוינות לפי יחידות, קטגוריות שנכללו, קטגוריות שלא, מ-תאריך, עד-תאריך)."""
+    f, t = year_range(year, today)
+    agg = merge_products(rpc, f, t, sort="q", fam_re=fam_re, ex_re=ex_re)
+    return agg["rows"], agg["sofa_fams"], agg["other_fams"], f, t
 
 
 def build_workbook(rows, sofa_fams, other_fams, d_from, d_to, profit=True, stamp=None):
@@ -121,7 +143,7 @@ def build_workbook(rows, sofa_fams, other_fams, d_from, d_to, profit=True, stamp
     stamp = stamp or dt.datetime.now().strftime("%d.%m.%Y %H:%M")
     year = d_from.year
     title = "מכירות דגמי ספות %d" % year
-    sub = ("%s–%s · לפי שם דגם · ממוין מהנמכר ביותר ומטה (יחידות בחיוב) · הופק %s"
+    sub = ("%s–%s · לפי שם דגם · ממוין מהנמכר ביותר ומטה (יחידות) · הופק %s"
            % (d_from.strftime("%d.%m.%Y"), d_to.strftime("%d.%m.%Y"), stamp))
 
     head = ["#", "דגם", "קטגוריה", 'מק"טים', "יחידות בחיוב", "כל היחידות",
