@@ -41,6 +41,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
                                RedirectResponse, Response)
 
+import sofa_report
 import xlsx
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -293,6 +294,9 @@ _NP_STRIP = {
     # הייצוא מחזיר את מה שהלקוח שלח. מה שלא הגיע למסך שלו לא יכול
     # להגיע לקובץ, ולכן אין כאן מה לסנן בשנית.
     "/api/xlsx": None,
+    # דוח הספות מוריד את עמודות הרווח בזמן בניית הקובץ; התשובה אינה JSON,
+    # ולכן המסנן לא נוגע בה — ההרשמה כאן היא כדי שהנתיב לא יוחזר כ"בפיתוח".
+    "/api/sofas.xlsx": None,
     "/api/segdrill": _np_dimtree,
     "/api/agentreport": _np_agentreport,
     "/api/panel": None,
@@ -1850,6 +1854,42 @@ def api_products(request: Request, d_from: str = "", d_to: str = "",
                                  "p_fam": fam or None, "p_model": model or None,
                                  "p_sort": sort, "p_limit": max(1, min(lim, 500))})
     return JSONResponse({"mode": "products", "agg": agg or {}})
+
+
+@app.get("/api/sofas.xlsx")
+def api_sofas_xlsx(request: Request, year: int = 0, fam_re: str = "", ex_re: str = ""):
+    """אקסל של מכירות דגמי הספות בשנה, דגם לשורה, מהנמכר ביותר ומטה.
+
+    הבקשה, 3.9.2026: "תן לי אקסל של המכירות של דגמי הספות ב-2026 לפי שם דגם,
+    ממוין מהדגם הנמכר ביותר ומטה". הלוגיקה כולה ב-sofa_report.py, כדי שאותו
+    קובץ ייצא גם מהמחשב בלי שרת. מי שאינו רואה רווח במסך אינו מקבל אותו
+    גם בקובץ — כמו בכל ייצוא אחר.
+    """
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    today = dt.datetime.now(IL).date()
+    year = year or today.year
+    if not (2015 <= year <= today.year):
+        return JSONResponse({"error": "bad year"}, status_code=400)
+    if max(len(fam_re), len(ex_re)) > 200:
+        return JSONResponse({"error": "bad re"}, status_code=400)
+    try:
+        rows, sofa_fams, other, f, t = sofa_report.collect(
+            sb_rpc, year, fam_re or sofa_report.DEFAULT_FAM_RE,
+            ex_re or sofa_report.EXCLUDE_FAM_RE, today=today)
+    except re.error:
+        return JSONResponse({"error": "bad re"}, status_code=400)
+    stamp = dt.datetime.now(IL).strftime("%d.%m.%Y %H:%M")
+    blob = sofa_report.build_workbook(rows, sofa_fams, other, f, t,
+                                      profit=not _is_noprofit(request), stamp=stamp)
+    name = sofa_report.file_name(year, dt.datetime.now(IL).strftime("%d.%m.%Y"))
+    return Response(
+        blob, media_type="application/vnd.openxmlformats-officedocument."
+                         "spreadsheetml.sheet",
+        headers={"Content-Disposition":
+                 "attachment; filename=sofas.xlsx; filename*=UTF-8''"
+                 + urllib.parse.quote(name),
+                 "Cache-Control": "no-store"})
 
 
 @app.get("/api/hours")
