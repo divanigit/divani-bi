@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>מילון מאפייני הספות</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&display=swap">
+<style>
+:root{
+  --bg:#F2F4F3; --card:#FFFFFF; --ink:#1B2622; --mute:#5E6D67; --line:#D5DDD9; --soft:#E9EEEB;
+  --acc:#1F6B4F; --acc-ink:#FFFFFF; --yes:#1F6B4F; --yes-bg:#E3F0EA; --no:#A8402D; --no-bg:#F7E6E1;
+  --warn-bg:#FBF1DA; --warn:#7A5A10; --mono:"Assistant",monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#141A17; --card:#1C2420; --ink:#E8EEEB; --mute:#9AAAA3; --line:#2E3A35; --soft:#232D28;
+  --acc:#4FA57F; --acc-ink:#0F1512; --yes:#5FBF92; --yes-bg:#1E332A; --no:#E0846F; --no-bg:#3A231E;
+  --warn-bg:#3A3118; --warn:#E6C979;
+}}
+:root[data-theme="dark"]{
+  --bg:#141A17; --card:#1C2420; --ink:#E8EEEB; --mute:#9AAAA3; --line:#2E3A35; --soft:#232D28;
+  --acc:#4FA57F; --acc-ink:#0F1512; --yes:#5FBF92; --yes-bg:#1E332A; --no:#E0846F; --no-bg:#3A231E;
+  --warn-bg:#3A3118; --warn:#E6C979;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Assistant","Segoe UI",Arial,sans-serif;font-size:17px;line-height:1.45;direction:rtl}
+main{max-width:720px;margin:0 auto;padding:16px 14px 120px}
+h1{font-size:26px;margin:8px 0 4px;font-weight:700;text-wrap:balance}
+h2{font-size:20px;margin:28px 0 8px;font-weight:700;display:flex;align-items:center;gap:10px}
+h2 .cnt{font-size:13px;color:var(--mute);font-weight:600;background:var(--soft);padding:2px 9px;border-radius:99px}
+p{margin:6px 0}
+.lead{color:var(--mute);font-size:15px}
+.intro{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-top:12px}
+.intro ol{margin:6px 0 0;padding-inline-start:20px}
+.who{display:flex;gap:8px;align-items:center;margin-top:10px}
+.who input{flex:1;font:inherit;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);min-height:44px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:8px 0}
+.q{font-weight:600;margin-bottom:6px}
+.ex{background:var(--soft);border-radius:6px;padding:7px 10px;font-family:var(--mono);font-size:14px;direction:ltr;text-align:left;overflow-x:auto;white-space:nowrap;margin:6px 0}
+.exnote{font-size:14px;color:var(--mute)}
+.meta{font-size:14px;color:var(--mute);display:flex;gap:12px;flex-wrap:wrap;font-variant-numeric:tabular-nums}
+.val{font-size:19px;font-weight:700}
+.prop{font-size:15px;color:var(--mute)}
+.prop b{color:var(--ink);font-weight:600}
+.btns{display:flex;gap:8px;margin-top:10px}
+.btns button.clr{flex:0 0 auto;padding:0 12px;color:var(--mute);font-weight:600}
+.btns button{flex:1;min-height:44px;font:inherit;font-weight:600;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;cursor:pointer}
+.btns button.on-yes{background:var(--yes-bg);border-color:var(--yes);color:var(--yes)}
+.btns button.on-no{background:var(--no-bg);border-color:var(--no);color:var(--no)}
+.btns button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+textarea,.card input[type=text]{width:100%;font:inherit;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);margin-top:8px;min-height:44px;resize:vertical}
+.note{display:none}.note.show{display:block}
+.warn{background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:8px 12px;font-size:15px;margin:8px 0}
+.bar{position:fixed;bottom:0;right:0;left:0;background:var(--card);border-top:1px solid var(--line);padding:10px 14px;display:flex;gap:8px;align-items:center;max-width:720px;margin:0 auto}
+.bar .prog{flex:1;font-size:14px;color:var(--mute);font-variant-numeric:tabular-nums}
+.bar button{min-height:44px;font:inherit;font-weight:700;border:0;border-radius:8px;padding:0 16px;cursor:pointer}
+.bar .send{background:var(--acc);color:var(--acc-ink)}
+.bar .copy{background:var(--soft);color:var(--ink)}
+.status{font-size:13px;color:var(--mute);margin-top:4px}
+.toast{position:fixed;top:12px;right:50%;transform:translateX(50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:15px;display:none;z-index:9}
+.toast.show{display:block}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px}
+@media (max-width:480px){.two{grid-template-columns:1fr}}
+.tag{display:inline-block;font-size:12px;padding:1px 7px;border-radius:99px;background:var(--soft);color:var(--mute);margin-inline-start:6px;vertical-align:middle}
+details{margin:8px 0}
+summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center}
+</style>
+</head>
+<body>
+<main>
+<h1>מילון מאפייני הספות</h1>
+<p class="lead">ויטוריו דיוואני · מכירות ספות 2026 (הזמנות) · הופק מפריוריטי</p>
+<div class="intro">
+  <p><b>למה זה:</b> אנחנו רוצים לדעת אילו צבעים, בדים ורכויות ספוג נמכרים הכי הרבה. פריוריטי לא שומרת את זה בשדה מסודר, אז קראנו את זה מתוך המק"טים. <b>לפני שסומכים על המספרים, צריך שמישהו שמכיר את המוצר יאשר שקראנו נכון.</b></p>
+  <ol>
+    <li>בכל שורה יש הצעה שלנו. לחצו <b>כן</b> אם נכון, <b>לא</b> אם לא.</li>
+    <li>אם לא — ייפתח שדה. כתבו מה כן, או הערה.</li>
+    <li>טעות? לחצו <b>ניקוי</b>, או שוב על אותו כפתור, והתשובה נמחקת.</li>
+    <li>אפשר לעצור באמצע ולחזור, גם ממכשיר אחר. התשובות נשמרות לבד.</li>
+    <li>בסוף לחצו <b>סיימתי</b> למטה.</li>
+  </ol>
+  <div class="who"><label for="who">מי ממלא:</label><input id="who" type="text" placeholder="שם" autocomplete="name"></div>
+  <div class="status" id="dbstat">בודק חיבור לשמירה…</div>
+</div>
+
+<h2>א. איך לקרוא מק"ט <span class="cnt" id="cntA"></span></h2>
+<p class="lead">תשע שאלות על המבנה. בלי התשובות האלה שאר הדף לא שווה הרבה.</p>
+<div id="secA"></div>
+
+<h2>ב. צבעים של ספות יבוא <span class="cnt" id="cntB"></span></h2>
+<p class="lead">בכל כרטיס: השם כפי שכתוב בשדה הצבע בפריוריטי, וכמה נמכר תחתיו. השאלה בכל כרטיס: <b>זה השם שאתם משתמשים בו?</b> אם שני שמות הם אותו צבע (למשל "בז'" ו"שמנת"), לחצו "לא" וכתבו איזה שם לאחד.</p>
+<div id="secB"></div>
+
+<h2>ג. בדים של ספות ייצור <span class="cnt" id="cntC"></span></h2>
+<p class="lead">המילה האחרונה בתיאור המק"ט. השאלה בכל כרטיס: <b>זה שם של בד?</b> שמות קטועים (כמו "ECT") סומנו.</p>
+<div id="secC"></div>
+
+<h2>ד. מספרי צבע בתוך בד <span class="cnt" id="cntD"></span></h2>
+<p class="lead">הצירופים הנמכרים ביותר. אם אתם יודעים איזה צבע זה, כתבו את שמו. אם לא יודעים, השאירו ריק.</p>
+<div id="secD"></div>
+
+<h2>ה. רכות ספוג <span class="cnt" id="cntE"></span></h2>
+<div id="secE"></div>
+
+<h2>ו. כריות <span class="cnt" id="cntF"></span></h2>
+<p class="lead">בפריוריטי יש שתי קטגוריות כריות. השאלה בכל כרטיס: <b>זו כרית שנעשית בהזמנה כחלק מהספה, כלומר שדרוג ספה, או כרית נוי מוכנה שאינה חלק מהספה?</b></p>
+<div id="secF"></div>
+</main>
+<div class="bar">
+  <div class="prog" id="prog"></div>
+  <button class="copy" id="copyBtn" type="button">העתקת סיכום</button>
+  <button class="send" id="sendBtn" type="button">סיימתי</button>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+var DATA={"total": 13565660, "parts": 1746, "colors": [{"v": "בז'", "s": 715762, "n": 6, "pn": "S250996", "pdes": "סלון-פינתי-נפתח-למיטה-סטארה-ימין-בד-בז'", "model": "סטארה", "eng": "OFF-WHITE"}, {"v": "אפור בהיר", "s": 711811, "n": 11, "pn": "S250995", "pdes": "סלון-פינתי-נפתח-למיטה-סטארה-ימין-בד-אפור בהיר", "model": "סטארה", "eng": "LIGHT GREY"}, {"v": "שמנת", "s": 254144, "n": 9, "pn": "S230958", "pdes": "סלון-פינתי-דגם-קולין-ריקליינר-בד-בז'", "model": "קולין", "eng": "OFF-WHITE"}, {"v": "אפור כהה", "s": 177940, "n": 5, "pn": "S230957", "pdes": "סלון-פינתי-דגם-קולין-ריקליינר-בד-אפור כהה", "model": "קולין", "eng": "DARK GREY"}, {"v": "אפור", "s": 144189, "n": 4, "pn": "S1250512", "pdes": "תלת(3)-דגם-סלאזור-ריקליינר-בד-אפור", "model": "סלאזור", "eng": "GREY"}, {"v": "חום", "s": 60706, "n": 3, "pn": "S1250514", "pdes": "תלת(3)-דגם-סלאזור-ריקליינר-בד-חום", "model": "סלאזור", "eng": "BROWN"}, {"v": "חום בהיר", "s": 19068, "n": 1, "pn": "S1250537", "pdes": "תלת(3)-דגם-ולורה-אופוויט", "model": "ולורה", "eng": "LIGHT BROWN"}, {"v": "..", "s": 4655, "n": 2, "pn": "S1240485", "pdes": "ספה תלת-קוסמו-2 חלקים-בד+הדום (רגל-13-זוית-שחור)", "model": "קוסמו", "eng": "."}], "fabrics": [{"v": "CANA SELECT", "s": 1230578, "n": 200, "pn": "SY81145C148MN0YY", "pdes": "ספה-תלת-דגם-מיסטיק-בד/Y/Y/0/NO/MEDIUM/4/CANA SELECT", "model": "מיסטיק", "eng": ""}, {"v": "MELA SELECT", "s": 1005315, "n": 182, "pn": "SS119C814M00N", "pdes": "סט 3+2 דגם סמבה/N/0/0/MEDIUM/1/MELA SELECT", "model": "סמבה", "eng": ""}, {"v": "SOFIA SELECT", "s": 614259, "n": 104, "pn": "SY656C814MYR00NY", "pdes": "סלון-פינתי-דגם-לארה-בד-מסגרת עץ (רגל-שפיץ)/M/1/SOFIA SELECT", "model": "לארה", "eng": ""}, {"v": "MOON SELECT", "s": 494316, "n": 91, "pn": "SY34641B113MN0NY", "pdes": "תלת-דגם-אקליפס-2 חלקים/Y/N/0/NO/MEDIUM/2/MOON SELECT", "model": "אקליפס", "eng": ""}, {"v": "FLAMINGO", "s": 493881, "n": 116, "pn": "SS11129C440M00N", "pdes": "סט 3+2 דגם סמבה/N/0/0/MEDIUM/2402/FLAMINGO", "model": "סמבה", "eng": ""}, {"v": "UNIQ -MADFA", "s": 420763, "n": 82, "pn": "SS6121A432MN00", "pdes": "סט 3+2 דגם ג'נובה/0/0/NO/MEDIUM/8401/UNIQ -MADFA", "model": "ג'נובה", "eng": ""}, {"v": "ANTIKA SELECT", "s": 308731, "n": 60, "pn": "SY728B113HNL00NY", "pdes": "13-זוית-שחור  + רגל-אמצע)/Y/N/0/0/L/NO/HARD/2/ANTIKA SELECT", "model": "מאסייה", "eng": ""}, {"v": "SNOW SELECT", "s": 306758, "n": 63, "pn": "SY6146A110MNL00NY", "pdes": "גם-קורטז-(רגל-שפיץ-שחור)/Y/N/0/0/L/NO/MEDIUM/11/SNOW SELECT", "model": "קורטז", "eng": ""}, {"v": "BERLIN", "s": 215894, "n": 41, "pn": "SY24108A326MNR00NY", "pdes": "יסימה-בד (רגל-8-גדוטה-שחור)/Y/N/0/0/R/NO/MEDIUM/7312/BERLIN", "model": "אמיסימה", "eng": ""}, {"v": "TOGO SELECT", "s": 192820, "n": 36, "pn": "SY10117C148MNL00NY", "pdes": "סלון-פינתי-דגם-עמנואל/Y/N/0/0/L/NO/MEDIUM/4/TOGO SELECT", "model": "עמנואל", "eng": ""}, {"v": "SOLLY SELECT", "s": 190607, "n": 37, "pn": "SY32633C814HNR+600NY", "pdes": "סלון-פינתי-דגם-קודה/Y/N/0/+60/R/NO/HARD/1/SOLLY SELECT", "model": "קודה", "eng": ""}, {"v": "OMEGA SELECT", "s": 184874, "n": 36, "pn": "SS35A335MN00N", "pdes": "סט 3+2 דגם אמרלד/N/0/0/NO/MEDIUM/13/OMEGA SELECT", "model": "אמרלד", "eng": ""}, {"v": "DIOR SELECT", "s": 179782, "n": 34, "pn": "SY6629B113MNL00NY", "pdes": "סלון-פינתי-דגם-קורטז/Y/N/0/0/L/NO/MEDIUM/2/DIOR SELECT", "model": "קורטז", "eng": ""}, {"v": "UNO SELECT", "s": 174588, "n": 32, "pn": "SY119155A668MN0YY", "pdes": "י+הדום(רגל-17-עכביש+רגל אמצע)/Y/Y/0/NO/MEDIUM/16/UNO SELECT", "model": "קולוני", "eng": ""}, {"v": "SPONA", "s": 172790, "n": 27, "pn": "SS6107A344MN00", "pdes": "סט 3+2 דגם ג'נובה/0/0/NO/MEDIUM/7602/SPONA", "model": "ג'נובה", "eng": ""}, {"v": "SONA", "s": 161762, "n": 42, "pn": "SS11138C151M00N", "pdes": "סט 3+2 דגם סמבה/N/0/0/MEDIUM/1104/SONA", "model": "סמבה", "eng": ""}, {"v": "LIFE SELECT", "s": 145942, "n": 26, "pn": "SY3411A779SN0YY", "pdes": "תלת-דגם-אקליפס-2 חלקים/Y/Y/0/NO/SOFT/17/LIFE SELECT", "model": "אקליפס", "eng": ""}, {"v": "REGALO SELECT", "s": 133395, "n": 30, "pn": "SY1518C037HNL0-DNY", "pdes": "סלון-פינתי-דגם-אטלנטה/Y/N/-D/0/L/NO/HARD/3/REGALO SELECT", "model": "אטלנטה", "eng": ""}, {"v": "EKO", "s": 132266, "n": 26, "pn": "SY81111C333HN0YY", "pdes": "ספה-תלת-דגם-מיסטיק-בד/Y/Y/0/NO/HARD/1903/EKO", "model": "מיסטיק", "eng": ""}, {"v": "BILBAO", "s": 102333, "n": 22, "pn": "SY83152C878MN02Y", "pdes": "ספה-תלת-דגם-מיקאסה/Y/2/0/NO/MEDIUM/509/BILBAO", "model": "מיקאסה", "eng": ""}, {"v": "ECT", "s": 96744, "n": 21, "pn": "SY72145A110MNL00NY", "pdes": "סלון-פינתי-דגם-מאסייה-בד (רגל-13-זוית-שחור  + רגל-אמצע)/ECT", "model": "מאסייה", "eng": ""}, {"v": "FANTASIA", "s": 82221, "n": 13, "pn": "SY125105A035MR0NY", "pdes": "סלון-פינתי-דגם-רוזאן-בד/Y/N/0/R/MEDIUM/4806/FANTASIA", "model": "רוזאן", "eng": ""}, {"v": "JOY SELECT", "s": 79437, "n": 16, "pn": "SY6637C370MNL-80-20NY", "pdes": "סלון-פינתי-דגם-קורטז/Y/N/-20/-80/L/NO/MEDIUM/6/JOY SELECT", "model": "קורטז", "eng": ""}, {"v": "ADANA", "s": 59753, "n": 15, "pn": "SY128137B113MN0NN", "pdes": "ה-בד (רגל-אמצע-מתכווננת + רגל אמצע)/N/N/0/NO/MEDIUM/2/ADANA", "model": "ריגאנה", "eng": ""}, {"v": "NAPOLI SELECT", "s": 57898, "n": 15, "pn": "SY11713C815MN02Y", "pdes": "תלת-דגם-קוזו-בד/Y/2/0/NO/MEDIUM/10/NAPOLI SELECT", "model": "קוזו", "eng": ""}, {"v": "LEOO SELECT", "s": 57033, "n": 11, "pn": "SS3147C815MN+10100N", "pdes": "סט 3+2 דגם אמרלד/N/100/+10/NO/MEDIUM/10/LEOO SELECT", "model": "אמרלד", "eng": ""}, {"v": "SMART MADFAA", "s": 55695, "n": 12, "pn": "SY54151C858HNL00NY", "pdes": "סלון-פינתי-דגם-גראנדה/Y/N/0/0/L/NO/HARD/2502/SMART MADFAA", "model": "גראנדה", "eng": ""}, {"v": "FIA SELECT", "s": 50417, "n": 5, "pn": "SY1226C814MNL00NY", "pdes": "סלון-פינתי-דגם-קורנה-בד (רגל-שפיץ +קורנה  +אמצע)/FIA SELECT", "model": "קורנה", "eng": ""}, {"v": "MOHAIR", "s": 47359, "n": 9, "pn": "SS6114A264MY+600", "pdes": "סט 3+2 דגם ג'נובה/0/+60/YES/MEDIUM/6810/MOHAIR", "model": "ג'נובה", "eng": ""}, {"v": "IKA SELECT", "s": 46730, "n": 5, "pn": "SY1228A557MNL00NY", "pdes": "סלון-פינתי-דגם-קורנה-בד (רגל-שפיץ +קורנה  +אמצע)/IKA SELECT", "model": "קורנה", "eng": ""}], "codes": [{"v": "SOFIA SELECT / 1", "s": 373079, "n": 57, "pn": "SY656C814MYR00NY", "pdes": "סלון-פינתי-דגם-לארה-בד-מסגרת עץ (רגל-שפיץ)/M/1/SOFIA SELECT", "model": "לארה", "eng": ""}, {"v": "CANA SELECT / 8", "s": 305822, "n": 46, "pn": "SY81145C592MN0YY", "pdes": "ספה-תלת-דגם-מיסטיק-בד/Y/Y/0/NO/MEDIUM/8/CANA SELECT", "model": "מיסטיק", "eng": ""}, {"v": "CANA SELECT / 7", "s": 210047, "n": 32, "pn": "SY125145C481MR0NY", "pdes": "סלון-פינתי-דגם-רוזאן-בד/Y/N/0/R/MEDIUM/7/CANA SELECT", "model": "רוזאן", "eng": ""}, {"v": "CANA SELECT / 4", "s": 204673, "n": 30, "pn": "SY81145C148MN0YY", "pdes": "ספה-תלת-דגם-מיסטיק-בד/Y/Y/0/NO/MEDIUM/4/CANA SELECT", "model": "מיסטיק", "eng": ""}, {"v": "CANA SELECT / 3", "s": 169284, "n": 32, "pn": "SY124145C037MN00NY", "pdes": "ספה תלת-קיארה-שני חלקים (רגל-8-גדוטה-שחור)/UM/3/CANA SELECT", "model": "קיארה", "eng": ""}, {"v": "MELA SELECT / 3", "s": 154547, "n": 28, "pn": "SY959C037MR00NY", "pdes": "סלון-פינתי-דגם-סמבה-בד/Y/N/0/0/R/MEDIUM/3/MELA SELECT", "model": "סמבה", "eng": ""}, {"v": "MELA SELECT / 2", "s": 140992, "n": 25, "pn": "SS69B113MN00", "pdes": "סט 3+2 דגם ג'נובה/0/0/NO/MEDIUM/2/MELA SELECT", "model": "ג'נובה", "eng": ""}, {"v": "MELA SELECT / 1", "s": 125449, "n": 19, "pn": "SS119C814M00N", "pdes": "סט 3+2 דגם סמבה/N/0/0/MEDIUM/1/MELA SELECT", "model": "סמבה", "eng": ""}, {"v": "FLAMINGO / 2402", "s": 119884, "n": 23, "pn": "SS11129C440M00N", "pdes": "סט 3+2 דגם סמבה/N/0/0/MEDIUM/2402/FLAMINGO", "model": "סמבה", "eng": ""}, {"v": "CANA SELECT / 6", "s": 110793, "n": 19, "pn": "SY81145C370MY0YY", "pdes": "ספה-תלת-דגם-מיסטיק/Y/Y/0/YES/MEDIUM/6/CANA SELECT", "model": "מיסטיק", "eng": ""}, {"v": "MELA SELECT / 14", "s": 100098, "n": 18, "pn": "SY999A446MNR00NY", "pdes": "דגם-סנטוריני(רגל-פלסטיק)/Y/N/0/0/R/NO/MEDIUM/14/MELA SELECT", "model": "סנטוריני", "eng": ""}, {"v": "CANA SELECT / 2", "s": 88420, "n": 15, "pn": "SY101145B113MNR00NY", "pdes": "סלון-פינתי-דגם-עמנואל/Y/N/0/0/R/NO/MEDIUM/2/CANA SELECT", "model": "עמנואל", "eng": ""}, {"v": "UNIQ -MADFA / 8401", "s": 85547, "n": 15, "pn": "SS6121A432MN00", "pdes": "סט 3+2 דגם ג'נובה/0/0/NO/MEDIUM/8401/UNIQ -MADFA", "model": "ג'נובה", "eng": ""}, {"v": "ANTIKA SELECT / 15", "s": 72609, "n": 14, "pn": "SY548A557MNR-10-50NY", "pdes": "ן-פינתי-דגם-גראנדה/Y/N/-50/-10/R/NO/MEDIUM/15/ANTIKA SELECT", "model": "גראנדה", "eng": ""}, {"v": "FLAMINGO / 2418", "s": 68129, "n": 16, "pn": "SY72129C457MNL00NY", "pdes": "סלון-פינתי-דגם-מאסייה/Y/N/0/0/L/NO/MEDIUM/2418/FLAMINGO", "model": "מאסייה", "eng": ""}, {"v": "FLAMINGO / 2404", "s": 65260, "n": 16, "pn": "SY72129C442MNR00NY", "pdes": "סלון-פינתי-דגם-מאסייה/Y/N/0/0/R/NO/MEDIUM/2404/FLAMINGO", "model": "מאסייה", "eng": ""}, {"v": "MOON SELECT / 13", "s": 63537, "n": 12, "pn": "SY11641A335MYL0+50NY", "pdes": "סלון-פינתי-דגם-אורסה/Y/N/+50/0/L/YES/MEDIUM/13/MOON SELECT", "model": "אורסה", "eng": ""}, {"v": "SONA / 1104", "s": 63443, "n": 12, "pn": "SS11138C151M00N", "pdes": "סט 3+2 דגם סמבה/N/0/0/MEDIUM/1104/SONA", "model": "סמבה", "eng": ""}, {"v": "SNOW SELECT / 2", "s": 59204, "n": 11, "pn": "SY6146B113MYL00NY", "pdes": "סלון-פינתי-דגם-קורטז/Y/N/0/0/L/YES/MEDIUM/2/SNOW SELECT", "model": "קורטז", "eng": ""}, {"v": "MOON SELECT / 5", "s": 59167, "n": 12, "pn": "SY52641C259MY+80Y", "pdes": "ספה-תלת-ג'נובה/Y/+80/YES/MEDIUM/5/MOON SELECT", "model": "ג'נובה", "eng": ""}, {"v": "SNOW SELECT / 11", "s": 58466, "n": 10, "pn": "SY6146A110MNL00NY", "pdes": "גם-קורטז-(רגל-שפיץ-שחור)/Y/N/0/0/L/NO/MEDIUM/11/SNOW SELECT", "model": "קורטז", "eng": ""}, {"v": "MOON SELECT / 4", "s": 58004, "n": 12, "pn": "SY6641C148MYR+800NY", "pdes": "סלון-פינתי-דגם-קורטז/Y/N/0/+80/R/YES/MEDIUM/4/MOON SELECT", "model": "קורטז", "eng": ""}, {"v": "MOON SELECT / 2", "s": 57388, "n": 7, "pn": "SY34641B113MN0NY", "pdes": "תלת-דגם-אקליפס-2 חלקים/Y/N/0/NO/MEDIUM/2/MOON SELECT", "model": "אקליפס", "eng": ""}, {"v": "ANTIKA SELECT / 2", "s": 56000, "n": 11, "pn": "SY728B113HNL00NY", "pdes": "13-זוית-שחור  + רגל-אמצע)/Y/N/0/0/L/NO/HARD/2/ANTIKA SELECT", "model": "מאסייה", "eng": ""}, {"v": "MOON SELECT / 14", "s": 54780, "n": 9, "pn": "SY34641A446MN-20NY", "pdes": "תלת-דגם-אקליפס-2 חלקים/Y/N/-20/NO/MEDIUM/14/MOON SELECT", "model": "אקליפס", "eng": ""}, {"v": "MELA SELECT / 16", "s": 53996, "n": 11, "pn": "SY729A668MNR00NY", "pdes": "סלון-פינתי-דגם-מאסייה/Y/N/0/0/R/NO/MEDIUM/16/MELA SELECT", "model": "מאסייה", "eng": ""}, {"v": "TOGO SELECT / 4", "s": 53543, "n": 9, "pn": "SY10117C148MNL00NY", "pdes": "סלון-פינתי-דגם-עמנואל/Y/N/0/0/L/NO/MEDIUM/4/TOGO SELECT", "model": "עמנואל", "eng": ""}, {"v": "UNIQ -MADFA / 8410", "s": 52135, "n": 10, "pn": "SY75121A442MNL00NY", "pdes": "סלון-פינתי-דגם-מג'יק/Y/N/0/0/L/NO/MEDIUM/8410/UNIQ -MADFA", "model": "מג'יק", "eng": ""}, {"v": "MELA SELECT / 12", "s": 50894, "n": 7, "pn": "SY2629A224HY-30YY", "pdes": "תלת-דגם-זפייר/Y/Y/-30/YES/HARD/12/MELA SELECT", "model": "זפייר", "eng": ""}, {"v": "UNIQ -MADFA / 8413", "s": 48355, "n": 9, "pn": "SY99121A445MNR00NY", "pdes": "סלון-פינתי-צורת ח'-דגם-סנטוריני(רגל-פלסטיק)/413/UNIQ -MADFA", "model": "סנטוריני", "eng": ""}, {"v": "BERLIN / 7301", "s": 48055, "n": 9, "pn": "SS6108A314MN00", "pdes": "סט 3+2 דגם ג'נובה/0/0/NO/MEDIUM/7301/BERLIN", "model": "ג'נובה", "eng": ""}, {"v": "CANA SELECT / 1", "s": 47366, "n": 8, "pn": "SY81145C814MN0YY", "pdes": "ספה-תלת-דגם-מיסטיק-בד/Y/Y/0/NO/MEDIUM/1/CANA SELECT", "model": "מיסטיק", "eng": ""}, {"v": "MELA SELECT / 5", "s": 46703, "n": 10, "pn": "SY69C259MNR00NY", "pdes": "סלון-פינתי-דגם-קורטז/Y/N/0/0/R/NO/MEDIUM/5/MELA SELECT", "model": "קורטז", "eng": ""}, {"v": "MELA SELECT / 15", "s": 46205, "n": 9, "pn": "SS49A557MN+90+40N", "pdes": "סט 3+2 דגם אריסטו/N/+40/+90/NO/MEDIUM/15/MELA SELECT", "model": "אריסטו", "eng": ""}, {"v": "MELA SELECT / 7", "s": 44492, "n": 8, "pn": "SY729C481MNL00NY", "pdes": "סלון-פינתי-דגם-מאסייה/Y/N/0/0/L/NO/MEDIUM/7/MELA SELECT", "model": "מאסייה", "eng": ""}, {"v": "DIOR SELECT / 2", "s": 43338, "n": 8, "pn": "SY6629B113MNL00NY", "pdes": "סלון-פינתי-דגם-קורטז/Y/N/0/0/L/NO/MEDIUM/2/DIOR SELECT", "model": "קורטז", "eng": ""}, {"v": "MELA SELECT / 4", "s": 43159, "n": 9, "pn": "SY1259C148MR0NY", "pdes": "סלון-פינתי-דגם-רוזאן/Y/N/0/R/MEDIUM/4/MELA SELECT", "model": "רוזאן", "eng": ""}, {"v": "SOFIA SELECT / 2", "s": 42428, "n": 6, "pn": "SY656B113MYR00NY", "pdes": "-בד-מסגרת עץ (רגל-שפיץ)/Y/N/0/0/R/YES/MEDIUM/2/SOFIA SELECT", "model": "לארה", "eng": ""}, {"v": "MELA SELECT / 13", "s": 41780, "n": 8, "pn": "SY719A335MY+90NN", "pdes": "תלת-דגם-מאסייה-בד-(רגל 13שחור)/90/YES/MEDIUM/13/MELA SELECT", "model": "מאסייה", "eng": ""}, {"v": "MELA SELECT / 6", "s": 41536, "n": 9, "pn": "SY399C370MN+503Y", "pdes": "תלת-דגם-בלאנס-בד (רגל-פלסטיק)/3/+50/NO/MEDIUM/6/MELA SELECT", "model": "בלאנס", "eng": ""}, {"v": "SPONA / 7603", "s": 39945, "n": 4, "pn": "SS6107A345MN00", "pdes": "סט 3+2 דגם ג'נובה/0/0/NO/MEDIUM/7603/SPONA", "model": "ג'נובה", "eng": ""}, {"v": "SPONA / 7602", "s": 39295, "n": 4, "pn": "SS6107A344MN00", "pdes": "סט 3+2 דגם ג'נובה/0/0/NO/MEDIUM/7602/SPONA", "model": "ג'נובה", "eng": ""}, {"v": "UNIQ -MADFA / 8408", "s": 38355, "n": 8, "pn": "SY31121A440MYL-200NY", "pdes": "לון-פינתי-דגם-אפולו/Y/N/0/-20/L/YES/MEDIUM/8408/UNIQ -MADFA", "model": "אפולו", "eng": ""}, {"v": "DIOR SELECT / 6", "s": 37738, "n": 7, "pn": "SY65629C370MNL00NY", "pdes": "ן-פינתי-דגם-לארה-מסגרת-עץ/Y/N/0/0/L/NO/MEDIUM/6/DIOR SELECT", "model": "לארה", "eng": ""}, {"v": "MELA SELECT / 10", "s": 37027, "n": 7, "pn": "SY1049C815MYR-20+40NY", "pdes": "סלון-פינתי-דגם-פיזה/Y/N/+40/-20/R/YES/MEDIUM/10/MELA SELECT", "model": "פיזה", "eng": ""}], "foam": [{"v": "בינוני", "s": 6495652, "n": 1222, "pn": "SY81145C148MN0YY", "pdes": "ספה-תלת-דגם-מיסטיק-בד/Y/Y/0/NO/MEDIUM/4/CANA SELECT", "model": "מיסטיק", "eng": ""}, {"v": "קשה", "s": 659327, "n": 126, "pn": "SY2629A224HY-30YY", "pdes": "תלת-דגם-זפייר/Y/Y/-30/YES/HARD/12/MELA SELECT", "model": "זפייר", "eng": ""}, {"v": "רך", "s": 412545, "n": 78, "pn": "SY3411A779SN0YY", "pdes": "תלת-דגם-אקליפס-2 חלקים/Y/Y/0/NO/SOFT/17/LIFE SELECT", "model": "אקליפס", "eng": ""}], "flag": [{"v": "NO", "s": 5498726, "n": 1077, "pn": "SY81145C148MN0YY", "pdes": "ספה-תלת-דגם-מיסטיק-בד/Y/Y/0/NO/MEDIUM/4/CANA SELECT", "model": "מיסטיק", "eng": ""}, {"v": "YES", "s": 1151844, "n": 190, "pn": "SY656C814MYL00NY", "pdes": "-בד-מסגרת עץ (רגל-שפיץ)/Y/N/0/0/L/YES/MEDIUM/1/SOFIA SELECT", "model": "לארה", "eng": ""}], "flag_examples": [{"pn": "SY656C814MYL00NY", "pdes": "-בד-מסגרת עץ (רגל-שפיץ)/Y/N/0/0/L/YES/MEDIUM/1/SOFIA SELECT", "s": 22198}, {"pn": "SY656B113MYR00NY", "pdes": "-בד-מסגרת עץ (רגל-שפיץ)/Y/N/0/0/R/YES/MEDIUM/2/SOFIA SELECT", "s": 16313}, {"pn": "SY2629A224HY-30YY", "pdes": "תלת-דגם-זפייר/Y/Y/-30/YES/HARD/12/MELA SELECT", "s": 15649}, {"pn": "SY81145C148MY0YY", "pdes": "ספה-תלת-דגם-מיסטיק/Y/Y/0/YES/MEDIUM/4/CANA SELECT", "s": 11834}, {"pn": "SY81145C370MY0YY", "pdes": "ספה-תלת-דגם-מיסטיק/Y/Y/0/YES/MEDIUM/6/CANA SELECT", "s": 11405}], "pillows": [{"fam": "כריות", "v": "כרית נוי-תצוגה בלבד !!!!!", "s": 10411, "n": 228, "parts": 1, "pn": "SHID0005", "ex": "כרית נוי-תצוגה בלבד !!!!!"}, {"fam": "כריות", "v": "כרית נוי בעיצוב אישי", "s": 4726, "n": 21, "parts": 1, "pn": "CUSH0023", "ex": "כרית נוי בעיצוב אישי"}, {"fam": "כריות", "v": "כרית דופן לסלון דגם מג'יק", "s": 1737, "n": 5, "parts": 1, "pn": "CUSH0017", "ex": "כרית דופן לסלון דגם מג'יק"}, {"fam": "כריות-מחולל מק\"טים", "v": "כרית-נוי-מרובע", "s": 35769, "n": 55, "parts": 52, "pn": "SY926C592", "ex": "כרית-נוי-מרובע-8/SOFIA SELECT/70X70"}, {"fam": "כריות-מחולל מק\"טים", "v": "כרית-גב-צד שזלונג", "s": 7195, "n": 16, "parts": 16, "pn": "SY108123C096", "ex": "כרית-גב-צד שזלונג/933/SAMSUNG"}, {"fam": "כריות-מחולל מק\"טים", "v": "כרית-נוי-מלבני", "s": 6491, "n": 8, "parts": 8, "pn": "SY1079C037", "ex": "כרית-נוי-מלבני-3/MELA SELECT/80X35"}, {"fam": "כריות-מחולל מק\"טים", "v": "כרית-גב-צד-ספה", "s": 3407, "n": 3, "parts": 3, "pn": "SY1096C814", "ex": "כרית-גב-צד-ספה/1/SOFIA SELECT"}]};
+var STRUCT=[{"id": "s1", "q": "בסוף כל תיאור של מק\"ט מחולל, אחרי הקו הנטוי האחרון, כתוב שם הבד.", "ex": "ספה-תלת-דגם-מיסטיק-בד/Y/Y/0/NO/MEDIUM/8/CANA SELECT", "exnote": "כאן: CANA SELECT"}, {"id": "s2", "q": "המספר שלפני שם הבד הוא מספר הצבע בתוך אותו בד.", "ex": "ספה-תלת-דגם-מיסטיק-בד/Y/Y/0/NO/MEDIUM/8/CANA SELECT", "exnote": "כאן: צבע 8 של CANA SELECT"}, {"id": "s3", "q": "יש רשימה או קטלוג שאומר איזה צבע זה כל מספר בכל בד? (למשל: CANA SELECT 8 = אפור בהיר). אם כן, איפה?", "ex": "", "exnote": "בלי זה נוכל להגיד רק 'CANA SELECT מספר 8', לא 'אפור בהיר'"}, {"id": "s4", "q": "המילה MEDIUM / HARD / SOFT היא רכות הספוג של המושב.", "ex": "סלון-פינתי-דגם-רוזאן-בד/Y/N/0/R/MEDIUM/7/CANA SELECT", "exnote": "כאן: MEDIUM"}, {"id": "s5", "q": "מה אומר YES או NO שלפני רכות הספוג? (ב-193 מק\"טים כתוב YES, ב-1,137 כתוב NO)", "ex": "ספה-תלת-דגם-מיסטיק-בד/Y/Y/0/NO/MEDIUM/8/CANA SELECT", "exnote": "ההשערה שלי: ויסקו. לא בטוח."}, {"id": "s6", "q": "ויסקו נמכר כשורה נפרדת בהזמנה: מק\"ט SHID0030 \"שדרוג מושבי ויסקו\" (38 הזמנות ב-2026). זו הדרך היחידה לדעת שספה קיבלה ויסקו?", "ex": "SHID0030 — שדרוג מושבי ויסקו", "exnote": ""}, {"id": "s7", "q": "שדרוג בד נמכר כשורה נפרדת: מק\"ט SHID0001 \"שדרוג בד\" (298 הזמנות, 297,329 ₪ ב-2026). איפה רשום לאיזה בד שודרג?", "ex": "SHID0001 — שדרוג בד", "exnote": "אם זה לא רשום בשום מקום, נדע רק 'שודרג', לא 'לאיזה בד'"}, {"id": "s8", "q": "ספות ייצור ישראלי במק\"ט קבוע (מאסייה, מג'יק, רוזאן, ג'נובה, מיסטיק ועוד) — בתיאור אין צבע ואין בד. איפה נרשם מה הלקוח בחר? (87 מק\"טים, 1,305,418 ₪ ב-2026)", "ex": "סלון-פינתי-דגם-מאסייה-ימין-בד (רגל-13-זוית-שחור  + רגל-אמצע", "exnote": "בלי תשובה, כעשרה אחוז ממכירות הספות יישארו 'צבע לא ידוע'"}, {"id": "s9", "q": "במוצרי יבוא הצבע כתוב בשדה צבע בפריוריטי. לפעמים השדה והתיאור לא מסכימים. מה נכון — השדה או התיאור?", "ex": "S230958: בתיאור 'בד-בז'', בשדה הצבע 'שמנת'", "exnote": "קולין ריקליינר, 254,144 ₪ תחת 'שמנת'"}];
+var answers = {};          // id -> {ok:true/false/null, note:"", who, at}
+var saveTimers = {};
+function $(s){return document.querySelector(s)}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function money(n){return Math.round(n).toLocaleString('he-IL')+' ₪'}
+function pct(n){return (n/DATA.total*100).toFixed(1)+'%'}
+function toast(t){var e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(function(){e.classList.remove('show')},1800)}
+
+function card(id, top, hint, placeholder, yesLbl, noLbl){
+  return '<div class="card" data-id="'+esc(id)+'"'+(yesLbl?' data-yes="'+esc(yesLbl)+'" data-no="'+esc(noLbl)+'"':'')+'>'+top+
+    '<div class="btns"><button type="button" data-v="yes">'+esc(yesLbl||'כן, נכון')+'</button><button type="button" data-v="no">'+esc(noLbl||'לא')+'</button><button type="button" class="clr" data-v="clear" hidden>ניקוי</button></div>'+
+    '<div class="note"><textarea rows="2" placeholder="'+esc(placeholder||'מה כן? או הערה')+'"></textarea></div>'+
+    (hint?'<div class="exnote">'+hint+'</div>':'')+'</div>';
+}
+function build(){
+  $('#secA').innerHTML = STRUCT.map(function(s){
+    return card(s.id, '<div class="q">'+esc(s.q)+'</div>'+(s.ex?'<div class="ex">'+esc(s.ex)+'</div>':'')+(s.exnote?'<div class="exnote">'+esc(s.exnote)+'</div>':''), '', 'התשובה / ההסבר');
+  }).join('');
+  $('#secB').innerHTML = DATA.colors.filter(function(c){return c.v!=='..'}).map(function(c){
+    var other = c.pdes && c.pdes.indexOf(c.v)<0 ? c.pdes.split('-').slice(-1)[0] : '';
+    var dis = other ? '<div class="warn">בשדה הצבע כתוב "'+esc(c.v)+'", אבל בתיאור המק"ט כתוב "'+esc(other)+'".</div>' : '';
+    var q = other ? 'איזה מהשניים נכון — "'+esc(c.v)+'" או "'+esc(other)+'"?' : 'הצבע הזה ייספר בשם "'+esc(c.v)+'". זה השם שאתם משתמשים בו?';
+    return card('color:'+c.v, '<div class="val">'+esc(c.v)+(c.eng?'<span class="tag">'+esc(c.eng)+'</span>':'')+'</div><div class="meta"><span>'+money(c.s)+'</span><span>'+pct(c.s)+' ממכירות הספות</span><span>'+c.n+' מק"טים</span></div><div class="ex">'+esc(c.pn)+' · '+esc(c.pdes)+'</div>'+dis+'<div class="q">'+q+'</div>', '', other?'מה הצבע הנכון?':'איך אתם קוראים לצבע הזה?');
+  }).join('');
+  $('#secC').innerHTML = DATA.fabrics.map(function(f){
+    var cut = f.v.length<=4 || /^(ECT|LECT|SELECT|A SELECT|IA SELECT|FIA SELECT|IKA SELECT)$/.test(f.v);
+    return card('fabric:'+f.v, '<div class="val" dir="ltr" style="text-align:right">'+esc(f.v)+(cut?'<span class="tag">כנראה קטוע</span>':'')+'</div><div class="meta"><span>'+money(f.s)+'</span><span>'+pct(f.s)+'</span><span>'+f.n+' מק"טים</span></div><div class="prop">דוגמה: <b>'+esc(f.model)+'</b></div><div class="ex">'+esc(f.pn)+' · '+esc(f.pdes)+'</div><div class="q">'+(cut?'השם נראה קטוע. זה בד? ומה שמו המלא?':'"'+esc(f.v)+'" הוא שם של בד?')+'</div>', '', cut?'מה השם המלא של הבד?':'זה לא בד? אז מה זה?');
+  }).join('');
+  $('#secD').innerHTML = DATA.codes.map(function(c){
+    return '<div class="card" data-id="'+esc('code:'+c.v)+'" data-free="1"><div class="val" dir="ltr" style="text-align:right">'+esc(c.v)+'</div><div class="meta"><span>'+money(c.s)+'</span><span>'+pct(c.s)+'</span><span>'+c.n+' מק"טים</span><span>למשל '+esc(c.model)+'</span></div><div class="q">איזה צבע זה? (אם לא יודעים — להשאיר ריק)</div><input type="text" placeholder="שם הצבע"></div>';
+  }).join('');
+  $('#secE').innerHTML = DATA.foam.map(function(f){
+    var tok={'בינוני':'MEDIUM','קשה':'HARD','רך':'SOFT'}[f.v]||'';
+    return card('foam:'+f.v, '<div class="val">'+esc(f.v)+(tok?'<span class="tag">'+tok+'</span>':'')+'</div><div class="q">כשבמק"ט כתוב '+tok+', הכוונה לספוג '+esc(f.v)+'?</div><div class="meta"><span>'+money(f.s)+'</span><span>'+pct(f.s)+'</span><span>'+f.n+' מק"טים</span></div><div class="ex">'+esc(f.pn)+' · '+esc(f.pdes)+'</div>', '', 'איך אתם קוראים לזה?');
+  }).join('');
+  $('#secF').innerHTML = DATA.pillows.map(function(c){
+    return card('pillow:'+c.v, '<div class="val">'+esc(c.v)+'<span class="tag">'+esc(c.fam)+'</span></div><div class="meta"><span>'+money(c.s)+'</span><span>'+c.n+' הזמנות</span><span>'+c.parts+' מק"טים</span></div><div class="ex">'+esc(c.pn)+' · '+esc(c.ex)+'</div><div class="q">מה זה?</div>', '', 'הערה', 'שדרוג ספה', 'כרית נוי מוכנה');
+  }).join('');
+  $('#cntF').textContent=DATA.pillows.length;
+  $('#cntA').textContent=STRUCT.length; $('#cntB').textContent=DATA.colors.length-1; $('#cntC').textContent=DATA.fabrics.length; $('#cntD').textContent=DATA.codes.length; $('#cntE').textContent=DATA.foam.length;
+  document.querySelectorAll('.card').forEach(function(c){
+    var id=c.getAttribute('data-id');
+    c.querySelectorAll('.btns button').forEach(function(b){
+      b.addEventListener('click',function(){
+        var v=b.getAttribute('data-v'), cur=(answers[id]||{}).ok;
+        if(v==='clear' || (v==='yes'&&cur===true) || (v==='no'&&cur===false)) clearAns(id);
+        else setAns(id,{ok:v==='yes'});
+      });
+    });
+    var ta=c.querySelector('textarea, input[type=text]');
+    if(ta) ta.addEventListener('input',function(){ setAns(id,{note:ta.value}); });
+  });
+  paint();
+}
+function setAns(id, patch){
+  var a = answers[id] || {ok:null, note:''};
+  Object.assign(a, patch); a.who = $('#who').value||''; a.at = new Date().toISOString();
+  answers[id]=a; paint(); persist(id, 'ok' in patch);
+}
+function docId(id){ return 'answers/'+encodeURIComponent(id).replace(/%/g,'~'); }
+function clearAns(id){
+  delete answers[id]; paint();
+  try{ localStorage.setItem('sofa-attr-answers', JSON.stringify(answers)); }catch(e){}
+  clearTimeout(saveTimers[id]);
+  post({qid:id, clear:true});
+}
+function paint(){
+  var done=0, total=0;
+  document.querySelectorAll('.card').forEach(function(c){
+    var id=c.getAttribute('data-id'), a=answers[id]||{}, free=c.getAttribute('data-free');
+    c.querySelectorAll('.btns button').forEach(function(b){ var v=b.getAttribute('data-v'); if(v==='clear'){ b.hidden = !(a.ok===true||a.ok===false); return; } b.className = (a.ok===true&&v==='yes')?'on-yes':(a.ok===false&&v==='no')?'on-no':''; });
+    var n=c.querySelector('.note'); if(n) n.classList.toggle('show', a.ok===false || (c.getAttribute('data-yes') && a.ok===true));
+    var f=c.querySelector('textarea, input[type=text]'); if(f && document.activeElement!==f && f.value!==(a.note||'')) f.value=a.note||'';
+    if(!free){ total++; if(a.ok!==null && a.ok!==undefined) done++; }
+  });
+  $('#prog').textContent = 'נענו '+done+' מתוך '+total;
+}
+var FORM='sofa-attrs', API='/api/form/'+FORM;
+function post(body){
+  return fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+    .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); $('#dbstat').textContent='נשמר בענן.'; })
+    .catch(function(e){ $('#dbstat').textContent='השמירה בענן נכשלה ('+e.message+'). התשובות נשמרות במכשיר; נסו שוב מאוחר יותר.'; });
+}
+function persist(id, now){
+  try{ localStorage.setItem('sofa-attr-answers', JSON.stringify(answers)); }catch(e){}
+  clearTimeout(saveTimers[id]);
+  saveTimers[id]=setTimeout(function(){
+    if(!answers[id]) return;
+    var a=answers[id]; post({qid:id, ok:(a.ok===true||a.ok===false)?a.ok:null, note:a.note||'', who:a.who||''});
+  }, now?0:500);
+}
+function summary(){
+  var lines=['מילון מאפייני הספות — תשובות','ממלא: '+($('#who').value||'—'),''];
+  var secs={s:'א. מבנה',color:'ב. צבעים',fabric:'ג. בדים',code:'ד. מספרי צבע',foam:'ה. ספוג',pillow:'ו. כריות'};
+  var byS={};
+  Object.keys(answers).forEach(function(id){ var k=id.split(':')[0]; if(k.length<=2&&/^s\d/.test(id)) k='s'; (byS[k]=byS[k]||[]).push(id); });
+  Object.keys(secs).forEach(function(k){
+    if(!byS[k]) return; lines.push(secs[k]);
+    byS[k].forEach(function(id){ var a=answers[id]; var label=id.indexOf(':')>0?id.split(':').slice(1).join(':'):id; var st=a.ok===true?(k==='pillow'?'שדרוג ספה':'כן'):a.ok===false?(k==='pillow'?'כרית נוי מוכנה':'לא'):''; lines.push('- '+label+(st?': '+st:'')+(a.note?' — '+a.note:'')); });
+    lines.push('');
+  });
+  return lines.join('\n');
+}
+$('#copyBtn').addEventListener('click',function(){
+  var t=summary();
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(function(){toast('הסיכום הועתק')},function(){prompt('העתיקו את הטקסט:',t)}); } else prompt('העתיקו את הטקסט:',t);
+});
+$('#sendBtn').addEventListener('click',function(){
+  setAns('__done__',{ok:true, note:'סיים למלא'});
+  toast('תודה! התשובות נשמרו ודורון רואה אותן.');
+});
+$('#who').addEventListener('change',function(){ try{localStorage.setItem('sofa-attr-who',$('#who').value)}catch(e){} });
+
+try{ answers=JSON.parse(localStorage.getItem('sofa-attr-answers')||'{}')||{}; $('#who').value=localStorage.getItem('sofa-attr-who')||''; }catch(e){}
+delete answers['__done__'];
+build();
+
+(function(){
+  $('#dbstat').textContent='טוען תשובות שנשמרו…';
+  fetch('/api/form/'+FORM).then(function(r){return r.json()}).then(function(j){
+    (j.answers||[]).forEach(function(a){ answers[a.qid]={ok:a.ok, note:a.note||'', who:a.who||'', at:a.at}; if(a.who&&!$('#who').value)$('#who').value=a.who; });
+    paint(); $('#dbstat').textContent='התשובות נשמרות בענן לבד, גם אם עוצרים באמצע.';
+  }).catch(function(){ $('#dbstat').textContent='לא הצלחתי לטעון מהענן. התשובות נשמרות במכשיר.'; });
+})();
+</script>
+
+</body>
+</html>

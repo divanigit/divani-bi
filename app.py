@@ -1938,6 +1938,79 @@ def api_flags(request: Request, d_from: str = "", d_to: str = "", pct: float = 5
                                             "p_disc_pct": pct}) or {})
 
 
+# ---------- טפסי אישור לגורם חיצוני (רום, מנהל הסחר) ----------
+# דורון, 9.9.2026: "שימלא וזה יעודכן אצלך מבלי שיצטרך להעתיק ולשלוח לי סיכום".
+# ארטיפקט של קלוד עם שמירה בענן פתוח רק למי שיש לו חשבון קלוד, ודף ארטיפקט
+# אינו רשאי לפנות לשום שרת. לכן הטופס יושב כאן: כתובת ציבורית בלי סיסמה, והתשובות
+# נכתבות ל-bi_attr_form_answers עם מפתח השירות. אין בטופס נתונים אישיים ואין
+# מספרי מכירות מעבר לסכומי קטגוריה — לכן ציבורי. הקריאה חזרה ציבורית גם היא, כדי
+# שמי שהתחיל בטלפון יוכל להמשיך במחשב.
+ATTR_FORMS = {"sofa-attrs": "attr_form.html"}
+_form_hits = {}   # ip -> [timestamps]; מגן פשוט מפני הצפה
+
+
+def _form_flood(ip: str) -> bool:
+    now = time.time()
+    lst = [t for t in _form_hits.get(ip, []) if now - t < 60]
+    lst.append(now)
+    _form_hits[ip] = lst
+    return len(lst) > 120
+
+
+@app.get("/form/{form}")
+def attr_form_page(form: str):
+    fn = ATTR_FORMS.get(form)
+    if not fn:
+        return HTMLResponse("<div dir='rtl' style='font-family:sans-serif;padding:40px'>הטופס לא נמצא.</div>",
+                            status_code=404)
+    with open(os.path.join(HERE, fn), encoding="utf-8") as f:
+        return HTMLResponse(f.read(), headers={"Cache-Control": "no-cache, must-revalidate"})
+
+
+@app.get("/api/form/{form}")
+def attr_form_read(request: Request, form: str):
+    if form not in ATTR_FORMS:
+        return JSONResponse({"error": "no such form"}, status_code=404)
+    if _form_flood(_client_ip(request)):
+        return JSONResponse({"error": "slow down"}, status_code=429)
+    rows = sb_select(f"bi_attr_form_answers?select=qid,ok,note,who,at&form=eq.{urllib.parse.quote(form)}"
+                     "&order=at.asc&limit=2000") or []
+    return JSONResponse({"form": form, "answers": rows})
+
+
+@app.post("/api/form/{form}")
+async def attr_form_write(request: Request, form: str):
+    """שורה אחת לכל שאלה. ok=null עם clear=true מוחק את התשובה (ניקוי)."""
+    if form not in ATTR_FORMS:
+        return JSONResponse({"error": "no such form"}, status_code=404)
+    ip = _client_ip(request)
+    if _form_flood(ip):
+        return JSONResponse({"error": "slow down"}, status_code=429)
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "bad json"}, status_code=400)
+    qid = str(body.get("qid") or "").strip()
+    if not qid or len(qid) > 200:
+        return JSONResponse({"error": "bad qid"}, status_code=400)
+    if body.get("clear"):
+        _http(f"{SB_URL}/rest/v1/bi_attr_form_answers?form=eq.{urllib.parse.quote(form)}"
+              f"&qid=eq.{urllib.parse.quote(qid)}",
+              {"apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY, "Prefer": "return=minimal"},
+              method="DELETE", timeout=60)
+        return JSONResponse({"ok": True, "cleared": True})
+    ok = body.get("ok")
+    if ok not in (True, False, None):
+        return JSONResponse({"error": "bad ok"}, status_code=400)
+    sb_upsert("bi_attr_form_answers?on_conflict=form,qid", [{
+        "form": form, "qid": qid, "ok": ok,
+        "note": str(body.get("note") or "")[:2000],
+        "who": str(body.get("who") or "")[:80],
+        "at": dt.datetime.now(IL).isoformat(), "ip": ip[:64],
+        "updated_at": dt.datetime.now(IL).isoformat()}])
+    return JSONResponse({"ok": True})
+
+
 @app.post("/api/flag")
 async def api_flag(request: Request):
     """Approve a flagged row (with the reason) or take the approval back."""
