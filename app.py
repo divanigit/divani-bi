@@ -41,7 +41,6 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
                                RedirectResponse, Response)
 
-import sofa_report
 import xlsx
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -1851,17 +1850,18 @@ def api_products(request: Request, d_from: str = "", d_to: str = "",
     if max(len(q), len(fam), len(model)) > 120:
         return JSONResponse({"error": "bad key"}, status_code=400)
     lim = max(1, min(lim, 500))
-    if fam == SOFAS_FAM:
-        # "ספות בלבד" (3.9.2026): הספות מפוזרות על כמה משפחות בפריוריטי, ומסנן
-        # של קטגוריה אחת לא עונה על "מה דגמי הספות שאני הכי הרבה מוכר".
-        # sofa_report מאחד את כל משפחות הספות לתשובה באותה צורה.
-        agg = sofa_report.merge_products(sb_rpc, f, t, level=level, q=q or None,
-                                         model=model or None, sort=sort, limit=lim)
-        return JSONResponse({"mode": "products", "agg": agg})
+    # "ספות בלבד" (3.9.2026): הספות מפוזרות על כמה משפחות בפריוריטי, ומסנן של
+    # קטגוריה אחת לא עונה על "מה דגמי הספות שאני הכי הרבה מוכר".
+    # 9.9.2026: "מה נחשב ספה" עבר ל-SQL (bi_is_sofa) — כלל על כל מק"ט בנפרד,
+    # כי הכרעת דורון על הכריות ("נוי" בחוץ, שאר הכריות בפנים) אינה כלל על
+    # קטגוריה. קריאה אחת במקום אחת לכל משפחה, ואותו כלל לכל מסך שישאל.
+    # התשובה כוללת sofa_fams — הקטגוריות שנספרו — לתווית שמתחת לטבלה.
+    sofas = (fam == SOFAS_FAM)
     agg = sb_rpc("bi_products", {"p_from": f.isoformat(), "p_to": t.isoformat(),
                                  "p_level": level, "p_q": q or None,
-                                 "p_fam": fam or None, "p_model": model or None,
-                                 "p_sort": sort, "p_limit": lim})
+                                 "p_fam": None if sofas else (fam or None),
+                                 "p_model": model or None,
+                                 "p_sort": sort, "p_limit": lim, "p_sofas": sofas})
     return JSONResponse({"mode": "products", "agg": agg or {}})
 
 

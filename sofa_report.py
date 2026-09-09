@@ -4,31 +4,30 @@
 הבקשה, 3.9.2026: "רציתי לדעת מה הדגמים שאני הכי הרבה מוכר מהספות". מסך
 המוצרים כבר ממיין דגמים לפי יחידות וכסף, אבל מסנן קטגוריה אחת בכל פעם,
 והספות מפוזרות על כמה משפחות בפריוריטי (פינתיות, תלת-מושביות, נפתחות,
-משפחות "מחולל מק׳טים"). כאן מזהים איזו משפחה היא ספה, שואלים את bi_products
-על כל אחת מהן ומאחדים — וזה מה שהמסך מציג כשבוחרים "ספות בלבד". התשובה
-אומרת במפורש איזו קטגוריה נכנסה, כדי שאף אחד לא יצטרך לנחש מה בתוך המספר.
+משפחות "מחולל מק׳טים"). הענן מחליט מה נחשב ספה (bi_is_sofa, כלל על כל
+מק"ט בנפרד) ו-bi_products עם p_sofas מחזיר תשובה אחת מאוחדת — וזה מה שהמסך
+מציג כשבוחרים "ספות בלבד". התשובה אומרת במפורש איזו קטגוריה נכנסה, כדי שאף
+אחד לא יצטרך לנחש מה בתוך המספר.
 
 אותו איחוד משמש גם את ההרצה מהמחשב, שכותבת אקסל בלי שרת:
     SUPABASE_URL=... SUPABASE_SECRET_KEY=... python sofa_report.py --year 2026
     python sofa_report.py --list-fams          # רק להדפיס את הקטגוריות שקיימות
-    python sofa_report.py --fam-re 'ספ|פינת'   # לבחור קטגוריות אחרת
 """
 import argparse
 import datetime as dt
 import json
 import os
-import re
 import sys
 import urllib.request
 
 import xlsx
 
-# קטגוריה של ספות: ספה/ספות, פינתי/ת, ומשפחות מחולל המק"טים שהסטים עברו
-# אליהן במהלך 2025–2026 (index.html מזהיר על זה בהשוואה השנתית).
-# ריפודים שאינם ספה — הדום, כורסה, כיסא, מזרן — מוחרגים במפורש גם אם
-# הקטגוריה שלהם מכילה את המילה "ספה" (למשל "הדומים לספות").
-DEFAULT_FAM_RE = r"ספ(ה|ות)|פינת|מחולל"
-EXCLUDE_FAM_RE = r"הדו[מם]|כורס|כיסא|כסא|מזר[ןנ]|שולח|מיט(ה|ות)\b|ארון|שיד|מראה|בד(ים)?\b|כרית"
+# "מה נחשב ספה" (9.9.2026) יושב ב-SQL — public.bi_is_sofa — ולא כאן. הסיבה:
+# הכרעת דורון על הכריות ("כל מק"ט שכתוב בו 'נוי' אינו ספה, כל שאר הכריות כן")
+# היא כלל על כל מק"ט בנפרד, ורשימת קטגוריות לא יכולה לבטא אותו. הגרסה הקודמת
+# של הקובץ הזה סיווגה לפי שם קטגוריה בביטוי רגולרי, ו"כרית" ביחיד לא תפס את
+# "כריות" ברבים — כל הכריות המיוצרות נספרו כספות. מקור הגירסאות של הפונקציה:
+# cloud\sqli_products.sql.
 
 MONEY, NUM, PCT, TXT, HEAD, TITLE = "m", "n", "p", "s", "h", "t"
 
@@ -43,99 +42,45 @@ def year_range(year, today=None):
     return f, t
 
 
-def split_families(families, fam_re=DEFAULT_FAM_RE, ex_re=EXCLUDE_FAM_RE):
-    """מחלק את רשימת הקטגוריות לספות / לא ספות."""
-    inc, exc = re.compile(fam_re), re.compile(ex_re) if ex_re else None
-    sofa, other = [], []
-    for f in families or []:
-        f = str(f or "")
-        if inc.search(f) and not (exc and exc.search(f)):
-            sofa.append(f)
-        else:
-            other.append(f)
-    return sofa, other
-
-
-def is_sofa_row(row, sofa_fams):
-    return str(row.get("fam") or "") in sofa_fams
-
-
 def paid_units(r):
     q = float(r.get("q") or 0)
     q0 = float(r.get("q0") or 0)
     return max(0.0, q - q0)
 
 
-SORT_KEYS = {
-    "s": lambda r: -float(r.get("s") or 0),
-    "q": lambda r: -float(r.get("q") or 0),
-    "n": lambda r: -float(r.get("n") or 0),
-    "pm": lambda r: -(float(r.get("p") or 0) / float(r.get("s"))) if float(r.get("s") or 0) > 0 else 1.0,
-}
-
-
-def sort_rows(rows, sort="q"):
-    """אותו סדר כמו במסך: הכי הרבה יחידות / כסף / הזמנות / אחוז רווח, ואז
-    כסף ושם כשוברי שוויון."""
-    key = SORT_KEYS.get(sort, SORT_KEYS["q"])
-    return sorted(rows, key=lambda r: (key(r), -float(r.get("s") or 0),
-                                       str(r.get("lbl") or r.get("k") or "")))
-
-
 def fetch_products(rpc, d_from, d_to, fam=None, level="model", q=None, model=None,
-                   sort="q", limit=2000):
-    """bi_products — אותה קריאה שמסך המוצרים עושה."""
+                   sort="q", limit=2000, sofas=False):
+    """bi_products — אותה קריאה שמסך המוצרים עושה. sofas=True = "ספות בלבד":
+    הסינון נעשה בענן לפי bi_is_sofa, והתשובה מחזירה גם sofa_fams."""
     return rpc("bi_products", {"p_from": d_from.isoformat(), "p_to": d_to.isoformat(),
                                "p_level": level, "p_q": q or None,
                                "p_fam": fam, "p_model": model or None,
-                               "p_sort": sort, "p_limit": limit}) or {}
+                               "p_sort": sort, "p_limit": limit,
+                               "p_sofas": bool(sofas)}) or {}
+
+
+def other_families(families, sofa_fams):
+    """הקטגוריות שלא נכנסו ל"ספות בלבד". קטגוריית כריות חוזרת מהענן עם התוספת
+    "(ללא נוי)", ולכן היא נחשבת "נכנסה" גם אם השם אינו זהה."""
+    sofa = set(sofa_fams or [])
+    return [f for f in (families or [])
+            if f not in sofa and (f + " (ללא נוי)") not in sofa]
 
 
 def merge_products(rpc, d_from, d_to, level="model", q=None, model=None, sort="q",
-                   limit=None, fam_re=DEFAULT_FAM_RE, ex_re=EXCLUDE_FAM_RE):
-    """מסך המוצרים עם "ספות בלבד": התשובה באותה צורה של bi_products, מאוחדת
-    על כל קטגוריות הספות, ועם sofa_fams — הקטגוריות שנכנסו.
-
-    קריאה אחת בלי סינון נותנת את רשימת הקטגוריות; אחר כך קריאה לכל קטגוריית
-    ספות בנפרד, כדי שתקרת השורות של השאילתה לא תבלע דגם שנמכר מעט. דגם
-    שמופיע בשתי קטגוריות (נמכר גם כספה וגם כהדום, למשל) נספר פעם אחת,
-    תחת הקטגוריה שבה יש לו הכי הרבה כסף — כמו במסך. הסיכומים מחושבים
-    מהשורות המאוחדות, ולכן הם סיכומי הספות ולא סיכומי כל המוצרים.
-    """
-    first = fetch_products(rpc, d_from, d_to, level=level, q=q, model=model, sort=sort, limit=1)
-    fams = first.get("families") or []
-    sofa_fams, other = split_families(fams, fam_re, ex_re)
-    sofa_set = set(sofa_fams)
-    by_key = {}
-    for fam in sofa_fams:
-        got = fetch_products(rpc, d_from, d_to, fam=fam, level=level, q=q, model=model, sort=sort)
-        for r in (got.get("rows") or []):
-            if not is_sofa_row(r, sofa_set):
-                continue
-            k = str(r.get("k") or r.get("lbl") or "")
-            if k not in by_key or float(r.get("s") or 0) > float(by_key[k].get("s") or 0):
-                by_key[k] = r
-    rows = sort_rows(by_key.values(), sort)
-    tot = {"total_s": 0.0, "total_p": 0.0, "total_q": 0.0, "total_q0": 0.0}
-    for r in rows:
-        tot["total_s"] += float(r.get("s") or 0); tot["total_p"] += float(r.get("p") or 0)
-        tot["total_q"] += float(r.get("q") or 0); tot["total_q0"] += float(r.get("q0") or 0)
-    shown = rows if not limit or len(rows) <= limit else rows[:limit]
-    agg = {"level": level, "families": fams, "sofa_fams": sofa_fams, "other_fams": other,
-           "rows": shown, "matched": len(rows), "shown": len(shown), "rest": None}
-    agg.update(tot)
-    if len(shown) < len(rows):
-        tail = rows[len(shown):]
-        agg["rest"] = {"cnt": len(tail), "s": sum(float(r.get("s") or 0) for r in tail),
-                       "p": sum(float(r.get("p") or 0) for r in tail)}
+                   limit=None):
+    """מסך המוצרים עם "ספות בלבד": קריאה אחת ל-bi_products עם p_sofas."""
+    agg = fetch_products(rpc, d_from, d_to, level=level, q=q, model=model, sort=sort,
+                         limit=limit or 2000, sofas=True)
+    agg["other_fams"] = other_families(agg.get("families"), agg.get("sofa_fams"))
     return agg
 
 
-def collect(rpc, year, fam_re=DEFAULT_FAM_RE, ex_re=EXCLUDE_FAM_RE, today=None):
+def collect(rpc, year, today=None):
     """מחזיר (שורות ממוינות לפי יחידות, קטגוריות שנכללו, קטגוריות שלא, מ-תאריך, עד-תאריך)."""
     f, t = year_range(year, today)
-    agg = merge_products(rpc, f, t, sort="q", fam_re=fam_re, ex_re=ex_re)
-    return agg["rows"], agg["sofa_fams"], agg["other_fams"], f, t
+    agg = merge_products(rpc, f, t, sort="q")
+    return agg.get("rows") or [], agg.get("sofa_fams") or [], agg["other_fams"], f, t
 
 
 def build_workbook(rows, sofa_fams, other_fams, d_from, d_to, profit=True, stamp=None):
@@ -231,14 +176,12 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--year", type=int, default=dt.date.today().year)
     ap.add_argument("--out", default="", help="נתיב הקובץ (ברירת מחדל: שם בעברית בתיקייה הנוכחית)")
-    ap.add_argument("--fam-re", default=DEFAULT_FAM_RE, help="ביטוי רגולרי לקטגוריות של ספות")
-    ap.add_argument("--exclude-re", default=EXCLUDE_FAM_RE, help="ביטוי רגולרי לקטגוריות שמוחרגות")
     ap.add_argument("--no-profit", action="store_true", help="בלי עמודות רווח")
     ap.add_argument("--list-fams", action="store_true", help="רק להדפיס את הקטגוריות ולצאת")
     a = ap.parse_args(argv)
 
     rpc = _env_rpc()
-    rows, sofa_fams, other, f, t = collect(rpc, a.year, a.fam_re, a.exclude_re)
+    rows, sofa_fams, other, f, t = collect(rpc, a.year)
     if a.list_fams:
         print("נכנסות לדוח:"); [print("  +", x) for x in sofa_fams]
         print("לא נכנסות:");  [print("  -", x) for x in other]
