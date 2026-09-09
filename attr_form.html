@@ -107,7 +107,6 @@ summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:
 </main>
 <div class="bar">
   <div class="prog" id="prog"></div>
-  <button class="copy" id="copyBtn" type="button">העתקת סיכום</button>
   <button class="send" id="sendBtn" type="button">סיימתי</button>
 </div>
 <div class="toast" id="toast"></div>
@@ -217,10 +216,6 @@ function summary(){
   });
   return lines.join('\n');
 }
-$('#copyBtn').addEventListener('click',function(){
-  var t=summary();
-  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(function(){toast('הסיכום הועתק')},function(){prompt('העתיקו את הטקסט:',t)}); } else prompt('העתיקו את הטקסט:',t);
-});
 $('#sendBtn').addEventListener('click',function(){
   setAns('__done__',{ok:true, note:'סיים למלא'});
   toast('תודה! התשובות נשמרו ודורון רואה אותן.');
