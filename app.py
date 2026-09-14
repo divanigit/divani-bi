@@ -1945,7 +1945,8 @@ def api_flags(request: Request, d_from: str = "", d_to: str = "", pct: float = 5
 # נכתבות ל-bi_attr_form_answers עם מפתח השירות. אין בטופס נתונים אישיים ואין
 # מספרי מכירות מעבר לסכומי קטגוריה — לכן ציבורי. הקריאה חזרה ציבורית גם היא, כדי
 # שמי שהתחיל בטלפון יוכל להמשיך במחשב.
-ATTR_FORMS = {"sofa-attrs": "attr_form.html"}
+ATTR_FORMS = {"sofa-attrs": "attr_form.html",
+              "sofa-colors": "attr_form_colors.html"}   # משפחת צבע ל-177 צירופי בד וקוד (מדגם 300)
 _form_hits = {}   # ip -> [timestamps]; מגן פשוט מפני הצפה
 
 
