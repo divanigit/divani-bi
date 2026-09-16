@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>בריאות האתר — ויטוריו דיוואני</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@700&display=swap">
+<style>
+:root{
+  --font: system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Hebrew",Arial,sans-serif;
+  --bg:#ffffff; --surface:#f4f8f6; --line:#e2e9e5; --line2:#cdd8d2;
+  --tx:#18241f; --tx2:#53635c; --tx3:#8a978f;
+  --brand:#0d9668; --brandSoft:rgba(13,150,104,.10);
+  --sys:#4a3aa7; --sysSoft:rgba(74,58,167,.07);
+  --okbg:#e3f3ec; --okfg:#0b6e4f; --wbg:#fbf0da; --wfg:#8f5f08; --dbg:#fbe6e4; --dfg:#a3271f;
+  --down:#a3271f;
+  --shadow:0 1px 2px rgba(16,24,32,.05),0 6px 18px rgba(16,24,32,.05);
+  --r:14px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0f1512; --surface:#19211d; --line:#26302b; --line2:#35423b;
+    --tx:#e9efeb; --tx2:#a2b0a9; --tx3:#6f7d76;
+    --brand:#2fbf8f; --brandSoft:rgba(47,191,143,.16);
+    --sys:#9085e9; --sysSoft:rgba(144,133,233,.10);
+    --okbg:#12312765; --okfg:#63d3a6; --wbg:#2e241065; --wfg:#e0b25a; --dbg:#3a1a1765; --dfg:#f0968f;
+    --down:#f0968f;
+    --shadow:0 1px 2px rgba(0,0,0,.5),0 6px 18px rgba(0,0,0,.35);
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--font);-webkit-text-size-adjust:100%;line-height:1.55}
+.wrap{max-width:900px;margin:0 auto;padding:12px 12px 40px}
+
+/* ---------- זהות ---------- */
+.hdr{display:flex;align-items:flex-start;justify-content:space-between;margin:0 0 6px}
+.hdr .out{font-size:11.5px;color:var(--tx3);text-decoration:none;padding:6px 2px}
+.owlbrand{display:flex;align-items:flex-start;gap:7px;flex:none}
+.owllogo{width:30px;height:auto;flex:none;color:#111}
+.owleye{fill:#4a3aa7}
+.owlword{font-family:"Space Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;font-size:17px;letter-spacing:.04em;color:#111;line-height:1;margin-top:2px;direction:ltr;unicode-bidi:isolate}
+@media (prefers-color-scheme:dark){.owllogo,.owlword{color:#e9efeb}.owleye{fill:#9085e9}}
+.brandcol{display:flex;flex-direction:column;align-items:flex-end;gap:2px;line-height:1}
+
+/* ---------- שורת התפריט ---------- */
+.owlbar{display:flex;align-items:center;gap:11px;margin:0 0 12px}
+.owlham{width:46px;height:46px;flex:none;border:1px solid var(--line);border-radius:13px;background:var(--surface);color:var(--tx);display:grid;place-items:center;cursor:pointer}
+.owlham svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round}
+.owlnow{min-width:0;display:flex;flex-direction:column;line-height:1.25}
+.owlnow .v{font-size:18px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.owlacts{margin-inline-start:auto;display:flex;align-items:center;gap:6px}
+.owlxls{display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-size:12.5px;border:1px solid var(--line2);background:var(--bg);color:var(--tx2);padding:7px 12px;min-height:38px;border-radius:999px;cursor:pointer}
+.owlxls[aria-pressed="true"]{background:var(--sysSoft);border-color:var(--sys);color:var(--sys);font-weight:700}
+.owlov{position:fixed;inset:0;background:rgba(10,18,14,.45);z-index:120;display:none}
+.owlov.on{display:block}
+.owlsheet{position:absolute;inset-block:0;inset-inline-end:0;width:min(330px,88vw);background:var(--bg);border-inline-start:1px solid var(--line);padding:14px;overflow:auto}
+.owlhead{display:flex;align-items:center;justify-content:space-between;margin:0 0 10px}
+.owlhead b{font-size:17px}
+.owlx{width:38px;height:38px;border:0;background:transparent;color:var(--tx);cursor:pointer;border-radius:10px;display:grid;place-items:center}
+.owlx svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+.owlg{font-size:10.5px;font-weight:700;letter-spacing:.09em;color:var(--tx3);margin:12px 4px 5px}
+.owlsheet a,.owlcur{display:flex;align-items:center;gap:9px;min-height:44px;padding:9px 11px;border-radius:11px;text-decoration:none;color:var(--tx);font-size:15px;border:1px solid transparent}
+.owlsheet a:hover{background:var(--surface);border-color:var(--line)}
+.owlcur,.owlsheet a.owlcur{background:#111;color:#fff;font-weight:700;border-color:#111;cursor:default}
+@media (prefers-color-scheme:dark){.owlcur,.owlsheet a.owlcur{background:#e9efeb;color:#0f1512;border-color:#e9efeb}}
+
+/* ---------- פס התראה ---------- */
+.alertbar{display:none;background:var(--dbg);color:var(--dfg);border:1px solid var(--dfg);border-radius:12px;padding:10px 13px;margin:0 0 12px;font-weight:700;font-size:14.5px}
+.alertbar.on{display:block}
+.alertbar .sub{display:block;font-weight:400;font-size:13px;margin-top:2px}
+
+/* ---------- כותרת ---------- */
+h1{font-size:clamp(23px,5.4vw,31px);font-weight:800;margin:4px 0 2px;letter-spacing:-.01em}
+.sub{font-size:13.5px;color:var(--tx2);margin:0 0 14px}
+h2{font-size:16px;font-weight:800;margin:0 0 4px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin:0 0 12px;box-shadow:var(--shadow)}
+.eyebrow{font-size:12.5px;font-weight:700;color:var(--tx2);margin:0 0 8px;line-height:1.35}
+.ctlrow{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:11px;overflow:hidden;background:var(--bg)}
+.seg button{font:inherit;font-size:14px;font-weight:600;min-height:44px;padding:0 15px;border:0;background:transparent;color:var(--tx2);cursor:pointer}
+.seg button+button{border-inline-start:1px solid var(--line2)}
+.seg button[aria-pressed="true"]{background:#111;color:#fff}
+@media (prefers-color-scheme:dark){.seg button[aria-pressed="true"]{background:#e9efeb;color:#0f1512}}
+.explain{display:none;font-size:13px;color:var(--tx2);background:var(--bg);border:1px dashed var(--line2);border-radius:10px;padding:9px 11px;margin:8px 0 0;line-height:1.6}
+body.explain .explain{display:block}
+
+/* ---------- שורה תחתונה ---------- */
+.verdict{display:flex;flex-wrap:wrap;gap:10px}
+.vbox{flex:1 1 150px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 13px;min-height:84px}
+.vbox .k{font-size:12px;color:var(--tx2);margin:0 0 4px}
+.vbox .v{font-size:26px;font-weight:800;line-height:1.1;letter-spacing:-.01em}
+.vbox .m{font-size:12px;color:var(--tx3);margin-top:4px}
+.tag{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;border:1px solid transparent}
+.tag.ok{background:var(--okbg);color:var(--okfg);border-color:var(--okfg)}
+.tag.w{background:var(--wbg);color:var(--wfg);border-color:var(--wfg)}
+.tag.d{background:var(--dbg);color:var(--dfg);border-color:var(--dfg)}
+.tag.n{background:var(--bg);color:var(--tx3);border-color:var(--line2)}
+.est{color:var(--tx3)}
+
+/* ---------- טבלאות ---------- */
+.tblwrap{overflow-x:auto;margin:0 -2px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:12px;color:var(--tx2);font-weight:700}
+td.num,th.num{direction:ltr;text-align:left;font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:0}
+td a{color:var(--tx);text-decoration:none;border-bottom:1px dotted var(--tx3)}
+.muted{color:var(--tx3);font-size:13px}
+.empty{color:var(--tx2);font-size:13.5px;padding:8px 0}
+
+/* ---------- גרפים ---------- */
+.chart{width:100%;height:auto;display:block;margin-top:6px}
+.chart text{font-family:var(--font);fill:var(--tx2);font-size:11px}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .ref{stroke:var(--tx3);stroke-width:1;stroke-dasharray:3 4}
+.chart .reft{fill:var(--tx3);font-size:10px}
+.chart .ln{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.chart .bar{fill:var(--down)}
+.chart .ms{fill:none;stroke:var(--brand);stroke-width:2}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 0}
+.legend button{font:inherit;font-size:12.5px;min-height:34px;padding:0 11px;border-radius:999px;border:1px solid var(--line2);background:var(--bg);color:var(--tx2);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.legend button i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.legend button[aria-pressed="false"]{opacity:.45}
+.list{margin:0;padding:0;list-style:none}
+.list li{padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px;display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}
+.list li:last-child{border-bottom:0}
+.list .when{color:var(--tx3);font-size:12px;direction:ltr}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hdr">
+    <div class="owlbrand">
+      <svg class="owllogo" viewBox="0 5 48 39" aria-label="owl">
+        <g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+          <circle cx="16.5" cy="20" r="7.5"/><circle cx="31.5" cy="20" r="7.5"/>
+          <path d="M11 13.2 L8.6 6.5"/><path d="M37 13.2 L39.4 6.5"/>
+          <path d="M16.5 42.5 L16.5 38.5"/><path d="M24 42.5 L24 36"/>
+          <path d="M31.5 42.5 L31.5 32.5"/></g>
+        <circle class="owleye" cx="16.5" cy="20" r="2.6"/>
+        <circle class="owleye" cx="31.5" cy="20" r="2.6"/>
+        <path d="M24 28 L26.4 32 L21.6 32 Z" fill="currentColor"/>
+      </svg><span class="owlword">owl</span>
+    </div>
+    <div class="brandcol"><a class="out" href="/logout">יציאה</a></div>
+  </div>
+
+  <div class="owlbar">
+    <button type="button" class="owlham" id="owlham" aria-label="תפריט">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 7h17"/><path d="M3.5 12h17"/><path d="M3.5 17h17"/></svg>
+    </button>
+    <div class="owlnow"><span class="v">בריאות האתר</span></div>
+    <div class="owlacts">
+      <button type="button" class="owlxls" id="explbtn" aria-pressed="false" title="הסבר פשוט לכל מספר">הסברים</button>
+      <button type="button" class="owlxls" id="refbtn" title="רענון">רענון</button>
+    </div>
+  </div>
+
+  <div class="alertbar" id="alertbar"></div>
+
+  <h1>בריאות האתר</h1>
+  <p class="sub" id="sub">vdivani.co.il · טוען…</p>
+
+  <section class="card">
+    <div class="ctlrow">
+      <div class="seg" id="segH">
+        <button type="button" data-h="24" aria-pressed="true">24 שעות</button>
+        <button type="button" data-h="168" aria-pressed="false">7 ימים</button>
+        <button type="button" data-h="720" aria-pressed="false">30 יום</button>
+        <button type="button" data-h="2160" aria-pressed="false">90 יום</button>
+      </div>
+      <div class="seg" id="segS">
+        <button type="button" data-s="mobile" aria-pressed="true">טלפון</button>
+        <button type="button" data-s="desktop" aria-pressed="false">מחשב</button>
+      </div>
+    </div>
+    <p class="explain">התקופה קובעת את כל המסך. "טלפון" ו"מחשב" משנים רק את מדדי המהירות — הזמינות זהה לשניהם. רוב הגולשים באתר מגיעים מטלפון, וגם גוגל מדרגת לפי הטלפון.</p>
+  </section>
+
+  <section class="card">
+    <h2>שורה תחתונה</h2>
+    <div class="verdict" id="verdict"></div>
+    <p class="explain">"מהירות": כמה זמן עד שהתוכן העיקרי בעמוד הבית מוצג בטלפון (מדד שנקרא LCP). עד 2 שניות: מצוין. עד 2.5: מהיר (הסף של גוגל). עד 4: בינוני. מעל 4: איטי. "זמינות" = כמה מהבדיקות (כל דקה, 4 עמודים) ענו תקין.</p>
+  </section>
+
+  <section class="card">
+    <h2>זמינות</h2>
+    <div id="availTbl"></div>
+    <div id="outages"></div>
+    <div id="availChart"></div>
+    <p class="explain">כל דקה נבדקים 4 עמודים. "נפילה" = 3 דקות רצופות שבהן אף עמוד לא ענה. הגרף: עמודות אדומות = בדיקות שנכשלו; קו ירוק = זמן תגובת השרת החציוני. הבודק הוא לקוח בודד מהענן: הוא רואה שהשרת עונה, לא כמה מהר האתר נטען אצל לקוח.</p>
+  </section>
+
+  <section class="card">
+    <h2>מהירות לאורך זמן</h2>
+    <div class="legend" id="legend"></div>
+    <div id="speedChart"></div>
+    <p class="explain">כל נקודה = חציון המדידות באותה שעה (או יום, בתקופות ארוכות) של הזמן עד הצגת התוכן העיקרי, בשניות. הקווים המקווקווים: 2.5 = הסף של גוגל ל"מהיר", 4 = מכאן "איטי". המדידה מדמה טלפון ממוצע ברשת סלולרית איטית, ולכן קשוחה מהמציאות אצל רוב הלקוחות. היא נועדה לראות מגמה, לא לפסוק.</p>
+  </section>
+
+  <section class="card">
+    <h2>העמודים העיקריים</h2>
+    <div id="coreTbl"></div>
+    <p class="explain">ציון = ציון הביצועים של גוגל (0–100, 90 ומעלה מצוין). LCP = זמן עד הצגת התוכן העיקרי. p50 = חציון, p95 = הגרוע מבין 95 אחוז מהמדידות. קפיצות = כמה העמוד "קופץ" בזמן טעינה (עד 0.1 טוב). שרת = זמן עד הבייט הראשון. "גולשים אמיתיים" = מה שגוגל מודדת אצל מבקרים אמיתיים בכרום (יש רק כשיש מספיק תנועה).</p>
+  </section>
+
+  <section class="card">
+    <h2>העמודים הכבדים באתר</h2>
+    <p class="muted" id="coverage"></p>
+    <div id="slowTbl"></div>
+    <p class="explain">כל עמוד באתר (מוצרים, קטגוריות, עמודים) נמדד בסבב: 2 עמודים כל 5 דקות, כל האתר בערך פעם ביום. כאן 10 הכבדים ביותר בתקופה. עמוד כבד כמעט תמיד אומר תמונות גדולות מדי.</p>
+  </section>
+
+  <section class="card">
+    <h2>התראות</h2>
+    <div id="alertsList"></div>
+    <p class="explain">התראה נפתחת ברגע שבדיקת זמינות אחת נכשלת, כשעמוד עיקרי איטי (מעל 4 שניות) פעמיים ברצף, או כשהמדידה עצמה נעצרה. נסגרת לבד כשהמצב חוזר לתקין, ואז נשלחת הודעת "חזר לתקין". ההודעות מגיעות לטלפון של כל מי שמנוי לערוץ.</p>
+  </section>
+
+  <section class="card">
+    <h2>המדידה עצמה</h2>
+    <div id="healthTbl"></div>
+    <p class="explain">אם שורה כאן "שקטה", המספרים למעלה ישנים, לא רעים. קודם מתקנים את המדידה, אחר כך קוראים מספרים.</p>
+  </section>
+
+</div>
+
+<div class="owlov" id="owlov">
+  <div class="owlsheet" role="dialog" aria-modal="true" aria-label="תפריט">
+    <div class="owlhead"><b>תפריט</b>
+      <button type="button" class="owlx" id="owlx" aria-label="סגירה">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div id="owllist"></div>
+  </div>
+</div>
+
+<script>
+/* ---------- תפריט OWL ---------- */
+window.OWL_NAV = [
+  ['g', 'מכירות'],
+  ['v', 'agents',    'סוכנים'],
+  ['v', 'branches',  'סניפים'],
+  ['v', 'hours',     'שעות חזקות וחלשות'],
+  ['v', 'products',  'מוצרים'],
+  ['g', 'כספים ושירות'],
+  ['v', 'cash',      'מזומן'],
+  ['v', 'collect',   'מקדמות'],
+  ['v', 'service',   'שירות'],
+  ['v', 'pctrl',     'בקרת מחירים', 'profit'],
+  ['g', 'אנליטיקה'],
+  ['v', 'site',      'מכירות האתר'],
+  ['v', 'branchsrc', 'מקורות הגעה'],
+  ['v', 'dim',       'פילוח'],
+  ['v', 'mdown',     'מוריד כסף', 'profit'],
+  ['v', 'cancels',   'אחוז ביטולים'],
+  ['v', 'comp',      'פיצויים'],
+  ['v', 'dow',       'ימים חזקים בשבוע'],
+  ['v', 'ins',       'תובנות'],
+  ['g', 'ניתוח'],
+  ['a', '/agent-report', 'ניתוח ביצועי נציגים וסניפים'],
+  ['a', '/conversion',   'יחס המרה'],
+  ['g', 'האתר'],
+  ['a', '/site',         'בריאות האתר'],
+  ['g', 'מערכת ניטור ואנליטיקת פרסום', 'profit'],
+  ['a', '/traffic',      'תמהיל מקורות התנועה', 'profit']
+];
+window.OWL_HERE = '/site';
+(function(){
+  var np = (window.OWL_ROLE || {}).noprofit, h = '', pend = null;
+  window.OWL_NAV.forEach(function(it){
+    if (it[it.length - 1] === 'profit' && np) return;
+    if (it[0] === 'g') { pend = it[1]; return; }
+    if (pend) { h += '<div class="owlg">' + pend + '</div>'; pend = null; }
+    var href = it[0] === 'a' ? it[1] : '/?v=' + it[1];
+    h += href === window.OWL_HERE
+      ? '<a href="' + href + '" class="owlcur" aria-current="page">' + it[2] + '</a>'
+      : '<a href="' + href + '">' + it[2] + '</a>';
+  });
+  document.getElementById('owllist').innerHTML = h;
+  var ov = document.getElementById('owlov');
+  function open(){ ov.classList.add('on'); document.body.style.overflow = 'hidden'; }
+  function close(){ ov.classList.remove('on'); document.body.style.overflow = ''; }
+  document.getElementById('owlham').addEventListener('click', open);
+  document.getElementById('owlx').addEventListener('click', close);
+  ov.addEventListener('click', function(e){ if (e.target === ov) close(); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && ov.classList.contains('on')) close(); });
+})();
+
+/* ---------- הנתונים ---------- */
+var $ = function(id){ return document.getElementById(id); };
+var state = { h: 24, s: 'mobile', hidden: {} };
+var COLORS = ['#0d9668', '#4a3aa7', '#c2410c', '#0369a1', '#7c3aed', '#be185d'];
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function sec(ms){ return ms == null ? '—' : (ms / 1000).toFixed(1); }
+function pct(n, d){ return d ? (100 * n / d).toFixed(2).replace(/\.?0+$/, '') + '%' : '—'; }
+function lcpTag(ms){
+  if (ms == null) return '<span class="tag n">אין</span>';
+  if (ms <= 2000) return '<span class="tag ok">מצוין</span>';
+  if (ms <= 2500) return '<span class="tag ok">מהיר</span>';
+  if (ms <= 4000) return '<span class="tag w">בינוני</span>';
+  return '<span class="tag d">איטי</span>';
+}
+function cruxTag(c){
+  if (!c) return '<span class="tag n">אין מספיק תנועה</span>';
+  return c === 'FAST' ? '<span class="tag ok">מהיר</span>' : c === 'AVERAGE' ? '<span class="tag w">בינוני</span>' : '<span class="tag d">איטי</span>';
+}
+function short(u){ try { var p = decodeURIComponent(new URL(u).pathname); return p.replace(/^\/product-category\//, 'קטגוריה: ').replace(/^\/product\//, 'מוצר: ').replace(/\/$/, '').replace(/-/g, ' ') || 'בית'; } catch (e) { return u; } }
+
+function load(){
+  $('sub').textContent = 'vdivani.co.il · טוען…';
+  fetch('/api/site?h=' + state.h + '&strategy=' + state.s, { cache: 'no-store' })
+    .then(function(r){ if (r.status === 401) { location.href = '/login'; throw new Error('auth'); } return r.json(); })
+    .then(render)
+    .catch(function(e){ $('sub').textContent = 'לא הצלחתי לטעון את הנתונים. ' + e; });
+}
+
+function render(d){
+  var av = Array.isArray(d.availability) ? d.availability : [];
+  var perPage = av.filter(function(r){ return r.section === 'לפי עמוד'; });
+  var outages = av.filter(function(r){ return r.section !== 'לפי עמוד'; });
+  var sp = Array.isArray(d.speed) ? d.speed : [];
+  var bottom = sp.filter(function(r){ return r.section === 'שורה תחתונה'; })[0];
+  var core = sp.filter(function(r){ return r.section === 'ליבה' && r.strategy === state.s; });
+  var slow = sp.filter(function(r){ return r.section === 'האיטיים באתר'; });
+  var cover = sp.filter(function(r){ return r.section === 'כיסוי'; })[0];
+  var open = Array.isArray(d.alerts_open) ? d.alerts_open : [];
+  var recent = Array.isArray(d.alerts_recent) ? d.alerts_recent : [];
+  var health = Array.isArray(d.health) ? d.health : [];
+
+  /* פס אדום */
+  var ab = $('alertbar');
+  if (open.length) {
+    ab.innerHTML = open.map(function(a){ return '<div>' + esc(a.title) + '<span class="sub">' + esc(a.body || '') + ' · מאז ' + esc(a.opened_il) + ' (' + a.minutes + ' דק\')</span></div>'; }).join('');
+    ab.classList.add('on');
+  } else { ab.classList.remove('on'); ab.innerHTML = ''; }
+
+  /* כותרת */
+  var lastProbe = health.filter(function(r){ return r.flow_name === 'בודק זמינות האתר'; })[0];
+  var lastIl = lastProbe && lastProbe.last_at ? new Date(lastProbe.last_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) : '—';
+  $('sub').textContent = 'vdivani.co.il · הבדיקה האחרונה ' + lastIl + ' · מתעדכן לבד כל דקה';
+
+  /* שורה תחתונה */
+  var checks = perPage.reduce(function(a, r){ return a + (+r.checks || 0); }, 0);
+  var failed = perPage.reduce(function(a, r){ return a + (+r.failed || 0); }, 0);
+  var upPct = checks ? (100 - 100 * failed / checks) : null;
+  var vh = '';
+  vh += '<div class="vbox"><div class="k">מהירות עמוד הבית בטלפון</div><div class="v">' + (bottom && bottom.lcp_p50 != null ? esc(bottom.verdict) : '<span class="est">אין נתונים</span>') + '</div><div class="m">' + (bottom && bottom.lcp_p50 != null ? sec(bottom.lcp_p50) + ' שניות עד התוכן · ' + bottom.checks + ' מדידות' : 'מדידת המהירות עדיין לא התחילה') + '</div></div>';
+  vh += '<div class="vbox"><div class="k">זמינות</div><div class="v">' + (upPct == null ? '<span class="est">—</span>' : upPct.toFixed(upPct < 99.95 ? 2 : 1) + '%') + '</div><div class="m">' + (checks ? failed + ' כשלים מתוך ' + checks.toLocaleString('he-IL') + ' בדיקות' : 'אין בדיקות בתקופה') + '</div></div>';
+  vh += '<div class="vbox"><div class="k">נפילות</div><div class="v">' + (outages.length ? '<span style="color:var(--dfg)">' + outages.length + '</span>' : '0') + '</div><div class="m">' + (outages.length ? 'סה"כ ' + outages.reduce(function(a, r){ return a + (+r.outage_minutes || 0); }, 0) + ' דקות' : 'האתר לא נפל בתקופה') + '</div></div>';
+  vh += '<div class="vbox"><div class="k">התראות פתוחות</div><div class="v">' + (open.length ? '<span style="color:var(--dfg)">' + open.length + '</span>' : '0') + '</div><div class="m">' + (recent.length ? recent.length + ' בתקופה' : 'אין התראות בתקופה') + '</div></div>';
+  $('verdict').innerHTML = vh;
+
+  /* זמינות */
+  if (perPage.length) {
+    var t = '<div class="tblwrap"><table><thead><tr><th>עמוד</th><th class="num">בדיקות</th><th class="num">כשלים</th><th class="num">אחוז</th><th class="num">שרת p50</th><th class="num">שרת p95</th><th>כשל אחרון</th></tr></thead><tbody>';
+    perPage.forEach(function(r){
+      t += '<tr><td>' + esc(r.page) + '</td><td class="num">' + r.checks + '</td><td class="num">' + (r.failed > 0 ? '<b style="color:var(--dfg)">' + r.failed + '</b>' : '0') + '</td><td class="num">' + esc(r.fail_pct) + '%</td><td class="num">' + (r.p50_ms == null ? '—' : r.p50_ms + ' ms') + '</td><td class="num">' + (r.p95_ms == null ? '—' : r.p95_ms + ' ms') + '</td><td>' + esc(r.last_fail_il || '—') + '</td></tr>';
+    });
+    $('availTbl').innerHTML = t + '</tbody></table></div>';
+  } else $('availTbl').innerHTML = '<p class="empty">אין בדיקות זמינות בתקופה.</p>';
+  $('outages').innerHTML = outages.length
+    ? '<p class="eyebrow" style="margin-top:12px">נפילות (3 דקות ומעלה שאף עמוד לא ענה)</p><ul class="list">' + outages.map(function(o){ return '<li><span class="tag d">' + o.outage_minutes + ' דק\'</span><span class="when">' + esc(o.outage_start_il) + ' → ' + esc(o.outage_end_il) + '</span></li>'; }).join('') + '</ul>'
+    : '';
+  $('availChart').innerHTML = availChart(Array.isArray(d.availability_series) ? d.availability_series : []);
+
+  /* מהירות לאורך זמן */
+  var series = Array.isArray(d.speed_series) ? d.speed_series : [];
+  $('legend').innerHTML = '';
+  if (series.length) {
+    var pages = []; series.forEach(function(r){ if (pages.indexOf(r.page) < 0) pages.push(r.page); });
+    $('legend').innerHTML = pages.map(function(p, i){ return '<button type="button" data-p="' + esc(p) + '" aria-pressed="' + (state.hidden[p] ? 'false' : 'true') + '"><i style="background:' + COLORS[i % COLORS.length] + '"></i>' + esc(p) + '</button>'; }).join('');
+    Array.prototype.forEach.call($('legend').querySelectorAll('button'), function(b){ b.addEventListener('click', function(){ var p = b.getAttribute('data-p'); state.hidden[p] = !state.hidden[p]; b.setAttribute('aria-pressed', state.hidden[p] ? 'false' : 'true'); $('speedChart').innerHTML = speedChart(series, pages); }); });
+    $('speedChart').innerHTML = speedChart(series, pages);
+  } else $('speedChart').innerHTML = '<p class="empty">' + (state.s === 'desktop' ? 'אין עדיין מדידות מחשב בתקופה (נמדד פעם בשעה).' : 'מדידת המהירות עדיין לא התחילה.') + '</p>';
+
+  /* עמודי ליבה */
+  if (core.length) {
+    var c = '<div class="tblwrap"><table><thead><tr><th>עמוד</th><th>מצב</th><th class="num">ציון</th><th class="num">LCP p50</th><th class="num">LCP p95</th><th class="num">קפיצות</th><th class="num">שרת</th><th class="num">איטי</th><th>גולשים אמיתיים</th></tr></thead><tbody>';
+    core.forEach(function(r){
+      c += '<tr><td>' + esc(r.page) + '</td><td>' + lcpTag(r.lcp_p50) + '</td><td class="num">' + (r.score_med == null ? '—' : r.score_med) + '</td><td class="num">' + sec(r.lcp_p50) + ' ש\'</td><td class="num">' + sec(r.lcp_p95) + ' ש\'</td><td class="num">' + (r.cls_med == null ? '—' : r.cls_med) + '</td><td class="num">' + (r.ttfb_p50 == null ? '—' : r.ttfb_p50 + ' ms') + '</td><td class="num">' + r.slow_runs + '/' + r.checks + '</td><td>' + cruxTag(r.crux_category) + (r.crux_lcp ? ' <span class="muted">' + sec(r.crux_lcp) + ' ש\'</span>' : '') + '</td></tr>';
+    });
+    $('coreTbl').innerHTML = c + '</tbody></table></div>';
+  } else $('coreTbl').innerHTML = '<p class="empty">אין מדידות ' + (state.s === 'desktop' ? 'מחשב' : 'טלפון') + ' בתקופה.</p>';
+
+  /* הכבדים */
+  $('coverage').textContent = cover ? 'נדגמו ' + cover.checks + ' מתוך ' + cover.slow_runs + ' עמודי האתר בתקופה.' : '';
+  if (slow.length) {
+    var s = '<div class="tblwrap"><table><thead><tr><th>עמוד</th><th>מצב</th><th class="num">LCP p50</th><th class="num">ציון</th><th class="num">מדידות</th><th>אחרונה</th></tr></thead><tbody>';
+    slow.forEach(function(r){
+      s += '<tr><td><a href="' + esc(r.page) + '" target="_blank" rel="noopener">' + esc(short(r.page)) + '</a></td><td>' + lcpTag(r.lcp_p50) + '</td><td class="num">' + sec(r.lcp_p50) + ' ש\'</td><td class="num">' + (r.score_med == null ? '—' : r.score_med) + '</td><td class="num">' + r.checks + '</td><td>' + esc(r.last_il) + '</td></tr>';
+    });
+    $('slowTbl').innerHTML = s + '</tbody></table></div>';
+  } else $('slowTbl').innerHTML = '<p class="empty">הסבב על כל האתר עדיין לא התחיל.</p>';
+
+  /* התראות */
+  $('alertsList').innerHTML = recent.length
+    ? '<ul class="list">' + recent.map(function(a){ return '<li><span class="tag ' + (a.open ? 'd' : 'n') + '">' + (a.open ? 'פתוחה' : 'נסגרה') + '</span><b>' + esc(a.title) + '</b><span class="muted">' + esc(a.body || '') + '</span><span class="when">' + esc(a.opened_il) + (a.closed_il ? ' → ' + esc(a.closed_il) : '') + ' · ' + a.minutes + ' דק\'</span></li>'; }).join('') + '</ul>'
+    : '<p class="empty">אין התראות בתקופה. זה טוב.</p>';
+
+  /* המדידה עצמה */
+  $('healthTbl').innerHTML = health.length
+    ? '<ul class="list">' + health.map(function(r){ var cls = r.status === 'תקין' ? 'ok' : r.status === 'מתעכב' ? 'w' : r.status === 'שקט' ? 'd' : 'n'; return '<li><span class="tag ' + cls + '">' + esc(r.status) + '</span>' + esc(r.flow_name) + '<span class="muted">' + esc(r.cadence || '') + (r.silent_txt ? ' · ' + esc(r.silent_txt) : '') + '</span></li>'; }).join('') + '</ul>'
+    : '<p class="empty">אין נתוני מדידה.</p>';
+}
+
+/* ---------- גרפים (SVG בלי ספרייה) ---------- */
+function xlabel(b){ return state.h <= 48 ? b.slice(11, 16) : b.slice(8, 10) + '.' + b.slice(5, 7); }
+function speedChart(series, pages){
+  var W = 720, H = 240, L = 34, R = 8, T = 12, B = 28;
+  var buckets = []; series.forEach(function(r){ if (buckets.indexOf(r.bucket) < 0) buckets.push(r.bucket); }); buckets.sort();
+  var vis = pages.filter(function(p){ return !state.hidden[p]; });
+  var maxV = 5000; series.forEach(function(r){ if (vis.indexOf(r.page) >= 0 && r.lcp_p50 > maxV) maxV = r.lcp_p50; }); maxV = Math.ceil(maxV / 1000) * 1000;
+  var x = function(i){ return buckets.length < 2 ? (L + (W - L - R) / 2) : L + (W - L - R) * i / (buckets.length - 1); };
+  var y = function(v){ return T + (H - T - B) * (1 - v / maxV); };
+  var s = '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="מהירות לאורך זמן">';
+  for (var g = 0; g <= maxV; g += 1000) s += '<line class="grid" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(g) + '" y2="' + y(g) + '"/><text x="' + (L - 4) + '" y="' + (y(g) + 4) + '" text-anchor="end">' + (g / 1000) + '</text>';
+  [[2500, 'גוגל 2.5'], [4000, 'איטי 4']].forEach(function(rf){ if (rf[0] <= maxV) s += '<line class="ref" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(rf[0]) + '" y2="' + y(rf[0]) + '"/><text class="reft" x="' + (W - R - 2) + '" y="' + (y(rf[0]) - 3) + '" text-anchor="end">' + rf[1] + '</text>'; });
+  var step = Math.max(1, Math.ceil(buckets.length / 8));
+  buckets.forEach(function(b, i){ if (i % step === 0 || i === buckets.length - 1) s += '<text x="' + x(i) + '" y="' + (H - 8) + '" text-anchor="middle">' + xlabel(b) + '</text>'; });
+  pages.forEach(function(p, pi){
+    if (state.hidden[p]) return;
+    var pts = [];
+    buckets.forEach(function(b, i){ var r = series.filter(function(q){ return q.page === p && q.bucket === b; })[0]; if (r && r.lcp_p50 != null) pts.push([x(i), y(Math.min(r.lcp_p50, maxV))]); });
+    if (!pts.length) return;
+    s += '<path class="ln" stroke="' + COLORS[pi % COLORS.length] + '" d="M' + pts.map(function(q){ return q[0].toFixed(1) + ' ' + q[1].toFixed(1); }).join(' L') + '"/>';
+    pts.forEach(function(q){ s += '<circle cx="' + q[0].toFixed(1) + '" cy="' + q[1].toFixed(1) + '" r="2.4" fill="' + COLORS[pi % COLORS.length] + '"/>'; });
+  });
+  return s + '</svg>';
+}
+function availChart(rows){
+  if (!rows.length) return '';
+  var W = 720, H = 160, L = 34, R = 34, T = 12, B = 28;
+  var maxF = 1; rows.forEach(function(r){ if (+r.failed > maxF) maxF = +r.failed; });
+  var maxMs = 500; rows.forEach(function(r){ if (+r.ms_p50 > maxMs) maxMs = +r.ms_p50; }); maxMs = Math.ceil(maxMs / 250) * 250;
+  var n = rows.length, bw = Math.max(2, (W - L - R) / n - 2);
+  var x = function(i){ return L + (W - L - R) * (i + 0.5) / n; };
+  var yf = function(v){ return T + (H - T - B) * (1 - v / maxF); };
+  var ym = function(v){ return T + (H - T - B) * (1 - v / maxMs); };
+  var s = '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="זמינות לאורך זמן">';
+  s += '<line class="grid" x1="' + L + '" x2="' + (W - R) + '" y1="' + (H - B) + '" y2="' + (H - B) + '"/>';
+  s += '<text x="' + (L - 4) + '" y="' + (T + 4) + '" text-anchor="end">' + maxF + '</text><text x="' + (L - 4) + '" y="' + (H - B + 4) + '" text-anchor="end">0</text>';
+  s += '<text x="' + (W - R + 4) + '" y="' + (T + 4) + '">' + maxMs + 'ms</text>';
+  var step = Math.max(1, Math.ceil(n / 8));
+  rows.forEach(function(r, i){
+    if (+r.failed > 0) s += '<rect class="bar" x="' + (x(i) - bw / 2) + '" y="' + yf(+r.failed) + '" width="' + bw + '" height="' + (H - B - yf(+r.failed)) + '"><title>' + esc(r.bucket) + ': ' + r.failed + ' כשלים מתוך ' + r.checks + '</title></rect>';
+    if (i % step === 0 || i === n - 1) s += '<text x="' + x(i) + '" y="' + (H - 8) + '" text-anchor="middle">' + xlabel(r.bucket) + '</text>';
+  });
+  var pts = rows.map(function(r, i){ return r.ms_p50 == null ? null : x(i).toFixed(1) + ' ' + ym(+r.ms_p50).toFixed(1); }).filter(Boolean);
+  if (pts.length > 1) s += '<path class="ms" d="M' + pts.join(' L') + '"/>';
+  return s + '</svg>';
+}
+
+/* ---------- פקדים ---------- */
+Array.prototype.forEach.call(document.querySelectorAll('#segH button'), function(b){ b.addEventListener('click', function(){ state.h = +b.getAttribute('data-h'); Array.prototype.forEach.call(document.querySelectorAll('#segH button'), function(o){ o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); }); load(); }); });
+Array.prototype.forEach.call(document.querySelectorAll('#segS button'), function(b){ b.addEventListener('click', function(){ state.s = b.getAttribute('data-s'); Array.prototype.forEach.call(document.querySelectorAll('#segS button'), function(o){ o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); }); load(); }); });
+$('refbtn').addEventListener('click', load);
+$('explbtn').addEventListener('click', function(){ var on = document.body.classList.toggle('explain'); $('explbtn').setAttribute('aria-pressed', on ? 'true' : 'false'); });
+load();
+setInterval(load, 60000);
+</script>
+</body>
+</html>

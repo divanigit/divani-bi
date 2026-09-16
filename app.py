@@ -387,6 +387,71 @@ button{width:100%;height:46px;margin-top:10px;border:0;border-radius:10px;backgr
 <button type="submit">כניסה</button>__ERR__</form></div></body></html>""").replace("__ERR__", e)
 
 
+@app.get("/site")
+def site_health(request: Request):
+    """מסך בריאות האתר — זמינות, מהירות, התראות. אותה תבנית כמו /conversion.
+
+    אין בו נתון רווח ולכן פתוח לכל מי שמחובר. המספרים באים מסופאבייס בלבד
+    (bi_site_probe, bi_site_speed, bi_alerts) — השרת הזה רק מגיש.
+    """
+    if not _logged_in(request):
+        return RedirectResponse("/login", status_code=303)
+    try:
+        with open(os.path.join(HERE, "site_health.html"), encoding="utf-8") as f:
+            html = f.read()
+    except Exception:
+        return HTMLResponse("<div dir='rtl' style='font-family:sans-serif;padding:40px'>"
+                            "המסך לא נמצא.</div>", status_code=404)
+    role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s};</script>' % (
+        "true" if _is_noprofit(request) else "false",
+        "true" if _is_admin(request) else "false")
+    html = html.replace("</head>", role + chr(10) + "</head>", 1)
+    return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
+
+
+@app.get("/api/alerts")
+def api_alerts(request: Request):
+    """ההתראות הפתוחות כרגע — לפס האדום בראש כל מסך. ריק = הכל תקין."""
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    try:
+        return JSONResponse({"open": sb_rpc("bi_alerts_open", {}) or []})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=502)
+
+
+@app.get("/api/site")
+def api_site(request: Request, h: int = 24, strategy: str = "mobile"):
+    """כל מה שמסך בריאות האתר צריך בקריאה אחת.
+
+    h = חלון בשעות (24 / 168 / 720 / 2160). strategy = mobile / desktop.
+    כל חלק נכשל לבד: חלק שנפל מחזיר error במקום להפיל את המסך כולו —
+    כך זמינות עדיין מוצגת גם אם מדידת המהירות טרם התחילה.
+    """
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    h = max(1, min(int(h), 2160))
+    strategy = "desktop" if strategy == "desktop" else "mobile"
+    out = {"hours": h, "strategy": strategy}
+    parts = {
+        "availability": ("bi_site_status", {"p_hours": h}),
+        "availability_series": ("bi_site_probe_series", {"p_hours": h}),
+        "speed": ("bi_site_speed_status", {"p_hours": h}),
+        "speed_series": ("bi_site_speed_series", {"p_hours": h, "p_strategy": strategy}),
+        "alerts_open": ("bi_alerts_open", {}),
+        "alerts_recent": ("bi_alerts_recent", {"p_days": max(1, h // 24)}),
+        "health": ("bi_health", {}),
+    }
+    for key, (fn, params) in parts.items():
+        try:
+            out[key] = sb_rpc(fn, params) or []
+        except Exception as e:
+            out[key] = {"error": str(e)}
+    if isinstance(out.get("health"), list):
+        out["health"] = [r for r in out["health"] if r.get("flow_group") == "אתר האינטרנט"]
+    return JSONResponse(out)
+
+
 # ---------- supabase / priority helpers ----------
 
 def _http(url, headers, data=None, timeout=180, method=None):
