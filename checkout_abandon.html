@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>נטישות בקופה — ויטוריו דיוואני</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@700&display=swap">
+<style>
+:root{
+  --font: system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Hebrew",Arial,sans-serif;
+  --bg:#ffffff; --surface:#f4f8f6; --line:#e2e9e5; --line2:#cdd8d2;
+  --tx:#18241f; --tx2:#53635c; --tx3:#8a978f;
+  --brand:#0d9668; --brandSoft:rgba(13,150,104,.10);
+  --sys:#4a3aa7; --sysSoft:rgba(74,58,167,.07);
+  --okbg:#e3f3ec; --okfg:#0b6e4f; --wbg:#fbf0da; --wfg:#8f5f08; --dbg:#fbe6e4; --dfg:#a3271f;
+  --down:#a3271f;
+  --shadow:0 1px 2px rgba(16,24,32,.05),0 6px 18px rgba(16,24,32,.05);
+  --r:14px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0f1512; --surface:#19211d; --line:#26302b; --line2:#35423b;
+    --tx:#e9efeb; --tx2:#a2b0a9; --tx3:#6f7d76;
+    --brand:#2fbf8f; --brandSoft:rgba(47,191,143,.16);
+    --sys:#9085e9; --sysSoft:rgba(144,133,233,.10);
+    --okbg:#12312765; --okfg:#63d3a6; --wbg:#2e241065; --wfg:#e0b25a; --dbg:#3a1a1765; --dfg:#f0968f;
+    --down:#f0968f;
+    --shadow:0 1px 2px rgba(0,0,0,.5),0 6px 18px rgba(0,0,0,.35);
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--font);-webkit-text-size-adjust:100%;line-height:1.55}
+.wrap{max-width:900px;margin:0 auto;padding:12px 12px 40px}
+
+/* ---------- זהות ---------- */
+.hdr{display:flex;align-items:flex-start;justify-content:space-between;margin:0 0 6px}
+.hdr .out{font-size:11.5px;color:var(--tx3);text-decoration:none;padding:6px 2px}
+.owlbrand{display:flex;align-items:flex-start;gap:7px;flex:none}
+.owllogo{width:30px;height:auto;flex:none;color:#111}
+.owleye{fill:#4a3aa7}
+.owlword{font-family:"Space Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;font-size:17px;letter-spacing:.04em;color:#111;line-height:1;margin-top:2px;direction:ltr;unicode-bidi:isolate}
+@media (prefers-color-scheme:dark){.owllogo,.owlword{color:#e9efeb}.owleye{fill:#9085e9}}
+.brandcol{display:flex;flex-direction:column;align-items:flex-end;gap:2px;line-height:1}
+
+/* ---------- שורת התפריט ---------- */
+.owlbar{display:flex;align-items:center;gap:11px;margin:0 0 12px}
+.owlham{width:46px;height:46px;flex:none;border:1px solid var(--line);border-radius:13px;background:var(--surface);color:var(--tx);display:grid;place-items:center;cursor:pointer}
+.owlham svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round}
+.owlnow{min-width:0;display:flex;flex-direction:column;line-height:1.25}
+.owlnow .v{font-size:18px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.owlacts{margin-inline-start:auto;display:flex;align-items:center;gap:6px}
+.owlxls{display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-size:12.5px;border:1px solid var(--line2);background:var(--bg);color:var(--tx2);padding:7px 12px;min-height:38px;border-radius:999px;cursor:pointer}
+.owlxls[aria-pressed="true"]{background:var(--sysSoft);border-color:var(--sys);color:var(--sys);font-weight:700}
+.owlov{position:fixed;inset:0;background:rgba(10,18,14,.45);z-index:120;display:none}
+.owlov.on{display:block}
+.owlsheet{position:absolute;inset-block:0;inset-inline-end:0;width:min(330px,88vw);background:var(--bg);border-inline-start:1px solid var(--line);padding:14px;overflow:auto}
+.owlhead{display:flex;align-items:center;justify-content:space-between;margin:0 0 10px}
+.owlhead b{font-size:17px}
+.owlx{width:38px;height:38px;border:0;background:transparent;color:var(--tx);cursor:pointer;border-radius:10px;display:grid;place-items:center}
+.owlx svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+.owlg{font-size:10.5px;font-weight:700;letter-spacing:.09em;color:var(--tx3);margin:12px 4px 5px}
+.owlsheet a,.owlcur{display:flex;align-items:center;gap:9px;min-height:44px;padding:9px 11px;border-radius:11px;text-decoration:none;color:var(--tx);font-size:15px;border:1px solid transparent}
+.owlsheet a:hover{background:var(--surface);border-color:var(--line)}
+.owlcur,.owlsheet a.owlcur{background:#111;color:#fff;font-weight:700;border-color:#111;cursor:default}
+@media (prefers-color-scheme:dark){.owlcur,.owlsheet a.owlcur{background:#e9efeb;color:#0f1512;border-color:#e9efeb}}
+
+/* ---------- פס התראה ---------- */
+.alertbar{display:none;background:var(--dbg);color:var(--dfg);border:1px solid var(--dfg);border-radius:12px;padding:10px 13px;margin:0 0 12px;font-weight:700;font-size:14.5px}
+.alertbar.on{display:block}
+.alertbar .sub{display:block;font-weight:400;font-size:13px;margin-top:2px}
+
+/* ---------- כותרת ---------- */
+h1{font-size:clamp(23px,5.4vw,31px);font-weight:800;margin:4px 0 2px;letter-spacing:-.01em}
+.sub{font-size:13.5px;color:var(--tx2);margin:0 0 14px}
+h2{font-size:16px;font-weight:800;margin:0 0 4px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin:0 0 12px;box-shadow:var(--shadow)}
+.eyebrow{font-size:12.5px;font-weight:700;color:var(--tx2);margin:0 0 8px;line-height:1.35}
+.ctlrow{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:11px;overflow:hidden;background:var(--bg)}
+.seg button{font:inherit;font-size:14px;font-weight:600;min-height:44px;padding:0 15px;border:0;background:transparent;color:var(--tx2);cursor:pointer}
+.seg button+button{border-inline-start:1px solid var(--line2)}
+.seg button[aria-pressed="true"]{background:#111;color:#fff}
+@media (prefers-color-scheme:dark){.seg button[aria-pressed="true"]{background:#e9efeb;color:#0f1512}}
+.explain{display:none;font-size:13px;color:var(--tx2);background:var(--bg);border:1px dashed var(--line2);border-radius:10px;padding:9px 11px;margin:8px 0 0;line-height:1.6}
+body.explain .explain{display:block}
+
+/* ---------- שורה תחתונה ---------- */
+.verdict{display:flex;flex-wrap:wrap;gap:10px}
+.vbox{flex:1 1 150px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 13px;min-height:84px}
+.vbox .k{font-size:12px;color:var(--tx2);margin:0 0 4px}
+.vbox .v{font-size:26px;font-weight:800;line-height:1.1;letter-spacing:-.01em}
+.vbox .m{font-size:12px;color:var(--tx3);margin-top:4px}
+.tag{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;border:1px solid transparent}
+.tag.ok{background:var(--okbg);color:var(--okfg);border-color:var(--okfg)}
+.tag.w{background:var(--wbg);color:var(--wfg);border-color:var(--wfg)}
+.tag.d{background:var(--dbg);color:var(--dfg);border-color:var(--dfg)}
+.tag.n{background:var(--bg);color:var(--tx3);border-color:var(--line2)}
+.est{color:var(--tx3)}
+
+/* ---------- טבלאות ---------- */
+.tblwrap{overflow-x:auto;margin:0 -2px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:12px;color:var(--tx2);font-weight:700}
+td.num,th.num{direction:ltr;text-align:left;font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:0}
+td a{color:var(--tx);text-decoration:none;border-bottom:1px dotted var(--tx3)}
+.muted{color:var(--tx3);font-size:13px}
+.empty{color:var(--tx2);font-size:13.5px;padding:8px 0}
+
+/* ---------- גרפים ---------- */
+.chart{width:100%;height:auto;display:block;margin-top:6px}
+.chart text{font-family:var(--font);fill:var(--tx2);font-size:11px}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .ref{stroke:var(--tx3);stroke-width:1;stroke-dasharray:3 4}
+.chart .reft{fill:var(--tx3);font-size:10px}
+.chart .ln{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.chart .bar{fill:var(--down)}
+.chart .ms{fill:none;stroke:var(--brand);stroke-width:2}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 0}
+.legend button{font:inherit;font-size:12.5px;min-height:34px;padding:0 11px;border-radius:999px;border:1px solid var(--line2);background:var(--bg);color:var(--tx2);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.legend button i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.legend button[aria-pressed="false"]{opacity:.45}
+.list{margin:0;padding:0;list-style:none}
+.list li{padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px;display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}
+.list li:last-child{border-bottom:0}
+.list .when{color:var(--tx3);font-size:12px;direction:ltr}
+.phone a{color:var(--brand);font-weight:700;text-decoration:none;direction:ltr;unicode-bidi:isolate}
+.items{white-space:normal;max-width:360px;color:var(--tx2);font-size:12.5px;display:inline-block}
+td.wrap{white-space:normal}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hdr">
+    <div class="owlbrand">
+      <svg class="owllogo" viewBox="0 5 48 39" aria-label="owl">
+        <g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+          <circle cx="16.5" cy="20" r="7.5"/><circle cx="31.5" cy="20" r="7.5"/>
+          <path d="M11 13.2 L8.6 6.5"/><path d="M37 13.2 L39.4 6.5"/>
+          <path d="M16.5 42.5 L16.5 38.5"/><path d="M24 42.5 L24 36"/>
+          <path d="M31.5 42.5 L31.5 32.5"/></g>
+        <circle class="owleye" cx="16.5" cy="20" r="2.6"/>
+        <circle class="owleye" cx="31.5" cy="20" r="2.6"/>
+        <path d="M24 28 L26.4 32 L21.6 32 Z" fill="currentColor"/>
+      </svg><span class="owlword">owl</span>
+    </div>
+    <div class="brandcol"><a class="out" href="/logout">יציאה</a></div>
+  </div>
+
+  <div class="owlbar">
+    <button type="button" class="owlham" id="owlham" aria-label="תפריט">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 7h17"/><path d="M3.5 12h17"/><path d="M3.5 17h17"/></svg>
+    </button>
+    <div class="owlnow"><span class="v">נטישות בקופה</span></div>
+    <div class="owlacts">
+      <button type="button" class="owlxls" id="explbtn" aria-pressed="false" title="הסבר פשוט">הסברים</button>
+      <button type="button" class="owlxls" id="refbtn" title="רענון">רענון</button>
+    </div>
+  </div>
+
+  <h1>נטישות בקופה</h1>
+  <p class="sub" id="sub">מי הגיע לתשלום באתר ולא שילם. טוען…</p>
+
+  <section class="card">
+    <div class="ctlrow">
+      <div class="seg" id="segD">
+        <button type="button" data-d="1" aria-pressed="false">אתמול והיום</button>
+        <button type="button" data-d="7" aria-pressed="false">7 ימים</button>
+        <button type="button" data-d="30" aria-pressed="true">30 יום</button>
+        <button type="button" data-d="90" aria-pressed="false">90 יום</button>
+      </div>
+    </div>
+    <p class="explain">"נטישה" = הזמנה שנוצרה באתר והגיעה לשלב התשלום, אבל לא שולמה: התשלום נכשל, או שהלקוח סגר את הדף, או שההזמנה בוטלה לבד. ביטול ידני של הצוות מוצג בנפרד ולא נספר. לקוח שהשלים הזמנה אחרת תוך שבוע יורד מהרשימה. הנתונים מווקומרס (האתר), לא מפריוריטי.</p>
+  </section>
+
+  <section class="card">
+    <h2>שורה תחתונה</h2>
+    <div class="verdict" id="verdict"></div>
+    <p class="explain">השוואה של אותה תקופה: כמה כסף נכנס דרך האתר, מול כמה נעצר בקופה. הסכום בנטישות הוא הסכום שהלקוח ראה בקופה, כולל מע"מ ומשלוח.</p>
+  </section>
+
+  <section class="card">
+    <h2>למי להתקשר</h2>
+    <div id="rows"></div>
+    <p class="explain">ממוין מהחדש לישן. "גיל" = כמה זמן עבר מאז. הטלפון לחיץ מהנייד. סימון "טופל" אחרי שיחה: בשלב הבא, אם תרצה.</p>
+  </section>
+
+</div>
+<div class="owlov" id="owlov">
+  <div class="owlsheet" role="dialog" aria-modal="true" aria-label="תפריט">
+    <div class="owlhead"><b>תפריט</b>
+      <button type="button" class="owlx" id="owlx" aria-label="סגירה">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div id="owllist"></div>
+  </div>
+</div>
+
+<script>
+/* ---------- תפריט OWL ---------- */
+window.OWL_NAV = [
+  ['g', 'מכירות'],
+  ['v', 'agents',    'סוכנים'],
+  ['v', 'branches',  'סניפים'],
+  ['v', 'hours',     'שעות חזקות וחלשות'],
+  ['v', 'products',  'מוצרים'],
+  ['g', 'כספים ושירות'],
+  ['v', 'cash',      'מזומן'],
+  ['v', 'collect',   'מקדמות'],
+  ['v', 'service',   'שירות'],
+  ['v', 'pctrl',     'בקרת מחירים', 'profit'],
+  ['g', 'אנליטיקה'],
+  ['v', 'site',      'מכירות האתר'],
+  ['v', 'branchsrc', 'מקורות הגעה'],
+  ['v', 'dim',       'פילוח'],
+  ['v', 'mdown',     'מוריד כסף', 'profit'],
+  ['v', 'cancels',   'אחוז ביטולים'],
+  ['v', 'comp',      'פיצויים'],
+  ['v', 'dow',       'ימים חזקים בשבוע'],
+  ['v', 'ins',       'תובנות'],
+  ['g', 'ניתוח'],
+  ['a', '/agent-report', 'ניתוח ביצועי נציגים וסניפים'],
+  ['a', '/conversion',   'יחס המרה'],
+  ['g', 'האתר'],
+  ['a', '/site',         'בריאות האתר'],
+  ['a', '/abandoned',    'נטישות בקופה'],
+  ['g', 'מערכת ניטור ואנליטיקת פרסום', 'profit'],
+  ['a', '/traffic',      'תמהיל מקורות התנועה', 'profit']
+];
+window.OWL_HERE = '/abandoned';
+(function(){
+  var np = (window.OWL_ROLE || {}).noprofit, h = '', pend = null;
+  window.OWL_NAV.forEach(function(it){
+    if (it[it.length - 1] === 'profit' && np) return;
+    if (it[0] === 'g') { pend = it[1]; return; }
+    if (pend) { h += '<div class="owlg">' + pend + '</div>'; pend = null; }
+    var href = it[0] === 'a' ? it[1] : '/?v=' + it[1];
+    h += href === window.OWL_HERE
+      ? '<a href="' + href + '" class="owlcur" aria-current="page">' + it[2] + '</a>'
+      : '<a href="' + href + '">' + it[2] + '</a>';
+  });
+  document.getElementById('owllist').innerHTML = h;
+  var ov = document.getElementById('owlov');
+  function open(){ ov.classList.add('on'); document.body.style.overflow = 'hidden'; }
+  function close(){ ov.classList.remove('on'); document.body.style.overflow = ''; }
+  document.getElementById('owlham').addEventListener('click', open);
+  document.getElementById('owlx').addEventListener('click', close);
+  ov.addEventListener('click', function(e){ if (e.target === ov) close(); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && ov.classList.contains('on')) close(); });
+})();
+
+/* ---------- הנתונים ---------- */
+var $ = function(id){ return document.getElementById(id); };
+var state = { d: 30 };
+var NF = new Intl.NumberFormat('he-IL');
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function money(v){ return v == null ? '—' : NF.format(Math.round(+v)) + ' ₪'; }
+function age(h){ return h == null ? '' : h < 24 ? h + ' שע\'' : Math.round(h / 24) + ' ימים'; }
+
+function load(){
+  $('sub').textContent = 'מי הגיע לתשלום באתר ולא שילם. טוען…';
+  fetch('/api/abandoned?days=' + state.d, { cache: 'no-store' })
+    .then(function(r){ if (r.status === 401) { location.href = '/login'; throw new Error('auth'); } return r.json(); })
+    .then(render)
+    .catch(function(e){ $('sub').textContent = 'לא הצלחתי לטעון. ' + e; });
+}
+function render(d){
+  var sm = Array.isArray(d.summary) ? d.summary : [], rows = Array.isArray(d.rows) ? d.rows : [];
+  var paid = sm.filter(function(r){ return r.kind === 'שולמו'; })[0] || { n: 0, total: 0 };
+  var ab = sm.filter(function(r){ return r.kind === 'נטישה'; })[0] || { n: 0, total: 0 };
+  var cn = sm.filter(function(r){ return r.kind === 'ביטול'; })[0] || { n: 0, total: 0 };
+  $('sub').textContent = 'מי הגיע לתשלום באתר ולא שילם · ' + (state.d === 1 ? 'אתמול והיום' : state.d + ' הימים האחרונים') + ' · מתעדכן כל 15 דקות';
+  var h = '';
+  h += '<div class="vbox"><div class="k">נטישות בקופה</div><div class="v" style="color:var(--dfg)">' + ab.n + '</div><div class="m">' + money(ab.total) + '</div></div>';
+  h += '<div class="vbox"><div class="k">שולמו באתר</div><div class="v">' + paid.n + '</div><div class="m">' + money(paid.total) + '</div></div>';
+  h += '<div class="vbox"><div class="k">יחס נטישה בקופה</div><div class="v">' + ((+ab.n + +paid.n) ? Math.round(100 * ab.n / (+ab.n + +paid.n)) + '%' : '—') + '</div><div class="m">מתוך מי שהגיע לתשלום</div></div>';
+  h += '<div class="vbox"><div class="k">ביטולים ידניים</div><div class="v">' + cn.n + '</div><div class="m">' + money(cn.total) + ' · לא נספרים</div></div>';
+  $('verdict').innerHTML = h;
+  if (!rows.length) { $('rows').innerHTML = '<p class="empty">אין נטישות בתקופה.</p>'; return; }
+  var t = '<div class="tblwrap"><table><thead><tr><th>מתי</th><th>גיל</th><th>שם</th><th>טלפון</th><th>עיר</th><th class="num">סכום</th><th>מה</th><th>מצב</th><th>הזמנה</th></tr></thead><tbody>';
+  rows.forEach(function(r){
+    var tel = r.phone ? r.phone.replace(/[^\d+]/g, '') : '';
+    t += '<tr' + (r.kind === 'ביטול' ? ' style="opacity:.55"' : '') + '><td>' + esc(r.date_il) + '</td><td class="muted">' + age(r.age_hours) + '</td><td>' + esc(r.name || '—') + '</td><td class="phone">' + (tel ? '<a href="tel:' + esc(tel) + '">' + esc(r.phone) + '</a>' : '—') + '</td><td>' + esc(r.city || '') + '</td><td class="num"><b>' + money(r.total) + '</b></td><td class="wrap"><span class="items">' + esc(r.items || '') + '</span></td><td><span class="tag ' + (r.kind === 'ביטול' ? 'n' : r.status === 'התשלום נכשל' ? 'd' : 'w') + '">' + esc(r.status) + '</span></td><td class="muted">#' + esc(r.number) + (r.email ? '<br><span style="direction:ltr;unicode-bidi:isolate;font-size:11.5px">' + esc(r.email) + '</span>' : '') + '</td></tr>';
+  });
+  $('rows').innerHTML = t + '</tbody></table></div>';
+}
+Array.prototype.forEach.call(document.querySelectorAll('#segD button'), function(b){ b.addEventListener('click', function(){ state.d = +b.getAttribute('data-d'); Array.prototype.forEach.call(document.querySelectorAll('#segD button'), function(o){ o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); }); load(); }); });
+$('refbtn').addEventListener('click', load);
+$('explbtn').addEventListener('click', function(){ var on = document.body.classList.toggle('explain'); $('explbtn').setAttribute('aria-pressed', on ? 'true' : 'false'); });
+load();
+</script>
+</body>
+</html>

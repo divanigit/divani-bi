@@ -441,6 +441,7 @@ def api_site(request: Request, h: int = 24, strategy: str = "mobile"):
         "alerts_open": ("bi_alerts_open", {}),
         "alerts_recent": ("bi_alerts_recent", {"p_days": max(1, h // 24)}),
         "health": ("bi_health", {}),
+        "product_issues": ("bi_web_product_issues", {}),
     }
     for key, (fn, params) in parts.items():
         try:
@@ -449,7 +450,44 @@ def api_site(request: Request, h: int = 24, strategy: str = "mobile"):
             out[key] = {"error": str(e)}
     if isinstance(out.get("health"), list):
         out["health"] = [r for r in out["health"] if r.get("flow_group") == "אתר האינטרנט"]
+    try:
+        out["cert"] = (sb_select("bi_site_cert?select=host,issuer,not_after,days_left,ok,err,checked_at&host=eq.vdivani.co.il") or [None])[0]
+    except Exception as e:
+        out["cert"] = {"error": str(e)}
     return JSONResponse(out)
+
+
+@app.get("/abandoned")
+def abandoned_page(request: Request):
+    """נטישות בקופה — מי הגיע לתשלום ולא שילם. רשימה לנציג שמתקשר. מאחורי סיסמה."""
+    if not _logged_in(request):
+        return RedirectResponse("/login", status_code=303)
+    try:
+        with open(os.path.join(HERE, "checkout_abandon.html"), encoding="utf-8") as f:
+            html = f.read()
+    except Exception:
+        return HTMLResponse("<div dir='rtl' style='font-family:sans-serif;padding:40px'>"
+                            "המסך לא נמצא.</div>", status_code=404)
+    role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s};</script>' % (
+        "true" if _is_noprofit(request) else "false",
+        "true" if _is_admin(request) else "false")
+    html = html.replace("</head>", role + chr(10) + "</head>", 1)
+    return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
+
+
+@app.get("/api/abandoned")
+def api_abandoned(request: Request, days: int = 30):
+    """הזמנות אתר שהגיעו לקופה ולא שולמו (failed / pending / cancelled שלא בוטלו ידנית),
+    למעט לקוח שהשלים הזמנה אחרת תוך שבוע. סיכום מול מה ששולם באותה תקופה."""
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    days = max(1, min(int(days), 365))
+    try:
+        return JSONResponse({"days": days,
+                             "summary": sb_rpc("bi_web_abandoned_summary", {"p_days": days}) or [],
+                             "rows": sb_rpc("bi_web_abandoned", {"p_days": days}) or []})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=502)
 
 
 # ---------- supabase / priority helpers ----------
@@ -887,6 +925,10 @@ def sync_web_prices():
             "on_sale":       on_sale,
             "in_stock":      bool(p.get("is_in_stock")),
             "currency":      pr.get("currency_code"),
+            # "מוצר שבור" (17.9.26): בלי תמונה / לא ניתן לרכישה נקראים מאותו צילום,
+            # כדי שהבדיקה היומית לא תעלה קריאה נוספת לאתר.
+            "image_count":   len(p.get("images") or []),
+            "purchasable":   bool(p.get("is_purchasable", True)),
         })
     for i in range(0, len(rows), 200):
         sb_upsert("bi_web_prices?on_conflict=snap_date,product_id", rows[i:i + 200])
@@ -1138,6 +1180,69 @@ def _money(x):
         return 0.0
 
 
+_AUTO_CANCEL = re.compile(r"unpaid order cancelled|time limit reached|לא שולמה|הגבלת הזמן|פג תוקף", re.I)
+
+
+def classify_cancelled(auth, limit=20):
+    """Was a cancelled website order abandoned at checkout, or cancelled by a person?
+
+    WooCommerce writes a system note ("Unpaid order cancelled - time limit
+    reached") when nobody paid; a person's cancellation carries a note added
+    by a user. Read once per order (notes_at), at most `limit` orders a cycle.
+    Unknown wording stays 'unknown' with the note text kept, so the rule can be
+    tightened after seeing real notes instead of guessing. Abandonment screen:
+    'unknown' counts as abandonment; only 'manual' is excluded.
+    """
+    todo = sb_select("bi_web_orders?select=wid,number&site=eq.new&status=eq.cancelled"
+                     "&notes_at=is.null&order=date_created.desc&limit=%d" % limit)
+    for o in todo:
+        wid = o.get("wid")
+        if not wid:
+            continue
+        req = urllib.request.Request(f"{WOO_API}/orders/{wid}/notes",
+                                     headers={"Authorization": auth, "User-Agent": "divani-bi/1.0",
+                                              "Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            notes = json.loads(r.read().decode("utf-8")) or []
+        kind, keep = "unknown", []
+        for n in notes:
+            txt = re.sub(r"<[^>]+>", "", n.get("note") or "").strip()
+            if not txt:
+                continue
+            keep.append(txt[:120])
+            if _AUTO_CANCEL.search(txt):
+                kind = "auto"
+            elif n.get("added_by_user") and re.search(r"cancel|בוטל|ביטול", txt, re.I):
+                kind = "manual"
+        sb_upsert("bi_web_orders?on_conflict=site,number",
+                  [{"site": "new", "number": o.get("number"), "cancel_kind": kind,
+                    "cancel_note": " | ".join(keep)[:300] or None,
+                    "notes_at": dt.datetime.now(IL).isoformat()}])
+
+
+def check_site_cert(host="vdivani.co.il"):
+    """תוקף תעודת האבטחה (המנעול) של האתר — פעם ביום. מתחת ל-14 יום = התראה (bi_alerts_check)."""
+    import socket
+    import ssl
+    row = {"host": host, "checked_at": dt.datetime.now(IL).isoformat()}
+    try:
+        ctx = ssl.create_default_context()
+        with socket.create_connection((host, 443), timeout=20) as sock:
+            with ctx.wrap_socket(sock, server_hostname=host) as ss:
+                cert = ss.getpeercert()
+        fmt = "%b %d %H:%M:%S %Y %Z"
+        na = dt.datetime.strptime(cert["notAfter"], fmt).replace(tzinfo=dt.timezone.utc)
+        nb = dt.datetime.strptime(cert["notBefore"], fmt).replace(tzinfo=dt.timezone.utc)
+        issuer = " ".join(v for rdn in cert.get("issuer", ()) for k, v in rdn if k in ("organizationName", "commonName"))
+        row.update({"issuer": issuer[:120], "not_before": nb.isoformat(), "not_after": na.isoformat(),
+                    "days_left": (na - dt.datetime.now(dt.timezone.utc)).days, "ok": True, "err": None})
+    except Exception as e:
+        row.update({"ok": False, "err": repr(e)[:300]})
+    sb_upsert("bi_site_cert?on_conflict=host", [row])
+    print(f"site-cert {host}: {row.get('days_left', '?')} days left, ok={row['ok']}", flush=True)
+    return row
+
+
 def sync_web_orders():
     """Pull recent website orders, then let the database bridge and compare."""
     auth = _woo_auth()
@@ -1161,7 +1266,11 @@ def sync_web_orders():
                       "shipping_total": _money(o.get("shipping_total")),
                       "discount_total": _money(o.get("discount_total")),
                       "payment_method": o.get("payment_method_title"),
-                      "customer_email": (b.get("email") or "").lower().strip() or None})
+                      "customer_email": (b.get("email") or "").lower().strip() or None,
+                      # לרשימת הנטישות בקופה: מי להתקשר אליו. מסך מאחורי סיסמה בלבד.
+                      "billing_name": (" ".join(x for x in [b.get("first_name"), b.get("last_name")] if x) or None),
+                      "billing_phone": (b.get("phone") or "").strip() or None,
+                      "billing_city": (b.get("city") or "").strip() or None})
         for li in (o.get("line_items") or []):
             lines.append({"site": "new", "number": num, "line_id": li.get("id"),
                           "product_id": li.get("product_id"),
@@ -1174,6 +1283,10 @@ def sync_web_orders():
         sb_upsert("bi_web_orders?on_conflict=site,number", heads[i:i + 200])
     for i in range(0, len(lines), 400):
         sb_upsert("bi_web_order_lines?on_conflict=site,number,line_id", lines[i:i + 400])
+    try:
+        classify_cancelled(auth)
+    except Exception as e:
+        print("cancel-notes failed:", repr(e)[:300], flush=True)
 
     linked = agreed = gaps = 0
     try:
@@ -1277,6 +1390,7 @@ def _refresher():
     last_nightly = None
     last_web = None
     last_prices = None
+    last_cert = None
     while True:
         try:
             now = dt.datetime.now(IL)
@@ -1300,6 +1414,13 @@ def _refresher():
             # Priority list price snapshot — the other half of price control, and
             # equally unrecoverable after the fact. Its own guard and its own marker
             # so a failure on one side never costs the other side its day.
+            if now.hour >= WEB_HOUR and _due(last_cert, "site_cert", today):
+                try:
+                    check_site_cert()
+                    last_cert = today
+                    _job_mark("site_cert", today)
+                except Exception as e:
+                    print("site-cert check failed:", repr(e)[:300], flush=True)
             if now.hour >= PRICE_HOUR and _due(last_prices, "part_prices", today):
                 try:
                     sync_part_prices()

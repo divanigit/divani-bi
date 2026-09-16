@@ -216,6 +216,18 @@ td a{color:var(--tx);text-decoration:none;border-bottom:1px dotted var(--tx3)}
   </section>
 
   <section class="card">
+    <h2>מוצרים שבורים באתר</h2>
+    <div id="issuesTbl"></div>
+    <p class="explain">נבדק פעם ביום (04:00) על כל הקטלוג הציבורי: מוצר בלי מחיר, בלי תמונה, לא במלאי, או שאי אפשר להוסיף לסל. "לא במלאי" אינו בהכרח תקלה, אבל לקוח שרואה את זה עוזב.</p>
+  </section>
+
+  <section class="card">
+    <h2>תעודת האבטחה (המנעול)</h2>
+    <div id="certBox"></div>
+    <p class="explain">התעודה היא מה שנותן לאתר את המנעול בדפדפן. כשהיא פגה, הדפדפן מציג ללקוח אזהרה אדומה במקום האתר. נבדקת פעם ביום; התראה מתחת ל-14 יום.</p>
+  </section>
+
+  <section class="card">
     <h2>התראות</h2>
     <div id="alertsList"></div>
     <p class="explain">התראה נפתחת ברגע שבדיקת זמינות אחת נכשלת, כשעמוד עיקרי איטי (מעל 4 שניות) פעמיים ברצף, או כשהמדידה עצמה נעצרה. נסגרת לבד כשהמצב חוזר לתקין, ואז נשלחת הודעת "חזר לתקין". ההודעות מגיעות לטלפון של כל מי שמנוי לערוץ.</p>
@@ -267,6 +279,7 @@ window.OWL_NAV = [
   ['a', '/conversion',   'יחס המרה'],
   ['g', 'האתר'],
   ['a', '/site',         'בריאות האתר'],
+  ['a', '/abandoned',    'נטישות בקופה'],
   ['g', 'מערכת ניטור ואנליטיקת פרסום', 'profit'],
   ['a', '/traffic',      'תמהיל מקורות התנועה', 'profit']
 ];
@@ -397,6 +410,23 @@ function render(d){
     });
     $('slowTbl').innerHTML = s + '</tbody></table></div>';
   } else $('slowTbl').innerHTML = '<p class="empty">הסבב על כל האתר עדיין לא התחיל.</p>';
+
+  /* מוצרים שבורים */
+  var iss = Array.isArray(d.product_issues) ? d.product_issues : [];
+  if (iss.length) {
+    var byI = {}; iss.forEach(function(r){ (byI[r.issue] = byI[r.issue] || []).push(r); });
+    var ih = '<p class="muted">' + Object.keys(byI).map(function(k){ return k + ': ' + byI[k].length; }).join(' · ') + ' · לפי צילום ' + esc(iss[0].snap_date) + '</p>';
+    ih += '<div class="tblwrap"><table><thead><tr><th>מה</th><th>מוצר</th></tr></thead><tbody>';
+    iss.slice(0, 60).forEach(function(r){ ih += '<tr><td><span class="tag ' + (r.issue === 'לא במלאי' ? 'w' : 'd') + '">' + esc(r.issue) + '</span></td><td><a href="' + esc(r.url) + '" target="_blank" rel="noopener">' + esc(r.name) + '</a></td></tr>'; });
+    $('issuesTbl').innerHTML = ih + '</tbody></table></div>' + (iss.length > 60 ? '<p class="muted">מוצגים 60 מתוך ' + iss.length + '.</p>' : '');
+  } else $('issuesTbl').innerHTML = '<p class="empty">' + (d.product_issues && d.product_issues.error ? 'הבדיקה לא זמינה.' : 'לא נמצאו מוצרים שבורים בצילום האחרון.') + '</p>';
+
+  /* תעודה */
+  var ce = d.cert;
+  if (ce && ce.host) {
+    var dl = ce.days_left, cls = !ce.ok ? 'd' : dl < 14 ? 'd' : dl < 30 ? 'w' : 'ok';
+    $('certBox').innerHTML = '<div class="verdict"><div class="vbox"><div class="k">תוקף</div><div class="v">' + (ce.ok ? dl + ' ימים' : 'הבדיקה נכשלה') + '</div><div class="m">' + (ce.ok ? 'עד ' + new Date(ce.not_after).toLocaleDateString('he-IL') + ' · ' + esc(ce.issuer || '') : esc(ce.err || '')) + '</div></div><div class="vbox"><div class="k">מצב</div><div class="v"><span class="tag ' + cls + '">' + (!ce.ok ? 'לא ידוע' : dl < 14 ? 'לחדש עכשיו' : dl < 30 ? 'לשים לב' : 'תקין') + '</span></div><div class="m">נבדק ' + new Date(ce.checked_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + '</div></div></div>';
+  } else $('certBox').innerHTML = '<p class="empty">עדיין לא נבדק (הבדיקה הראשונה ב-04:00).</p>';
 
   /* התראות */
   $('alertsList').innerHTML = recent.length
