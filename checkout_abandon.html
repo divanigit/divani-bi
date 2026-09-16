@@ -68,7 +68,7 @@ body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--font);-webk
 @media (prefers-color-scheme:dark){.owlcur,.owlsheet a.owlcur{background:#e9efeb;color:#0f1512;border-color:#e9efeb}}
 
 /* ---------- פס התראה ---------- */
-.alertbar{display:none;background:var(--dbg);color:var(--dfg);border:1px solid var(--dfg);border-radius:12px;padding:10px 13px;margin:0 0 12px;font-weight:700;font-size:14.5px}
+.alertbar{display:none;background:var(--dbg);color:var(--dfg);border:1px solid var(--dfg);border-radius:12px;padding:10px 13px;margin:0 0 12px;font-weight:700;font-size:14.5px;cursor:pointer}
 .alertbar.on{display:block}
 .alertbar .sub{display:block;font-weight:400;font-size:13px;margin-top:2px}
 
@@ -80,16 +80,22 @@ h2{font-size:16px;font-weight:800;margin:0 0 4px}
 .eyebrow{font-size:12.5px;font-weight:700;color:var(--tx2);margin:0 0 8px;line-height:1.35}
 .ctlrow{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
 .seg{display:inline-flex;border:1px solid var(--line2);border-radius:11px;overflow:hidden;background:var(--bg)}
-.seg button{font:inherit;font-size:14px;font-weight:600;min-height:44px;padding:0 15px;border:0;background:transparent;color:var(--tx2);cursor:pointer}
+.seg button{font:inherit;font-size:14px;font-weight:600;min-height:44px;padding:0 13px;border:0;background:transparent;color:var(--tx2);cursor:pointer}
 .seg button+button{border-inline-start:1px solid var(--line2)}
 .seg button[aria-pressed="true"]{background:#111;color:#fff}
 @media (prefers-color-scheme:dark){.seg button[aria-pressed="true"]{background:#e9efeb;color:#0f1512}}
+.dates{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:9px}
+.dates label{font-size:13px;color:var(--tx2);display:flex;align-items:center;gap:6px}
+.dates input{font:inherit;font-size:14px;min-height:44px;padding:0 10px;border:1px solid var(--line2);border-radius:11px;background:var(--bg);color:var(--tx)}
+.dates .go{font:inherit;font-size:14px;font-weight:700;min-height:44px;padding:0 16px;border:0;border-radius:11px;background:var(--brand);color:#fff;cursor:pointer}
+.hint{font-size:12.5px;color:var(--tx3);margin:6px 0 0}
 .explain{display:none;font-size:13px;color:var(--tx2);background:var(--bg);border:1px dashed var(--line2);border-radius:10px;padding:9px 11px;margin:8px 0 0;line-height:1.6}
 body.explain .explain{display:block}
 
 /* ---------- שורה תחתונה ---------- */
 .verdict{display:flex;flex-wrap:wrap;gap:10px}
-.vbox{flex:1 1 150px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 13px;min-height:84px}
+.vbox{flex:1 1 150px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 13px;min-height:84px;cursor:pointer;text-align:start;font:inherit;color:var(--tx)}
+.vbox:hover{border-color:var(--line2)}
 .vbox .k{font-size:12px;color:var(--tx2);margin:0 0 4px}
 .vbox .v{font-size:26px;font-weight:800;line-height:1.1;letter-spacing:-.01em}
 .vbox .m{font-size:12px;color:var(--tx3);margin-top:4px}
@@ -107,9 +113,12 @@ th,td{text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);white
 th{font-size:12px;color:var(--tx2);font-weight:700}
 td.num,th.num{direction:ltr;text-align:left;font-variant-numeric:tabular-nums}
 tr:last-child td{border-bottom:0}
+tr.rowbtn{cursor:pointer}
+tr.rowbtn:hover td{background:var(--bg)}
 td a{color:var(--tx);text-decoration:none;border-bottom:1px dotted var(--tx3)}
 .muted{color:var(--tx3);font-size:13px}
 .empty{color:var(--tx2);font-size:13.5px;padding:8px 0}
+.more{font-size:12px;color:var(--tx3);margin:6px 0 0}
 
 /* ---------- גרפים ---------- */
 .chart{width:100%;height:auto;display:block;margin-top:6px}
@@ -118,16 +127,32 @@ td a{color:var(--tx);text-decoration:none;border-bottom:1px dotted var(--tx3)}
 .chart .ref{stroke:var(--tx3);stroke-width:1;stroke-dasharray:3 4}
 .chart .reft{fill:var(--tx3);font-size:10px}
 .chart .ln{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
-.chart .bar{fill:var(--down)}
+.chart .bar{fill:var(--down);cursor:pointer}
+.chart .bar:hover{opacity:.75}
 .chart .ms{fill:none;stroke:var(--brand);stroke-width:2}
+.chart .hit{fill:transparent;cursor:pointer}
+.chart .pt{cursor:pointer}
 .legend{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 0}
 .legend button{font:inherit;font-size:12.5px;min-height:34px;padding:0 11px;border-radius:999px;border:1px solid var(--line2);background:var(--bg);color:var(--tx2);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
 .legend button i{width:10px;height:10px;border-radius:50%;display:inline-block}
 .legend button[aria-pressed="false"]{opacity:.45}
 .list{margin:0;padding:0;list-style:none}
 .list li{padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px;display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}
+.list li.rowbtn{cursor:pointer}
 .list li:last-child{border-bottom:0}
 .list .when{color:var(--tx3);font-size:12px;direction:ltr}
+
+/* ---------- חלון העומק (דריל) ---------- */
+.dov{position:fixed;inset:0;background:rgba(10,18,14,.5);z-index:130;display:none}
+.dov.on{display:block}
+.dsheet{position:absolute;inset-inline:0;bottom:0;max-height:88vh;overflow:auto;background:var(--bg);border-radius:18px 18px 0 0;border:1px solid var(--line);border-bottom:0;box-shadow:var(--shadow);padding:14px 14px 28px}
+@media (min-width:720px){.dsheet{inset-inline:auto;left:50%;transform:translateX(-50%);width:720px;bottom:auto;top:6vh;border-radius:18px;border-bottom:1px solid var(--line)}}
+.dhd{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 8px;padding-bottom:9px;border-bottom:1px solid var(--line)}
+.dhd b{font-size:17px}
+.dsum{font-size:14.5px;line-height:1.6;margin:0 0 10px}
+.dsum b{font-weight:800}
+.dwhat{font-size:13px;color:var(--tx2);background:var(--surface);border-radius:10px;padding:9px 11px;margin:0 0 12px;line-height:1.6}
+.dsheet h3{font-size:13.5px;font-weight:800;margin:14px 0 6px;color:var(--tx2)}
 .phone a{color:var(--brand);font-weight:700;text-decoration:none;direction:ltr;unicode-bidi:isolate}
 .items{white-space:normal;max-width:360px;color:var(--tx2);font-size:12.5px;display:inline-block}
 td.wrap{white-space:normal}
@@ -175,18 +200,25 @@ td.wrap{white-space:normal}
         <button type="button" data-d="90" aria-pressed="false">90 יום</button>
       </div>
     </div>
-    <p class="explain">"נטישה" = הזמנה שנוצרה באתר והגיעה לשלב התשלום, אבל לא שולמה: התשלום נכשל, או שהלקוח סגר את הדף, או שההזמנה בוטלה לבד. ביטול ידני של הצוות מוצג בנפרד ולא נספר. לקוח שהשלים הזמנה אחרת תוך שבוע יורד מהרשימה. הנתונים מווקומרס (האתר), לא מפריוריטי.</p>
+    <div class="dates">
+      <label>מתאריך <input type="date" id="dFrom"></label>
+      <label>עד <input type="date" id="dTo"></label>
+      <button type="button" class="go" id="dGo">הצג</button>
+    </div>
+    <p class="hint" id="rangeTxt"></p>
+    <p class="explain">"נטישה" = הזמנה שנוצרה באתר והגיעה לשלב התשלום, אבל לא שולמה: התשלום נכשל, או שהלקוח סגר את הדף, או שההזמנה בוטלה לבד. ביטול ידני של הצוות מוצג בנפרד ולא נספר. לקוח שהשלים הזמנה אחרת תוך שבוע יורד מהרשימה. הזמנות בדיקה של הצוות (מייל של דיוואני) מסוננות. הנתונים מווקומרס (האתר), לא מפריוריטי.</p>
   </section>
 
   <section class="card">
     <h2>שורה תחתונה</h2>
     <div class="verdict" id="verdict"></div>
-    <p class="explain">השוואה של אותה תקופה: כמה כסף נכנס דרך האתר, מול כמה נעצר בקופה. הסכום בנטישות הוא הסכום שהלקוח ראה בקופה, כולל מע"מ ומשלוח.</p>
+    <p class="explain">השוואה של אותה תקופה: כמה כסף נכנס דרך האתר, מול כמה נעצר בקופה. הסכום בנטישות הוא הסכום שהלקוח ראה בקופה, כולל מע"מ ומשלוח. לחיצה על מספר: הרשימה מאחוריו.</p>
   </section>
 
   <section class="card">
     <h2>למי להתקשר</h2>
     <div id="rows"></div>
+    <p class="hint">לחיצה על שורה: ההזמנה לעומק, סיבת הביטול, והזמנות אחרות של אותו לקוח.</p>
     <p class="explain">ממוין מהחדש לישן. "גיל" = כמה זמן עבר מאז. הטלפון לחיץ מהנייד. סימון "טופל" אחרי שיחה: בשלב הבא, אם תרצה.</p>
   </section>
 
@@ -199,6 +231,17 @@ td.wrap{white-space:normal}
       </button>
     </div>
     <div id="owllist"></div>
+  </div>
+</div>
+
+<div class="dov" id="dov">
+  <div class="dsheet" id="dsheet" role="dialog" aria-modal="true" aria-labelledby="dttl">
+    <div class="dhd"><b id="dttl"></b>
+      <button type="button" class="owlx" id="dx" aria-label="סגירה">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div id="dbody"></div>
   </div>
 </div>
 
@@ -257,40 +300,94 @@ window.OWL_HERE = '/abandoned';
 
 /* ---------- הנתונים ---------- */
 var $ = function(id){ return document.getElementById(id); };
-var state = { d: 30 };
+var state = { d: 30, f: '', t: '', seq: 0, rows: [], filter: null };
 var NF = new Intl.NumberFormat('he-IL');
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
 function money(v){ return v == null ? '—' : NF.format(Math.round(+v)) + ' ₪'; }
 function age(h){ return h == null ? '' : h < 24 ? h + ' שע\'' : Math.round(h / 24) + ' ימים'; }
+function qs(){ return state.f ? 'f=' + state.f + '&t=' + state.t : 'days=' + state.d; }
+function periodTxt(){ return state.f ? 'מ-' + state.f.split('-').reverse().join('.') + ' עד ' + state.t.split('-').reverse().join('.') : state.d === 1 ? 'אתמול והיום' : state.d + ' הימים האחרונים'; }
+var STATUS_HE = { completed: 'שולמה והושלמה', processing: 'שולמה, בטיפול', 'phone-order': 'הזמנה טלפונית', cancelled: 'בוטלה', failed: 'התשלום נכשל', pending: 'לא שולמה', 'on-hold': 'ממתינה לתשלום', refunded: 'הוחזר כסף' };
 
 function load(){
+  var seq = ++state.seq;
   $('sub').textContent = 'מי הגיע לתשלום באתר ולא שילם. טוען…';
-  fetch('/api/abandoned?days=' + state.d, { cache: 'no-store' })
+  $('rangeTxt').textContent = 'מוצג: ' + periodTxt();
+  fetch('/api/abandoned?' + qs(), { cache: 'no-store' })
     .then(function(r){ if (r.status === 401) { location.href = '/login'; throw new Error('auth'); } return r.json(); })
-    .then(render)
-    .catch(function(e){ $('sub').textContent = 'לא הצלחתי לטעון. ' + e; });
+    .then(function(d){ if (seq === state.seq) render(d); })
+    .catch(function(e){ if (seq === state.seq) $('sub').textContent = 'לא הצלחתי לטעון. ' + e; });
 }
 function render(d){
   var sm = Array.isArray(d.summary) ? d.summary : [], rows = Array.isArray(d.rows) ? d.rows : [];
+  state.rows = rows;
   var paid = sm.filter(function(r){ return r.kind === 'שולמו'; })[0] || { n: 0, total: 0 };
   var ab = sm.filter(function(r){ return r.kind === 'נטישה'; })[0] || { n: 0, total: 0 };
   var cn = sm.filter(function(r){ return r.kind === 'ביטול'; })[0] || { n: 0, total: 0 };
-  $('sub').textContent = 'מי הגיע לתשלום באתר ולא שילם · ' + (state.d === 1 ? 'אתמול והיום' : state.d + ' הימים האחרונים') + ' · מתעדכן כל 15 דקות';
+  $('sub').textContent = 'מי הגיע לתשלום באתר ולא שילם · ' + periodTxt() + ' · מתעדכן כל 15 דקות';
   var h = '';
-  h += '<div class="vbox"><div class="k">נטישות בקופה</div><div class="v" style="color:var(--dfg)">' + ab.n + '</div><div class="m">' + money(ab.total) + '</div></div>';
-  h += '<div class="vbox"><div class="k">שולמו באתר</div><div class="v">' + paid.n + '</div><div class="m">' + money(paid.total) + '</div></div>';
-  h += '<div class="vbox"><div class="k">יחס נטישה בקופה</div><div class="v">' + ((+ab.n + +paid.n) ? Math.round(100 * ab.n / (+ab.n + +paid.n)) + '%' : '—') + '</div><div class="m">מתוך מי שהגיע לתשלום</div></div>';
-  h += '<div class="vbox"><div class="k">ביטולים ידניים</div><div class="v">' + cn.n + '</div><div class="m">' + money(cn.total) + ' · לא נספרים</div></div>';
+  h += '<button type="button" class="vbox" data-k="נטישה"><div class="k">נטישות בקופה</div><div class="v" style="color:var(--dfg)">' + ab.n + '</div><div class="m">' + money(ab.total) + '</div></button>';
+  h += '<button type="button" class="vbox" data-k="paid"><div class="k">שולמו באתר</div><div class="v">' + paid.n + '</div><div class="m">' + money(paid.total) + '</div></button>';
+  h += '<div class="vbox" style="cursor:default"><div class="k">יחס נטישה בקופה</div><div class="v">' + ((+ab.n + +paid.n) ? Math.round(100 * ab.n / (+ab.n + +paid.n)) + '%' : '—') + '</div><div class="m">מתוך מי שהגיע לתשלום</div></div>';
+  h += '<button type="button" class="vbox" data-k="ביטול"><div class="k">ביטולים ידניים</div><div class="v">' + cn.n + '</div><div class="m">' + money(cn.total) + ' · לא נספרים</div></button>';
   $('verdict').innerHTML = h;
-  if (!rows.length) { $('rows').innerHTML = '<p class="empty">אין נטישות בתקופה.</p>'; return; }
-  var t = '<div class="tblwrap"><table><thead><tr><th>מתי</th><th>גיל</th><th>שם</th><th>טלפון</th><th>עיר</th><th class="num">סכום</th><th>מה</th><th>מצב</th><th>הזמנה</th></tr></thead><tbody>';
+  Array.prototype.forEach.call($('verdict').querySelectorAll('button.vbox'), function(b){ b.addEventListener('click', function(){
+    var k = b.getAttribute('data-k');
+    if (k === 'paid') { openSheet('שולמו באתר', '<p class="dsum"><b>' + paid.n + '</b> הזמנות שולמו באתר ב' + periodTxt() + ', סך <b>' + money(paid.total) + '</b>. הפירוט שלהן נמצא במסך "מכירות האתר" בלוח הראשי.</p>'); return; }
+    state.filter = state.filter === k ? null : k; drawRows();
+  }); });
+  drawRows();
+}
+function drawRows(){
+  var rows = state.filter ? state.rows.filter(function(r){ return r.kind === state.filter; }) : state.rows;
+  if (!rows.length) { $('rows').innerHTML = '<p class="empty">' + (state.filter ? 'אין שורות מסוג "' + state.filter + '" בתקופה.' : 'אין נטישות בתקופה.') + '</p>'; return; }
+  var t = (state.filter ? '<p class="muted">מסונן: ' + esc(state.filter) + ' בלבד. לחיצה חוזרת על המספר מבטלת.</p>' : '') + '<div class="tblwrap"><table><thead><tr><th>מתי</th><th>גיל</th><th>שם</th><th>טלפון</th><th>עיר</th><th class="num">סכום</th><th>מה</th><th>מצב</th><th>הזמנה</th></tr></thead><tbody>';
   rows.forEach(function(r){
     var tel = r.phone ? r.phone.replace(/[^\d+]/g, '') : '';
-    t += '<tr' + (r.kind === 'ביטול' ? ' style="opacity:.55"' : '') + '><td>' + esc(r.date_il) + '</td><td class="muted">' + age(r.age_hours) + '</td><td>' + esc(r.name || '—') + '</td><td class="phone">' + (tel ? '<a href="tel:' + esc(tel) + '">' + esc(r.phone) + '</a>' : '—') + '</td><td>' + esc(r.city || '') + '</td><td class="num"><b>' + money(r.total) + '</b></td><td class="wrap"><span class="items">' + esc(r.items || '') + '</span></td><td><span class="tag ' + (r.kind === 'ביטול' ? 'n' : r.status === 'התשלום נכשל' ? 'd' : 'w') + '">' + esc(r.status) + '</span></td><td class="muted">#' + esc(r.number) + (r.email ? '<br><span style="direction:ltr;unicode-bidi:isolate;font-size:11.5px">' + esc(r.email) + '</span>' : '') + '</td></tr>';
+    t += '<tr class="rowbtn" data-n="' + esc(r.number) + '"' + (r.kind === 'ביטול' ? ' style="opacity:.55"' : '') + '><td>' + esc(r.date_il) + '</td><td class="muted">' + age(r.age_hours) + '</td><td>' + esc(r.name || '—') + '</td><td class="phone">' + (tel ? '<a href="tel:' + esc(tel) + '" onclick="event.stopPropagation()">' + esc(r.phone) + '</a>' : '—') + '</td><td>' + esc(r.city || '') + '</td><td class="num"><b>' + money(r.total) + '</b></td><td class="wrap"><span class="items">' + esc(r.items || '') + '</span></td><td><span class="tag ' + (r.kind === 'ביטול' ? 'n' : r.status === 'התשלום נכשל' ? 'd' : 'w') + '">' + esc(r.status) + '</span></td><td class="muted">#' + esc(r.number) + (r.email ? '<br><span style="direction:ltr;unicode-bidi:isolate;font-size:11.5px">' + esc(r.email) + '</span>' : '') + '</td></tr>';
   });
   $('rows').innerHTML = t + '</tbody></table></div>';
+  Array.prototype.forEach.call($('rows').querySelectorAll('tr.rowbtn'), function(tr){ tr.addEventListener('click', function(){ drillOrder(tr.getAttribute('data-n')); }); });
 }
-Array.prototype.forEach.call(document.querySelectorAll('#segD button'), function(b){ b.addEventListener('click', function(){ state.d = +b.getAttribute('data-d'); Array.prototype.forEach.call(document.querySelectorAll('#segD button'), function(o){ o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); }); load(); }); });
+
+/* ---------- חלון העומק ---------- */
+var dov = $('dov');
+function openSheet(title, html){ $('dttl').textContent = title; $('dbody').innerHTML = html; dov.classList.add('on'); document.body.style.overflow = 'hidden'; $('dsheet').scrollTo(0, 0); }
+function closeSheet(){ dov.classList.remove('on'); document.body.style.overflow = ''; }
+$('dx').addEventListener('click', closeSheet);
+dov.addEventListener('click', function(e){ if (e.target === dov) closeSheet(); });
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && dov.classList.contains('on')) closeSheet(); });
+function drillOrder(number){
+  openSheet('הזמנה #' + number, '<p class="empty">טוען…</p>');
+  fetch('/api/abandoned/order?number=' + encodeURIComponent(number), { cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(d){
+    var o = (d.rows || [])[0]; if (!o) { $('dbody').innerHTML = '<p class="empty">לא נמצאה.</p>'; return; }
+    var why = o.status === 'failed' ? 'התשלום נכשל בחברת האשראי או בסליקה. הלקוח ניסה לשלם ולא הצליח: זה הלקוח הכי חם ברשימה.'
+      : o.status === 'pending' ? 'ההזמנה נוצרה ולא שולמה. הלקוח הגיע לתשלום ועצר.'
+      : o.status === 'on-hold' ? 'ההזמנה ממתינה לתשלום (למשל העברה בנקאית שעוד לא הגיעה).'
+      : o.cancel_kind === 'auto' ? 'ההזמנה בוטלה לבד כי לא שולמה בזמן. הלקוח הגיע לקופה ולא סיים.'
+      : o.cancel_kind === 'manual' ? 'מישהו מהצוות ביטל את ההזמנה ידנית. לא נטישה.'
+      : 'ההזמנה בוטלה. עדיין לא ידוע אם לבד או ידנית (הסיווג רץ ברקע כל רבע שעה).';
+    var h = '<p class="dsum"><b>' + esc(o.name || 'ללא שם') + '</b>' + (o.city ? ', ' + esc(o.city) : '') + ' · ' + esc(o.date_il) + '<br>סכום בקופה: <b>' + money(o.total) + '</b>' + (o.shipping ? ' (מזה משלוח ' + money(o.shipping) + ')' : '') + (o.discount ? ', הנחה ' + money(o.discount) : '') + '<br>מצב: <b>' + esc(STATUS_HE[o.status] || o.status) + '</b>' + (o.payment ? ' · אמצעי תשלום: ' + esc(o.payment) : '') + '</p>';
+    h += '<div class="dwhat">' + why + (o.cancel_note ? '<br><span class="muted">מהערות ההזמנה: ' + esc(o.cancel_note) + '</span>' : '') + '</div>';
+    h += '<p class="dsum">' + (o.phone ? '<a class="phone" href="tel:' + esc(o.phone.replace(/[^\d+]/g, '')) + '"><b>' + esc(o.phone) + '</b></a>' : 'אין טלפון') + (o.email ? ' · <span style="direction:ltr;unicode-bidi:isolate">' + esc(o.email) + '</span>' : '') + '</p>';
+    if (o.lines && o.lines.length) h += '<h3>מה היה בסל</h3><div class="tblwrap"><table><thead><tr><th>פריט</th><th class="num">כמות</th><th class="num">סכום</th></tr></thead><tbody>' + o.lines.map(function(l){ return '<tr><td style="white-space:normal">' + esc(l.name) + (l.sku ? ' <span class="muted">' + esc(l.sku) + '</span>' : '') + '</td><td class="num">' + (+l.qty || 1) + '</td><td class="num">' + money(l.total) + '</td></tr>'; }).join('') + '</tbody></table></div>';
+    if (o.history && o.history.length) h += '<h3>הזמנות אחרות של אותו לקוח</h3><ul class="list">' + o.history.map(function(x){ var paid = ['completed', 'processing', 'phone-order'].indexOf(x.status) >= 0; return '<li><span class="tag ' + (paid ? 'ok' : 'n') + '">' + esc(STATUS_HE[x.status] || x.status) + '</span>#' + esc(x.number) + ' · ' + money(x.total) + '<span class="when">' + esc(x.date) + '</span></li>'; }).join('') + '</ul>';
+    else h += '<p class="muted">לקוח חדש: אין הזמנות אחרות באתר עם המייל הזה.</p>';
+    h += '<div class="dwhat">מה לומר בשיחה: "ראינו שהתחלת הזמנה של ' + esc((o.lines && o.lines[0] && o.lines[0].name) || 'מוצר') + ' ולא הסתיים התשלום. רוצה שנעזור לסיים, או שיש שאלה על המוצר?"</div>';
+    $('dbody').innerHTML = h;
+  }).catch(function(e){ $('dbody').innerHTML = '<p class="empty">לא הצלחתי לטעון. ' + esc(e) + '</p>'; });
+}
+
+/* ---------- פקדים ---------- */
+Array.prototype.forEach.call(document.querySelectorAll('#segD button'), function(b){ b.addEventListener('click', function(){ state.d = +b.getAttribute('data-d'); state.f = ''; state.t = ''; $('dFrom').value = ''; $('dTo').value = ''; Array.prototype.forEach.call(document.querySelectorAll('#segD button'), function(o){ o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); }); load(); }); });
+$('dGo').addEventListener('click', function(){
+  var f = $('dFrom').value, t = $('dTo').value || new Date().toISOString().slice(0, 10);
+  if (!f) { $('dFrom').focus(); return; }
+  if (t < f) { var x = f; f = t; t = x; }
+  state.f = f; state.t = t; $('dTo').value = t;
+  Array.prototype.forEach.call(document.querySelectorAll('#segD button'), function(o){ o.setAttribute('aria-pressed', 'false'); });
+  load();
+});
 $('refbtn').addEventListener('click', load);
 $('explbtn').addEventListener('click', function(){ var on = document.body.classList.toggle('explain'); $('explbtn').setAttribute('aria-pressed', on ? 'true' : 'false'); });
 load();

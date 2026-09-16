@@ -68,7 +68,7 @@ body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--font);-webk
 @media (prefers-color-scheme:dark){.owlcur,.owlsheet a.owlcur{background:#e9efeb;color:#0f1512;border-color:#e9efeb}}
 
 /* ---------- פס התראה ---------- */
-.alertbar{display:none;background:var(--dbg);color:var(--dfg);border:1px solid var(--dfg);border-radius:12px;padding:10px 13px;margin:0 0 12px;font-weight:700;font-size:14.5px}
+.alertbar{display:none;background:var(--dbg);color:var(--dfg);border:1px solid var(--dfg);border-radius:12px;padding:10px 13px;margin:0 0 12px;font-weight:700;font-size:14.5px;cursor:pointer}
 .alertbar.on{display:block}
 .alertbar .sub{display:block;font-weight:400;font-size:13px;margin-top:2px}
 
@@ -80,16 +80,22 @@ h2{font-size:16px;font-weight:800;margin:0 0 4px}
 .eyebrow{font-size:12.5px;font-weight:700;color:var(--tx2);margin:0 0 8px;line-height:1.35}
 .ctlrow{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
 .seg{display:inline-flex;border:1px solid var(--line2);border-radius:11px;overflow:hidden;background:var(--bg)}
-.seg button{font:inherit;font-size:14px;font-weight:600;min-height:44px;padding:0 15px;border:0;background:transparent;color:var(--tx2);cursor:pointer}
+.seg button{font:inherit;font-size:14px;font-weight:600;min-height:44px;padding:0 13px;border:0;background:transparent;color:var(--tx2);cursor:pointer}
 .seg button+button{border-inline-start:1px solid var(--line2)}
 .seg button[aria-pressed="true"]{background:#111;color:#fff}
 @media (prefers-color-scheme:dark){.seg button[aria-pressed="true"]{background:#e9efeb;color:#0f1512}}
+.dates{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:9px}
+.dates label{font-size:13px;color:var(--tx2);display:flex;align-items:center;gap:6px}
+.dates input{font:inherit;font-size:14px;min-height:44px;padding:0 10px;border:1px solid var(--line2);border-radius:11px;background:var(--bg);color:var(--tx)}
+.dates .go{font:inherit;font-size:14px;font-weight:700;min-height:44px;padding:0 16px;border:0;border-radius:11px;background:var(--brand);color:#fff;cursor:pointer}
+.hint{font-size:12.5px;color:var(--tx3);margin:6px 0 0}
 .explain{display:none;font-size:13px;color:var(--tx2);background:var(--bg);border:1px dashed var(--line2);border-radius:10px;padding:9px 11px;margin:8px 0 0;line-height:1.6}
 body.explain .explain{display:block}
 
 /* ---------- שורה תחתונה ---------- */
 .verdict{display:flex;flex-wrap:wrap;gap:10px}
-.vbox{flex:1 1 150px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 13px;min-height:84px}
+.vbox{flex:1 1 150px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 13px;min-height:84px;cursor:pointer;text-align:start;font:inherit;color:var(--tx)}
+.vbox:hover{border-color:var(--line2)}
 .vbox .k{font-size:12px;color:var(--tx2);margin:0 0 4px}
 .vbox .v{font-size:26px;font-weight:800;line-height:1.1;letter-spacing:-.01em}
 .vbox .m{font-size:12px;color:var(--tx3);margin-top:4px}
@@ -107,9 +113,12 @@ th,td{text-align:right;padding:8px 6px;border-bottom:1px solid var(--line);white
 th{font-size:12px;color:var(--tx2);font-weight:700}
 td.num,th.num{direction:ltr;text-align:left;font-variant-numeric:tabular-nums}
 tr:last-child td{border-bottom:0}
+tr.rowbtn{cursor:pointer}
+tr.rowbtn:hover td{background:var(--bg)}
 td a{color:var(--tx);text-decoration:none;border-bottom:1px dotted var(--tx3)}
 .muted{color:var(--tx3);font-size:13px}
 .empty{color:var(--tx2);font-size:13.5px;padding:8px 0}
+.more{font-size:12px;color:var(--tx3);margin:6px 0 0}
 
 /* ---------- גרפים ---------- */
 .chart{width:100%;height:auto;display:block;margin-top:6px}
@@ -118,16 +127,32 @@ td a{color:var(--tx);text-decoration:none;border-bottom:1px dotted var(--tx3)}
 .chart .ref{stroke:var(--tx3);stroke-width:1;stroke-dasharray:3 4}
 .chart .reft{fill:var(--tx3);font-size:10px}
 .chart .ln{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
-.chart .bar{fill:var(--down)}
+.chart .bar{fill:var(--down);cursor:pointer}
+.chart .bar:hover{opacity:.75}
 .chart .ms{fill:none;stroke:var(--brand);stroke-width:2}
+.chart .hit{fill:transparent;cursor:pointer}
+.chart .pt{cursor:pointer}
 .legend{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 0}
 .legend button{font:inherit;font-size:12.5px;min-height:34px;padding:0 11px;border-radius:999px;border:1px solid var(--line2);background:var(--bg);color:var(--tx2);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
 .legend button i{width:10px;height:10px;border-radius:50%;display:inline-block}
 .legend button[aria-pressed="false"]{opacity:.45}
 .list{margin:0;padding:0;list-style:none}
 .list li{padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px;display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}
+.list li.rowbtn{cursor:pointer}
 .list li:last-child{border-bottom:0}
 .list .when{color:var(--tx3);font-size:12px;direction:ltr}
+
+/* ---------- חלון העומק (דריל) ---------- */
+.dov{position:fixed;inset:0;background:rgba(10,18,14,.5);z-index:130;display:none}
+.dov.on{display:block}
+.dsheet{position:absolute;inset-inline:0;bottom:0;max-height:88vh;overflow:auto;background:var(--bg);border-radius:18px 18px 0 0;border:1px solid var(--line);border-bottom:0;box-shadow:var(--shadow);padding:14px 14px 28px}
+@media (min-width:720px){.dsheet{inset-inline:auto;left:50%;transform:translateX(-50%);width:720px;bottom:auto;top:6vh;border-radius:18px;border-bottom:1px solid var(--line)}}
+.dhd{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 8px;padding-bottom:9px;border-bottom:1px solid var(--line)}
+.dhd b{font-size:17px}
+.dsum{font-size:14.5px;line-height:1.6;margin:0 0 10px}
+.dsum b{font-weight:800}
+.dwhat{font-size:13px;color:var(--tx2);background:var(--surface);border-radius:10px;padding:9px 11px;margin:0 0 12px;line-height:1.6}
+.dsheet h3{font-size:13.5px;font-weight:800;margin:14px 0 6px;color:var(--tx2)}
 </style>
 </head>
 <body>
@@ -160,7 +185,7 @@ td a{color:var(--tx);text-decoration:none;border-bottom:1px dotted var(--tx3)}
     </div>
   </div>
 
-  <div class="alertbar" id="alertbar"></div>
+  <div class="alertbar" id="alertbar" title="לחיצה: פרטים"></div>
 
   <h1>בריאות האתר</h1>
   <p class="sub" id="sub">vdivani.co.il · טוען…</p>
@@ -178,13 +203,19 @@ td a{color:var(--tx);text-decoration:none;border-bottom:1px dotted var(--tx3)}
         <button type="button" data-s="desktop" aria-pressed="false">מחשב</button>
       </div>
     </div>
-    <p class="explain">התקופה קובעת את כל המסך. "טלפון" ו"מחשב" משנים רק את מדדי המהירות — הזמינות זהה לשניהם. רוב הגולשים באתר מגיעים מטלפון, וגם גוגל מדרגת לפי הטלפון.</p>
+    <div class="dates">
+      <label>מתאריך <input type="date" id="dFrom"></label>
+      <label>עד <input type="date" id="dTo"></label>
+      <button type="button" class="go" id="dGo">הצג</button>
+    </div>
+    <p class="hint" id="rangeTxt"></p>
+    <p class="explain">התקופה קובעת את כל המסך. "טלפון" ו"מחשב" משנים רק את מדדי המהירות; הזמינות זהה לשניהם. כל מספר, שורה ונקודה בגרף לחיצים: לחיצה פותחת את הפירוט מאחוריהם.</p>
   </section>
 
   <section class="card">
     <h2>שורה תחתונה</h2>
     <div class="verdict" id="verdict"></div>
-    <p class="explain">"מהירות": כמה זמן עד שהתוכן העיקרי בעמוד הבית מוצג בטלפון (מדד שנקרא LCP). עד 2 שניות: מצוין. עד 2.5: מהיר (הסף של גוגל). עד 4: בינוני. מעל 4: איטי. "זמינות" = כמה מהבדיקות (כל דקה, 4 עמודים) ענו תקין.</p>
+    <p class="explain">"מהירות" = כמה זמן עד שהתוכן העיקרי בעמוד הבית מוצג בטלפון. עד 2 שניות: מצוין. עד 2.5: מהיר (הסף של גוגל). עד 4: בינוני. מעל 4: איטי. "זמינות" = כמה מהבדיקות (כל דקה, 4 עמודים) ענו תקין.</p>
   </section>
 
   <section class="card">
@@ -192,27 +223,29 @@ td a{color:var(--tx);text-decoration:none;border-bottom:1px dotted var(--tx3)}
     <div id="availTbl"></div>
     <div id="outages"></div>
     <div id="availChart"></div>
-    <p class="explain">כל דקה נבדקים 4 עמודים. "נפילה" = 3 דקות רצופות שבהן אף עמוד לא ענה. הגרף: עמודות אדומות = בדיקות שנכשלו; קו ירוק = זמן תגובת השרת החציוני. הבודק הוא לקוח בודד מהענן: הוא רואה שהשרת עונה, לא כמה מהר האתר נטען אצל לקוח.</p>
+    <p class="hint">לחיצה על שורה: הכשלים של העמוד. לחיצה על עמודה אדומה: הכשלים באותה שעה/יום. לחיצה על הקו הירוק: זמן התגובה לפי עמוד.</p>
+    <p class="explain">כל דקה נבדקים 4 עמודים. "נפילה" = 3 דקות רצופות שבהן אף עמוד לא ענה. בגרף: עמודות אדומות = בדיקות שנכשלו; קו ירוק = זמן תגובת השרת החציוני. הבודק הוא לקוח בודד מהענן: הוא רואה שהשרת עונה, לא כמה מהר האתר נטען אצל לקוח.</p>
   </section>
 
   <section class="card">
     <h2>מהירות לאורך זמן</h2>
     <div class="legend" id="legend"></div>
     <div id="speedChart"></div>
+    <p class="hint" id="speedHint" hidden>לחיצה על נקודה: המדידות של אותו עמוד באותה שעה/יום, ומה האט אותו.</p>
     <p class="explain">כל נקודה = חציון המדידות באותה שעה (או יום, בתקופות ארוכות) של הזמן עד הצגת התוכן העיקרי, בשניות. הקווים המקווקווים: 2.5 = הסף של גוגל ל"מהיר", 4 = מכאן "איטי". המדידה מדמה טלפון ממוצע ברשת סלולרית איטית, ולכן קשוחה מהמציאות אצל רוב הלקוחות. היא נועדה לראות מגמה, לא לפסוק.</p>
   </section>
 
   <section class="card">
     <h2>העמודים העיקריים</h2>
     <div id="coreTbl"></div>
-    <p class="explain">ציון = ציון הביצועים של גוגל (0–100, 90 ומעלה מצוין). LCP = זמן עד הצגת התוכן העיקרי. p50 = חציון, p95 = הגרוע מבין 95 אחוז מהמדידות. קפיצות = כמה העמוד "קופץ" בזמן טעינה (עד 0.1 טוב). שרת = זמן עד הבייט הראשון. "גולשים אמיתיים" = מה שגוגל מודדת אצל מבקרים אמיתיים בכרום (יש רק כשיש מספיק תנועה).</p>
+    <p class="explain">ציון = ציון הביצועים של גוגל (0–100, 90 ומעלה מצוין). LCP = זמן עד הצגת התוכן העיקרי. p50 = חציון, p95 = הגרוע מבין 95 אחוז מהמדידות. קפיצות = כמה העמוד "קופץ" בזמן טעינה (עד 0.1 טוב). שרת = זמן עד הבייט הראשון. "גולשים אמיתיים" = מה שגוגל מודדת אצל מבקרים אמיתיים בכרום (יש רק כשיש מספיק תנועה). לחיצה על שורה: כל המדידות ומה מאט את העמוד.</p>
   </section>
 
   <section class="card">
     <h2>העמודים הכבדים באתר</h2>
     <p class="muted" id="coverage"></p>
     <div id="slowTbl"></div>
-    <p class="explain">כל עמוד באתר (מוצרים, קטגוריות, עמודים) נמדד בסבב: 2 עמודים כל 5 דקות, כל האתר בערך פעם ביום. כאן 10 הכבדים ביותר בתקופה. עמוד כבד כמעט תמיד אומר תמונות גדולות מדי.</p>
+    <p class="explain">כל עמוד באתר (מוצרים, קטגוריות, עמודים) נמדד בסבב: 2 עמודים כל 5 דקות, כל האתר בערך פעם ביום. כאן 10 הכבדים ביותר בתקופה. עמוד כבד כמעט תמיד אומר תמונות גדולות מדי. לחיצה על שורה: מה בדיוק מאט אותו.</p>
   </section>
 
   <section class="card">
@@ -230,13 +263,13 @@ td a{color:var(--tx);text-decoration:none;border-bottom:1px dotted var(--tx3)}
   <section class="card">
     <h2>התראות</h2>
     <div id="alertsList"></div>
-    <p class="explain">התראה נפתחת ברגע שבדיקת זמינות אחת נכשלת, כשעמוד עיקרי איטי (מעל 4 שניות) פעמיים ברצף, או כשהמדידה עצמה נעצרה. נסגרת לבד כשהמצב חוזר לתקין, ואז נשלחת הודעת "חזר לתקין". ההודעות מגיעות לטלפון של כל מי שמנוי לערוץ.</p>
+    <p class="explain">התראה נפתחת ברגע שבדיקת זמינות אחת נכשלת, כשעמוד עיקרי איטי (מעל 4 שניות) פעמיים ברצף, כשהמדידה עצמה נעצרה, או כשתעודת האבטחה עומדת לפוג. נסגרת לבד כשהמצב חוזר לתקין. ההודעות מגיעות לטלפון של כל מי שמנוי לערוץ. לחיצה: מה בדיוק קרה.</p>
   </section>
 
   <section class="card">
     <h2>המדידה עצמה</h2>
     <div id="healthTbl"></div>
-    <p class="explain">אם שורה כאן "שקטה", המספרים למעלה ישנים, לא רעים. קודם מתקנים את המדידה, אחר כך קוראים מספרים.</p>
+    <p class="explain">אם שורה כאן "שקטה", המספרים למעלה ישנים, לא רעים. קודם מתקנים את המדידה, אחר כך קוראים מספרים. לחיצה: מה השורה מודדת ומה עושים.</p>
   </section>
 
 </div>
@@ -249,6 +282,17 @@ td a{color:var(--tx);text-decoration:none;border-bottom:1px dotted var(--tx3)}
       </button>
     </div>
     <div id="owllist"></div>
+  </div>
+</div>
+
+<div class="dov" id="dov">
+  <div class="dsheet" id="dsheet" role="dialog" aria-modal="true" aria-labelledby="dttl">
+    <div class="dhd"><b id="dttl"></b>
+      <button type="button" class="owlx" id="dx" aria-label="סגירה">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div id="dbody"></div>
   </div>
 </div>
 
@@ -305,13 +349,14 @@ window.OWL_HERE = '/site';
   document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && ov.classList.contains('on')) close(); });
 })();
 
-/* ---------- הנתונים ---------- */
+/* ---------- עזרים ---------- */
 var $ = function(id){ return document.getElementById(id); };
-var state = { h: 24, s: 'mobile', hidden: {} };
+var state = { h: 24, f: '', t: '', s: 'mobile', hidden: {}, seq: 0, data: null };
 var COLORS = ['#0d9668', '#4a3aa7', '#c2410c', '#0369a1', '#7c3aed', '#be185d'];
+var NF = new Intl.NumberFormat('he-IL');
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
 function sec(ms){ return ms == null ? '—' : (ms / 1000).toFixed(1); }
-function pct(n, d){ return d ? (100 * n / d).toFixed(2).replace(/\.?0+$/, '') + '%' : '—'; }
+function n(v){ return v == null ? '—' : NF.format(v); }
 function lcpTag(ms){
   if (ms == null) return '<span class="tag n">אין</span>';
   if (ms <= 2000) return '<span class="tag ok">מצוין</span>';
@@ -319,18 +364,51 @@ function lcpTag(ms){
   if (ms <= 4000) return '<span class="tag w">בינוני</span>';
   return '<span class="tag d">איטי</span>';
 }
+function lcpWord(ms){ return ms == null ? 'אין נתונים' : ms <= 2000 ? 'מהיר מצוין' : ms <= 2500 ? 'מהיר' : ms <= 4000 ? 'בינוני' : 'איטי'; }
 function cruxTag(c){
   if (!c) return '<span class="tag n">אין מספיק תנועה</span>';
   return c === 'FAST' ? '<span class="tag ok">מהיר</span>' : c === 'AVERAGE' ? '<span class="tag w">בינוני</span>' : '<span class="tag d">איטי</span>';
 }
 function short(u){ try { var p = decodeURIComponent(new URL(u).pathname); return p.replace(/^\/product-category\//, 'קטגוריה: ').replace(/^\/product\//, 'מוצר: ').replace(/\/$/, '').replace(/-/g, ' ') || 'בית'; } catch (e) { return u; } }
+function qs(){ return state.f ? '&f=' + state.f + '&t=' + state.t : '&h=' + state.h; }
+function periodTxt(){ return state.f ? 'מ-' + state.f.split('-').reverse().join('.') + ' עד ' + state.t.split('-').reverse().join('.') : state.h === 24 ? '24 השעות האחרונות' : state.h / 24 + ' הימים האחרונים'; }
+function bucketTxt(b){ return b.length > 10 ? 'ב-' + b.slice(8, 10) + '.' + b.slice(5, 7) + ' בשעה ' + b.slice(11, 16) : 'ב-' + b.slice(8, 10) + '.' + b.slice(5, 7); }
+/* תרגום "מה מאט את העמוד" (Lighthouse) לעברית פשוטה */
+var OPP = {
+  'render-blocking-resources': 'קבצים שחוסמים את הציור הראשון (סקריפטים וסגנון בראש העמוד)',
+  'unused-css-rules': 'סגנון (CSS) שלא בשימוש נטען בכל זאת',
+  'unused-javascript': 'קוד (JavaScript) שלא בשימוש נטען בכל זאת',
+  'modern-image-formats': 'תמונות בפורמט ישן (JPG/PNG) במקום WebP/AVIF',
+  'uses-optimized-images': 'תמונות לא דחוסות מספיק',
+  'uses-responsive-images': 'תמונות גדולות מדי לגודל שבו הן מוצגות',
+  'offscreen-images': 'תמונות מחוץ למסך נטענות מיד במקום בגלילה',
+  'server-response-time': 'השרת עונה לאט (זמן עד הבייט הראשון)',
+  'uses-text-compression': 'קבצי טקסט נשלחים בלי דחיסה',
+  'uses-rel-preconnect': 'חיבור מוקדם לשרתים חיצוניים חסר',
+  'redirects': 'הפניות (redirect) לפני שהעמוד נטען',
+  'uses-long-cache-ttl': 'קבצים לא נשמרים בזיכרון הדפדפן לזמן ארוך',
+  'efficient-animated-content': 'אנימציות GIF במקום וידאו',
+  'duplicated-javascript': 'קוד כפול',
+  'legacy-javascript': 'קוד ישן שנשלח גם לדפדפנים חדשים',
+  'prioritize-lcp-image': 'התמונה הראשית לא נטענת בעדיפות',
+  'total-byte-weight': 'העמוד כבד מאוד בסך הכל',
+  'dom-size': 'העמוד מורכב מיותר מדי אלמנטים',
+  'third-party-summary': 'קוד של צד שלישי (פיקסלים, צ\'אט, אנליטיקס) מאט',
+  'bootup-time': 'הדפדפן עסוק בהרצת קוד',
+  'mainthread-work-breakdown': 'הדפדפן עסוק מדי בזמן הטעינה',
+  'font-display': 'הטקסט מחכה לגופן שייטען'
+};
+function oppName(o){ return OPP[o.id] || o.title || o.id; }
 
+/* ---------- טעינה ---------- */
 function load(){
+  var seq = ++state.seq;
   $('sub').textContent = 'vdivani.co.il · טוען…';
-  fetch('/api/site?h=' + state.h + '&strategy=' + state.s, { cache: 'no-store' })
+  $('rangeTxt').textContent = 'מוצג: ' + periodTxt();
+  fetch('/api/site?strategy=' + state.s + qs(), { cache: 'no-store' })
     .then(function(r){ if (r.status === 401) { location.href = '/login'; throw new Error('auth'); } return r.json(); })
-    .then(render)
-    .catch(function(e){ $('sub').textContent = 'לא הצלחתי לטעון את הנתונים. ' + e; });
+    .then(function(d){ if (seq !== state.seq) return; state.data = d; render(d); })
+    .catch(function(e){ if (seq === state.seq) $('sub').textContent = 'לא הצלחתי לטעון את הנתונים. ' + e; });
 }
 
 function render(d){
@@ -350,65 +428,83 @@ function render(d){
   var ab = $('alertbar');
   if (open.length) {
     ab.innerHTML = open.map(function(a){ return '<div>' + esc(a.title) + '<span class="sub">' + esc(a.body || '') + ' · מאז ' + esc(a.opened_il) + ' (' + a.minutes + ' דק\')</span></div>'; }).join('');
-    ab.classList.add('on');
+    ab.classList.add('on'); ab.onclick = function(){ drillAlert(open[0].id); };
   } else { ab.classList.remove('on'); ab.innerHTML = ''; }
 
   /* כותרת */
   var lastProbe = health.filter(function(r){ return r.flow_name === 'בודק זמינות האתר'; })[0];
   var lastIl = lastProbe && lastProbe.last_at ? new Date(lastProbe.last_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) : '—';
-  $('sub').textContent = 'vdivani.co.il · הבדיקה האחרונה ' + lastIl + ' · מתעדכן לבד כל דקה';
+  $('sub').textContent = 'vdivani.co.il · הבדיקה האחרונה ' + lastIl + ' · ' + periodTxt();
 
   /* שורה תחתונה */
   var checks = perPage.reduce(function(a, r){ return a + (+r.checks || 0); }, 0);
   var failed = perPage.reduce(function(a, r){ return a + (+r.failed || 0); }, 0);
   var upPct = checks ? (100 - 100 * failed / checks) : null;
+  var outMin = outages.reduce(function(a, r){ return a + (+r.outage_minutes || 0); }, 0);
   var vh = '';
-  vh += '<div class="vbox"><div class="k">מהירות עמוד הבית בטלפון</div><div class="v">' + (bottom && bottom.lcp_p50 != null ? esc(bottom.verdict) : '<span class="est">אין נתונים</span>') + '</div><div class="m">' + (bottom && bottom.lcp_p50 != null ? sec(bottom.lcp_p50) + ' שניות עד התוכן · ' + bottom.checks + ' מדידות' : 'מדידת המהירות עדיין לא התחילה') + '</div></div>';
-  vh += '<div class="vbox"><div class="k">זמינות</div><div class="v">' + (upPct == null ? '<span class="est">—</span>' : upPct.toFixed(upPct < 99.95 ? 2 : 1) + '%') + '</div><div class="m">' + (checks ? failed + ' כשלים מתוך ' + checks.toLocaleString('he-IL') + ' בדיקות' : 'אין בדיקות בתקופה') + '</div></div>';
-  vh += '<div class="vbox"><div class="k">נפילות</div><div class="v">' + (outages.length ? '<span style="color:var(--dfg)">' + outages.length + '</span>' : '0') + '</div><div class="m">' + (outages.length ? 'סה"כ ' + outages.reduce(function(a, r){ return a + (+r.outage_minutes || 0); }, 0) + ' דקות' : 'האתר לא נפל בתקופה') + '</div></div>';
-  vh += '<div class="vbox"><div class="k">התראות פתוחות</div><div class="v">' + (open.length ? '<span style="color:var(--dfg)">' + open.length + '</span>' : '0') + '</div><div class="m">' + (recent.length ? recent.length + ' בתקופה' : 'אין התראות בתקופה') + '</div></div>';
+  vh += '<button type="button" class="vbox" data-drill="home"><div class="k">מהירות עמוד הבית בטלפון</div><div class="v">' + (bottom && bottom.lcp_p50 != null ? esc(bottom.verdict) : '<span class="est">אין נתונים</span>') + '</div><div class="m">' + (bottom && bottom.lcp_p50 != null ? sec(bottom.lcp_p50) + ' שניות עד התוכן · ' + bottom.checks + ' מדידות' : 'מדידת המהירות עדיין לא התחילה') + '</div></button>';
+  vh += '<button type="button" class="vbox" data-drill="fails"><div class="k">זמינות</div><div class="v">' + (upPct == null ? '<span class="est">—</span>' : upPct.toFixed(upPct < 99.95 ? 2 : 1) + '%') + '</div><div class="m">' + (checks ? n(failed) + ' כשלים מתוך ' + n(checks) + ' בדיקות' : 'אין בדיקות בתקופה') + '</div></button>';
+  vh += '<button type="button" class="vbox" data-drill="outages"><div class="k">נפילות</div><div class="v">' + (outages.length ? '<span style="color:var(--dfg)">' + outages.length + '</span>' : '0') + '</div><div class="m">' + (outages.length ? 'סה"כ ' + outMin + ' דקות' : 'האתר לא נפל בתקופה') + '</div></button>';
+  vh += '<button type="button" class="vbox" data-drill="alerts"><div class="k">התראות פתוחות</div><div class="v">' + (open.length ? '<span style="color:var(--dfg)">' + open.length + '</span>' : '0') + '</div><div class="m">' + (recent.length ? recent.length + ' בתקופה' : 'אין התראות בתקופה') + '</div></button>';
   $('verdict').innerHTML = vh;
+  Array.prototype.forEach.call($('verdict').querySelectorAll('.vbox'), function(b){ b.addEventListener('click', function(){
+    var w = b.getAttribute('data-drill');
+    if (w === 'home') { if (bottom && bottom.url) drillRuns(bottom.url, 'בית', null); else openSheet('מהירות עמוד הבית', '<p class="dsum">מדידת המהירות עדיין לא התחילה. היא מחכה למפתח מגוגל. ברגע שהוא יוכנס, כאן יופיעו המדידות של עמוד הבית כל רבע שעה.</p>'); }
+    else if (w === 'fails') drillFails(null, null, checks, failed, perPage);
+    else if (w === 'outages') drillOutages(outages);
+    else drillAlerts(recent, open);
+  }); });
 
   /* זמינות */
   if (perPage.length) {
     var t = '<div class="tblwrap"><table><thead><tr><th>עמוד</th><th class="num">בדיקות</th><th class="num">כשלים</th><th class="num">אחוז</th><th class="num">שרת p50</th><th class="num">שרת p95</th><th>כשל אחרון</th></tr></thead><tbody>';
-    perPage.forEach(function(r){
-      t += '<tr><td>' + esc(r.page) + '</td><td class="num">' + r.checks + '</td><td class="num">' + (r.failed > 0 ? '<b style="color:var(--dfg)">' + r.failed + '</b>' : '0') + '</td><td class="num">' + esc(r.fail_pct) + '%</td><td class="num">' + (r.p50_ms == null ? '—' : r.p50_ms + ' ms') + '</td><td class="num">' + (r.p95_ms == null ? '—' : r.p95_ms + ' ms') + '</td><td>' + esc(r.last_fail_il || '—') + '</td></tr>';
+    perPage.forEach(function(r, i){
+      t += '<tr class="rowbtn" data-i="' + i + '"><td>' + esc(r.page) + '</td><td class="num">' + n(+r.checks) + '</td><td class="num">' + (r.failed > 0 ? '<b style="color:var(--dfg)">' + r.failed + '</b>' : '0') + '</td><td class="num">' + esc(r.fail_pct) + '%</td><td class="num">' + (r.p50_ms == null ? '—' : r.p50_ms + ' ms') + '</td><td class="num">' + (r.p95_ms == null ? '—' : r.p95_ms + ' ms') + '</td><td>' + esc(r.last_fail_il || '—') + '</td></tr>';
     });
     $('availTbl').innerHTML = t + '</tbody></table></div>';
+    Array.prototype.forEach.call($('availTbl').querySelectorAll('tr.rowbtn'), function(tr){ tr.addEventListener('click', function(){ var r = perPage[+tr.getAttribute('data-i')]; drillFails(r.page, null, +r.checks, +r.failed, [r]); }); });
   } else $('availTbl').innerHTML = '<p class="empty">אין בדיקות זמינות בתקופה.</p>';
   $('outages').innerHTML = outages.length
-    ? '<p class="eyebrow" style="margin-top:12px">נפילות (3 דקות ומעלה שאף עמוד לא ענה)</p><ul class="list">' + outages.map(function(o){ return '<li><span class="tag d">' + o.outage_minutes + ' דק\'</span><span class="when">' + esc(o.outage_start_il) + ' → ' + esc(o.outage_end_il) + '</span></li>'; }).join('') + '</ul>'
+    ? '<p class="eyebrow" style="margin-top:12px">נפילות (3 דקות ומעלה שאף עמוד לא ענה)</p><ul class="list">' + outages.map(function(o, i){ return '<li class="rowbtn" data-i="' + i + '"><span class="tag d">' + o.outage_minutes + ' דק\'</span><span class="when">' + esc(o.outage_start_il) + ' → ' + esc(o.outage_end_il) + '</span></li>'; }).join('') + '</ul>'
     : '';
-  $('availChart').innerHTML = availChart(Array.isArray(d.availability_series) ? d.availability_series : []);
+  Array.prototype.forEach.call($('outages').querySelectorAll('li.rowbtn'), function(li){ li.addEventListener('click', function(){ drillOutages([outages[+li.getAttribute('data-i')]]); }); });
+  var pser = Array.isArray(d.availability_series) ? d.availability_series : [];
+  $('availChart').innerHTML = availChart(pser);
+  Array.prototype.forEach.call($('availChart').querySelectorAll('[data-bucket]'), function(el){ el.addEventListener('click', function(){
+    var b = el.getAttribute('data-bucket'), row = pser.filter(function(r){ return r.bucket === b; })[0];
+    if (el.classList.contains('bar')) drillFails(null, b, +row.checks, +row.failed, null); else drillBucket(b, row);
+  }); });
 
   /* מהירות לאורך זמן */
   var series = Array.isArray(d.speed_series) ? d.speed_series : [];
   $('legend').innerHTML = '';
+  $('speedHint').hidden = !series.length;
   if (series.length) {
     var pages = []; series.forEach(function(r){ if (pages.indexOf(r.page) < 0) pages.push(r.page); });
     $('legend').innerHTML = pages.map(function(p, i){ return '<button type="button" data-p="' + esc(p) + '" aria-pressed="' + (state.hidden[p] ? 'false' : 'true') + '"><i style="background:' + COLORS[i % COLORS.length] + '"></i>' + esc(p) + '</button>'; }).join('');
-    Array.prototype.forEach.call($('legend').querySelectorAll('button'), function(b){ b.addEventListener('click', function(){ var p = b.getAttribute('data-p'); state.hidden[p] = !state.hidden[p]; b.setAttribute('aria-pressed', state.hidden[p] ? 'false' : 'true'); $('speedChart').innerHTML = speedChart(series, pages); }); });
-    $('speedChart').innerHTML = speedChart(series, pages);
+    Array.prototype.forEach.call($('legend').querySelectorAll('button'), function(b){ b.addEventListener('click', function(){ var p = b.getAttribute('data-p'); state.hidden[p] = !state.hidden[p]; b.setAttribute('aria-pressed', state.hidden[p] ? 'false' : 'true'); drawSpeed(series, pages); }); });
+    drawSpeed(series, pages);
   } else $('speedChart').innerHTML = '<p class="empty">' + (state.s === 'desktop' ? 'אין עדיין מדידות מחשב בתקופה (נמדד פעם בשעה).' : 'מדידת המהירות עדיין לא התחילה.') + '</p>';
 
   /* עמודי ליבה */
   if (core.length) {
     var c = '<div class="tblwrap"><table><thead><tr><th>עמוד</th><th>מצב</th><th class="num">ציון</th><th class="num">LCP p50</th><th class="num">LCP p95</th><th class="num">קפיצות</th><th class="num">שרת</th><th class="num">איטי</th><th>גולשים אמיתיים</th></tr></thead><tbody>';
-    core.forEach(function(r){
-      c += '<tr><td>' + esc(r.page) + '</td><td>' + lcpTag(r.lcp_p50) + '</td><td class="num">' + (r.score_med == null ? '—' : r.score_med) + '</td><td class="num">' + sec(r.lcp_p50) + ' ש\'</td><td class="num">' + sec(r.lcp_p95) + ' ש\'</td><td class="num">' + (r.cls_med == null ? '—' : r.cls_med) + '</td><td class="num">' + (r.ttfb_p50 == null ? '—' : r.ttfb_p50 + ' ms') + '</td><td class="num">' + r.slow_runs + '/' + r.checks + '</td><td>' + cruxTag(r.crux_category) + (r.crux_lcp ? ' <span class="muted">' + sec(r.crux_lcp) + ' ש\'</span>' : '') + '</td></tr>';
+    core.forEach(function(r, i){
+      c += '<tr class="rowbtn" data-i="' + i + '"><td>' + esc(r.page) + '</td><td>' + lcpTag(r.lcp_p50) + '</td><td class="num">' + (r.score_med == null ? '—' : r.score_med) + '</td><td class="num">' + sec(r.lcp_p50) + ' ש\'</td><td class="num">' + sec(r.lcp_p95) + ' ש\'</td><td class="num">' + (r.cls_med == null ? '—' : r.cls_med) + '</td><td class="num">' + (r.ttfb_p50 == null ? '—' : r.ttfb_p50 + ' ms') + '</td><td class="num">' + r.slow_runs + '/' + r.checks + '</td><td>' + cruxTag(r.crux_category) + (r.crux_lcp ? ' <span class="muted">' + sec(r.crux_lcp) + ' ש\'</span>' : '') + '</td></tr>';
     });
     $('coreTbl').innerHTML = c + '</tbody></table></div>';
+    Array.prototype.forEach.call($('coreTbl').querySelectorAll('tr.rowbtn'), function(tr){ tr.addEventListener('click', function(){ var r = core[+tr.getAttribute('data-i')]; drillRuns(r.url, r.page, null); }); });
   } else $('coreTbl').innerHTML = '<p class="empty">אין מדידות ' + (state.s === 'desktop' ? 'מחשב' : 'טלפון') + ' בתקופה.</p>';
 
   /* הכבדים */
   $('coverage').textContent = cover ? 'נדגמו ' + cover.checks + ' מתוך ' + cover.slow_runs + ' עמודי האתר בתקופה.' : '';
   if (slow.length) {
     var s = '<div class="tblwrap"><table><thead><tr><th>עמוד</th><th>מצב</th><th class="num">LCP p50</th><th class="num">ציון</th><th class="num">מדידות</th><th>אחרונה</th></tr></thead><tbody>';
-    slow.forEach(function(r){
-      s += '<tr><td><a href="' + esc(r.page) + '" target="_blank" rel="noopener">' + esc(short(r.page)) + '</a></td><td>' + lcpTag(r.lcp_p50) + '</td><td class="num">' + sec(r.lcp_p50) + ' ש\'</td><td class="num">' + (r.score_med == null ? '—' : r.score_med) + '</td><td class="num">' + r.checks + '</td><td>' + esc(r.last_il) + '</td></tr>';
+    slow.forEach(function(r, i){
+      s += '<tr class="rowbtn" data-i="' + i + '"><td>' + esc(short(r.page)) + '</td><td>' + lcpTag(r.lcp_p50) + '</td><td class="num">' + sec(r.lcp_p50) + ' ש\'</td><td class="num">' + (r.score_med == null ? '—' : r.score_med) + '</td><td class="num">' + r.checks + '</td><td>' + esc(r.last_il) + '</td></tr>';
     });
     $('slowTbl').innerHTML = s + '</tbody></table></div>';
+    Array.prototype.forEach.call($('slowTbl').querySelectorAll('tr.rowbtn'), function(tr){ tr.addEventListener('click', function(){ var r = slow[+tr.getAttribute('data-i')]; drillRuns(r.url, short(r.url), null); }); });
   } else $('slowTbl').innerHTML = '<p class="empty">הסבב על כל האתר עדיין לא התחיל.</p>';
 
   /* מוצרים שבורים */
@@ -425,22 +521,28 @@ function render(d){
   var ce = d.cert;
   if (ce && ce.host) {
     var dl = ce.days_left, cls = !ce.ok ? 'd' : dl < 14 ? 'd' : dl < 30 ? 'w' : 'ok';
-    $('certBox').innerHTML = '<div class="verdict"><div class="vbox"><div class="k">תוקף</div><div class="v">' + (ce.ok ? dl + ' ימים' : 'הבדיקה נכשלה') + '</div><div class="m">' + (ce.ok ? 'עד ' + new Date(ce.not_after).toLocaleDateString('he-IL') + ' · ' + esc(ce.issuer || '') : esc(ce.err || '')) + '</div></div><div class="vbox"><div class="k">מצב</div><div class="v"><span class="tag ' + cls + '">' + (!ce.ok ? 'לא ידוע' : dl < 14 ? 'לחדש עכשיו' : dl < 30 ? 'לשים לב' : 'תקין') + '</span></div><div class="m">נבדק ' + new Date(ce.checked_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + '</div></div></div>';
+    $('certBox').innerHTML = '<div class="verdict"><div class="vbox" style="cursor:default"><div class="k">תוקף</div><div class="v">' + (ce.ok ? dl + ' ימים' : 'הבדיקה נכשלה') + '</div><div class="m">' + (ce.ok ? 'עד ' + new Date(ce.not_after).toLocaleDateString('he-IL') + ' · ' + esc(ce.issuer || '') : esc(ce.err || '')) + '</div></div><div class="vbox" style="cursor:default"><div class="k">מצב</div><div class="v"><span class="tag ' + cls + '">' + (!ce.ok ? 'לא ידוע' : dl < 14 ? 'לחדש עכשיו' : dl < 30 ? 'לשים לב' : 'תקין') + '</span></div><div class="m">נבדק ' + new Date(ce.checked_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + '</div></div></div>';
   } else $('certBox').innerHTML = '<p class="empty">עדיין לא נבדק (הבדיקה הראשונה ב-04:00).</p>';
 
   /* התראות */
   $('alertsList').innerHTML = recent.length
-    ? '<ul class="list">' + recent.map(function(a){ return '<li><span class="tag ' + (a.open ? 'd' : 'n') + '">' + (a.open ? 'פתוחה' : 'נסגרה') + '</span><b>' + esc(a.title) + '</b><span class="muted">' + esc(a.body || '') + '</span><span class="when">' + esc(a.opened_il) + (a.closed_il ? ' → ' + esc(a.closed_il) : '') + ' · ' + a.minutes + ' דק\'</span></li>'; }).join('') + '</ul>'
+    ? '<ul class="list">' + recent.map(function(a){ return '<li class="rowbtn" data-id="' + a.id + '"><span class="tag ' + (a.open ? 'd' : 'n') + '">' + (a.open ? 'פתוחה' : 'נסגרה') + '</span><b>' + esc(a.title) + '</b><span class="muted">' + esc(a.body || '') + '</span><span class="when">' + esc(a.opened_il) + (a.closed_il ? ' → ' + esc(a.closed_il) : '') + ' · ' + a.minutes + ' דק\'</span></li>'; }).join('') + '</ul>'
     : '<p class="empty">אין התראות בתקופה. זה טוב.</p>';
+  Array.prototype.forEach.call($('alertsList').querySelectorAll('li.rowbtn'), function(li){ li.addEventListener('click', function(){ drillAlert(+li.getAttribute('data-id')); }); });
 
   /* המדידה עצמה */
   $('healthTbl').innerHTML = health.length
-    ? '<ul class="list">' + health.map(function(r){ var cls = r.status === 'תקין' ? 'ok' : r.status === 'מתעכב' ? 'w' : r.status === 'שקט' ? 'd' : 'n'; return '<li><span class="tag ' + cls + '">' + esc(r.status) + '</span>' + esc(r.flow_name) + '<span class="muted">' + esc(r.cadence || '') + (r.silent_txt ? ' · ' + esc(r.silent_txt) : '') + '</span></li>'; }).join('') + '</ul>'
+    ? '<ul class="list">' + health.map(function(r, i){ var cls = r.status === 'תקין' ? 'ok' : r.status === 'מתעכב' ? 'w' : r.status === 'שקט' ? 'd' : 'n'; return '<li class="rowbtn" data-i="' + i + '"><span class="tag ' + cls + '">' + esc(r.status) + '</span>' + esc(r.flow_name) + '<span class="muted">' + esc(r.cadence || '') + (r.silent_txt ? ' · ' + esc(r.silent_txt) : '') + '</span></li>'; }).join('') + '</ul>'
     : '<p class="empty">אין נתוני מדידה.</p>';
+  Array.prototype.forEach.call($('healthTbl').querySelectorAll('li.rowbtn'), function(li){ li.addEventListener('click', function(){ drillHealth(health[+li.getAttribute('data-i')]); }); });
 }
 
 /* ---------- גרפים (SVG בלי ספרייה) ---------- */
-function xlabel(b){ return state.h <= 48 ? b.slice(11, 16) : b.slice(8, 10) + '.' + b.slice(5, 7); }
+function xlabel(b){ return b.length > 10 ? b.slice(11, 16) : b.slice(8, 10) + '.' + b.slice(5, 7); }
+function drawSpeed(series, pages){
+  $('speedChart').innerHTML = speedChart(series, pages);
+  Array.prototype.forEach.call($('speedChart').querySelectorAll('.pt'), function(el){ el.addEventListener('click', function(){ drillRuns(el.getAttribute('data-url'), el.getAttribute('data-page'), el.getAttribute('data-bucket')); }); });
+}
 function speedChart(series, pages){
   var W = 720, H = 240, L = 34, R = 8, T = 12, B = 28;
   var buckets = []; series.forEach(function(r){ if (buckets.indexOf(r.bucket) < 0) buckets.push(r.bucket); }); buckets.sort();
@@ -455,20 +557,20 @@ function speedChart(series, pages){
   buckets.forEach(function(b, i){ if (i % step === 0 || i === buckets.length - 1) s += '<text x="' + x(i) + '" y="' + (H - 8) + '" text-anchor="middle">' + xlabel(b) + '</text>'; });
   pages.forEach(function(p, pi){
     if (state.hidden[p]) return;
-    var pts = [];
-    buckets.forEach(function(b, i){ var r = series.filter(function(q){ return q.page === p && q.bucket === b; })[0]; if (r && r.lcp_p50 != null) pts.push([x(i), y(Math.min(r.lcp_p50, maxV))]); });
+    var pts = [], url = '';
+    buckets.forEach(function(b, i){ var r = series.filter(function(q){ return q.page === p && q.bucket === b; })[0]; if (r && r.lcp_p50 != null) { url = r.url; pts.push([x(i), y(Math.min(r.lcp_p50, maxV)), b, r]); } });
     if (!pts.length) return;
     s += '<path class="ln" stroke="' + COLORS[pi % COLORS.length] + '" d="M' + pts.map(function(q){ return q[0].toFixed(1) + ' ' + q[1].toFixed(1); }).join(' L') + '"/>';
-    pts.forEach(function(q){ s += '<circle cx="' + q[0].toFixed(1) + '" cy="' + q[1].toFixed(1) + '" r="2.4" fill="' + COLORS[pi % COLORS.length] + '"/>'; });
+    pts.forEach(function(q){ s += '<circle class="pt" data-url="' + esc(url) + '" data-page="' + esc(p) + '" data-bucket="' + esc(q[2]) + '" cx="' + q[0].toFixed(1) + '" cy="' + q[1].toFixed(1) + '" r="7" fill="' + COLORS[pi % COLORS.length] + '" fill-opacity="0.15"><title>' + esc(p) + ' ' + xlabel(q[2]) + ': ' + sec(q[3].lcp_p50) + ' ש\'</title></circle><circle cx="' + q[0].toFixed(1) + '" cy="' + q[1].toFixed(1) + '" r="2.6" fill="' + COLORS[pi % COLORS.length] + '" pointer-events="none"/>'; });
   });
   return s + '</svg>';
 }
 function availChart(rows){
   if (!rows.length) return '';
-  var W = 720, H = 160, L = 34, R = 34, T = 12, B = 28;
+  var W = 720, H = 160, L = 34, R = 40, T = 12, B = 28;
   var maxF = 1; rows.forEach(function(r){ if (+r.failed > maxF) maxF = +r.failed; });
   var maxMs = 500; rows.forEach(function(r){ if (+r.ms_p50 > maxMs) maxMs = +r.ms_p50; }); maxMs = Math.ceil(maxMs / 250) * 250;
-  var n = rows.length, bw = Math.max(2, (W - L - R) / n - 2);
+  var n = rows.length, bw = Math.max(3, (W - L - R) / n - 2);
   var x = function(i){ return L + (W - L - R) * (i + 0.5) / n; };
   var yf = function(v){ return T + (H - T - B) * (1 - v / maxF); };
   var ym = function(v){ return T + (H - T - B) * (1 - v / maxMs); };
@@ -478,21 +580,120 @@ function availChart(rows){
   s += '<text x="' + (W - R + 4) + '" y="' + (T + 4) + '">' + maxMs + 'ms</text>';
   var step = Math.max(1, Math.ceil(n / 8));
   rows.forEach(function(r, i){
-    if (+r.failed > 0) s += '<rect class="bar" x="' + (x(i) - bw / 2) + '" y="' + yf(+r.failed) + '" width="' + bw + '" height="' + (H - B - yf(+r.failed)) + '"><title>' + esc(r.bucket) + ': ' + r.failed + ' כשלים מתוך ' + r.checks + '</title></rect>';
+    if (+r.failed > 0) s += '<rect class="bar" data-bucket="' + esc(r.bucket) + '" x="' + (x(i) - bw / 2) + '" y="' + yf(+r.failed) + '" width="' + bw + '" height="' + (H - B - yf(+r.failed)) + '"><title>' + esc(r.bucket) + ': ' + r.failed + ' כשלים מתוך ' + r.checks + '</title></rect>';
     if (i % step === 0 || i === n - 1) s += '<text x="' + x(i) + '" y="' + (H - 8) + '" text-anchor="middle">' + xlabel(r.bucket) + '</text>';
   });
   var pts = rows.map(function(r, i){ return r.ms_p50 == null ? null : x(i).toFixed(1) + ' ' + ym(+r.ms_p50).toFixed(1); }).filter(Boolean);
   if (pts.length > 1) s += '<path class="ms" d="M' + pts.join(' L') + '"/>';
+  rows.forEach(function(r, i){ if (r.ms_p50 != null) s += '<circle class="hit" data-bucket="' + esc(r.bucket) + '" cx="' + x(i).toFixed(1) + '" cy="' + ym(+r.ms_p50).toFixed(1) + '" r="9"><title>' + esc(r.bucket) + ': שרת ' + r.ms_p50 + ' ms</title></circle>'; });
   return s + '</svg>';
 }
 
+/* ---------- חלון העומק ---------- */
+var dov = $('dov');
+function openSheet(title, html){ $('dttl').textContent = title; $('dbody').innerHTML = html; dov.classList.add('on'); document.body.style.overflow = 'hidden'; $('dsheet').scrollTo(0, 0); }
+function closeSheet(){ dov.classList.remove('on'); document.body.style.overflow = ''; }
+$('dx').addEventListener('click', closeSheet);
+dov.addEventListener('click', function(e){ if (e.target === dov) closeSheet(); });
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && dov.classList.contains('on')) closeSheet(); });
+function drill(params){ return fetch('/api/site/drill?' + params + qs(), { cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(d){ if (d.error) throw new Error(d.error); return d.rows || []; }); }
+function loading(title){ openSheet(title, '<p class="empty">טוען…</p>'); }
+function fail(e){ $('dbody').innerHTML = '<p class="empty">לא הצלחתי לטעון. ' + esc(e) + '</p>'; }
+
+function drillFails(page, bucket, checks, failed, perPage){
+  var title = page ? 'הכשלים של עמוד ' + page : bucket ? 'הכשלים ' + bucketTxt(bucket) : 'כל הכשלים';
+  loading(title);
+  drill('what=fails&page=' + encodeURIComponent(page || '') + '&bucket=' + encodeURIComponent(bucket || '')).then(function(rows){
+    var h = '';
+    if (checks) h += '<p class="dsum"><b>' + n(failed) + '</b> בדיקות נכשלו מתוך <b>' + n(checks) + '</b> (' + (100 * failed / checks).toFixed(2) + ' אחוז). ' + (failed === 0 ? 'הכל ענה.' : failed <= 3 ? 'כשל בודד פה ושם הוא רעש רגיל של רשת, לא תקלה.' : 'זה מעבר לרעש רגיל. כדאי לראות אם הכשלים מקובצים בשעה אחת (אירוע) או מפוזרים (עומס).') + '</p>';
+    var kinds = {}; rows.forEach(function(r){ kinds[r.kind] = (kinds[r.kind] || 0) + 1; });
+    if (rows.length) h += '<div class="dwhat">מה קרה: ' + Object.keys(kinds).map(function(k){ return esc(k) + ' × ' + kinds[k]; }).join(' · ') + '</div>';
+    if (!page && perPage && perPage.length > 1) h += '<h3>לפי עמוד</h3><ul class="list">' + perPage.map(function(r){ return '<li><b>' + esc(r.page) + '</b> ' + r.failed + ' מתוך ' + n(+r.checks) + '</li>'; }).join('') + '</ul>';
+    h += '<h3>הבדיקות שנכשלו' + (rows.length >= 500 ? ' (500 האחרונות)' : '') + '</h3>';
+    h += rows.length ? '<div class="tblwrap"><table><thead><tr><th>מתי</th><th>עמוד</th><th>מה קרה</th><th class="num">אחרי</th></tr></thead><tbody>' + rows.map(function(r){ return '<tr><td>' + esc(r.at_il) + '</td><td>' + esc(r.page) + '</td><td>' + esc(r.kind) + (r.err ? ' <span class="muted">' + esc(r.err.slice(0, 60)) + '</span>' : '') + '</td><td class="num">' + (r.ms == null ? '—' : (r.ms / 1000).toFixed(1) + ' ש\'') + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="empty">אין כשלים.</p>';
+    $('dbody').innerHTML = h;
+  }).catch(fail);
+}
+function drillBucket(b, row){
+  loading('זמן תגובת השרת ' + bucketTxt(b));
+  drill('what=bucket&bucket=' + encodeURIComponent(b)).then(function(rows){
+    var h = '<p class="dsum">חציון זמן התגובה: <b>' + row.ms_p50 + ' ms</b>. הכי איטי (95 אחוז): <b>' + row.ms_p95 + ' ms</b>. ' + (row.ms_p50 <= 800 ? 'השרת ענה מהר (הסף של גוגל: 800).' : row.ms_p50 <= 1500 ? 'השרת ענה לאט מהרצוי. אם זה חוזר בשעות מסוימות, זה עומס.' : 'השרת ענה לאט מאוד. זה לפני שהעמוד בכלל מתחיל להיטען אצל הלקוח.') + '</p>';
+    h += '<div class="tblwrap"><table><thead><tr><th>עמוד</th><th class="num">בדיקות</th><th class="num">כשלים</th><th class="num">חציון</th><th class="num">הכי איטי</th><th>מתי</th></tr></thead><tbody>' + rows.map(function(r){ return '<tr><td>' + esc(r.page) + '</td><td class="num">' + r.checks + '</td><td class="num">' + r.failed + '</td><td class="num">' + (r.ms_p50 == null ? '—' : r.ms_p50 + ' ms') + '</td><td class="num">' + (r.ms_max == null ? '—' : r.ms_max + ' ms') + '</td><td>' + esc(r.worst_il || '') + '</td></tr>'; }).join('') + '</tbody></table></div>';
+    h += '<div class="dwhat">עמוד הסל וקטגוריה תמיד איטיים יותר: הם לא נשמרים בזיכרון המטמון של האתר ונבנים מחדש בכל כניסה. עמוד הבית ומוצר מגיעים מהמטמון.</div>';
+    $('dbody').innerHTML = h;
+  }).catch(fail);
+}
+function drillOutages(list){
+  var h = list.length ? '<p class="dsum">' + (list.length === 1 ? 'נפילה אחת' : list.length + ' נפילות') + ' בתקופה. נפילה = 3 דקות רצופות שבהן אף אחד מ-4 העמודים לא ענה. סך הכל <b>' + list.reduce(function(a, r){ return a + (+r.outage_minutes || 0); }, 0) + ' דקות</b> שבהן לקוח לא יכול היה להיכנס.</p><ul class="list">' + list.map(function(o){ return '<li><span class="tag d">' + o.outage_minutes + ' דק\'</span><span class="when">' + esc(o.outage_start_il) + ' → ' + esc(o.outage_end_il) + '</span></li>'; }).join('') + '</ul><div class="dwhat">לראות מה קרה בדיוק: לחיצה על העמודה האדומה של אותה שעה בגרף הזמינות.</div>' : '<p class="dsum">האתר לא נפל בתקופה. כשל של דקה אחת בעמוד אחד נספר בזמינות, לא כאן.</p>';
+  openSheet('נפילות', h);
+}
+function drillAlerts(recent, open){
+  var h = '<p class="dsum">' + (open.length ? '<b>' + open.length + '</b> התראות פתוחות עכשיו.' : 'אין התראה פתוחה עכשיו.') + ' ' + (recent.length ? recent.length + ' התראות בתקופה.' : 'לא היו התראות בתקופה.') + '</p>';
+  h += recent.length ? '<ul class="list">' + recent.map(function(a){ return '<li class="rowbtn" data-id="' + a.id + '"><span class="tag ' + (a.open ? 'd' : 'n') + '">' + (a.open ? 'פתוחה' : 'נסגרה') + '</span><b>' + esc(a.title) + '</b><span class="when">' + esc(a.opened_il) + ' · ' + a.minutes + ' דק\'</span></li>'; }).join('') + '</ul>' : '';
+  openSheet('התראות', h);
+  Array.prototype.forEach.call($('dbody').querySelectorAll('li.rowbtn'), function(li){ li.addEventListener('click', function(){ drillAlert(+li.getAttribute('data-id')); }); });
+}
+function drillAlert(id){
+  loading('התראה');
+  drill('what=alert&id=' + id).then(function(rows){
+    var a = rows[0]; if (!a) { $('dbody').innerHTML = '<p class="empty">לא נמצאה.</p>'; return; }
+    $('dttl').textContent = a.title;
+    var h = '<p class="dsum">' + (a.open ? 'עדיין פתוחה, ' : 'נסגרה. ') + 'נפתחה ב-<b>' + esc(a.opened_il) + '</b>' + (a.closed_il ? ', נסגרה ב-<b>' + esc(a.closed_il) + '</b>' : '') + ', סך הכל <b>' + a.minutes + ' דקות</b>.<br>' + esc(a.body || '') + '</p>';
+    var what = { down: 'בדיקת זמינות נכשלה. הכלל שלך: כל כשל בודד מתריע, גם של שנייה. כשל אחד ויחיד הוא לרוב רעש רשת; שניים-שלושה ברצף הם תקלה אמיתית.', slow: 'עמוד עיקרי נמדד איטי (מעל 4 שניות עד התוכן) פעמיים ברצף. אם זה קורה בשעות עומס בלבד, זה השרת. אם תמיד, זה העמוד עצמו (תמונות, תוספים).', silent: 'הבודק עצמו הפסיק לרוץ. עד שהוא חוזר, המספרים במסך ישנים.', cert: 'תעודת האבטחה עומדת לפוג. צריך לחדש אצל חברת האחסון או להפעיל חידוש אוטומטי.' };
+    h += '<div class="dwhat">' + (what[a.kind] || '') + '</div>';
+    if (a.fails && a.fails.length) h += '<h3>הבדיקות שנכשלו מאחורי ההתראה</h3><div class="tblwrap"><table><thead><tr><th>מתי</th><th>עמוד</th><th>מה</th></tr></thead><tbody>' + a.fails.map(function(f){ return '<tr><td>' + esc(f.at) + '</td><td>' + esc(f.page) + '</td><td>' + esc(f.status ? 'קוד ' + f.status : (f.err || '')) + '</td></tr>'; }).join('') + '</tbody></table></div>';
+    if (a.sent && a.sent.length) h += '<h3>הודעות שנשלחו לטלפון</h3><ul class="list">' + a.sent.map(function(s){ return '<li><span class="tag ' + (s.status === 200 ? 'ok' : 'd') + '">' + (s.status === 200 ? 'נשלחה' : 'נכשלה') + '</span>' + (s.event === 'open' ? 'פתיחה' : s.event === 'close' ? 'חזר לתקין' : esc(s.event)) + '<span class="when">' + esc(s.at) + '</span></li>'; }).join('') + '</ul>';
+    $('dbody').innerHTML = h;
+  }).catch(fail);
+}
+function drillRuns(url, page, bucket){
+  var title = 'מהירות: ' + page + (bucket ? ' ' + bucketTxt(bucket) : '');
+  loading(title);
+  drill('what=runs&url=' + encodeURIComponent(url) + '&strategy=' + state.s + '&bucket=' + encodeURIComponent(bucket || '')).then(function(rows){
+    var ok = rows.filter(function(r){ return r.ok; });
+    if (!ok.length) { $('dbody').innerHTML = '<p class="empty">אין מדידות תקינות' + (rows.length ? ' (' + rows.length + ' ניסיונות נכשלו: ' + esc(rows[0].err || '') + ')' : '') + '.</p>'; return; }
+    var lcps = ok.map(function(r){ return r.lcp_ms; }).filter(function(v){ return v != null; }).sort(function(a, b){ return a - b; });
+    var med = lcps[Math.floor(lcps.length / 2)], worst = ok.reduce(function(a, r){ return (r.lcp_ms || 0) > (a.lcp_ms || 0) ? r : a; }, ok[0]), best = ok.reduce(function(a, r){ return (r.lcp_ms || 1e9) < (a.lcp_ms || 1e9) ? r : a; }, ok[0]);
+    var h = '<p class="dsum"><b>' + ok.length + '</b> מדידות ב' + (state.s === 'desktop' ? 'מחשב' : 'טלפון') + '. חציון <b>' + sec(med) + ' שניות</b> עד התוכן העיקרי: <b>' + lcpWord(med) + '</b>. הכי איטית ' + sec(worst.lcp_ms) + ' ש\' (' + esc(worst.at_il) + '), הכי מהירה ' + sec(best.lcp_ms) + ' ש\' (' + esc(best.at_il) + ').' + (ok[0].crux_category ? ' אצל גולשים אמיתיים גוגל מודדת: <b>' + (ok[0].crux_category === 'FAST' ? 'מהיר' : ok[0].crux_category === 'AVERAGE' ? 'בינוני' : 'איטי') + '</b>' + (ok[0].crux_lcp_ms ? ' (' + sec(ok[0].crux_lcp_ms) + ' ש\')' : '') + '.' : '') + '</p>';
+    /* מה מאט: ממוצע החיסכון לכל סיבה על פני המדידות */
+    var agg = {}; ok.forEach(function(r){ (r.opps || []).forEach(function(o){ var k = o.id; agg[k] = agg[k] || { id: k, title: o.title, sum: 0, cnt: 0 }; agg[k].sum += +o.ms || 0; agg[k].cnt++; }); });
+    var opps = Object.keys(agg).map(function(k){ return agg[k]; }).sort(function(a, b){ return b.sum / b.cnt - a.sum / a.cnt; }).slice(0, 6);
+    if (opps.length) h += '<h3>מה מאט את העמוד (לפי גוגל)</h3><ul class="list">' + opps.map(function(o){ return '<li><b>' + sec(o.sum / o.cnt) + ' ש\'</b> ' + esc(oppName(o)) + '</li>'; }).join('') + '</ul><div class="dwhat">המספר = כמה זמן אפשר לחסוך אם מטפלים בסיבה הזאת, לפי ההערכה של גוגל. הסיבות הראשונות הן כמעט תמיד תמונות: לדחוס, להקטין לגודל התצוגה, ולטעון רק כשגוללים.</div>';
+    h += '<h3>המדידות</h3><div class="tblwrap"><table><thead><tr><th>מתי</th><th>מצב</th><th class="num">ציון</th><th class="num">תוכן (LCP)</th><th class="num">שרת</th><th class="num">משקל</th><th class="num">קפיצות</th></tr></thead><tbody>' + ok.slice(0, 100).map(function(r){ return '<tr><td>' + esc(r.at_il) + '</td><td>' + lcpTag(r.lcp_ms) + '</td><td class="num">' + (r.score == null ? '—' : r.score) + '</td><td class="num">' + sec(r.lcp_ms) + ' ש\'</td><td class="num">' + (r.ttfb_ms == null ? '—' : r.ttfb_ms + ' ms') + '</td><td class="num">' + (r.bytes == null ? '—' : (r.bytes / 1048576).toFixed(1) + ' MB') + '</td><td class="num">' + (r.cls == null ? '—' : r.cls) + '</td></tr>'; }).join('') + '</tbody></table></div>' + (ok.length > 100 ? '<p class="more">מוצגות 100 מתוך ' + ok.length + '.</p>' : '');
+    h += '<p class="more"><a href="' + esc(url) + '" target="_blank" rel="noopener">לפתוח את העמוד באתר</a></p>';
+    $('dbody').innerHTML = h;
+  }).catch(fail);
+}
+function drillHealth(r){
+  var what = {
+    'בודק זמינות האתר': 'כל דקה סופאבייס פונה ל-4 עמודים באתר ורושם אם ענו ותוך כמה זמן. אם השורה הזאת שקטה, הבודק עצמו נעצר ואף אחד לא בודק את האתר.',
+    'מדידת מהירות — עמודי ליבה': 'כל רבע שעה גוגל מודדת עבורנו את 5 העמודים העיקריים בטלפון (ופעם בשעה במחשב). דורש מפתח מגוגל. אם השורה שקטה, המדידה נעצרה או שהמפתח חסר.',
+    'מדידת מהירות — סבב כל האתר': 'כל 5 דקות נמדדים 2 עמודים מכל האתר, כך שכל עמוד נמדד בערך פעם ביום.',
+    'טעינת מפת האתר': 'פעם בלילה נטענת רשימת כל העמודים באתר (מוצרים, קטגוריות) כדי שהסבב יכיר מוצרים חדשים.',
+    'בדיקת תעודת האבטחה': 'פעם ביום נבדק מתי תעודת האבטחה של האתר פגה.',
+    'צילום מחירי האתר': 'פעם ביום ב-04:00 נשמרים כל המחירים באתר, לבקרת מחירים מול פריוריטי ולבדיקת מוצרים שבורים.',
+    'הזמנות אתר וגישור לפריוריטי': 'כל רבע שעה נמשכות ההזמנות מהאתר ומושוות לפריוריטי. מכאן גם רשימת הנטישות בקופה.'
+  };
+  var status = r.status === 'תקין' ? 'רץ כמו שצריך.' : r.status === 'מתעכב' ? 'מאחר. אם זה לא חוזר לתקין תוך שעה, יש בעיה.' : r.status === 'שקט' ? 'נעצר. המספרים שתלויים בו ישנים.' : r.status === 'אין נתון' ? 'עדיין לא רץ אף פעם.' : r.status;
+  openSheet(r.flow_name, '<p class="dsum"><b>' + esc(r.status) + '</b>: ' + status + (r.last_at ? ' הריצה האחרונה: ' + new Date(r.last_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + '.' : '') + '</p><div class="dwhat">' + (what[r.flow_name] || esc(r.note || '')) + '</div><p class="muted">קצב: ' + esc(r.cadence || '') + ' · סף איחור: ' + r.warn_minutes + ' דק\' · סף שתיקה: ' + r.late_minutes + ' דק\'</p>');
+}
+
 /* ---------- פקדים ---------- */
-Array.prototype.forEach.call(document.querySelectorAll('#segH button'), function(b){ b.addEventListener('click', function(){ state.h = +b.getAttribute('data-h'); Array.prototype.forEach.call(document.querySelectorAll('#segH button'), function(o){ o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); }); load(); }); });
+function setPreset(h){ state.h = h; state.f = ''; state.t = ''; $('dFrom').value = ''; $('dTo').value = ''; Array.prototype.forEach.call(document.querySelectorAll('#segH button'), function(o){ o.setAttribute('aria-pressed', +o.getAttribute('data-h') === h ? 'true' : 'false'); }); load(); }
+Array.prototype.forEach.call(document.querySelectorAll('#segH button'), function(b){ b.addEventListener('click', function(){ setPreset(+b.getAttribute('data-h')); }); });
 Array.prototype.forEach.call(document.querySelectorAll('#segS button'), function(b){ b.addEventListener('click', function(){ state.s = b.getAttribute('data-s'); Array.prototype.forEach.call(document.querySelectorAll('#segS button'), function(o){ o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); }); load(); }); });
+$('dGo').addEventListener('click', function(){
+  var f = $('dFrom').value, t = $('dTo').value || new Date().toISOString().slice(0, 10);
+  if (!f) { $('dFrom').focus(); return; }
+  if (t < f) { var x = f; f = t; t = x; }
+  state.f = f; state.t = t; $('dTo').value = t;
+  Array.prototype.forEach.call(document.querySelectorAll('#segH button'), function(o){ o.setAttribute('aria-pressed', 'false'); });
+  load();
+});
 $('refbtn').addEventListener('click', load);
 $('explbtn').addEventListener('click', function(){ var on = document.body.classList.toggle('explain'); $('explbtn').setAttribute('aria-pressed', on ? 'true' : 'false'); });
 load();
-setInterval(load, 60000);
+setInterval(function(){ if (!dov.classList.contains('on')) load(); }, 60000);
 </script>
 </body>
 </html>

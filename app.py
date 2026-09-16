@@ -420,26 +420,47 @@ def api_alerts(request: Request):
         return JSONResponse({"error": str(e)}, status_code=502)
 
 
+def _range_args(h, f, t):
+    """חלון זמן למסכי האתר. from/to = תאריכים (YYYY-MM-DD) בשעון ישראל, 'עד' כולל את היום כולו.
+    בלי from/to — h שעות אחורה מעכשיו. מחזיר (from_iso, to_iso, hours)."""
+    now = dt.datetime.now(IL)
+    if f:
+        try:
+            d0 = dt.datetime.strptime(f, "%Y-%m-%d").replace(tzinfo=IL)
+            d1 = (dt.datetime.strptime(t, "%Y-%m-%d").replace(tzinfo=IL) if t else now)
+            if t:
+                d1 = d1 + dt.timedelta(days=1)
+            if d1 <= d0:
+                d1 = d0 + dt.timedelta(days=1)
+            hrs = max(1, int((d1 - d0).total_seconds() // 3600))
+            return d0.isoformat(), d1.isoformat(), hrs
+        except ValueError:
+            pass
+    h = max(1, min(int(h or 24), 24 * 400))
+    return (now - dt.timedelta(hours=h)).isoformat(), (now + dt.timedelta(minutes=1)).isoformat(), h
+
+
 @app.get("/api/site")
-def api_site(request: Request, h: int = 24, strategy: str = "mobile"):
+def api_site(request: Request, h: int = 24, strategy: str = "mobile", f: str = "", t: str = ""):
     """כל מה שמסך בריאות האתר צריך בקריאה אחת.
 
-    h = חלון בשעות (24 / 168 / 720 / 2160). strategy = mobile / desktop.
+    h = חלון בשעות, או f/t = טווח תאריכים חופשי (שעון ישראל). strategy = mobile / desktop.
     כל חלק נכשל לבד: חלק שנפל מחזיר error במקום להפיל את המסך כולו —
     כך זמינות עדיין מוצגת גם אם מדידת המהירות טרם התחילה.
     """
     if not _logged_in(request):
         return JSONResponse({"error": "auth"}, status_code=401)
-    h = max(1, min(int(h), 2160))
+    p_from, p_to, hrs = _range_args(h, f, t)
     strategy = "desktop" if strategy == "desktop" else "mobile"
-    out = {"hours": h, "strategy": strategy}
+    out = {"hours": hrs, "from": p_from, "to": p_to, "strategy": strategy}
+    rng = {"p_from": p_from, "p_to": p_to}
     parts = {
-        "availability": ("bi_site_status", {"p_hours": h}),
-        "availability_series": ("bi_site_probe_series", {"p_hours": h}),
-        "speed": ("bi_site_speed_status", {"p_hours": h}),
-        "speed_series": ("bi_site_speed_series", {"p_hours": h, "p_strategy": strategy}),
+        "availability": ("bi_site_status_range", rng),
+        "availability_series": ("bi_site_probe_series_range", rng),
+        "speed": ("bi_site_speed_status_range", rng),
+        "speed_series": ("bi_site_speed_series_range", dict(rng, p_strategy=strategy)),
         "alerts_open": ("bi_alerts_open", {}),
-        "alerts_recent": ("bi_alerts_recent", {"p_days": max(1, h // 24)}),
+        "alerts_recent": ("bi_alerts_range", rng),
         "health": ("bi_health", {}),
         "product_issues": ("bi_web_product_issues", {}),
     }
@@ -455,6 +476,36 @@ def api_site(request: Request, h: int = 24, strategy: str = "mobile"):
     except Exception as e:
         out["cert"] = {"error": str(e)}
     return JSONResponse(out)
+
+
+@app.get("/api/site/drill")
+def api_site_drill(request: Request, what: str = "", h: int = 24, f: str = "", t: str = "",
+                   page: str = "", bucket: str = "", url: str = "", strategy: str = "mobile", id: int = 0):
+    """דריל-דאון למסך בריאות האתר. what:
+       fails  — הבדיקות שנכשלו (page / bucket אופציונליים)
+       bucket — זמן תגובת שרת לפי עמוד בשעה/יום אחד
+       runs   — המדידות הבודדות של עמוד (url; bucket אופציונלי), כולל "מה מאט"
+       alert  — פרטי התראה (id) עם ההודעות שנשלחו והכשלים שמאחוריה"""
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    p_from, p_to, _ = _range_args(h, f, t)
+    strategy = "desktop" if strategy == "desktop" else "mobile"
+    try:
+        if what == "fails":
+            rows = sb_rpc("bi_site_probe_fails", {"p_from": p_from, "p_to": p_to,
+                                                  "p_page": page or None, "p_bucket": bucket or None})
+        elif what == "bucket":
+            rows = sb_rpc("bi_site_probe_bucket", {"p_bucket": bucket})
+        elif what == "runs":
+            rows = sb_rpc("bi_site_speed_runs", {"p_from": p_from, "p_to": p_to, "p_url": url,
+                                                 "p_strategy": strategy, "p_bucket": bucket or None})
+        elif what == "alert":
+            rows = sb_rpc("bi_alert_detail", {"p_id": int(id)})
+        else:
+            return JSONResponse({"error": "what?"}, status_code=400)
+        return JSONResponse({"rows": rows or []})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=502)
 
 
 @app.get("/abandoned")
@@ -475,17 +526,30 @@ def abandoned_page(request: Request):
     return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
 
+@app.get("/api/abandoned/order")
+def api_abandoned_order(request: Request, number: str = ""):
+    """הזמנה אחת לעומק: הפריטים, התשלום, סיבת הביטול (מהערות ווקומרס), והזמנות אחרות של אותו לקוח."""
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    try:
+        return JSONResponse({"rows": sb_rpc("bi_web_order_detail", {"p_number": number}) or []})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=502)
+
+
 @app.get("/api/abandoned")
-def api_abandoned(request: Request, days: int = 30):
+def api_abandoned(request: Request, days: int = 30, f: str = "", t: str = ""):
     """הזמנות אתר שהגיעו לקופה ולא שולמו (failed / pending / cancelled שלא בוטלו ידנית),
     למעט לקוח שהשלים הזמנה אחרת תוך שבוע. סיכום מול מה ששולם באותה תקופה."""
     if not _logged_in(request):
         return JSONResponse({"error": "auth"}, status_code=401)
-    days = max(1, min(int(days), 365))
+    days = max(1, min(int(days), 3650))
+    p_from, p_to, _ = _range_args(days * 24, f, t)
+    rng = {"p_from": p_from, "p_to": p_to}
     try:
-        return JSONResponse({"days": days,
-                             "summary": sb_rpc("bi_web_abandoned_summary", {"p_days": days}) or [],
-                             "rows": sb_rpc("bi_web_abandoned", {"p_days": days}) or []})
+        return JSONResponse({"days": days, "from": p_from, "to": p_to,
+                             "summary": sb_rpc("bi_web_abandoned_summary_range", rng) or [],
+                             "rows": sb_rpc("bi_web_abandoned_range", rng) or []})
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=502)
 
