@@ -70,7 +70,11 @@ body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--font);-webk
 /* ---------- פס התראה ---------- */
 .alertbar{display:none;background:var(--dbg);color:var(--dfg);border:1px solid var(--dfg);border-radius:12px;padding:10px 13px;margin:0 0 12px;font-weight:700;font-size:14.5px;cursor:pointer}
 .alertbar.on{display:block}
-.alertbar .sub{display:block;font-weight:400;font-size:13px;margin-top:2px}
+.alertbar .sub{display:block;font-weight:400;font-size:13px;margin-top:2px;white-space:pre-line}
+.alertbar .arow{display:flex;gap:8px;align-items:flex-start}
+.alertbar .arow+.arow{margin-top:8px;padding-top:8px;border-top:1px solid var(--dfg)}
+.alertbar .arow>div{flex:1;min-width:0}
+.alertbar .ax{flex:none;width:34px;height:34px;border:1px solid var(--dfg);border-radius:8px;background:transparent;color:var(--dfg);font:inherit;font-weight:700;cursor:pointer}
 
 /* ---------- כותרת ---------- */
 h1{font-size:clamp(23px,5.4vw,31px);font-weight:800;margin:4px 0 2px;letter-spacing:-.01em}
@@ -263,7 +267,7 @@ td a{color:var(--tx);text-decoration:none;border-bottom:1px dotted var(--tx3)}
   <section class="card">
     <h2>התראות</h2>
     <div id="alertsList"></div>
-    <p class="explain">התראה נפתחת ברגע שבדיקת זמינות אחת נכשלת, כשעמוד עיקרי איטי (מעל 4 שניות) פעמיים ברצף, כשהמדידה עצמה נעצרה, או כשתעודת האבטחה עומדת לפוג. נסגרת לבד כשהמצב חוזר לתקין. ההודעות מגיעות לטלפון של כל מי שמנוי לערוץ. לחיצה: מה בדיוק קרה.</p>
+    <p class="explain">התראה נפתחת ברגע שבדיקת זמינות אחת נכשלת, כשעמוד עיקרי איטי (מעל 4 שניות) פעמיים ברצף, כשהמדידה עצמה נעצרה, או כשתעודת האבטחה עומדת לפוג. נסגרת לבד כשהמצב חוזר לתקין. ההודעות מגיעות לטלפון של כל מי שמנוי לערוץ. לחיצה: מה בדיוק קרה. ✕ בפס האדום = "ראיתי": מסתיר לכולם עד שההתראה תיסגר ותיפתח מחדש. בטלפון, הודעות ישנות נמחקות מתוך אפליקציית ntfy (החלקה או "נקה הכל").</p>
   </section>
 
   <section class="card">
@@ -426,9 +430,12 @@ function render(d){
 
   /* פס אדום */
   var ab = $('alertbar');
-  if (open.length) {
-    ab.innerHTML = open.map(function(a){ return '<div>' + esc(a.title) + '<span class="sub">' + esc(a.body || '') + ' · מאז ' + esc(a.opened_il) + ' (' + a.minutes + ' דק\')</span></div>'; }).join('');
-    ab.classList.add('on'); ab.onclick = function(){ drillAlert(open[0].id); };
+  var vis = open.filter(function(a){ return !a.acked; });
+  if (vis.length) {
+    ab.innerHTML = vis.map(function(a){ return '<div class="arow" data-id="' + a.id + '"><div>' + esc(a.title) + '<span class="sub">' + esc(a.body || '') + ' · מאז ' + esc(a.opened_il) + ' (' + a.minutes + ' דק\')</span></div><button type="button" class="ax" data-id="' + a.id + '" title="ראיתי — להסתיר עד שישתנה">✕</button></div>'; }).join('');
+    ab.classList.add('on'); ab.onclick = null;
+    Array.prototype.forEach.call(ab.querySelectorAll('.arow'), function(r){ r.addEventListener('click', function(){ drillAlert(+r.getAttribute('data-id')); }); });
+    Array.prototype.forEach.call(ab.querySelectorAll('.ax'), function(b){ b.addEventListener('click', function(e){ e.stopPropagation(); fetch('/api/alerts/ack', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: +b.getAttribute('data-id') }) }).then(load).catch(function(){}); }); });
   } else { ab.classList.remove('on'); ab.innerHTML = ''; }
 
   /* כותרת */

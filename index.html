@@ -30,7 +30,11 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .hdr{display:flex;align-items:flex-start;justify-content:space-between}
   .sitealert{display:none;background:var(--dbg);color:var(--dfg);border:1px solid var(--dfg);border-radius:12px;padding:9px 13px;margin:8px 0 10px;font-weight:700;font-size:14px;cursor:pointer}
   .sitealert.on{display:block}
-  .sitealert small{display:block;font-weight:400;font-size:12.5px}
+  .sitealert small{display:block;font-weight:400;font-size:12.5px;white-space:pre-line}
+  .sitealert .arow{display:flex;gap:8px;align-items:flex-start}
+  .sitealert .arow+.arow{margin-top:6px;padding-top:6px;border-top:1px solid var(--dfg)}
+  .sitealert .arow>div{flex:1;min-width:0}
+  .sitealert .ax{flex:none;width:32px;height:32px;border:1px solid var(--dfg);border-radius:8px;background:transparent;color:var(--dfg);font:inherit;font-weight:700;cursor:pointer}
 
   /* נעילת הלוגו של המערכת. הכיתוב משמאל לסמל, שניהם על הקו העליון של
      לוגו דיוואני. Space Mono הוא הפונט שנבחר ללוגו בלבד; אם הוא לא נטען,
@@ -4658,9 +4662,11 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   (function(){var el=document.getElementById('sitealert');if(!el)return;
     el.addEventListener('click',function(){location.href='/site';});
     function pull(){fetch('/api/alerts',{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(d){
-      var o=(d&&d.open)||[];if(!o.length){el.classList.remove('on');el.innerHTML='';return;}
-      el.innerHTML=o.map(function(a){return '<div>'+a.title+'<small>'+(a.body||'')+' · מאז '+a.opened_il+'</small></div>';}).join('');
-      el.classList.add('on');}).catch(function(){});}
+      var o=((d&&d.open)||[]).filter(function(a){return !a.acked;});if(!o.length){el.classList.remove('on');el.innerHTML='';return;}
+      el.innerHTML=o.map(function(a){return '<div class="arow"><div>'+a.title+'<small>'+(a.body||'')+' · מאז '+a.opened_il+'</small></div><button type="button" class="ax" data-id="'+a.id+'" title="ראיתי — להסתיר עד שישתנה">✕</button></div>';}).join('');
+      el.classList.add('on');
+      Array.prototype.forEach.call(el.querySelectorAll('.ax'),function(b){b.addEventListener('click',function(e){e.stopPropagation();fetch('/api/alerts/ack',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:+b.getAttribute('data-id')})}).then(pull).catch(function(){});});});
+    }).catch(function(){});}
     pull();setInterval(pull,60000);})();
   (function(){var t=document.getElementById('sitehbtn');if(t)t.addEventListener('click',function(){location.href='/site';});})();
   (function(){var t=document.getElementById('abandbtn');if(t)t.addEventListener('click',function(){location.href='/abandoned';});})();

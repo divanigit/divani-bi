@@ -248,7 +248,17 @@ td.wrap{white-space:normal}
       <button type="button" data-v="date" aria-pressed="false">חדש לישן</button>
       <button type="button" data-v="attempts" aria-pressed="false">ניסיונות</button>
     </div>
+    <div class="eyebrow" style="margin-top:12px">מה קרה אחר כך</div>
+    <div class="chips" id="fOut">
+      <button type="button" data-v="פתוח" aria-pressed="true">פתוח (למי להתקשר)</button>
+      <button type="button" data-v="" aria-pressed="false">הכל</button>
+      <button type="button" data-v="נסגר בפריוריטי" aria-pressed="false">נסגר בפריוריטי</button>
+      <button type="button" data-v="קנה באתר" aria-pressed="false">קנה באתר</button>
+      <button type="button" data-v="לא רלוונטי" aria-pressed="false">לא רלוונטי</button>
+    </div>
     <div class="chips" style="margin-top:12px"><button type="button" id="fPhone" aria-pressed="false">רק עם טלפון</button></div>
+    <div class="dates"><label>שם הנציג שמתקשר <input type="text" id="repName" placeholder="לדוגמה: דב" style="width:150px"></label><span class="muted">נשמר במכשיר הזה. נרשם ליד כל שיחה.</span></div>
+    <p class="explain">"מה קרה אחר כך" נסגר לבד: הזמנה בפריוריטי מאותו טלפון, או הזמנה משולמת באתר מאותו מייל, תוך 30 יום. שיחה יזומה נרשמת אוטומטית כשלוחצים על מספר הטלפון כאן במסך; אם הרכישה באה אחרי שיחה רשומה, זו "הוצלה בשיחה". רכישה בלי שיחה רשומה = "קנה לבד" (הגיע לסניף, חזר לאתר, או התקשר בעצמו). לכן חשוב להתקשר מהמסך, לא מהטלפון ישירות.</p>
     <p class="explain">"חום" = למי כדאי להתקשר קודם, 0–100. מורכב מ: מה קרה (ניסה לשלם ונכשל = הכי חם, אחר כך עצר בתשלום, אחר כך בוטל לבד) · כמה טרי (בשעתיים הראשונות הסיכוי הכי גבוה; אחרי שבוע כמעט אפס) · ניסה יותר מפעם אחת · לקוח שכבר קנה אצלנו · גודל הסכום. בלי טלפון: תמיד "קר", כי אי אפשר להתקשר. חם = 70 ומעלה, פושר = 45–69.</p>
   </section>
 
@@ -337,7 +347,10 @@ window.OWL_HERE = '/abandoned';
 
 /* ---------- הנתונים ---------- */
 var $ = function(id){ return document.getElementById(id); };
-var state = { d: 30, f: '', t: '', seq: 0, rows: [], filter: null, fs: '', fh: '', sort: 'heat', phone: false };
+var state = { d: 30, f: '', t: '', seq: 0, rows: [], filter: null, fs: '', fh: '', fo: 'פתוח', sort: 'heat', phone: false };
+function repName(){ try { return (localStorage.getItem('owl_rep') || '').trim(); } catch (e) { return ''; } }
+function logAction(number, action, note){ return fetch('/api/abandoned/action', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ number: number, action: action, who: repName(), note: note || '' }), keepalive: true }).then(function(r){ return r.json(); }); }
+function outTag(o){ return o === 'פתוח' ? '' : '<span class="tag ' + (o === 'נסגר בפריוריטי' || o === 'קנה באתר' ? 'ok' : 'n') + '">' + esc(o) + '</span>'; }
 var NF = new Intl.NumberFormat('he-IL');
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
 function money(v){ return v == null ? '—' : NF.format(Math.round(+v)) + ' ₪'; }
@@ -363,28 +376,39 @@ function render(d){
   var ab = sm.filter(function(r){ return r.kind === 'נטישה'; })[0] || { n: 0, total: 0 };
   var cn = sm.filter(function(r){ return r.kind === 'ביטול'; })[0] || { n: 0, total: 0 };
   var hot = sm.filter(function(r){ return r.kind === 'חם'; })[0] || { n: 0, total: 0 };
+  var opn = sm.filter(function(r){ return r.kind === 'פתוח'; })[0] || { n: 0, total: 0 };
+  var byCall = sm.filter(function(r){ return r.kind === 'הוצל בשיחה'; })[0] || { n: 0, total: 0 };
+  var alone = sm.filter(function(r){ return r.kind === 'קנה לבד'; })[0] || { n: 0, total: 0 };
+  var calls = sm.filter(function(r){ return r.kind === 'שיחות'; })[0] || { n: 0, total: 0 };
   $('sub').textContent = 'מי הגיע לתשלום באתר ולא שילם · ' + periodTxt() + ((+ab.n + +paid.n) ? ' · ' + Math.round(100 * ab.n / (+ab.n + +paid.n)) + ' אחוז ממי שהגיע לתשלום לא שילם' : '');
   var h = '';
   h += '<button type="button" class="vbox" data-k="hot"><div class="k">להתקשר עכשיו (חם)</div><div class="v" style="color:var(--dfg)">' + hot.n + '</div><div class="m">' + money(hot.total) + '</div></button>';
   h += '<button type="button" class="vbox" data-k="נטישה"><div class="k">נטישות בקופה</div><div class="v">' + ab.n + '</div><div class="m">' + money(ab.total) + '</div></button>';
   h += '<button type="button" class="vbox" data-k="paid"><div class="k">שולמו באתר</div><div class="v">' + paid.n + '</div><div class="m">' + money(paid.total) + '</div></button>';
+  h += '<button type="button" class="vbox" data-k="byCall"><div class="k">הוצלו בשיחה יזומה</div><div class="v" style="color:var(--okfg)">' + byCall.n + '</div><div class="m">' + money(byCall.total) + ' · מתוך ' + calls.n + ' שנוצר איתם קשר</div></button>';
+  h += '<button type="button" class="vbox" data-k="alone"><div class="k">קנו לבד (בלי שיחה)</div><div class="v">' + alone.n + '</div><div class="m">' + money(alone.total) + '</div></button>';
   h += '<button type="button" class="vbox" data-k="ביטול"><div class="k">ביטולים ידניים</div><div class="v">' + cn.n + '</div><div class="m">' + money(cn.total) + ' · לא נספרים</div></button>';
   $('verdict').innerHTML = h;
   Array.prototype.forEach.call($('verdict').querySelectorAll('button.vbox'), function(b){ b.addEventListener('click', function(){
     var k = b.getAttribute('data-k');
     if (k === 'paid') { openSheet('שולמו באתר', '<p class="dsum"><b>' + paid.n + '</b> הזמנות שולמו באתר ב' + periodTxt() + ', סך <b>' + money(paid.total) + '</b>. הפירוט שלהן נמצא במסך "מכירות האתר" בלוח הראשי.</p>'); return; }
-    if (k === 'hot') { state.fh = 'חם'; state.filter = null; syncChips(); drawRows(); document.getElementById('rows').scrollIntoView({ behavior: 'smooth' }); return; }
+    if (k === 'hot') { state.fh = 'חם'; state.fo = 'פתוח'; state.filter = null; syncChips(); drawRows(); document.getElementById('rows').scrollIntoView({ behavior: 'smooth' }); return; }
+    if (k === 'byCall' || k === 'alone') { state.fo = ''; state.fh = ''; state.filter = k; syncChips(); drawRows(); document.getElementById('rows').scrollIntoView({ behavior: 'smooth' }); return; }
+    if (k === 'נטישה') { state.fo = ''; state.fh = ''; }
     state.filter = state.filter === k ? null : k; drawRows();
   }); });
   drawRows();
 }
 function syncChips(){
-  [['fStatus', 'fs'], ['fHeat', 'fh'], ['fSort', 'sort']].forEach(function(x){ Array.prototype.forEach.call(document.querySelectorAll('#' + x[0] + ' button'), function(b){ b.setAttribute('aria-pressed', b.getAttribute('data-v') === state[x[1]] ? 'true' : 'false'); }); });
+  [['fStatus', 'fs'], ['fHeat', 'fh'], ['fSort', 'sort'], ['fOut', 'fo']].forEach(function(x){ Array.prototype.forEach.call(document.querySelectorAll('#' + x[0] + ' button'), function(b){ b.setAttribute('aria-pressed', b.getAttribute('data-v') === state[x[1]] ? 'true' : 'false'); }); });
   $('fPhone').setAttribute('aria-pressed', state.phone ? 'true' : 'false');
 }
 function drawRows(){
   var rows = state.rows.filter(function(r){
+    if (state.filter === 'byCall') return r.converted_by_call;
+    if (state.filter === 'alone') return (r.outcome === 'נסגר בפריוריטי' || r.outcome === 'קנה באתר') && !r.converted_by_call;
     if (state.filter && r.kind !== state.filter) return false;
+    if (state.fo && r.outcome !== state.fo) return false;
     if (state.fs && r.status !== state.fs) return false;
     if (state.fh && r.heat_label !== state.fh) return false;
     if (state.phone && !r.phone) return false;
@@ -396,15 +420,16 @@ function drawRows(){
     if (state.sort === 'attempts') return (b.attempts || 0) - (a.attempts || 0) || (b.heat || 0) - (a.heat || 0);
     return (b.heat || 0) - (a.heat || 0) || (a.age_hours || 0) - (b.age_hours || 0);
   });
-  var desc = [state.fs, state.fh, state.phone ? 'עם טלפון' : ''].filter(Boolean).join(' · ');
+  var desc = [state.fo, state.fs, state.fh, state.phone ? 'עם טלפון' : '', state.filter === 'byCall' ? 'הוצלו בשיחה' : state.filter === 'alone' ? 'קנו לבד' : ''].filter(Boolean).join(' · ');
   if (!rows.length) { $('rows').innerHTML = '<p class="empty">' + (desc ? 'אין שורות שמתאימות לסינון (' + esc(desc) + ').' : 'אין נטישות בתקופה.') + '</p>'; return; }
-  var t = '<p class="muted">' + rows.length + ' שורות' + (desc ? ' · מסונן: ' + esc(desc) : '') + '</p><div class="tblwrap"><table><thead><tr><th>חום</th><th>מתי</th><th>גיל</th><th>שם</th><th>טלפון</th><th>עיר</th><th class="num">סכום</th><th>מה</th><th>מצב</th><th>הזמנה</th></tr></thead><tbody>';
+  var t = '<p class="muted">' + rows.length + ' שורות' + (desc ? ' · מסונן: ' + esc(desc) : '') + '</p><div class="tblwrap"><table><thead><tr><th>חום</th><th>מתי</th><th>גיל</th><th>שם</th><th>טלפון</th><th>עיר</th><th class="num">סכום</th><th>מה</th><th>מצב</th><th>אחר כך</th><th>הזמנה</th></tr></thead><tbody>';
   rows.forEach(function(r){
     var tel = r.phone ? r.phone.replace(/[^\d+]/g, '') : '';
-    t += '<tr class="rowbtn" data-n="' + esc(r.number) + '"' + (r.kind === 'ביטול' ? ' style="opacity:.55"' : '') + '><td>' + heatTag(r.heat_label) + ' <span class="heat">' + (r.kind === 'ביטול' ? '' : r.heat) + '</span><span class="why">' + esc(r.heat_why || '') + '</span></td><td>' + esc(r.date_il) + '</td><td class="muted">' + age(r.age_hours) + '</td><td>' + esc(r.name || '—') + '</td><td class="phone">' + (tel ? '<a href="tel:' + esc(tel) + '" onclick="event.stopPropagation()">' + esc(r.phone) + '</a>' : '—') + '</td><td>' + esc(r.city || '') + '</td><td class="num"><b>' + money(r.total) + '</b></td><td class="wrap"><span class="items">' + esc(r.items || '') + '</span></td><td><span class="tag ' + (r.kind === 'ביטול' ? 'n' : r.status === 'התשלום נכשל' ? 'd' : 'w') + '">' + esc(r.status) + '</span></td><td class="muted">#' + esc(r.number) + (r.email ? '<br><span style="direction:ltr;unicode-bidi:isolate;font-size:11.5px">' + esc(r.email) + '</span>' : '') + '</td></tr>';
+    t += '<tr class="rowbtn" data-n="' + esc(r.number) + '"' + (r.kind === 'ביטול' ? ' style="opacity:.55"' : '') + '><td>' + heatTag(r.heat_label) + ' <span class="heat">' + (r.kind === 'ביטול' ? '' : r.heat) + '</span><span class="why">' + esc(r.heat_why || '') + '</span></td><td>' + esc(r.date_il) + '</td><td class="muted">' + age(r.age_hours) + '</td><td>' + esc(r.name || '—') + '</td><td class="phone">' + (tel ? '<a href="tel:' + esc(tel) + '" class="callbtn" data-n="' + esc(r.number) + '">' + esc(r.phone) + '</a>' : '—') + (r.calls ? '<span class="why">התקשרו ' + r.calls + '× · ' + esc(r.called_il || '') + (r.called_by ? ' · ' + esc(r.called_by) : '') + '</span>' : '') + (r.glassix ? '<span class="why">היה קשר בגלאסיקס</span>' : '') + '</td><td>' + esc(r.city || '') + '</td><td class="num"><b>' + money(r.total) + '</b></td><td class="wrap"><span class="items">' + esc(r.items || '') + '</span></td><td><span class="tag ' + (r.kind === 'ביטול' ? 'n' : r.status === 'התשלום נכשל' ? 'd' : 'w') + '">' + esc(r.status) + '</span></td><td>' + outTag(r.outcome) + (r.outcome_ref ? '<span class="why">' + esc(r.outcome_ref) + ' · ' + esc(r.outcome_il || '') + ' · ' + money(r.outcome_total) + (r.converted_by_call ? ' · <b>אחרי שיחה</b>' : '') + '</span>' : '') + '</td><td class="muted">#' + esc(r.number) + (r.email ? '<br><span style="direction:ltr;unicode-bidi:isolate;font-size:11.5px">' + esc(r.email) + '</span>' : '') + '</td></tr>';
   });
   $('rows').innerHTML = t + '</tbody></table></div>';
   Array.prototype.forEach.call($('rows').querySelectorAll('tr.rowbtn'), function(tr){ tr.addEventListener('click', function(){ drillOrder(tr.getAttribute('data-n')); }); });
+  Array.prototype.forEach.call($('rows').querySelectorAll('a.callbtn'), function(a){ a.addEventListener('click', function(e){ e.stopPropagation(); logAction(a.getAttribute('data-n'), 'call').then(function(){ setTimeout(load, 1500); }).catch(function(){}); }); });
 }
 
 /* ---------- חלון העומק ---------- */
@@ -432,8 +457,11 @@ function drillOrder(number){
     if (o.lines && o.lines.length) h += '<h3>מה היה בסל</h3><div class="tblwrap"><table><thead><tr><th>פריט</th><th class="num">כמות</th><th class="num">סכום</th></tr></thead><tbody>' + o.lines.map(function(l){ return '<tr><td style="white-space:normal">' + esc(l.name) + (l.sku ? ' <span class="muted">' + esc(l.sku) + '</span>' : '') + '</td><td class="num">' + (+l.qty || 1) + '</td><td class="num">' + money(l.total) + '</td></tr>'; }).join('') + '</tbody></table></div>';
     if (o.history && o.history.length) h += '<h3>הזמנות אחרות של אותו לקוח</h3><ul class="list">' + o.history.map(function(x){ var paid = ['completed', 'processing', 'phone-order'].indexOf(x.status) >= 0; return '<li><span class="tag ' + (paid ? 'ok' : 'n') + '">' + esc(STATUS_HE[x.status] || x.status) + '</span>#' + esc(x.number) + ' · ' + money(x.total) + '<span class="when">' + esc(x.date) + '</span></li>'; }).join('') + '</ul>';
     else h += '<p class="muted">לקוח חדש: אין הזמנות אחרות באתר עם המייל הזה.</p>';
+    h += '<h3>אחרי השיחה (לחיצה אחת)</h3><div class="chips" id="actChips"><button type="button" data-a="answered">ענה, מתלבט</button><button type="button" data-a="no_answer">לא ענה</button><button type="button" data-a="not_interested">לא מעוניין</button><button type="button" data-a="irrelevant">לא רלוונטי (טעות/כפול)</button></div><p class="muted" id="actMsg">' + (rr && rr.calls ? 'נרשמו ' + rr.calls + ' שיחות' + (rr.last_action && rr.last_action !== 'call' ? ' · אחרון: ' + ({ answered: 'ענה', no_answer: 'לא ענה', not_interested: 'לא מעוניין', irrelevant: 'לא רלוונטי' }[rr.last_action] || rr.last_action) : '') : 'עדיין לא נרשמה שיחה. לחיצה על הטלפון רושמת אותה לבד.') + '</p>';
     h += '<div class="dwhat">מה לומר בשיחה: "ראינו שהתחלת הזמנה של ' + esc((o.lines && o.lines[0] && o.lines[0].name) || 'מוצר') + ' ולא הסתיים התשלום. רוצה שנעזור לסיים, או שיש שאלה על המוצר?"</div>';
     $('dbody').innerHTML = h;
+    Array.prototype.forEach.call($('dbody').querySelectorAll('a.phone, .phone a'), function(a){ a.addEventListener('click', function(){ logAction(o.number, 'call').then(function(){ setTimeout(load, 1500); }).catch(function(){}); }); });
+    Array.prototype.forEach.call($('dbody').querySelectorAll('#actChips button'), function(b){ b.addEventListener('click', function(){ var act = b.getAttribute('data-a'); b.setAttribute('aria-pressed', 'true'); logAction(o.number, act).then(function(){ $('actMsg').textContent = 'נרשם: ' + b.textContent; setTimeout(load, 800); }).catch(function(){ $('actMsg').textContent = 'לא נרשם. נסה שוב.'; }); }); });
   }).catch(function(e){ $('dbody').innerHTML = '<p class="empty">לא הצלחתי לטעון. ' + esc(e) + '</p>'; });
 }
 
@@ -447,8 +475,10 @@ $('dGo').addEventListener('click', function(){
   Array.prototype.forEach.call(document.querySelectorAll('#segD button'), function(o){ o.setAttribute('aria-pressed', 'false'); });
   load();
 });
-[['fStatus', 'fs'], ['fHeat', 'fh'], ['fSort', 'sort']].forEach(function(x){ Array.prototype.forEach.call(document.querySelectorAll('#' + x[0] + ' button'), function(b){ b.addEventListener('click', function(){ state[x[1]] = b.getAttribute('data-v'); state.filter = null; syncChips(); drawRows(); }); }); });
+[['fStatus', 'fs'], ['fHeat', 'fh'], ['fSort', 'sort'], ['fOut', 'fo']].forEach(function(x){ Array.prototype.forEach.call(document.querySelectorAll('#' + x[0] + ' button'), function(b){ b.addEventListener('click', function(){ state[x[1]] = b.getAttribute('data-v'); state.filter = null; syncChips(); drawRows(); }); }); });
 $('fPhone').addEventListener('click', function(){ state.phone = !state.phone; syncChips(); drawRows(); });
+$('repName').value = repName();
+$('repName').addEventListener('change', function(){ try { localStorage.setItem('owl_rep', $('repName').value.trim()); } catch (e) {} });
 $('refbtn').addEventListener('click', load);
 $('explbtn').addEventListener('click', function(){ var on = document.body.classList.toggle('explain'); $('explbtn').setAttribute('aria-pressed', on ? 'true' : 'false'); });
 load();

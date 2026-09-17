@@ -217,6 +217,21 @@ def _who(p: str) -> str:
     return _identity(p)[0]
 
 
+def _who_cookie(request: Request) -> str:
+    """מי מחזיק את העוגייה. דב, שרון והסיסמה המשותפת חולקים עוגייה אחת ולכן
+    חוזרים כ'צוות'; המסך משלים שם נציג שנשמר בדפדפן."""
+    tok = request.cookies.get(COOKIE_NAME, "")
+    if DASH_PASS_ADMIN and hmac.compare_digest(tok, _admin_token()):
+        return "דורון"
+    if DASH_PASS_ITAMAR and hmac.compare_digest(tok, _itamar_token()):
+        return "איתמר"
+    if DASH_PASS_ASK2 and hmac.compare_digest(tok, _ask2_token()):
+        return "חיים"
+    if DASH_PASS_IDO and hmac.compare_digest(tok, _ido_token()):
+        return "עידו"
+    return "צוות"
+
+
 # ---------- the no-profit role (עידו) ----------
 # One gate for every /api/ answer, and it denies by default: an endpoint that is not
 # listed here returns "בפיתוח" instead of leaking a number nobody checked.
@@ -440,6 +455,25 @@ def _range_args(h, f, t):
     return (now - dt.timedelta(hours=h)).isoformat(), (now + dt.timedelta(minutes=1)).isoformat(), h
 
 
+@app.post("/api/alerts/ack")
+async def api_alerts_ack(request: Request):
+    """'ראיתי' — מסתיר התראה פתוחה מהפס האדום (לכולם) עד שתיסגר ותיפתח מחדש. לא סוגר אותה."""
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    try:
+        body = await request.json()
+        aid = int(body.get("id") or 0)
+    except Exception:
+        aid = 0
+    if not aid:
+        return JSONResponse({"error": "bad request"}, status_code=400)
+    try:
+        sb_rpc("bi_alert_ack", {"p_id": aid, "p_who": _who_cookie(request)})
+        return JSONResponse({"ok": True})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=502)
+
+
 @app.get("/api/site")
 def api_site(request: Request, h: int = 24, strategy: str = "mobile", f: str = "", t: str = ""):
     """כל מה שמסך בריאות האתר צריך בקריאה אחת.
@@ -533,6 +567,32 @@ def api_abandoned_order(request: Request, number: str = ""):
         return JSONResponse({"error": "auth"}, status_code=401)
     try:
         return JSONResponse({"rows": sb_rpc("bi_web_order_detail", {"p_number": number}) or []})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=502)
+
+
+@app.post("/api/abandoned/action")
+async def api_abandoned_action(request: Request):
+    """רישום פעולה על נטישה: call (נרשם אוטומטית בלחיצה על הטלפון) / answered / no_answer /
+    not_interested / irrelevant / note. זה מה שמאפשר להבדיל 'הוצל בשיחה' מ'קנה לבד'."""
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    number = str(body.get("number") or "").strip()
+    action = str(body.get("action") or "").strip()
+    if not number or action not in ("call", "answered", "no_answer", "not_interested", "irrelevant", "note"):
+        return JSONResponse({"error": "bad request"}, status_code=400)
+    who = _who_cookie(request)
+    rep = str(body.get("who") or "").strip()[:40]
+    if rep:
+        who = rep if who == "צוות" else f"{who} ({rep})"
+    try:
+        rid = sb_rpc("bi_abandon_action", {"p_number": number, "p_action": action, "p_who": who,
+                                           "p_note": str(body.get("note") or "")[:300] or None})
+        return JSONResponse({"ok": True, "id": rid, "who": who})
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=502)
 
@@ -802,11 +862,14 @@ def sync_customers_window(days_back: int):
     minimization) for customers created in the last `days_back` days."""
     auth = "Basic " + base64.b64encode(f"{PRI_USER}:{PRI_PASS}".encode("utf-8")).decode("ascii")
     lo = (dt.datetime.now(IL).date() - dt.timedelta(days=days_back)).isoformat()
+    # PHONE/CELLPHONE נמשכים רק כדי לסגור מעגל לנטישות בקופה (17.9.26): ה-RPC מגבב
+    # אותם (md5 של 9 הספרות האחרונות) ושומר גיבוב בלבד. הטלפון עצמו לא נשמר אצלנו.
     url = (f"{PRI_BASE}/CUSTOMERS?$filter=CREATEDDATE%20ge%20{lo}T00:00:00%2B02:00"
-           "&$select=CUSTNAME,CITYNAME,RONY_SUGCUSTDES,SPEC4,CREATEDDATE")
+           "&$select=CUSTNAME,CITYNAME,RONY_SUGCUSTDES,SPEC4,CREATEDDATE,PHONE,CELLPHONE")
     rows = [{"cn": r.get("CUSTNAME") or "", "ct": r.get("CITYNAME") or "",
              "sc": r.get("RONY_SUGCUSTDES") or "", "sr": r.get("SPEC4") or "",
-             "cr": (r.get("CREATEDDATE") or "")[:10]}
+             "cr": (r.get("CREATEDDATE") or "")[:10],
+             "ph": [x for x in (r.get("PHONE"), r.get("CELLPHONE")) if x]}
             for r in _pri_pages(url, auth)]
     if rows:
         for i in range(0, len(rows), 2000):
