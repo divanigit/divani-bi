@@ -455,6 +455,18 @@ def _range_args(h, f, t):
     return (now - dt.timedelta(hours=h)).isoformat(), (now + dt.timedelta(minutes=1)).isoformat(), h
 
 
+@app.get("/api/messages")
+def api_messages(request: Request, h: int = 720, f: str = "", t: str = ""):
+    """כל ההודעות שנשלחו לטלפון (התראות, חזר לתקין, בוקר) עם הטקסט — גישה רטרואקטיבית."""
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    p_from, p_to, _ = _range_args(h, f, t)
+    try:
+        return JSONResponse({"rows": sb_rpc("bi_messages_range", {"p_from": p_from, "p_to": p_to}) or []})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=502)
+
+
 @app.post("/api/alerts/ack")
 async def api_alerts_ack(request: Request):
     """'ראיתי' — מסתיר התראה פתוחה מהפס האדום (לכולם) עד שתיסגר ותיפתח מחדש. לא סוגר אותה."""
@@ -498,11 +510,17 @@ def api_site(request: Request, h: int = 24, strategy: str = "mobile", f: str = "
         "health": ("bi_health", {}),
         "product_issues": ("bi_web_product_issues", {}),
     }
-    for key, (fn, params) in parts.items():
+    # במקביל: כל חלק לבד, כדי שהמסך לא יחכה לסכום של שמונה קריאות.
+    from concurrent.futures import ThreadPoolExecutor
+    def _one(item):
+        key, (fn, params) = item
         try:
-            out[key] = sb_rpc(fn, params) or []
+            return key, (sb_rpc(fn, params) or [])
         except Exception as e:
-            out[key] = {"error": str(e)}
+            return key, {"error": str(e)}
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        for key, val in ex.map(_one, parts.items()):
+            out[key] = val
     if isinstance(out.get("health"), list):
         out["health"] = [r for r in out["health"] if r.get("flow_group") == "אתר האינטרנט"]
     try:
@@ -607,9 +625,12 @@ def api_abandoned(request: Request, days: int = 30, f: str = "", t: str = ""):
     p_from, p_to, _ = _range_args(days * 24, f, t)
     rng = {"p_from": p_from, "p_to": p_to}
     try:
-        return JSONResponse({"days": days, "from": p_from, "to": p_to,
-                             "summary": sb_rpc("bi_web_abandoned_summary_range", rng) or [],
-                             "rows": sb_rpc("bi_web_abandoned_range", rng) or []})
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=2) as ex:
+            fs = ex.submit(sb_rpc, "bi_web_abandoned_summary_range", rng)
+            fr = ex.submit(sb_rpc, "bi_web_abandoned_range", rng)
+            return JSONResponse({"days": days, "from": p_from, "to": p_to,
+                                 "summary": fs.result() or [], "rows": fr.result() or []})
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=502)
 

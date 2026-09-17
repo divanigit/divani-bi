@@ -157,9 +157,23 @@ td a{color:var(--tx);text-decoration:none;border-bottom:1px dotted var(--tx3)}
 .dsum b{font-weight:800}
 .dwhat{font-size:13px;color:var(--tx2);background:var(--surface);border-radius:10px;padding:9px 11px;margin:0 0 12px;line-height:1.6}
 .dsheet h3{font-size:13.5px;font-weight:800;margin:14px 0 6px;color:var(--tx2)}
+
+/* ---------- חיווי טעינה ---------- */
+.loadbar{position:fixed;top:0;left:0;right:0;height:3px;background:var(--brand);transform:scaleX(0);transform-origin:right;transition:transform .4s;z-index:200}
+body.loading .loadbar{animation:lb 1.2s ease-in-out infinite}
+@keyframes lb{0%{transform:scaleX(0);transform-origin:right}50%{transform:scaleX(1);transform-origin:right}51%{transform-origin:left}100%{transform:scaleX(0);transform-origin:left}}
+.loadpill{position:fixed;top:12px;left:50%;transform:translateX(-50%);background:#111;color:#fff;font-size:13px;font-weight:700;padding:8px 14px;border-radius:999px;display:none;z-index:200;box-shadow:var(--shadow)}
+body.loading .loadpill{display:flex;align-items:center;gap:8px}
+.loadpill i{width:12px;height:12px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:sp .8s linear infinite;display:inline-block}
+@keyframes sp{to{transform:rotate(360deg)}}
+body.loading .card{opacity:.55;transition:opacity .2s}
+.stale{font-size:12px;color:var(--wfg);background:var(--wbg);border-radius:8px;padding:4px 9px;display:none;margin:0 0 8px}
+body.loading .stale{display:inline-block}
 </style>
 </head>
 <body>
+<div class="loadbar" aria-hidden="true"></div>
+<div class="loadpill" role="status"><i></i><span id="loadtxt">טוען נתונים…</span></div>
 <div class="wrap">
 
   <div class="hdr">
@@ -270,6 +284,11 @@ td a{color:var(--tx);text-decoration:none;border-bottom:1px dotted var(--tx3)}
     <p class="explain">התראה נפתחת ברגע שבדיקת זמינות אחת נכשלת, כשעמוד עיקרי איטי (מעל 4 שניות) פעמיים ברצף, כשהמדידה עצמה נעצרה, או כשתעודת האבטחה עומדת לפוג. נסגרת לבד כשהמצב חוזר לתקין. ההודעות מגיעות לטלפון של כל מי שמנוי לערוץ. לחיצה: מה בדיוק קרה. ✕ בפס האדום = "ראיתי": מסתיר לכולם עד שההתראה תיסגר ותיפתח מחדש. בטלפון, הודעות ישנות נמחקות מתוך אפליקציית ntfy (החלקה או "נקה הכל").</p>
   </section>
 
+  <section class="card">
+    <h2>הודעות שנשלחו לטלפון</h2>
+    <div id="msgList"></div>
+    <p class="explain">כל מה שהינשוף שלח לערוץ ההתראות בתקופה שנבחרה: התראות, "חזר לתקין", והודעות הבוקר. גם אם נמחקו מהטלפון, הן כאן.</p>
+  </section>
   <section class="card">
     <h2>המדידה עצמה</h2>
     <div id="healthTbl"></div>
@@ -406,13 +425,13 @@ function oppName(o){ return OPP[o.id] || o.title || o.id; }
 
 /* ---------- טעינה ---------- */
 function load(){
-  var seq = ++state.seq;
+  var seq = ++state.seq; document.body.classList.add('loading'); var lt = $('loadtxt'); if (lt) lt.textContent = 'טוען נתונים…';
   $('sub').textContent = 'vdivani.co.il · טוען…';
   $('rangeTxt').textContent = 'מוצג: ' + periodTxt();
   fetch('/api/site?strategy=' + state.s + qs(), { cache: 'no-store' })
     .then(function(r){ if (r.status === 401) { location.href = '/login'; throw new Error('auth'); } return r.json(); })
-    .then(function(d){ if (seq !== state.seq) return; state.data = d; render(d); })
-    .catch(function(e){ if (seq === state.seq) $('sub').textContent = 'לא הצלחתי לטעון את הנתונים. ' + e; });
+    .then(function(d){ if (seq !== state.seq) return; state.data = d; render(d); document.body.classList.remove('loading'); loadMessages(); })
+    .catch(function(e){ if (seq === state.seq) { document.body.classList.remove('loading'); $('sub').textContent = 'לא הצלחתי לטעון את הנתונים. ' + e; } });
 }
 
 function render(d){
@@ -604,7 +623,7 @@ $('dx').addEventListener('click', closeSheet);
 dov.addEventListener('click', function(e){ if (e.target === dov) closeSheet(); });
 document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && dov.classList.contains('on')) closeSheet(); });
 function drill(params){ return fetch('/api/site/drill?' + params + qs(), { cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(d){ if (d.error) throw new Error(d.error); return d.rows || []; }); }
-function loading(title){ openSheet(title, '<p class="empty">טוען…</p>'); }
+function loading(title){ openSheet(title, '<p class="empty"><i style="display:inline-block;width:12px;height:12px;border:2px solid var(--tx3);border-top-color:transparent;border-radius:50%;animation:sp .8s linear infinite;vertical-align:middle;margin-inline-end:6px"></i>טוען…</p>'); }
 function fail(e){ $('dbody').innerHTML = '<p class="empty">לא הצלחתי לטעון. ' + esc(e) + '</p>'; }
 
 function drillFails(page, bucket, checks, failed, perPage){
@@ -701,6 +720,15 @@ $('refbtn').addEventListener('click', load);
 $('explbtn').addEventListener('click', function(){ var on = document.body.classList.toggle('explain'); $('explbtn').setAttribute('aria-pressed', on ? 'true' : 'false'); });
 load();
 setInterval(function(){ if (!dov.classList.contains('on')) load(); }, 60000);
+
+/* ---------- יומן הודעות ---------- */
+function loadMessages(){
+  var el = $('msgList'); if (!el) return;
+  fetch('/api/messages?' + (typeof qs === 'function' ? qs().replace(/^&/, '') : 'h=720'), { cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(d){
+    var rows = Array.isArray(d.rows) ? d.rows : [];
+    el.innerHTML = rows.length ? '<ul class="list">' + rows.map(function(m){ return '<li><span class="tag ' + (m.kind === 'התראה' ? 'd' : m.kind === 'חזר לתקין' ? 'ok' : 'n') + '">' + esc(m.kind) + '</span><b>' + esc(m.title || '') + '</b><span class="muted" style="white-space:pre-line;flex-basis:100%">' + esc(m.msg || '') + '</span><span class="when">' + esc(m.at_il) + (m.sent ? '' : ' · לא נשלחה') + '</span></li>'; }).join('') + '</ul>' : '<p class="empty">לא נשלחו הודעות בתקופה.</p>';
+  }).catch(function(){ el.innerHTML = '<p class="empty">לא הצלחתי לטעון את ההודעות.</p>'; });
+}
 </script>
 </body>
 </html>

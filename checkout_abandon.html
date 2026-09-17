@@ -165,9 +165,23 @@ td.wrap{white-space:normal}
 .tag.warm{background:var(--wbg);color:var(--wfg);border-color:var(--wfg)}
 .tag.cold{background:var(--bg);color:var(--tx3);border-color:var(--line2)}
 .why{display:block;font-size:11.5px;color:var(--tx3);white-space:normal;max-width:220px}
+
+/* ---------- חיווי טעינה ---------- */
+.loadbar{position:fixed;top:0;left:0;right:0;height:3px;background:var(--brand);transform:scaleX(0);transform-origin:right;transition:transform .4s;z-index:200}
+body.loading .loadbar{animation:lb 1.2s ease-in-out infinite}
+@keyframes lb{0%{transform:scaleX(0);transform-origin:right}50%{transform:scaleX(1);transform-origin:right}51%{transform-origin:left}100%{transform:scaleX(0);transform-origin:left}}
+.loadpill{position:fixed;top:12px;left:50%;transform:translateX(-50%);background:#111;color:#fff;font-size:13px;font-weight:700;padding:8px 14px;border-radius:999px;display:none;z-index:200;box-shadow:var(--shadow)}
+body.loading .loadpill{display:flex;align-items:center;gap:8px}
+.loadpill i{width:12px;height:12px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:sp .8s linear infinite;display:inline-block}
+@keyframes sp{to{transform:rotate(360deg)}}
+body.loading .card{opacity:.55;transition:opacity .2s}
+.stale{font-size:12px;color:var(--wfg);background:var(--wbg);border-radius:8px;padding:4px 9px;display:none;margin:0 0 8px}
+body.loading .stale{display:inline-block}
 </style>
 </head>
 <body>
+<div class="loadbar" aria-hidden="true"></div>
+<div class="loadpill" role="status"><i></i><span id="loadtxt">טוען נתונים…</span></div>
 <div class="wrap">
 
   <div class="hdr">
@@ -269,6 +283,12 @@ td.wrap{white-space:normal}
     <p class="explain">ממוין מהחדש לישן. "גיל" = כמה זמן עבר מאז. הטלפון לחיץ מהנייד. סימון "טופל" אחרי שיחה: בשלב הבא, אם תרצה.</p>
   </section>
 
+  <section class="card">
+    <h2>הודעות שנשלחו לטלפון</h2>
+    <div id="msgList"></div>
+    <p class="explain">כל מה שהינשוף שלח לערוץ ההתראות בתקופה שנבחרה: התראות, "חזר לתקין", והודעות הבוקר. גם אם נמחקו מהטלפון, הן כאן.</p>
+  </section>
+
 </div>
 <div class="owlov" id="owlov">
   <div class="owlsheet" role="dialog" aria-modal="true" aria-label="תפריט">
@@ -361,13 +381,13 @@ function heatTag(l){ return l === 'חם' ? '<span class="tag hot">חם</span>' :
 var STATUS_HE = { completed: 'שולמה והושלמה', processing: 'שולמה, בטיפול', 'phone-order': 'הזמנה טלפונית', cancelled: 'בוטלה', failed: 'התשלום נכשל', pending: 'לא שולמה', 'on-hold': 'ממתינה לתשלום', refunded: 'הוחזר כסף' };
 
 function load(){
-  var seq = ++state.seq;
+  var seq = ++state.seq; document.body.classList.add('loading'); var lt = $('loadtxt'); if (lt) lt.textContent = 'טוען נתונים…';
   $('sub').textContent = 'מי הגיע לתשלום באתר ולא שילם. טוען…';
   $('rangeTxt').textContent = 'מוצג: ' + periodTxt();
   fetch('/api/abandoned?' + qs(), { cache: 'no-store' })
     .then(function(r){ if (r.status === 401) { location.href = '/login'; throw new Error('auth'); } return r.json(); })
-    .then(function(d){ if (seq === state.seq) render(d); })
-    .catch(function(e){ if (seq === state.seq) $('sub').textContent = 'לא הצלחתי לטעון. ' + e; });
+    .then(function(d){ if (seq === state.seq) { render(d); document.body.classList.remove('loading'); loadMessages(); } })
+    .catch(function(e){ if (seq === state.seq) { document.body.classList.remove('loading'); $('sub').textContent = 'לא הצלחתי לטעון. ' + e; } });
 }
 function render(d){
   var sm = Array.isArray(d.summary) ? d.summary : [], rows = Array.isArray(d.rows) ? d.rows : [];
@@ -440,7 +460,7 @@ $('dx').addEventListener('click', closeSheet);
 dov.addEventListener('click', function(e){ if (e.target === dov) closeSheet(); });
 document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && dov.classList.contains('on')) closeSheet(); });
 function drillOrder(number){
-  openSheet('הזמנה #' + number, '<p class="empty">טוען…</p>');
+  openSheet('הזמנה #' + number, '<p class="empty"><i style="display:inline-block;width:12px;height:12px;border:2px solid var(--tx3);border-top-color:transparent;border-radius:50%;animation:sp .8s linear infinite;vertical-align:middle;margin-inline-end:6px"></i>טוען…</p>');
   fetch('/api/abandoned/order?number=' + encodeURIComponent(number), { cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(d){
     var o = (d.rows || [])[0]; if (!o) { $('dbody').innerHTML = '<p class="empty">לא נמצאה.</p>'; return; }
     var why = o.status === 'failed' ? 'התשלום נכשל בחברת האשראי או בסליקה. הלקוח ניסה לשלם ולא הצליח: זה הלקוח הכי חם ברשימה.'
@@ -482,6 +502,15 @@ $('repName').addEventListener('change', function(){ try { localStorage.setItem('
 $('refbtn').addEventListener('click', load);
 $('explbtn').addEventListener('click', function(){ var on = document.body.classList.toggle('explain'); $('explbtn').setAttribute('aria-pressed', on ? 'true' : 'false'); });
 load();
+
+/* ---------- יומן הודעות ---------- */
+function loadMessages(){
+  var el = $('msgList'); if (!el) return;
+  fetch('/api/messages?' + (typeof qs === 'function' ? qs().replace(/^&/, '') : 'h=720'), { cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(d){
+    var rows = Array.isArray(d.rows) ? d.rows : [];
+    el.innerHTML = rows.length ? '<ul class="list">' + rows.map(function(m){ return '<li><span class="tag ' + (m.kind === 'התראה' ? 'd' : m.kind === 'חזר לתקין' ? 'ok' : 'n') + '">' + esc(m.kind) + '</span><b>' + esc(m.title || '') + '</b><span class="muted" style="white-space:pre-line;flex-basis:100%">' + esc(m.msg || '') + '</span><span class="when">' + esc(m.at_il) + (m.sent ? '' : ' · לא נשלחה') + '</span></li>'; }).join('') + '</ul>' : '<p class="empty">לא נשלחו הודעות בתקופה.</p>';
+  }).catch(function(){ el.innerHTML = '<p class="empty">לא הצלחתי לטעון את ההודעות.</p>'; });
+}
 </script>
 </body>
 </html>
