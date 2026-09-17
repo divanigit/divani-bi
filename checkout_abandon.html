@@ -156,6 +156,15 @@ td a{color:var(--tx);text-decoration:none;border-bottom:1px dotted var(--tx3)}
 .phone a{color:var(--brand);font-weight:700;text-decoration:none;direction:ltr;unicode-bidi:isolate}
 .items{white-space:normal;max-width:360px;color:var(--tx2);font-size:12.5px;display:inline-block}
 td.wrap{white-space:normal}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 0}
+.chips button{font:inherit;font-size:13px;min-height:38px;padding:0 12px;border-radius:999px;border:1px solid var(--line2);background:var(--bg);color:var(--tx2);cursor:pointer}
+.chips button[aria-pressed="true"]{background:#111;color:#fff;border-color:#111;font-weight:700}
+@media (prefers-color-scheme:dark){.chips button[aria-pressed="true"]{background:#e9efeb;color:#0f1512;border-color:#e9efeb}}
+.heat{font-weight:800}
+.tag.hot{background:var(--dbg);color:var(--dfg);border-color:var(--dfg)}
+.tag.warm{background:var(--wbg);color:var(--wfg);border-color:var(--wfg)}
+.tag.cold{background:var(--bg);color:var(--tx3);border-color:var(--line2)}
+.why{display:block;font-size:11.5px;color:var(--tx3);white-space:normal;max-width:220px}
 </style>
 </head>
 <body>
@@ -213,6 +222,34 @@ td.wrap{white-space:normal}
     <h2>שורה תחתונה</h2>
     <div class="verdict" id="verdict"></div>
     <p class="explain">השוואה של אותה תקופה: כמה כסף נכנס דרך האתר, מול כמה נעצר בקופה. הסכום בנטישות הוא הסכום שהלקוח ראה בקופה, כולל מע"מ ומשלוח. לחיצה על מספר: הרשימה מאחוריו.</p>
+  </section>
+
+  <section class="card">
+    <h2>סינון ומיון</h2>
+    <div class="eyebrow">מצב</div>
+    <div class="chips" id="fStatus">
+      <button type="button" data-v="" aria-pressed="true">הכל</button>
+      <button type="button" data-v="התשלום נכשל" aria-pressed="false">התשלום נכשל</button>
+      <button type="button" data-v="לא שולם" aria-pressed="false">לא שולם</button>
+      <button type="button" data-v="בוטל" aria-pressed="false">בוטל לבד</button>
+      <button type="button" data-v="בוטל ידנית" aria-pressed="false">ביטול ידני</button>
+    </div>
+    <div class="eyebrow" style="margin-top:12px">חום</div>
+    <div class="chips" id="fHeat">
+      <button type="button" data-v="" aria-pressed="true">הכל</button>
+      <button type="button" data-v="חם" aria-pressed="false">חם</button>
+      <button type="button" data-v="פושר" aria-pressed="false">פושר</button>
+      <button type="button" data-v="קר" aria-pressed="false">קר</button>
+    </div>
+    <div class="eyebrow" style="margin-top:12px">מיון</div>
+    <div class="chips" id="fSort">
+      <button type="button" data-v="heat" aria-pressed="true">חום (למי קודם)</button>
+      <button type="button" data-v="total" aria-pressed="false">סכום</button>
+      <button type="button" data-v="date" aria-pressed="false">חדש לישן</button>
+      <button type="button" data-v="attempts" aria-pressed="false">ניסיונות</button>
+    </div>
+    <div class="chips" style="margin-top:12px"><button type="button" id="fPhone" aria-pressed="false">רק עם טלפון</button></div>
+    <p class="explain">"חום" = למי כדאי להתקשר קודם, 0–100. מורכב מ: מה קרה (ניסה לשלם ונכשל = הכי חם, אחר כך עצר בתשלום, אחר כך בוטל לבד) · כמה טרי (בשעתיים הראשונות הסיכוי הכי גבוה; אחרי שבוע כמעט אפס) · ניסה יותר מפעם אחת · לקוח שכבר קנה אצלנו · גודל הסכום. בלי טלפון: תמיד "קר", כי אי אפשר להתקשר. חם = 70 ומעלה, פושר = 45–69.</p>
   </section>
 
   <section class="card">
@@ -300,13 +337,14 @@ window.OWL_HERE = '/abandoned';
 
 /* ---------- הנתונים ---------- */
 var $ = function(id){ return document.getElementById(id); };
-var state = { d: 30, f: '', t: '', seq: 0, rows: [], filter: null };
+var state = { d: 30, f: '', t: '', seq: 0, rows: [], filter: null, fs: '', fh: '', sort: 'heat', phone: false };
 var NF = new Intl.NumberFormat('he-IL');
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
 function money(v){ return v == null ? '—' : NF.format(Math.round(+v)) + ' ₪'; }
 function age(h){ return h == null ? '' : h < 24 ? h + ' שע\'' : Math.round(h / 24) + ' ימים'; }
 function qs(){ return state.f ? 'f=' + state.f + '&t=' + state.t : 'days=' + state.d; }
 function periodTxt(){ return state.f ? 'מ-' + state.f.split('-').reverse().join('.') + ' עד ' + state.t.split('-').reverse().join('.') : state.d === 1 ? 'אתמול והיום' : state.d + ' הימים האחרונים'; }
+function heatTag(l){ return l === 'חם' ? '<span class="tag hot">חם</span>' : l === 'פושר' ? '<span class="tag warm">פושר</span>' : l === 'קר' ? '<span class="tag cold">קר</span>' : '<span class="tag n">—</span>'; }
 var STATUS_HE = { completed: 'שולמה והושלמה', processing: 'שולמה, בטיפול', 'phone-order': 'הזמנה טלפונית', cancelled: 'בוטלה', failed: 'התשלום נכשל', pending: 'לא שולמה', 'on-hold': 'ממתינה לתשלום', refunded: 'הוחזר כסף' };
 
 function load(){
@@ -324,27 +362,46 @@ function render(d){
   var paid = sm.filter(function(r){ return r.kind === 'שולמו'; })[0] || { n: 0, total: 0 };
   var ab = sm.filter(function(r){ return r.kind === 'נטישה'; })[0] || { n: 0, total: 0 };
   var cn = sm.filter(function(r){ return r.kind === 'ביטול'; })[0] || { n: 0, total: 0 };
-  $('sub').textContent = 'מי הגיע לתשלום באתר ולא שילם · ' + periodTxt() + ' · מתעדכן כל 15 דקות';
+  var hot = sm.filter(function(r){ return r.kind === 'חם'; })[0] || { n: 0, total: 0 };
+  $('sub').textContent = 'מי הגיע לתשלום באתר ולא שילם · ' + periodTxt() + ((+ab.n + +paid.n) ? ' · ' + Math.round(100 * ab.n / (+ab.n + +paid.n)) + ' אחוז ממי שהגיע לתשלום לא שילם' : '');
   var h = '';
-  h += '<button type="button" class="vbox" data-k="נטישה"><div class="k">נטישות בקופה</div><div class="v" style="color:var(--dfg)">' + ab.n + '</div><div class="m">' + money(ab.total) + '</div></button>';
+  h += '<button type="button" class="vbox" data-k="hot"><div class="k">להתקשר עכשיו (חם)</div><div class="v" style="color:var(--dfg)">' + hot.n + '</div><div class="m">' + money(hot.total) + '</div></button>';
+  h += '<button type="button" class="vbox" data-k="נטישה"><div class="k">נטישות בקופה</div><div class="v">' + ab.n + '</div><div class="m">' + money(ab.total) + '</div></button>';
   h += '<button type="button" class="vbox" data-k="paid"><div class="k">שולמו באתר</div><div class="v">' + paid.n + '</div><div class="m">' + money(paid.total) + '</div></button>';
-  h += '<div class="vbox" style="cursor:default"><div class="k">יחס נטישה בקופה</div><div class="v">' + ((+ab.n + +paid.n) ? Math.round(100 * ab.n / (+ab.n + +paid.n)) + '%' : '—') + '</div><div class="m">מתוך מי שהגיע לתשלום</div></div>';
   h += '<button type="button" class="vbox" data-k="ביטול"><div class="k">ביטולים ידניים</div><div class="v">' + cn.n + '</div><div class="m">' + money(cn.total) + ' · לא נספרים</div></button>';
   $('verdict').innerHTML = h;
   Array.prototype.forEach.call($('verdict').querySelectorAll('button.vbox'), function(b){ b.addEventListener('click', function(){
     var k = b.getAttribute('data-k');
     if (k === 'paid') { openSheet('שולמו באתר', '<p class="dsum"><b>' + paid.n + '</b> הזמנות שולמו באתר ב' + periodTxt() + ', סך <b>' + money(paid.total) + '</b>. הפירוט שלהן נמצא במסך "מכירות האתר" בלוח הראשי.</p>'); return; }
+    if (k === 'hot') { state.fh = 'חם'; state.filter = null; syncChips(); drawRows(); document.getElementById('rows').scrollIntoView({ behavior: 'smooth' }); return; }
     state.filter = state.filter === k ? null : k; drawRows();
   }); });
   drawRows();
 }
+function syncChips(){
+  [['fStatus', 'fs'], ['fHeat', 'fh'], ['fSort', 'sort']].forEach(function(x){ Array.prototype.forEach.call(document.querySelectorAll('#' + x[0] + ' button'), function(b){ b.setAttribute('aria-pressed', b.getAttribute('data-v') === state[x[1]] ? 'true' : 'false'); }); });
+  $('fPhone').setAttribute('aria-pressed', state.phone ? 'true' : 'false');
+}
 function drawRows(){
-  var rows = state.filter ? state.rows.filter(function(r){ return r.kind === state.filter; }) : state.rows;
-  if (!rows.length) { $('rows').innerHTML = '<p class="empty">' + (state.filter ? 'אין שורות מסוג "' + state.filter + '" בתקופה.' : 'אין נטישות בתקופה.') + '</p>'; return; }
-  var t = (state.filter ? '<p class="muted">מסונן: ' + esc(state.filter) + ' בלבד. לחיצה חוזרת על המספר מבטלת.</p>' : '') + '<div class="tblwrap"><table><thead><tr><th>מתי</th><th>גיל</th><th>שם</th><th>טלפון</th><th>עיר</th><th class="num">סכום</th><th>מה</th><th>מצב</th><th>הזמנה</th></tr></thead><tbody>';
+  var rows = state.rows.filter(function(r){
+    if (state.filter && r.kind !== state.filter) return false;
+    if (state.fs && r.status !== state.fs) return false;
+    if (state.fh && r.heat_label !== state.fh) return false;
+    if (state.phone && !r.phone) return false;
+    return true;
+  });
+  rows.sort(function(a, b){
+    if (state.sort === 'total') return (+b.total || 0) - (+a.total || 0);
+    if (state.sort === 'date') return (a.age_hours || 0) - (b.age_hours || 0);
+    if (state.sort === 'attempts') return (b.attempts || 0) - (a.attempts || 0) || (b.heat || 0) - (a.heat || 0);
+    return (b.heat || 0) - (a.heat || 0) || (a.age_hours || 0) - (b.age_hours || 0);
+  });
+  var desc = [state.fs, state.fh, state.phone ? 'עם טלפון' : ''].filter(Boolean).join(' · ');
+  if (!rows.length) { $('rows').innerHTML = '<p class="empty">' + (desc ? 'אין שורות שמתאימות לסינון (' + esc(desc) + ').' : 'אין נטישות בתקופה.') + '</p>'; return; }
+  var t = '<p class="muted">' + rows.length + ' שורות' + (desc ? ' · מסונן: ' + esc(desc) : '') + '</p><div class="tblwrap"><table><thead><tr><th>חום</th><th>מתי</th><th>גיל</th><th>שם</th><th>טלפון</th><th>עיר</th><th class="num">סכום</th><th>מה</th><th>מצב</th><th>הזמנה</th></tr></thead><tbody>';
   rows.forEach(function(r){
     var tel = r.phone ? r.phone.replace(/[^\d+]/g, '') : '';
-    t += '<tr class="rowbtn" data-n="' + esc(r.number) + '"' + (r.kind === 'ביטול' ? ' style="opacity:.55"' : '') + '><td>' + esc(r.date_il) + '</td><td class="muted">' + age(r.age_hours) + '</td><td>' + esc(r.name || '—') + '</td><td class="phone">' + (tel ? '<a href="tel:' + esc(tel) + '" onclick="event.stopPropagation()">' + esc(r.phone) + '</a>' : '—') + '</td><td>' + esc(r.city || '') + '</td><td class="num"><b>' + money(r.total) + '</b></td><td class="wrap"><span class="items">' + esc(r.items || '') + '</span></td><td><span class="tag ' + (r.kind === 'ביטול' ? 'n' : r.status === 'התשלום נכשל' ? 'd' : 'w') + '">' + esc(r.status) + '</span></td><td class="muted">#' + esc(r.number) + (r.email ? '<br><span style="direction:ltr;unicode-bidi:isolate;font-size:11.5px">' + esc(r.email) + '</span>' : '') + '</td></tr>';
+    t += '<tr class="rowbtn" data-n="' + esc(r.number) + '"' + (r.kind === 'ביטול' ? ' style="opacity:.55"' : '') + '><td>' + heatTag(r.heat_label) + ' <span class="heat">' + (r.kind === 'ביטול' ? '' : r.heat) + '</span><span class="why">' + esc(r.heat_why || '') + '</span></td><td>' + esc(r.date_il) + '</td><td class="muted">' + age(r.age_hours) + '</td><td>' + esc(r.name || '—') + '</td><td class="phone">' + (tel ? '<a href="tel:' + esc(tel) + '" onclick="event.stopPropagation()">' + esc(r.phone) + '</a>' : '—') + '</td><td>' + esc(r.city || '') + '</td><td class="num"><b>' + money(r.total) + '</b></td><td class="wrap"><span class="items">' + esc(r.items || '') + '</span></td><td><span class="tag ' + (r.kind === 'ביטול' ? 'n' : r.status === 'התשלום נכשל' ? 'd' : 'w') + '">' + esc(r.status) + '</span></td><td class="muted">#' + esc(r.number) + (r.email ? '<br><span style="direction:ltr;unicode-bidi:isolate;font-size:11.5px">' + esc(r.email) + '</span>' : '') + '</td></tr>';
   });
   $('rows').innerHTML = t + '</tbody></table></div>';
   Array.prototype.forEach.call($('rows').querySelectorAll('tr.rowbtn'), function(tr){ tr.addEventListener('click', function(){ drillOrder(tr.getAttribute('data-n')); }); });
@@ -368,6 +425,8 @@ function drillOrder(number){
       : o.cancel_kind === 'manual' ? 'מישהו מהצוות ביטל את ההזמנה ידנית. לא נטישה.'
       : 'ההזמנה בוטלה. עדיין לא ידוע אם לבד או ידנית (הסיווג רץ ברקע כל רבע שעה).';
     var h = '<p class="dsum"><b>' + esc(o.name || 'ללא שם') + '</b>' + (o.city ? ', ' + esc(o.city) : '') + ' · ' + esc(o.date_il) + '<br>סכום בקופה: <b>' + money(o.total) + '</b>' + (o.shipping ? ' (מזה משלוח ' + money(o.shipping) + ')' : '') + (o.discount ? ', הנחה ' + money(o.discount) : '') + '<br>מצב: <b>' + esc(STATUS_HE[o.status] || o.status) + '</b>' + (o.payment ? ' · אמצעי תשלום: ' + esc(o.payment) : '') + '</p>';
+    var rr = state.rows.filter(function(x){ return x.number === o.number; })[0];
+    if (rr && rr.kind !== 'ביטול') h += '<p class="dsum">' + heatTag(rr.heat_label) + ' <b>' + rr.heat + '</b> מתוך 100 · ' + esc(rr.heat_why || '') + '<br><span class="muted">' + (rr.age_hours <= 2 ? 'להתקשר עכשיו: בשעתיים הראשונות הסיכוי הכי גבוה.' : rr.age_hours <= 24 ? 'להתקשר היום. אחרי יום הסיכוי יורד בחצי.' : rr.age_hours <= 168 ? 'עדיין שווה שיחה, במיוחד אם הסכום גדול.' : 'ישן. שיחה קצרה או הודעה, בלי ציפיות.') + '</span></p>';
     h += '<div class="dwhat">' + why + (o.cancel_note ? '<br><span class="muted">מהערות ההזמנה: ' + esc(o.cancel_note) + '</span>' : '') + '</div>';
     h += '<p class="dsum">' + (o.phone ? '<a class="phone" href="tel:' + esc(o.phone.replace(/[^\d+]/g, '')) + '"><b>' + esc(o.phone) + '</b></a>' : 'אין טלפון') + (o.email ? ' · <span style="direction:ltr;unicode-bidi:isolate">' + esc(o.email) + '</span>' : '') + '</p>';
     if (o.lines && o.lines.length) h += '<h3>מה היה בסל</h3><div class="tblwrap"><table><thead><tr><th>פריט</th><th class="num">כמות</th><th class="num">סכום</th></tr></thead><tbody>' + o.lines.map(function(l){ return '<tr><td style="white-space:normal">' + esc(l.name) + (l.sku ? ' <span class="muted">' + esc(l.sku) + '</span>' : '') + '</td><td class="num">' + (+l.qty || 1) + '</td><td class="num">' + money(l.total) + '</td></tr>'; }).join('') + '</tbody></table></div>';
@@ -388,6 +447,8 @@ $('dGo').addEventListener('click', function(){
   Array.prototype.forEach.call(document.querySelectorAll('#segD button'), function(o){ o.setAttribute('aria-pressed', 'false'); });
   load();
 });
+[['fStatus', 'fs'], ['fHeat', 'fh'], ['fSort', 'sort']].forEach(function(x){ Array.prototype.forEach.call(document.querySelectorAll('#' + x[0] + ' button'), function(b){ b.addEventListener('click', function(){ state[x[1]] = b.getAttribute('data-v'); state.filter = null; syncChips(); drawRows(); }); }); });
+$('fPhone').addEventListener('click', function(){ state.phone = !state.phone; syncChips(); drawRows(); });
 $('refbtn').addEventListener('click', load);
 $('explbtn').addEventListener('click', function(){ var on = document.body.classList.toggle('explain'); $('explbtn').setAttribute('aria-pressed', on ? 'true' : 'false'); });
 load();
