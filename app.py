@@ -55,6 +55,7 @@ DASH_PASS_DOV = os.environ.get("DASH_PASS_DOV", "")  # Dov (operations mgr): own
 DASH_PASS_SHARON = os.environ.get("DASH_PASS_SHARON", "")  # Sharon: own credential, regular view access
 DASH_PASS_ITAMAR = os.environ.get("DASH_PASS_ITAMAR", "")  # Itamar: own credential, owner rights
 DASH_PASS_IDO = os.environ.get("DASH_PASS_IDO", "")  # עידו אהרון: regular view, without any profit figure
+OWL_CART_SECRET = os.environ.get("OWL_CART_SECRET", "")  # לכידת עגלות מהאתר: חתימת HMAC משותפת עם התוסף
 SB_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SB_KEY = os.environ.get("SUPABASE_SECRET_KEY", "")
 PRI_USER = os.environ.get("PRI_USER", "")
@@ -325,6 +326,8 @@ _NP_STRIP = {
     "/api/cash": None,
     "/api/pending": None,
     "/api/refresh": None,
+    # קליטת עגלות מהאתר: מאומת ב-HMAC, לא נמשך ע"י משתמש. אין בו רווח.
+    "/api/cartcapture": None,
 }
 # התובנות מוצגות לעידו כ"בפיתוח" (דורון, 30.8.2026), ולכן גם הנתונים
 # עצמם לא נמשכים: מסך שכתוב עליו "בפיתוח" ובכל זאת מוריד נתונים הוא
@@ -624,6 +627,35 @@ async def api_abandoned_action(request: Request):
         rid = sb_rpc("bi_abandon_action", {"p_number": number, "p_action": action, "p_who": who,
                                            "p_note": str(body.get("note") or "")[:300] or None})
         return JSONResponse({"ok": True, "id": rid, "who": who})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=502)
+
+
+@app.post("/api/cartcapture")
+async def api_cartcapture(request: Request):
+    """לכידת עגלה מהאתר בזמן אמת, מהתוסף owl-cart-capture. מאומת ב-HMAC משותף
+    (OWL_CART_SECRET) ולא מאחורי סיסמת המסך — התוסף מדבר עם השרת ישירות. שלב
+    'form' = הוקלד טלפון או מייל (יש למי לפנות), 'cart' = רק הוסיף לעגלה.
+    הקליטה מצטברת: כל פעימה משלימה שדות ואינה דורסת מה שכבר נלכד (bi_cart_upsert)."""
+    raw = await request.body()
+    sig = request.headers.get("X-OWL-Sign", "")
+    good = OWL_CART_SECRET and sig and hmac.compare_digest(
+        sig, hmac.new(OWL_CART_SECRET.encode("utf-8"), raw, hashlib.sha256).hexdigest())
+    if not good:
+        return JSONResponse({"error": "auth"}, status_code=401)
+    try:
+        b = json.loads(raw.decode("utf-8"))
+    except Exception:
+        return JSONResponse({"error": "bad json"}, status_code=400)
+    if not str(b.get("cart_id") or "").strip():
+        return JSONResponse({"error": "no cart_id"}, status_code=400)
+    email = str(b.get("email") or "").strip().lower()
+    # הזמנות בדיקה של הצוות לא נכנסות לרשימת מי לפנות אליו.
+    if email.endswith("@divani.co.il") or re.match(r"^(test|בדיקה|demo)", email):
+        return JSONResponse({"ok": True, "skipped": "staff"})
+    try:
+        stage = sb_rpc("bi_cart_upsert", {"p": b})
+        return JSONResponse({"ok": True, "stage": stage})
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=502)
 
@@ -1803,7 +1835,10 @@ async def login_post(request: Request):
     who, tok = _identity(p)          # one decision: the log and the cookie cannot disagree
     _log_login(request, True, who)
     resp = RedirectResponse("/", status_code=303)
-    resp.set_cookie(COOKIE_NAME, tok, max_age=60 * 60 * 24 * 30,
+    # שנה שלמה (דורון, שאלה 94, 18.9.2026): הכניסה נזכרת לזמן ארוך כדי שהינשוף
+    # יבקש סיסמה לעתים רחוקות. העוגייה היא HMAC של הסיסמה — החלפת סיסמה עדיין
+    # מבטלת אותה מיד, אורך החיים לא נוגע בזה.
+    resp.set_cookie(COOKIE_NAME, tok, max_age=60 * 60 * 24 * 365,
                     httponly=True, secure=_is_https(request), samesite="lax")
     return resp
 
