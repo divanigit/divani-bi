@@ -748,7 +748,10 @@ function renderNow(d){
   var age = d.age_sec == null ? null : Math.max(0, d.age_sec);
   var ageTxt = age == null ? 'אין בדיקה ב־15 הדקות האחרונות' : ('נבדק לפני ' + (age < 90 ? age + ' שניות' : Math.round(age / 60) + ' דקות'));
   var okN = pages.filter(function(p){ return p.ok; }).length;
-  var site = !pages.length ? ['n', 'אין נתון', ageTxt] : d.all_ok ? ['ok', 'פעיל', ageTxt + ' · ' + okN + ' מתוך ' + pages.length + ' עמודים עונים'] : d.any_ok ? ['w', 'חלקי', ageTxt + ' · ' + okN + ' מתוך ' + pages.length + ' עונים'] : ['d', 'נפל', ageTxt + ' · אף עמוד לא עונה'];
+  /* זמינות: מהסבב האחרון מכל סוג (מלא כל דקה, קל כל 30 שניות). תגובת שרת: מהסבב המלא האחרון בלבד. */
+  var latest = Array.isArray(d.latest) ? d.latest : pages; var okL = latest.filter(function(p){ return p.ok; }).length;
+  var lightTxt = d.light ? ' · בדיקה קלה' : '';
+  var site = !latest.length ? ['n', 'אין נתון', ageTxt] : d.all_ok ? ['ok', 'פעיל', ageTxt + lightTxt + ' · ' + okL + ' מתוך ' + latest.length + ' עמודים עונים'] : d.any_ok ? ['w', 'חלקי', ageTxt + lightTxt + ' · ' + okL + ' מתוך ' + latest.length + ' עונים'] : ['d', 'נפל', ageTxt + lightTxt + ' · אף עמוד לא עונה'];
   var home = pages.filter(function(p){ return p.page === 'בית'; })[0];
   var slowest = pages.slice().sort(function(a, b){ return (b.ms || 0) - (a.ms || 0); })[0];
   var srv = home && home.ok ? ['' + nowColorMs(home.ms), nowSec(home.ms), 'דף הבית' + (slowest && slowest.page !== 'בית' ? ' · הכי איטי כרגע: ' + esc(slowest.page) + ' ' + nowSec(slowest.ms) : '')] : ['d', 'לא עונה', 'דף הבית'];
