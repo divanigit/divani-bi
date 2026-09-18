@@ -424,6 +424,19 @@ def site_health(request: Request):
     return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
 
+@app.get("/api/site/now")
+def api_site_now(request: Request):
+    """"עכשיו" למסך בריאות האתר: סבב הבדיקה האחרון (כל דקה) לפי עמוד, מדידת המעבדה האחרונה לדף הבית,
+    מהירות אצל לקוחות אמיתיים בשעה האחרונה (bi_rum, מרגע שהתוסף בחי), ומספר ההתראות הפתוחות.
+    ספים לצבעים (דורון, 18.9.2026): תגובת שרת ירוק עד 0.5 שנ', צהוב עד 1.5, אדום מעל או כשעמוד לא עונה."""
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    try:
+        return JSONResponse(sb_rpc("bi_site_now", {}) or {}, headers={"Cache-Control": "no-store"})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=502)
+
+
 @app.get("/api/alerts")
 def api_alerts(request: Request):
     """ההתראות הפתוחות כרגע — לפס האדום בראש כל מסך. ריק = הכל תקין."""

@@ -96,6 +96,17 @@ h2{font-size:16px;font-weight:800;margin:0 0 4px}
 .explain{display:none;font-size:13px;color:var(--tx2);background:var(--bg);border:1px dashed var(--line2);border-radius:10px;padding:9px 11px;margin:8px 0 0;line-height:1.6}
 body.explain .explain{display:block}
 
+/* ---------- עכשיו (דורון 18.9.2026, שאלות 44–47) ---------- */
+.now{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.nbox{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 13px;min-height:84px}
+.nbox .k{font-size:12px;color:var(--tx2);margin:0 0 4px}
+.nbox .v{font-size:24px;font-weight:800;line-height:1.1;display:flex;align-items:center;gap:8px}
+.nbox .m{font-size:12px;color:var(--tx3);margin-top:4px}
+.dot{width:12px;height:12px;border-radius:50%;display:inline-block;flex:none}
+.dot.ok{background:var(--okfg)}.dot.w{background:var(--wfg)}.dot.d{background:var(--dfg)}.dot.n{background:var(--tx3)}
+.npages{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.nowtick{font-size:12px;color:var(--tx3);margin-top:8px}
+
 /* ---------- שורה תחתונה ---------- */
 .verdict{display:flex;flex-wrap:wrap;gap:10px}
 .vbox{flex:1 1 150px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 13px;min-height:84px;cursor:pointer;text-align:start;font:inherit;color:var(--tx)}
@@ -207,6 +218,14 @@ body.loading .stale{display:inline-block}
 
   <h1>בריאות האתר</h1>
   <p class="sub" id="sub">vdivani.co.il · טוען…</p>
+
+  <section class="card" id="nowcard">
+    <h2>עכשיו</h2>
+    <div class="now" id="now"><div class="nbox"><div class="k">האתר עכשיו</div><div class="v"><span class="dot n"></span>טוען…</div></div></div>
+    <div class="npages" id="nowpages"></div>
+    <p class="nowtick" id="nowtick"></p>
+    <p class="explain">"עכשיו" = סבב הבדיקה האחרון של הינשוף, כל דקה, ארבעה עמודים. "תגובת שרת" = כמה זמן עובר מהבקשה עד שהשרת מתחיל לענות: ירוק עד 0.5 שנ', צהוב עד 1.5, אדום מעל או כשעמוד לא עונה. "מהירות אצל לקוחות" = מה שגולשים אמיתיים חוו בשעה האחרונה, זמן עד תוכן ראשי, אחוזון 75 (מתחיל עם עליית התוסף לאתר החי). מתרענן לבד כל 60 שניות.</p>
+  </section>
 
   <section class="card">
     <div class="ctlrow">
@@ -720,6 +739,33 @@ $('refbtn').addEventListener('click', load);
 $('explbtn').addEventListener('click', function(){ var on = document.body.classList.toggle('explain'); $('explbtn').setAttribute('aria-pressed', on ? 'true' : 'false'); });
 load();
 setInterval(function(){ if (!dov.classList.contains('on')) load(); }, 60000);
+
+/* ---------- עכשיו: סבב הבדיקה האחרון, מתרענן כל 60 שניות גם כשגיליון פתוח ---------- */
+function nowColorMs(ms){ if (ms == null) return 'n'; return ms <= 500 ? 'ok' : ms <= 1500 ? 'w' : 'd'; }
+function nowSec(ms){ return ms == null ? '—' : (ms / 1000).toFixed(ms < 1000 ? 2 : 1) + ' שנ\''; }
+function renderNow(d){
+  var pages = Array.isArray(d.pages) ? d.pages : [];
+  var age = d.age_sec == null ? null : Math.max(0, d.age_sec);
+  var ageTxt = age == null ? 'אין בדיקה ב־15 הדקות האחרונות' : ('נבדק לפני ' + (age < 90 ? age + ' שניות' : Math.round(age / 60) + ' דקות'));
+  var okN = pages.filter(function(p){ return p.ok; }).length;
+  var site = !pages.length ? ['n', 'אין נתון', ageTxt] : d.all_ok ? ['ok', 'פעיל', ageTxt + ' · ' + okN + ' מתוך ' + pages.length + ' עמודים עונים'] : d.any_ok ? ['w', 'חלקי', ageTxt + ' · ' + okN + ' מתוך ' + pages.length + ' עונים'] : ['d', 'נפל', ageTxt + ' · אף עמוד לא עונה'];
+  var home = pages.filter(function(p){ return p.page === 'בית'; })[0];
+  var slowest = pages.slice().sort(function(a, b){ return (b.ms || 0) - (a.ms || 0); })[0];
+  var srv = home && home.ok ? ['' + nowColorMs(home.ms), nowSec(home.ms), 'דף הבית' + (slowest && slowest.page !== 'בית' ? ' · הכי איטי כרגע: ' + esc(slowest.page) + ' ' + nowSec(slowest.ms) : '')] : ['d', 'לא עונה', 'דף הבית'];
+  var rum = d.rum || {}; var rumBox = rum.n ? [nowColorMs(rum.p75_ms <= 2500 ? 400 : rum.p75_ms <= 4000 ? 1000 : 2000), nowSec(rum.p75_ms), rum.n + ' צפיות בשעה האחרונה · אחוזון 75'] : ['n', '—', 'יופעל עם עליית התוסף לאתר החי'];
+  var sp = d.speed || {}; var spT = sp.checked_at ? new Date(sp.checked_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) : '—';
+  var lab = sp.lcp_ms ? [sp.lcp_ms <= 2500 ? 'ok' : sp.lcp_ms <= 4000 ? 'w' : 'd', (sp.lcp_ms / 1000).toFixed(1) + ' שנ\'', 'דף הבית בטלפון, ' + spT + ' · ציון ' + (sp.score == null ? '—' : sp.score) + ' · יעד 2.5'] : ['n', '—', 'אין מדידה'];
+  function box(k, c){ return '<div class="nbox"><div class="k">' + k + '</div><div class="v"><span class="dot ' + c[0] + '"></span>' + c[1] + '</div><div class="m">' + c[2] + '</div></div>'; }
+  $('now').innerHTML = box('האתר עכשיו', site) + box('תגובת שרת עכשיו', srv) + box('מהירות אצל לקוחות, שעה אחרונה', rumBox) + box('מעבדה, מדידה אחרונה', lab);
+  $('nowpages').innerHTML = pages.map(function(p){ var c = p.ok ? nowColorMs(p.ms) : 'd'; return '<span class="tag ' + (c === 'ok' ? 'ok' : c === 'w' ? 'w' : 'd') + '" title="' + esc(p.url || '') + '">' + esc(p.page) + ' ' + (p.ok ? nowSec(p.ms) : 'לא עונה' + (p.status ? ' (' + p.status + ')' : '')) + '</span>'; }).join('');
+  var al = +d.alerts_open || 0;
+  $('nowtick').textContent = 'עודכן ' + new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' · רענון אוטומטי כל 60 שניות' + (al ? ' · ' + al + ' התראות פתוחות' : '');
+}
+function loadNow(){
+  fetch('/api/site/now', { cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(d){ if (!d || d.error) throw new Error(d && d.error || 'no data'); renderNow(d); })
+    .catch(function(e){ $('nowtick').textContent = 'לא הצלחתי לטעון את "עכשיו": ' + e; });
+}
+loadNow(); setInterval(loadNow, 60000);
 
 /* ---------- יומן הודעות ---------- */
 function loadMessages(){
