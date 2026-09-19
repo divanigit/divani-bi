@@ -138,7 +138,7 @@ tr:last-child td{border-bottom:0}
 tr.rowbtn{cursor:pointer}
 tr.rowbtn:hover td{background:var(--bg)}
 td a{color:var(--tx);text-decoration:none;border-bottom:1px dotted var(--tx3)}
-.muted{color:var(--tx3);font-size:13px}
+.muted{color:var(--tx3);font-size:13px;overflow-wrap:anywhere;word-break:break-word}
 .empty{color:var(--tx2);font-size:13.5px;padding:8px 0}
 .more{font-size:12px;color:var(--tx3);margin:6px 0 0}
 
@@ -160,6 +160,7 @@ td a{color:var(--tx);text-decoration:none;border-bottom:1px dotted var(--tx3)}
 .legend button[aria-pressed="false"]{opacity:.45}
 .list{margin:0;padding:0;list-style:none}
 .list li{padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px;display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}
+.list li>*{min-width:0;max-width:100%}
 .list li.rowbtn{cursor:pointer}
 .list li:last-child{border-bottom:0}
 .list .when{color:var(--tx3);font-size:12px;direction:ltr}
@@ -187,6 +188,21 @@ body.loading .loadpill{display:flex;align-items:center;gap:8px}
 body.loading .card{opacity:.55;transition:opacity .2s}
 .stale{font-size:12px;color:var(--wfg);background:var(--wbg);border-radius:8px;padding:4px 9px;display:none;margin:0 0 8px}
 body.loading .stale{display:inline-block}
+
+/* ---------- טלפון: קיבוע למסך וריווח נקי ---------- */
+@media (max-width:640px){
+  .wrap{padding:10px 11px 40px}
+  .card{padding:13px 12px;margin:0 0 11px}
+  h1{margin-top:2px}
+  .sub{margin-bottom:12px}
+  /* טבלאות רחבות נשארות בתוך הכרטיס וגוללות אופקית בלבד — לא חותכות את העמוד */
+  .tblwrap{-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+  th,td{padding:8px 7px}
+  /* גוף ההתראה/ההודעה: שורה שלמה, נשבר יפה, לא דוחף לרוחב */
+  .list li>.muted,.list li>.when{flex-basis:100%}
+}
+/* רשת ביטחון: שום אלמנט לא יגלוש את רוחב המסך בטלפון */
+html,body{overflow-x:hidden}
 </style>
 </head>
 <body>
@@ -589,7 +605,7 @@ function render(d){
 
   /* התראות */
   $('alertsList').innerHTML = recent.length
-    ? '<ul class="list">' + recent.map(function(a){ return '<li class="rowbtn" data-id="' + a.id + '"><span class="tag ' + (a.open ? 'd' : 'n') + '">' + (a.open ? 'פתוחה' : 'נסגרה') + '</span><b>' + esc(a.title) + '</b><span class="muted">' + esc(a.body || '') + '</span><span class="when">' + esc(a.opened_il) + (a.closed_il ? ' → ' + esc(a.closed_il) : '') + ' · ' + a.minutes + ' דק\'</span></li>'; }).join('') + '</ul>'
+    ? '<ul class="list">' + recent.map(function(a){ return '<li class="rowbtn" data-id="' + a.id + '"><span class="tag ' + (a.open ? 'd' : 'n') + '">' + (a.open ? 'פתוחה' : 'נסגרה') + '</span><b>' + esc(a.title) + '</b><span class="muted">' + esc(niceBody(a.body || '', a.title)) + '</span><span class="when">' + esc(a.opened_il) + (a.closed_il ? ' → ' + esc(a.closed_il) : '') + ' · ' + a.minutes + ' דק\'</span></li>'; }).join('') + '</ul>'
     : '<p class="empty">אין התראות בתקופה. זה טוב.</p>';
   Array.prototype.forEach.call($('alertsList').querySelectorAll('li.rowbtn'), function(li){ li.addEventListener('click', function(){ drillAlert(+li.getAttribute('data-id')); }); });
 
@@ -701,7 +717,7 @@ function drillAlert(id){
   drill('what=alert&id=' + id).then(function(rows){
     var a = rows[0]; if (!a) { $('dbody').innerHTML = '<p class="empty">לא נמצאה.</p>'; return; }
     $('dttl').textContent = a.title;
-    var h = '<p class="dsum">' + (a.open ? 'עדיין פתוחה, ' : 'נסגרה. ') + 'נפתחה ב-<b>' + esc(a.opened_il) + '</b>' + (a.closed_il ? ', נסגרה ב-<b>' + esc(a.closed_il) + '</b>' : '') + ', סך הכל <b>' + a.minutes + ' דקות</b>.<br>' + esc(a.body || '') + '</p>';
+    var h = '<p class="dsum">' + (a.open ? 'עדיין פתוחה, ' : 'נסגרה. ') + 'נפתחה ב-<b>' + esc(a.opened_il) + '</b>' + (a.closed_il ? ', נסגרה ב-<b>' + esc(a.closed_il) + '</b>' : '') + ', סך הכל <b>' + a.minutes + ' דקות</b>.<br>' + esc(niceBody(a.body || '', a.title)) + '</p>';
     var what = { down: 'בדיקת זמינות נכשלה. הכלל שלך: כל כשל בודד מתריע, גם של שנייה. כשל אחד ויחיד הוא לרוב רעש רשת; שניים-שלושה ברצף הם תקלה אמיתית.', slow: 'עמוד עיקרי נמדד איטי (מעל 4 שניות עד התוכן) פעמיים ברצף. אם זה קורה בשעות עומס בלבד, זה השרת. אם תמיד, זה העמוד עצמו (תמונות, תוספים).', silent: 'הבודק עצמו הפסיק לרוץ. עד שהוא חוזר, המספרים במסך ישנים.', cert: 'תעודת האבטחה עומדת לפוג. צריך לחדש אצל חברת האחסון או להפעיל חידוש אוטומטי.' };
     h += '<div class="dwhat">' + (what[a.kind] || '') + '</div>';
     if (a.fails && a.fails.length) h += '<h3>הבדיקות שנכשלו מאחורי ההתראה</h3><div class="tblwrap"><table><thead><tr><th>מתי</th><th>עמוד</th><th>מה</th></tr></thead><tbody>' + a.fails.map(function(f){ return '<tr><td>' + esc(f.at) + '</td><td>' + esc(f.page) + '</td><td>' + esc(f.status ? 'קוד ' + f.status : (f.err || '')) + '</td></tr>'; }).join('') + '</tbody></table></div>';
@@ -793,7 +809,7 @@ function loadMessages(){
   var el = $('msgList'); if (!el) return;
   fetch('/api/messages?' + (typeof qs === 'function' ? qs().replace(/^&/, '') : 'h=720'), { cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(d){
     var rows = Array.isArray(d.rows) ? d.rows : [];
-    el.innerHTML = rows.length ? '<ul class="list">' + rows.map(function(m){ return '<li><span class="tag ' + (m.kind === 'התראה' ? 'd' : m.kind === 'חזר לתקין' ? 'ok' : 'n') + '">' + esc(m.kind) + '</span><b>' + esc(m.title || '') + '</b><span class="muted" style="white-space:pre-line;flex-basis:100%">' + esc(m.msg || '') + '</span><span class="when">' + esc(m.at_il) + (m.sent ? '' : ' · לא נשלחה') + '</span></li>'; }).join('') + '</ul>' : '<p class="empty">לא נשלחו הודעות בתקופה.</p>';
+    el.innerHTML = rows.length ? '<ul class="list">' + rows.map(function(m){ return '<li><span class="tag ' + (m.kind === 'התראה' ? 'd' : m.kind === 'חזר לתקין' ? 'ok' : 'n') + '">' + esc(m.kind) + '</span><b>' + esc(m.title || '') + '</b><span class="muted" style="white-space:pre-line;flex-basis:100%">' + esc(niceBody(m.msg || '', m.title)) + '</span><span class="when">' + esc(m.at_il) + (m.sent ? '' : ' · לא נשלחה') + '</span></li>'; }).join('') + '</ul>' : '<p class="empty">לא נשלחו הודעות בתקופה.</p>';
   }).catch(function(){ el.innerHTML = '<p class="empty">לא הצלחתי לטעון את ההודעות.</p>'; });
 }
 </script>
