@@ -87,6 +87,13 @@ body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--font);-webk
 h1{font-size:clamp(23px,5.4vw,31px);font-weight:800;margin:4px 0 2px;letter-spacing:-.01em}
 .sub{font-size:13.5px;color:var(--tx2);margin:0 0 14px}
 h2{font-size:16px;font-weight:800;margin:0 0 4px}
+/* קיפול כרטיס — אותה תבנית כמו פס ההתראות: כותרת + מספר + חץ, לחיצה פותחת. מקופל כברירת מחדל. */
+.foldhead{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+.foldhead .foldn{font-size:13px;font-weight:600;color:var(--tx3)}
+.foldhead .foldchev{margin-inline-start:auto;font-size:13px;color:var(--tx3);transition:transform .2s}
+.foldcard.collapsed .foldchev{transform:rotate(-90deg)}
+.foldcard.collapsed .foldbody{display:none}
+.foldcard.collapsed{padding-bottom:14px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin:0 0 12px;box-shadow:var(--shadow)}
 .eyebrow{font-size:12.5px;font-weight:700;color:var(--tx2);margin:0 0 8px;line-height:1.35}
 .ctlrow{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
@@ -320,15 +327,15 @@ html,body{overflow-x:hidden}
     <p class="explain">התעודה היא מה שנותן לאתר את המנעול בדפדפן. כשהיא פגה, הדפדפן מציג ללקוח אזהרה אדומה במקום האתר. נבדקת פעם ביום; התראה מתחת ל-14 יום.</p>
   </section>
 
-  <section class="card">
-    <h2>התראות</h2>
-    <div id="alertsList"></div>
+  <section class="card foldcard collapsed">
+    <h2 class="foldhead">התראות<span class="foldn" id="alertsN"></span><span class="foldchev">▾</span></h2>
+    <div id="alertsList" class="foldbody"></div>
     <p class="explain">התראה נפתחת ברגע שבדיקת זמינות אחת נכשלת, כשעמוד עיקרי איטי (מעל 4 שניות) פעמיים ברצף, כשהמדידה עצמה נעצרה, או כשתעודת האבטחה עומדת לפוג. נסגרת לבד כשהמצב חוזר לתקין. ההודעות מגיעות לטלפון של כל מי שמנוי לערוץ. לחיצה: מה בדיוק קרה. ✕ בפס האדום = "ראיתי": מסתיר לכולם עד שההתראה תיסגר ותיפתח מחדש. בטלפון, הודעות ישנות נמחקות מתוך אפליקציית ntfy (החלקה או "נקה הכל").</p>
   </section>
 
-  <section class="card">
-    <h2>הודעות שנשלחו לטלפון</h2>
-    <div id="msgList"></div>
+  <section class="card foldcard collapsed">
+    <h2 class="foldhead">הודעות שנשלחו לטלפון<span class="foldn" id="msgN"></span><span class="foldchev">▾</span></h2>
+    <div id="msgList" class="foldbody"></div>
     <p class="explain">כל מה שהינשוף שלח לערוץ ההתראות בתקופה שנבחרה: התראות, "חזר לתקין", והודעות הבוקר. גם אם נמחקו מהטלפון, הן כאן.</p>
   </section>
   <section class="card">
@@ -607,6 +614,7 @@ function render(d){
   $('alertsList').innerHTML = recent.length
     ? '<ul class="list">' + recent.map(function(a){ return '<li class="rowbtn" data-id="' + a.id + '"><span class="tag ' + (a.open ? 'd' : 'n') + '">' + (a.open ? 'פתוחה' : 'נסגרה') + '</span><b>' + esc(a.title) + '</b><span class="muted">' + esc(niceBody(a.body || '', a.title)) + '</span><span class="when">' + esc(a.opened_il) + (a.closed_il ? ' → ' + esc(a.closed_il) : '') + ' · ' + a.minutes + ' דק\'</span></li>'; }).join('') + '</ul>'
     : '<p class="empty">אין התראות בתקופה. זה טוב.</p>';
+  var _an = $('alertsN'); if (_an) _an.textContent = ' · ' + recent.length;
   Array.prototype.forEach.call($('alertsList').querySelectorAll('li.rowbtn'), function(li){ li.addEventListener('click', function(){ drillAlert(+li.getAttribute('data-id')); }); });
 
   /* המדידה עצמה */
@@ -804,12 +812,16 @@ function loadNow(){
 }
 loadNow(); setInterval(loadNow, 60000);
 
+/* קיפול כרטיסים: לחיצה על כותרת עם .foldhead פותחת/סוגרת את גוף הכרטיס */
+document.addEventListener('click', function(e){ var h = e.target.closest && e.target.closest('.foldhead'); if (h && h.parentElement && h.parentElement.classList.contains('foldcard')) h.parentElement.classList.toggle('collapsed'); });
+
 /* ---------- יומן הודעות ---------- */
 function loadMessages(){
   var el = $('msgList'); if (!el) return;
   fetch('/api/messages?' + (typeof qs === 'function' ? qs().replace(/^&/, '') : 'h=720'), { cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(d){
     var rows = Array.isArray(d.rows) ? d.rows : [];
     el.innerHTML = rows.length ? '<ul class="list">' + rows.map(function(m){ return '<li><span class="tag ' + (m.kind === 'התראה' ? 'd' : m.kind === 'חזר לתקין' ? 'ok' : 'n') + '">' + esc(m.kind) + '</span><b>' + esc(m.title || '') + '</b><span class="muted" style="white-space:pre-line;flex-basis:100%">' + esc(niceBody(m.msg || '', m.title)) + '</span><span class="when">' + esc(m.at_il) + (m.sent ? '' : ' · לא נשלחה') + '</span></li>'; }).join('') + '</ul>' : '<p class="empty">לא נשלחו הודעות בתקופה.</p>';
+    var _mn = $('msgN'); if (_mn) _mn.textContent = ' · ' + rows.length;
   }).catch(function(){ el.innerHTML = '<p class="empty">לא הצלחתי לטעון את ההודעות.</p>'; });
 }
 </script>
