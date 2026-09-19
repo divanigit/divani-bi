@@ -4663,9 +4663,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     el.addEventListener('click',function(){location.href='/site';});
     function pull(){fetch('/api/alerts',{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(d){
       var o=((d&&d.open)||[]).filter(function(a){return !a.acked;});if(!o.length){el.classList.remove('on');el.innerHTML='';return;}
-      el.innerHTML=o.map(function(a){return '<div class="arow"><div>'+a.title+'<small>'+(a.body||'')+' · מאז '+a.opened_il+'</small></div><button type="button" class="ax" data-id="'+a.id+'" title="ראיתי — להסתיר עד שישתנה">✕</button></div>';}).join('');
+      // בלוח הראשי רק סיכום קצר — הפירוט והטיפול במסך "בריאות האתר".
+      var t=o[0]&&o[0].title?String(o[0].title).replace(/[<>&]/g,' '):'';
+      el.innerHTML='<div class="arow"><div><b>⚠ '+o.length+' '+(o.length===1?'התראה פעילה':'התראות פעילות')+' באתר</b><small>'+t+(o.length>1?' ועוד '+(o.length-1):'')+' · הקש לבריאות האתר</small></div></div>';
       el.classList.add('on');
-      Array.prototype.forEach.call(el.querySelectorAll('.ax'),function(b){b.addEventListener('click',function(e){e.stopPropagation();fetch('/api/alerts/ack',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:+b.getAttribute('data-id')})}).then(pull).catch(function(){});});});
     }).catch(function(){});}
     pull();setInterval(pull,60000);})();
   (function(){var t=document.getElementById('sitehbtn');if(t)t.addEventListener('click',function(){location.href='/site';});})();
