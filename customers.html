@@ -185,8 +185,8 @@ details.exp b{color:var(--tx);font-weight:600}
 
   <div class="tabs" role="tablist">
     <button class="on" data-tab="dlv" role="tab">אספקות</button>
-    <button data-tab="sat" role="tab" disabled>שביעות רצון<span class="soon">שלב הבא</span></button>
-    <button data-tab="prod" role="tab" disabled>מוצרים<span class="soon">שלב הבא</span></button>
+    <button data-tab="sat" role="tab">שביעות רצון</button>
+    <button data-tab="prod" role="tab">מוצרים</button>
   </div>
 
   <div id="tab-dlv">
@@ -229,6 +229,40 @@ details.exp b{color:var(--tx);font-weight:600}
       <div class="tw" id="late"></div>
     </div>
   </div>
+
+  <div id="tab-sat" style="display:none">
+    <details class="exp">
+      <summary>הסברים — איך זה נמדד</summary>
+      <p><b>מרוצה</b> = לקוח שכתב תודה/שבח מיוזמתו (וואטסאפ/צ'אט דרך גלסיקס, או ביקורת Google) ואין לו שום תלונה בתקופה הנבחרת. <b>לא מרוצה</b> = לקוח עם תלונה בתקופה: הודעה שסווגה כתלונה, או קוד תקלה שנציג הקליד בפריוריטי. <b>שקט</b> = לקוח שקיבל אספקה בתקופה ולא כתב כלום.</p>
+      <p>הסיווג של הודעות הלקוח נעשה במודל שפה (Claude Haiku) על הודעות של אותו יום באותה שיחה — תודה נימוסית בסוף בקשה אינה "מרוצה". נשמר ציטוט קצר בלבד. <span class="est">הסיווג הוא אומדן: דיוק נבדק על מדגם ומוצג כאן כשיש.</span></p>
+      <p>אין סקר פעיל (הכרעה 20.9.2026) — "מרוצה" הוא רק מי שכתב מיוזמתו, ולכן המספר האמיתי גבוה יותר.</p>
+    </details>
+    <div class="tiles" id="satTiles" style="grid-template-columns:repeat(3,1fr)"></div>
+    <p class="line1" id="satLine"></p>
+    <div class="sec">
+      <h2>תודות מיוזמת הלקוח</h2>
+      <p class="h">ציטוט · לקוח · מוצר · תאריך — לחיצה פותחת כרטיס לקוח</p>
+      <div id="thanks"></div>
+    </div>
+    <div class="sec">
+      <h2>לא מרוצים</h2>
+      <p class="h">כל תלונה בתקופה, החדשה למעלה. "מאוחרת" = הלקוח גם סופק באיחור ב-120 הימים האחרונים</p>
+      <div class="tw" id="unhappy"></div>
+    </div>
+  </div>
+
+  <div id="tab-prod" style="display:none">
+    <details class="exp">
+      <summary>הסברים — איך זה נמדד</summary>
+      <p><b>תלונות ל-100 יחידות</b> = תלונות איכות מוצר (קוד תקלה בפריוריטי על מק"ט, או הודעה שסווגה "ביקורת מוצר" עם מק"ט) חלקי יחידות שסופקו באותה תקופה לפי תעודות המשלוח. מוצג רק ממשפחה/דגם עם 30 יחידות ומעלה — פחות מזה לא מוצג.</p>
+      <p>ספה פינתית נספרת לפי חלקיה בתעודת המשלוח (כמה שורות) — ולכן היחידות שם גבוהות יותר מהזמנות. השוואה בין משפחות היא יחסית, לא מוחלטת.</p>
+    </details>
+    <div class="ctl" id="prodLvl">
+      <button class="chip on" data-lvl="family">משפחות</button>
+      <button class="chip" data-lvl="model">דגמים</button>
+    </div>
+    <div class="tw" id="prod"></div>
+  </div>
 </div>
 
 <div class="ovl" id="ovl" aria-hidden="true">
@@ -242,7 +276,7 @@ details.exp b{color:var(--tx);font-weight:600}
 (function(){
   var $=function(s){return document.querySelector(s);};
   var state={days:30,from:'',to:'',branch:'',dim:'branch'};
-  var cache={};
+  var cache={};var tab='dlv';
   function iso(d){return d.toISOString().slice(0,10);}
   function fmtD(s){if(!s)return '—';var p=s.slice(0,10).split('-');return p[2]+'.'+p[1]+'.'+p[0].slice(2);}
   function fmtDT(s){if(!s)return '—';var d=new Date(s);return fmtD(s)+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);}
@@ -258,6 +292,7 @@ details.exp b{color:var(--tx);font-weight:600}
 
   function load(){
     setRange();
+    if(tab!=='dlv'){loadTab();}
     var k=key();
     $('#tiles').innerHTML='<div class="load" style="grid-column:1/-1">טוען…</div>';
     var q='d_from='+state.from+'&d_to='+state.to+'&branch='+encodeURIComponent(state.branch)+'&dim='+state.dim;
@@ -374,6 +409,93 @@ details.exp b{color:var(--tx);font-weight:600}
   $('#shX').addEventListener('click',closeSheet);
   $('#ovl').addEventListener('click',function(e){if(e.target===this)closeSheet();});
   document.addEventListener('keydown',function(e){if(e.key==='Escape')closeSheet();});
+
+  // ----- לשוניות -----
+  document.querySelector('.tabs').addEventListener('click',function(e){
+    var b=e.target.closest('button[data-tab]');if(!b||b.disabled)return;
+    tab=b.getAttribute('data-tab');
+    Array.prototype.forEach.call(document.querySelectorAll('.tabs button'),function(x){x.classList.toggle('on',x===b);});
+    ['dlv','sat','prod'].forEach(function(t){$('#tab-'+t).style.display=t===tab?'':'none';});
+    loadTab();
+  });
+  function loadTab(){if(tab==='sat')loadSat();else if(tab==='prod')loadProd();}
+  var KIND={thanks:'תודה',complaint_product:'מוצר',complaint_delay:'עיכוב',complaint_service:'שירות',complaint_money:'כסף',neutral:'ניטרלי'};
+  var SRC={glassix:'גלסיקס',priority:'פריוריטי',google:'Google'};
+  function satKey(){return ['S',state.from,state.to,state.branch].join('|');}
+  function loadSat(){
+    setRange();var k=satKey();
+    $('#satTiles').innerHTML='<div class="load" style="grid-column:1/-1">טוען…</div>';
+    fetch('/api/cust/sat?d_from='+state.from+'&d_to='+state.to+'&branch='+encodeURIComponent(state.branch),{cache:'no-store'}).then(ok).then(function(j){
+      if(satKey()!==k)return;
+      var kp=j.kpi||{},p=kp.prev||{};
+      $('#satTiles').innerHTML=
+        '<div class="tile ok"><div class="l">מרוצים</div><div class="v">'+(kp.happy||0)+'</div><div class="d">'+(p.happy!=null?'קודם '+p.happy:'')+'</div></div>'+
+        '<div class="tile bad"><div class="l">לא מרוצים</div><div class="v">'+(kp.unhappy||0)+'</div><div class="d">'+(p.unhappy!=null?'קודם '+p.unhappy:'')+'</div></div>'+
+        '<div class="tile"><div class="l">שקט</div><div class="v est">'+(kp.quiet||0)+'</div><div class="d">מתוך '+(kp.delivered_customers||0)+' שסופקו</div></div>';
+      var bk=kp.by_kind||{},bs=kp.by_src||{};
+      $('#satLine').innerHTML='תלונות: מוצר <b>'+(bk.complaint_product||0)+'</b> · עיכוב <b>'+(bk.complaint_delay||0)+'</b> · שירות <b>'+(bk.complaint_service||0)+'</b> · כסף <b>'+(bk.complaint_money||0)+'</b>'+
+        ' · מקור: פריוריטי '+(bs.priority||0)+', גלסיקס '+(bs.glassix||0)+(bs.google?', Google '+bs.google:'')+
+        ' · <b>'+(kp.unhappy_late||0)+'</b> מהלא-מרוצים גם סופקו באיחור'+
+        (kp.pending_msgs>0?'<br><span class="est">'+kp.pending_msgs+' הודעות לקוח עדיין ממתינות לסיווג'+(kp.classified_to?' (סווג עד '+fmtD(kp.classified_to)+')':'')+'</span>':'');
+      renderThanks(j.thanks||[]);renderUnhappy(j.complaints||[]);
+    }).catch(function(e){if(e!==0)$('#satTiles').innerHTML='<div class="empty" style="grid-column:1/-1">שגיאה בטעינת נתונים</div>';});
+  }
+  function renderThanks(rows){
+    if(!rows.length){$('#thanks').innerHTML='<div class="empty">אין תודות מסווגות בתקופה</div>';return;}
+    var h='<table><thead><tr><th>ציטוט</th><th>לקוח</th><th>מוצר</th><th>תאריך</th></tr></thead><tbody>';
+    rows.forEach(function(r){
+      h+='<tr class="row" data-c="'+esc(r.custname)+'" data-n="'+esc(r.cdes)+'"><td>„'+esc(r.quote||'')+'”</td><td>'+esc(r.cdes||r.custname||'—')+'<div class="muted" style="font-size:11px">'+esc(SRC[r.src]||r.src)+'</div></td><td>'+esc(r.product||'')+'</td><td class="muted">'+fmtD(r.dt)+'</td></tr>';
+    });
+    $('#thanks').innerHTML='<div class="tw">'+h+'</tbody></table></div>';
+    $('#thanks').querySelector('tbody').addEventListener('click',function(ev){var tr=ev.target.closest('tr.row');if(tr&&tr.getAttribute('data-c'))openCard(tr.getAttribute('data-c'),tr.getAttribute('data-n'));});
+  }
+  function renderUnhappy(rows){
+    if(!rows.length){$('#unhappy').innerHTML='<div class="empty">אין תלונות בתקופה</div>';return;}
+    var h='<table><thead><tr><th>לקוח</th><th>סוג</th><th>מה</th><th>מקור</th><th>אספקה</th><th>תאריך</th></tr></thead><tbody>';
+    rows.forEach(function(r){
+      var kcls=r.kind==='complaint_delay'?'warn':'bad';
+      h+='<tr class="row" data-c="'+esc(r.custname)+'" data-n="'+esc(r.cdes)+'"><td>'+esc(r.cdes||r.custname||'—')+(r.n_complaints>1?'<div class="muted" style="font-size:11px">'+r.n_complaints+' תלונות</div>':'')+'</td>'+
+         '<td><span class="tag '+kcls+'">'+esc(KIND[r.kind]||r.kind)+'</span></td><td style="font-size:12px">'+esc(r.quote||'')+(r.product?'<div class="muted" style="font-size:11px">'+esc(r.product)+'</div>':'')+'</td>'+
+         '<td class="muted" style="font-size:12px">'+esc(SRC[r.src]||r.src)+'</td><td>'+(r.late_order?'<span class="tag bad">מאוחרת +'+r.late_gap+'</span>':'<span class="muted">—</span>')+'</td><td class="muted">'+fmtD(r.dt)+'</td></tr>';
+    });
+    $('#unhappy').innerHTML=h+'</tbody></table>';
+    $('#unhappy').querySelector('tbody').addEventListener('click',function(ev){var tr=ev.target.closest('tr.row');if(tr&&tr.getAttribute('data-c'))openCard(tr.getAttribute('data-c'),tr.getAttribute('data-n'));});
+  }
+  var prodLvl='family';
+  $('#prodLvl').addEventListener('click',function(e){var b=e.target.closest('button[data-lvl]');if(!b)return;
+    Array.prototype.forEach.call($('#prodLvl').querySelectorAll('button'),function(x){x.classList.toggle('on',x===b);});prodLvl=b.getAttribute('data-lvl');loadProd();});
+  function loadProd(){
+    setRange();$('#prod').innerHTML='<div class="load">טוען…</div>';
+    fetch('/api/cust/prod?d_from='+state.from+'&d_to='+state.to+'&level='+prodLvl,{cache:'no-store'}).then(ok).then(function(j){
+      var rows=j.rows||[];
+      if(!rows.length){$('#prod').innerHTML='<div class="empty">אין משפחות עם 30 יחידות ומעלה בתקופה</div>';return;}
+      var mx=Math.max.apply(null,rows.map(function(r){return +r.per_100||0;}))||1;
+      var h='<table><thead><tr><th>'+(prodLvl==='model'?'דגם':'משפחה')+'</th><th class="n">סופקו</th><th class="n">תלונות</th><th class="n">ל-100</th><th style="width:30%"></th><th>הבעיה הנפוצה</th></tr></thead><tbody>';
+      rows.forEach(function(r){
+        h+='<tr><td>'+esc(r.k)+'</td><td class="n">'+Math.round(r.units)+'</td><td class="n">'+r.complaints+'</td><td class="n">'+(r.per_100==null?'—':r.per_100)+'</td><td><div class="pbar"><i style="width:'+Math.round(100*(+r.per_100||0)/mx)+'%"></i></div></td><td class="muted" style="font-size:12px">'+esc(r.top_issue||'')+'</td></tr>';
+      });
+      $('#prod').innerHTML=h+'</tbody></table>';
+    }).catch(function(e){if(e!==0)$('#prod').innerHTML='<div class="empty">שגיאה בטעינת נתונים</div>';});
+  }
+  function openCard(c,name){
+    $('#shT').textContent=(name||'')+' · לקוח '+c;$('#shB').innerHTML='<div class="load">טוען…</div>';
+    $('#ovl').classList.add('on');$('#ovl').setAttribute('aria-hidden','false');
+    fetch('/api/cust/card?cust='+encodeURIComponent(c),{cache:'no-store'}).then(ok).then(function(j){
+      var h='';
+      var os=j.orders||[];
+      h+='<h2 style="font-size:14px;margin:0 0 4px">אספקות ('+os.length+')</h2><ul class="tl">';
+      if(!os.length)h+='<li><span class="t">—</span><span class="muted">אין הזמנות מ-2023</span></li>';
+      os.forEach(function(o){h+='<li class="'+(o.timing==='מאוחר'?'late':o.timing==='פתוח'?'':'ok')+'"><span class="t">'+fmtD(o.ord_date)+'</span><span><a href="#" data-o="'+esc(o.ordname)+'" class="olink" style="color:inherit">'+esc(o.ordname)+'</a> · הובטח '+fmtD(o.due_date)+' · '+(o.delivered_on?'סופק '+fmtD(o.delivered_on)+' ('+esc(o.timing)+(o.gap_days!=null?' '+(o.gap_days>0?'+':'')+o.gap_days:'')+')':'פתוח')+'</span></li>';});
+      h+='</ul>';
+      var fb=j.feedback||[];
+      h+='<h2 style="font-size:14px;margin:12px 0 4px">פניות ופידבק ('+fb.length+')</h2><ul class="tl">';
+      if(!fb.length)h+='<li><span class="t">—</span><span class="muted">אין</span></li>';
+      fb.forEach(function(f){h+='<li class="'+(f.kind==='thanks'?'ok':f.kind==='neutral'?'':'late')+'"><span class="t">'+fmtD(f.dt)+'</span><span><span class="tag '+(f.kind==='thanks'?'ok':f.kind==='neutral'?'':'bad')+'">'+esc(KIND[f.kind]||f.kind)+'</span> '+esc(f.q||'')+(f.prod?' <span class="muted">· '+esc(f.prod)+'</span>':'')+' <span class="muted">· '+esc(SRC[f.src]||f.src)+'</span></span></li>';});
+      h+='</ul>';
+      $('#shB').innerHTML=h;
+      $('#shB').onclick=function(ev){var a=ev.target.closest('a.olink');if(a){ev.preventDefault();openTimeline(a.getAttribute('data-o'),name);}};
+    }).catch(function(){$('#shB').innerHTML='<div class="empty">שגיאה בטעינה</div>';});
+  }
 
   $('#ctl').addEventListener('click',function(e){
     var b=e.target.closest('button[data-days]');if(!b)return;

@@ -1183,6 +1183,93 @@ def sync_delivery_window(days_back: int, by_status: bool = True) -> int:
     return delivery_push(orders)
 
 
+# ---------- שביעות רצון → bi_feedback (20.9.2026) ----------
+# הודעות לקוח מגלסיקס מקובצות לכרטיס×יום (bi_feedback_units), ומסווגות ב-Haiku 4.5:
+# תודה / תלונה על מוצר / עיכוב / שירות / כסף / ניטרלי + סנטימנט + מוצר + ציטוט קצר.
+# רץ בכל סבב של הרפרשר על עד FB_BATCH יחידות, וסיווג היסטורי מקומי דרך
+# cloud/backfill_feedback.py. קודי התקלה של פריוריטי נכנסים בלי LLM (bi_feedback_from_notes).
+# פרטיות: לשרת נשלח הטקסט בלבד (בלי שם/טלפון); נשמר ציטוט של עד 120 תווים.
+# SQL: cloud/sql/bi_feedback.sql
+FB_MODEL = os.environ.get("FB_MODEL", "claude-haiku-4-5-20251001")
+FB_BATCH = 300          # units per refresher cycle (15 calls, ~1 min); ~6,200 historical units clear in ~5 hours
+FB_PER_CALL = 20        # units per API call
+FB_SYSTEM = """אתה מסווג הודעות של לקוחות של חנות רהיטים ישראלית (ויטוריו דיוואני: ספות, פינות אוכל, כיסאות, מיטות, מזרנים, ארונות, כורסאות).
+לכל יחידה (הודעות שלקוח כתב באותו יום בשיחה אחת, ולפעמים ההודעה האחרונה של הנציג לפניהן כהקשר) החזר שורה אחת.
+
+kind — בדיוק אחד:
+- thanks — הלקוח מודה, משבח, מרוצה מהמוצר או מהשירות מיוזמתו ("תודה רבה", "הספה מדהימה", "שירות מעולה"). לא "תודה" נימוסית בסוף בקשה או תלונה.
+- complaint_product — טענה על המוצר עצמו: פגם, שבר, קרע, קילוף, לא נוח, רעש, ריח, לא כמו בתצוגה, איכות ירודה.
+- complaint_delay — טענה על זמן: איחור, "מתי מגיע", עיכוב, לא הגיעו במועד, אספקה חלקית, ממתין.
+- complaint_service — טענה על יחס/מענה/תיאום/הרכבה/טעות בהזמנה: לא חזרו אליי, לא ענו, נציג לא נעים, שעות לא מתאימות, טעות במה שסופק.
+- complaint_money — טענה כספית: חיוב, זיכוי, החזר, מחיר, פיצוי.
+- neutral — כל השאר: שאלה, תיאום, אישור, "בוקר טוב", מידע, בקשה רגילה בלי טענה.
+
+sent — סנטימנט: -2 כועס/מאוכזב מאוד, -1 לא מרוצה, 0 ניטרלי, 1 מרוצה, 2 נלהב.
+prod — המוצר שהוזכר, מילה-שתיים בעברית (ספה, פינת אוכל, כיסאות, מיטה, מזרן, ארון, כורסה, שולחן, מזנון) או ריק.
+q — ציטוט מילולי מהלקוח, המשפט המייצג ביותר, עד 100 תווים, בלי שמות אנשים ובלי טלפונים. ריק אם ניטרלי.
+conf — ביטחון 0 עד 1.
+
+החזר JSON בלבד: מערך של אובייקטים {"i":<מספר היחידה>,"kind":"...","sent":<int>,"prod":"...","q":"...","conf":<num>} — לכל יחידה שקיבלת, באותו סדר. בלי טקסט נוסף."""
+
+
+def _fb_call(units: list) -> list:
+    """One API call for up to FB_PER_CALL units. Returns list of dicts keyed by unit index."""
+    parts = []
+    for i, u in enumerate(units):
+        ctx = (u.get("ctx") or "").strip()
+        parts.append(f"### יחידה {i}\n" + (f"[נציג לפני כן]: {ctx}\n" if ctx else "") +
+                     f"[לקוח]: {(u.get('txt') or '').strip()}")
+    body = json.dumps({
+        "model": FB_MODEL, "max_tokens": 200 * len(units) + 100,
+        "system": [{"type": "text", "text": FB_SYSTEM, "cache_control": {"type": "ephemeral"}}],
+        "messages": [{"role": "user", "content": "\n\n".join(parts)}]}, ensure_ascii=False).encode("utf-8")
+    r = json.loads(_http("https://api.anthropic.com/v1/messages",
+                         {"x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01",
+                          "Content-Type": "application/json"}, data=body, timeout=120).decode("utf-8"))
+    text = "".join(b.get("text", "") for b in (r.get("content") or []) if b.get("type") == "text")
+    m = re.search(r"\[.*\]", text, re.S)
+    if not m:
+        raise RuntimeError("classifier returned no JSON array")
+    out = json.loads(m.group(0))
+    u = r.get("usage") or {}
+    return out, (u.get("input_tokens") or 0), (u.get("output_tokens") or 0)
+
+
+def classify_feedback(limit: int = FB_BATCH) -> int:
+    """Classify up to `limit` unclassified customer-day units. Returns rows written."""
+    if not ANTHROPIC_KEY:
+        return 0
+    units = sb_rpc("bi_feedback_units", {"p_limit": limit}) or []
+    if not units:
+        return 0
+    rows, tin, tout = [], 0, 0
+    for i in range(0, len(units), FB_PER_CALL):
+        chunk = units[i:i + FB_PER_CALL]
+        try:
+            res, a, b = _fb_call(chunk)
+            tin += a
+            tout += b
+        except Exception as e:
+            print("feedback classify failed:", repr(e)[:200], flush=True)
+            continue
+        by_i = {int(x.get("i", -1)): x for x in res if isinstance(x, dict)}
+        for j, u in enumerate(chunk):
+            x = by_i.get(j)
+            if not x:
+                continue
+            rows.append({"src": "glassix", "ref": u["ref_id"], "cn": u.get("custname") or "",
+                         "o": u.get("ordname") or "", "b": "", "dt": u["first_dt"],
+                         "kind": x.get("kind") or "neutral", "sent": x.get("sent") or 0,
+                         "prod": x.get("prod") or "", "q": x.get("q") or "",
+                         "conf": x.get("conf"), "model": FB_MODEL})
+    n = 0
+    for i in range(0, len(rows), 500):
+        n += int(sb_rpc("bi_feedback_upsert", {"p_rows": rows[i:i + 500]}) or 0)
+    if n:
+        print(f"feedback: {n} units classified ({tin} in / {tout} out tokens)", flush=True)
+    return n
+
+
 # ---------- website price snapshot (vdivani.co.il) → bi_web_prices ----------
 # Price control compares every order line to the website price of that day. The site
 # keeps NO price history: a day that was not captured can never be reconstructed
@@ -1822,6 +1909,15 @@ def _refresher():
                 sync_delivery_window(3)        # אספקות: הזמנות חדשות + שינויי סטטוס
             except Exception as e:
                 print("delivery auto-sync failed:", repr(e)[:300], flush=True)
+            try:
+                sb_rpc("bi_feedback_from_notes", {})   # קודי תקלה → פידבק (בלי LLM)
+            except Exception as e:
+                print("feedback-from-notes failed:", repr(e)[:300], flush=True)
+            if ANTHROPIC_KEY:
+                try:
+                    classify_feedback()                # הודעות לקוח חדשות → סיווג
+                except Exception as e:
+                    print("feedback classify failed:", repr(e)[:300], flush=True)
             if ANTHROPIC_KEY:  # without vision there are no slip amounts — nothing to show
                 try:
                     _scan_pending_transfers()
@@ -2936,6 +3032,68 @@ def api_cust_late(request: Request, d_from: str = "", d_to: str = "", branch: st
     rows = sb_rpc("bi_dlv_late_list", {"p_from": f.isoformat(), "p_to": t.isoformat(),
                                        "p_branch": branch or "", "p_limit": max(1, min(500, limit))})
     return JSONResponse({"rows": rows or []})
+
+
+@app.get("/api/cust/sat")
+def api_cust_sat(request: Request, d_from: str = "", d_to: str = "", branch: str = ""):
+    """שביעות רצון: מונים (מרוצים/לא מרוצים/שקט) + פיד תודות + רשימת לא מרוצים."""
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    f, t = _parse_date(d_from), _parse_date(d_to)
+    if not f or not t:
+        return JSONResponse({"error": "bad dates"}, status_code=400)
+    if f > t:
+        f, t = t, f
+    args = {"p_from": f.isoformat(), "p_to": t.isoformat(), "p_branch": branch or ""}
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=3) as ex:
+        fk = ex.submit(sb_rpc, "bi_sat_kpi", args)
+        ft = ex.submit(sb_rpc, "bi_sat_feed", dict(args, p_kind="thanks", p_limit=100))
+        fc = ex.submit(sb_rpc, "bi_sat_feed", dict(args, p_kind="complaint", p_limit=200))
+        out = {"kpi": fk.result() or {}, "thanks": ft.result() or [], "complaints": fc.result() or []}
+    return JSONResponse(out)
+
+
+@app.get("/api/cust/prod")
+def api_cust_prod(request: Request, d_from: str = "", d_to: str = "", level: str = "family",
+                  min_units: int = 30):
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    f, t = _parse_date(d_from), _parse_date(d_to)
+    if not f or not t:
+        return JSONResponse({"error": "bad dates"}, status_code=400)
+    if f > t:
+        f, t = t, f
+    rows = sb_rpc("bi_prod_quality", {"p_from": f.isoformat(), "p_to": t.isoformat(),
+                                      "p_level": "model" if level == "model" else "family",
+                                      "p_min_units": max(1, min(500, min_units))})
+    return JSONResponse({"rows": rows or []})
+
+
+@app.get("/api/cust/card")
+def api_cust_card(request: Request, cust: str = ""):
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    c = (cust or "").strip()[:20]
+    if not c:
+        return JSONResponse({"error": "bad cust"}, status_code=400)
+    return JSONResponse(sb_rpc("bi_cust_card", {"p_cust": c}) or {})
+
+
+@app.post("/api/cust/classify")
+async def api_cust_classify(request: Request, n: int = 60):
+    """הרצה ידנית של המסווג (בעלים בלבד) — לבדיקת איכות ולזירוז ההיסטוריה."""
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    if not _is_admin(request):
+        return JSONResponse({"error": "admin_only"}, status_code=403)
+    if not ANTHROPIC_KEY:
+        return JSONResponse({"error": "no_key"}, status_code=503)
+    try:
+        done = classify_feedback(limit=max(1, min(400, n)))
+    except Exception as e:
+        return JSONResponse({"error": repr(e)[:200]}, status_code=500)
+    return JSONResponse({"classified": done})
 
 
 @app.get("/api/cust/timeline")
