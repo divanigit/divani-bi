@@ -708,6 +708,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         <button type="button" data-v="site" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.8"/><path d="M3.2 12h17.6"/><path d="M12 3.2a13.5 13.5 0 0 1 0 17.6a13.5 13.5 0 0 1 0-17.6"/></svg><span class="rlbl">מכירות האתר</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" id="nrepbtn" class="navext" aria-pressed="false" title="ניתוח ביצועי נציגים וסניפים"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 3.5v17h17"/><path d="M7 14.5l4-4 3 3 5.2-6"/></svg><span class="rlbl">ניתוח ביצועי נציגים וסניפים</span><svg class="rext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 16L16 8"/><path d="M9 8h7v7"/></svg></button>
         <button type="button" id="convbtn" class="navext" aria-pressed="false" title="כמה מהנכנסים קונים"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 3.5v17h17"/><path d="M7 14.5l4-4 3 3 5.2-6"/></svg><span>יחס המרה</span><svg class="rext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 17L17 7"/><path d="M9 7h8v8"/></svg></button>
+        <button type="button" id="custbtn" class="navext" aria-pressed="false" title="אספקות מול ההבטחה ושביעות רצון לקוחות"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7.5h11v9h-11z"/><path d="M14.5 10.5h3.2l2.8 3v3h-6z"/><circle cx="7" cy="18.5" r="1.6"/><circle cx="17.5" cy="18.5" r="1.6"/></svg><span>לקוחות — אספקות</span><svg class="rext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 17L17 7"/><path d="M9 7h8v8"/></svg></button>
 <!--NOPROFIT-->
         <div class="navsys" id="navsys">
           <div class="syshead">
@@ -4672,6 +4673,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   (function(){var t=document.getElementById('sitehbtn');if(t)t.addEventListener('click',function(){location.href='/site';});})();
   (function(){var t=document.getElementById('abandbtn');if(t)t.addEventListener('click',function(){location.href='/abandoned';});})();
   (function(){var c=document.getElementById('convbtn');if(c)c.addEventListener('click',function(){location.href='/conversion';});})();
+  (function(){var c=document.getElementById('custbtn');if(c)c.addEventListener('click',function(){location.href='/customers';});})();
 
   /* ---- התראות (alerts layer — v1: transfers with an אסמכתא but no receipt yet) ---- */
   var ALERT_DAYS=3;

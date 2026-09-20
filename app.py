@@ -2873,6 +2873,81 @@ def api_compensation(request: Request, d_from: str = "", d_to: str = "",
     return JSONResponse({"mode": "compensation", "agg": agg or {}})
 
 
+# ---------- לקוחות: אספקות ושביעות רצון (20.9.2026) ----------
+# מסך נפרד (/customers) על אותו סגנון של /conversion. כל הנתונים כאן הם
+# אספקות מול הבטחה — לא מכירות — ולכן אין בהם רווח, אבל התפריט המשותף עובר
+# את אותו ניקוי. SQL: cloud/sql/bi_delivery_panels.sql
+@app.get("/customers")
+def customers_page(request: Request):
+    if not _logged_in(request):
+        return RedirectResponse("/login", status_code=303)
+    try:
+        with open(os.path.join(HERE, "customers.html"), encoding="utf-8") as f:
+            html = f.read()
+    except Exception:
+        return HTMLResponse("<div dir='rtl' style='font-family:sans-serif;padding:40px'>"
+                            "המסך לא נמצא.</div>", status_code=404)
+    if not _is_admin(request):
+        html = _OWNER_BLOCK.sub("", html)
+    if _is_noprofit(request):
+        html = _NOPROFIT_BLOCK.sub("", html)
+    role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s};</script>' % (
+        "true" if _is_noprofit(request) else "false",
+        "true" if _is_admin(request) else "false")
+    html = html.replace("</head>", role + chr(10) + "</head>", 1)
+    return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
+
+
+@app.get("/api/cust/dlv")
+def api_cust_dlv(request: Request, d_from: str = "", d_to: str = "", branch: str = "",
+                 dim: str = "branch"):
+    """אריחים + מגמה חודשית + פילוח + סיבות, בקריאה אחת. התקופה = תאריך האספקה."""
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    f, t = _parse_date(d_from), _parse_date(d_to)
+    if not f or not t:
+        return JSONResponse({"error": "bad dates"}, status_code=400)
+    if f > t:
+        f, t = t, f
+    if dim not in ("branch", "otype", "supply", "supplier", "distr"):
+        dim = "branch"
+    args = {"p_from": f.isoformat(), "p_to": t.isoformat(), "p_branch": branch or ""}
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        fk = ex.submit(sb_rpc, "bi_dlv_kpi", args)
+        fs = ex.submit(sb_rpc, "bi_dlv_series", args)
+        fp = ex.submit(sb_rpc, "bi_dlv_split", dict(args, p_dim=dim))
+        fc = ex.submit(sb_rpc, "bi_dlv_causes", args)
+        out = {"kpi": fk.result() or {}, "series": fs.result() or [],
+               "split": fp.result() or [], "causes": fc.result() or []}
+    return JSONResponse(out)
+
+
+@app.get("/api/cust/late")
+def api_cust_late(request: Request, d_from: str = "", d_to: str = "", branch: str = "",
+                  limit: int = 200):
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    f, t = _parse_date(d_from), _parse_date(d_to)
+    if not f or not t:
+        return JSONResponse({"error": "bad dates"}, status_code=400)
+    if f > t:
+        f, t = t, f
+    rows = sb_rpc("bi_dlv_late_list", {"p_from": f.isoformat(), "p_to": t.isoformat(),
+                                       "p_branch": branch or "", "p_limit": max(1, min(500, limit))})
+    return JSONResponse({"rows": rows or []})
+
+
+@app.get("/api/cust/timeline")
+def api_cust_timeline(request: Request, ord: str = ""):
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    o = (ord or "").strip()[:24]
+    if not o:
+        return JSONResponse({"error": "bad order"}, status_code=400)
+    return JSONResponse(sb_rpc("bi_dlv_timeline", {"p_ord": o}) or {})
+
+
 @app.get("/api/dow")
 def api_dow(request: Request, d_from: str = "", d_to: str = ""):
     """מחזור ומספר הזמנות לפי יום בשבוע (0=ראשון)."""
