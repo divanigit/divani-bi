@@ -56,6 +56,11 @@ DASH_PASS_SHARON = os.environ.get("DASH_PASS_SHARON", "")  # Sharon: own credent
 DASH_PASS_ITAMAR = os.environ.get("DASH_PASS_ITAMAR", "")  # Itamar: own credential, owner rights
 DASH_PASS_IDO = os.environ.get("DASH_PASS_IDO", "")  # עידו אהרון: regular view, without any profit figure
 OWL_CART_SECRET = os.environ.get("OWL_CART_SECRET", "")  # לכידת עגלות מהאתר: חתימת HMAC משותפת עם התוסף
+HEALTH_SHARE_TOKEN = os.environ.get("HEALTH_SHARE_TOKEN", "")  # קישור בריאות האתר לדיגיטאץ' — טוקן נפרד, מסך אחד בלבד, בלי שום גישה לינשוף
+if not HEALTH_SHARE_TOKEN and OWL_CART_SECRET:
+    # אין צורך במשתנה סביבה נוסף: הטוקן נגזר מ-OWL_CART_SECRET בגזירה חד-כיוונית
+    # (לא ניתן לשחזר ממנו את הסוד). יציב בין דיפלויים. לסובב: להגדיר HEALTH_SHARE_TOKEN במפורש.
+    HEALTH_SHARE_TOKEN = hmac.new(OWL_CART_SECRET.encode("utf-8"), b"health-share-v1", hashlib.sha256).hexdigest()[:32]
 SB_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SB_KEY = os.environ.get("SUPABASE_SECRET_KEY", "")
 PRI_USER = os.environ.get("PRI_USER", "")
@@ -152,6 +157,14 @@ def _logged_in(request: Request) -> bool:
     tok = request.cookies.get(COOKIE_NAME, "")
     return (hmac.compare_digest(tok, _session_token()) or _is_admin(request)
             or _is_ask2(request) or _is_noprofit(request))
+
+
+def _health_ok(request: Request) -> bool:
+    # גישה מוגבלת אך ורק למסך "בריאות האתר" (/status) ולשלוש קריאות הנתונים שלו
+    # (זמינות/מהירות/התראות). טוקן נפרד לגמרי מסיסמאות הינשוף: אינו נחשב _logged_in
+    # באף מסלול אחר, ולכן אינו מקנה גישה לאף נתון מכירות/רווח או למסך אחר.
+    k = request.query_params.get("k", "")
+    return bool(HEALTH_SHARE_TOKEN) and bool(k) and hmac.compare_digest(k, HEALTH_SHARE_TOKEN)
 
 
 def _match(p: str, expected: str) -> bool:
@@ -427,12 +440,45 @@ def site_health(request: Request):
     return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
 
+@app.get("/status")
+def site_health_share(request: Request):
+    """מסך "בריאות האתר" לשיתוף עם דיגיטאץ' — אותו מסך בדיוק, בלי תפריט, בלי יציאה,
+    בלי יומן ההודעות הפנימי, ובלי אפשרות לסמן "ראיתי". מאחורי טוקן נפרד (HEALTH_SHARE_TOKEN)
+    שאינו מקנה שום גישה לינשוף או לנתוני מכירות/רווח. דורון שולח את הקישור, לא הינשוף.
+    """
+    if not _health_ok(request):
+        return HTMLResponse(
+            "<div dir='rtl' style='font-family:system-ui,sans-serif;padding:48px;text-align:center;color:#333'>"
+            "הקישור אינו תקין או שפג. פנה לדורון.</div>", status_code=403)
+    try:
+        with open(os.path.join(HERE, "site_health.html"), encoding="utf-8") as f:
+            html = f.read()
+    except Exception:
+        return HTMLResponse("<div dir='rtl' style='font-family:sans-serif;padding:40px'>המסך לא נמצא.</div>",
+                            status_code=404)
+    k = json.dumps(HEALTH_SHARE_TOKEN)
+    inject = (
+        '<script>window.OWL_ROLE={"noprofit":true,"owner":false};window.OWL_SHARE=1;</script>'
+        '<style>.owlham,.brandcol .out{display:none!important}'
+        '.card:has(#msgList){display:none!important}'
+        '.alertbar .ax{display:none!important}</style>'
+        "<script>(function(){var K=" + k + ";var of=window.fetch;"
+        "window.fetch=function(u,o){try{if(typeof u==='string'){"
+        "if(u.indexOf('/api/messages')===0)return Promise.resolve(new Response('{\"rows\":[]}',{headers:{'Content-Type':'application/json'}}));"
+        "if(u.indexOf('/api/alerts/ack')===0)return Promise.resolve(new Response('{\"ok\":true}',{headers:{'Content-Type':'application/json'}}));"
+        "if(u.indexOf('/api/')===0)u+=(u.indexOf('?')<0?'?':'&')+'k='+encodeURIComponent(K);"
+        "}}catch(e){}return of(u,o);};})();</script>"
+    )
+    html = html.replace("</head>", inject + chr(10) + "</head>", 1)
+    return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
+
+
 @app.get("/api/site/now")
 def api_site_now(request: Request):
     """"עכשיו" למסך בריאות האתר: סבב הבדיקה האחרון (כל דקה) לפי עמוד, מדידת המעבדה האחרונה לדף הבית,
     מהירות אצל לקוחות אמיתיים בשעה האחרונה (bi_rum, מרגע שהתוסף בחי), ומספר ההתראות הפתוחות.
     ספים לצבעים (דורון, 18.9.2026): תגובת שרת ירוק עד 0.5 שנ', צהוב עד 1.5, אדום מעל או כשעמוד לא עונה."""
-    if not _logged_in(request):
+    if not (_logged_in(request) or _health_ok(request)):
         return JSONResponse({"error": "auth"}, status_code=401)
     try:
         return JSONResponse(sb_rpc("bi_site_now", {}) or {}, headers={"Cache-Control": "no-store"})
@@ -510,7 +556,7 @@ def api_site(request: Request, h: int = 24, strategy: str = "mobile", f: str = "
     כל חלק נכשל לבד: חלק שנפל מחזיר error במקום להפיל את המסך כולו —
     כך זמינות עדיין מוצגת גם אם מדידת המהירות טרם התחילה.
     """
-    if not _logged_in(request):
+    if not (_logged_in(request) or _health_ok(request)):
         return JSONResponse({"error": "auth"}, status_code=401)
     p_from, p_to, hrs = _range_args(h, f, t)
     strategy = "desktop" if strategy == "desktop" else "mobile"
@@ -554,7 +600,7 @@ def api_site_drill(request: Request, what: str = "", h: int = 24, f: str = "", t
        bucket — זמן תגובת שרת לפי עמוד בשעה/יום אחד
        runs   — המדידות הבודדות של עמוד (url; bucket אופציונלי), כולל "מה מאט"
        alert  — פרטי התראה (id) עם ההודעות שנשלחו והכשלים שמאחוריה"""
-    if not _logged_in(request):
+    if not (_logged_in(request) or _health_ok(request)):
         return JSONResponse({"error": "auth"}, status_code=401)
     p_from, p_to, _ = _range_args(h, f, t)
     strategy = "desktop" if strategy == "desktop" else "mobile"
@@ -823,6 +869,11 @@ def deep_rotate(today: dt.date):
     if hi < lo:
         return
     sync_window("deep", lo, hi, skip_if_empty=True)
+    try:
+        # אותה פרוסה גם לאספקות — תעודת משלוח/סטטוס של הזמנה ישנה מתעדכנים באיחור
+        delivery_push(delivery_pull(lo, hi, "CURDATE"))
+    except Exception as e:
+        print("delivery deep-rotate failed:", repr(e)[:300], flush=True)
 
 
 # ---------- receipts (קבלות) → cash indicator ----------
@@ -1025,6 +1076,111 @@ def sync_service_notes_window(days_back: int):
         for i in range(0, len(rows), 1000):
             sb_rpc("bi_upsert_service_notes", {"p_rows": rows[i:i + 1000]})
     return len(rows)
+
+
+# ---------- אספקות → bi_order_dates / bi_line_dates / bi_deliveries / bi_status_log / bi_date_changes ----------
+# ממשק ניטור לקוחות (20.9.2026). טבלאות נפרדות לחלוטין מ-bi_order_lines: המכירות
+# נשארות "הזמנות" (הכרעת דורון 23.8.2026); כאן נמדדת האספקה מול ההבטחה.
+#
+# תעודות המשלוח (DOCUMENTS_D) חסומות ברישיון — אבל ORDERS/$expand=ORDERSDOCS_SUBFORM
+# מחזיר אותן מצד ההזמנה (אומת חי 20.9.2026). CURDATE של התעודה = יום ההפצה.
+# ORDSTATUSDES='בוצעה' נקבע ברגע יצירת התעודה, ימים לפני ההפצה — לא תאריך אספקה.
+# SQL: cloud/sql/bi_delivery_sync.sql
+DLV_SEL = ("$select=ORDNAME,CURDATE,ORDSTATUSDES,STATUSDATE,DUEDATE,RSOL_DUEDATE,FVIT_DAYSPRI,"
+           "RSOL_DELIVERYTYPE,DISTRLINEDES,ESTR_REASONCODE,ESTR_REASONDES,BRANCHNAME,TYPECODE,"
+           "TYPEDES,CUSTNAME,ESTR_ORDNAME,ESTR_MALFCODE,ESTR_MALFDES,RSOL_SERVPARTNAME,ESTR_ACCOUNTDES"
+           "&$expand=ORDERITEMS_SUBFORM($select=PARTNAME,DUEDATE,PRDATE,TQUANT,ESTR_TYPEPARTDES,SUPNAME,TBALANCE),"
+           "ORDERSDOCS_SUBFORM($select=OLINE,TLINE,CURDATE,DOCDES,DOCNO,STATDES,PARTNAME,TQUANT,TYPE),"
+           "DOCTODOLISTLOG_SUBFORM($select=UDATE,STATDES,USERLOGIN,DURATIONDAYS),"
+           "ORD_CHANGES_LOG_SUBFORM($select=LINE,FIELD,OLDVALUE,NEWVALUE,UDATE,USERLOGIN)")
+
+
+def _d10(v):
+    return (v or "")[:10]
+
+
+def _num(v):
+    try:
+        return None if v is None else float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def delivery_map_order(o: dict) -> dict:
+    """Priority order (with the four subforms) → the compact shape bi_upsert_delivery_batch reads."""
+    lines = [{"i": i, "pn": ln.get("PARTNAME") or "", "q": _num(ln.get("TQUANT")),
+              "due": _d10(ln.get("DUEDATE")), "pr": _d10(ln.get("PRDATE")),
+              "bal": _num(ln.get("TBALANCE")), "ty": ln.get("ESTR_TYPEPARTDES") or "",
+              "sup": ln.get("SUPNAME") or ""}
+             for i, ln in enumerate(o.get("ORDERITEMS_SUBFORM") or [])]
+    docs = [{"no": d.get("DOCNO") or "", "tl": d.get("TLINE"), "ol": d.get("OLINE"),
+             "pn": d.get("PARTNAME") or "", "q": _num(d.get("TQUANT")), "d": _d10(d.get("CURDATE")),
+             "des": d.get("DOCDES") or "", "ty": d.get("TYPE") or "", "st": d.get("STATDES") or ""}
+            for d in (o.get("ORDERSDOCS_SUBFORM") or []) if d.get("DOCNO")]
+    log = [{"u": s.get("UDATE") or "", "st": s.get("STATDES") or "",
+            "by": s.get("USERLOGIN") or "", "dd": _num(s.get("DURATIONDAYS"))}
+           for s in (o.get("DOCTODOLISTLOG_SUBFORM") or []) if s.get("UDATE")]
+    chg = [{"ln": c.get("LINE"), "u": c.get("UDATE") or "", "old": c.get("OLDVALUE") or "",
+            "new": c.get("NEWVALUE") or "", "by": c.get("USERLOGIN") or ""}
+           for c in (o.get("ORD_CHANGES_LOG_SUBFORM") or [])
+           if c.get("FIELD") == "ת. אספקה" and c.get("UDATE")]
+    # Priority's UDATE has minute resolution: two status hops in the same minute
+    # collide on the (ordname, udate, statdes) key and break the batch upsert.
+    def _dedupe(rows, key):
+        seen, out = {}, []
+        for r in rows:
+            seen[key(r)] = r
+        return list(seen.values())
+    docs = _dedupe(docs, lambda d: (d["no"], d["tl"]))
+    log = _dedupe(log, lambda s: (s["u"], s["st"]))
+    chg = _dedupe(chg, lambda c: (c["ln"], c["u"], c["new"]))
+    return {"o": o.get("ORDNAME") or "", "d": _d10(o.get("CURDATE")),
+            "cn": o.get("CUSTNAME") or "", "b": o.get("BRANCHNAME") or "",
+            "t": o.get("TYPEDES") or "", "tc": o.get("TYPECODE") or "",
+            "st": o.get("ORDSTATUSDES") or "", "sd": _d10(o.get("STATUSDATE")),
+            "due": _d10(o.get("DUEDATE")), "plan": _d10(o.get("RSOL_DUEDATE")),
+            "dp": o.get("FVIT_DAYSPRI"), "dt": o.get("RSOL_DELIVERYTYPE") or "",
+            "dl": o.get("DISTRLINEDES") or "", "rc": o.get("ESTR_REASONCODE") or "",
+            "rd": o.get("ESTR_REASONDES") or "", "so": o.get("ESTR_ORDNAME") or "",
+            "mc": o.get("ESTR_MALFCODE") or "", "md": o.get("ESTR_MALFDES") or "",
+            "sp": o.get("RSOL_SERVPARTNAME") or "", "ad": o.get("ESTR_ACCOUNTDES") or "",
+            "lines": lines, "docs": docs, "log": log, "chg": chg}
+
+
+def delivery_pull(d_from: dt.date, d_to: dt.date, field: str = "CURDATE"):
+    """Orders whose `field` (CURDATE or STATUSDATE) falls in [d_from, d_to], mapped."""
+    auth = "Basic " + base64.b64encode(f"{PRI_USER}:{PRI_PASS}".encode("utf-8")).decode("ascii")
+    lo = (d_from - dt.timedelta(days=1)).isoformat() + "T00:00:00%2B02:00"
+    hi = (d_to + dt.timedelta(days=2)).isoformat() + "T00:00:00%2B02:00"
+    url = f"{PRI_BASE}/ORDERS?$filter={field}%20ge%20{lo}%20and%20{field}%20lt%20{hi}&{DLV_SEL}"
+    lo_s, hi_s = d_from.isoformat(), d_to.isoformat()
+    out = []
+    for o in _pri_pages(url, auth):
+        if lo_s <= _d10(o.get(field)) <= hi_s and o.get("ORDNAME"):
+            out.append(delivery_map_order(o))
+    return out
+
+
+def delivery_push(orders: list, chunk: int = 200) -> int:
+    n = 0
+    for i in range(0, len(orders), chunk):
+        r = sb_rpc("bi_upsert_delivery_batch", {"p_orders": orders[i:i + chunk]})
+        n += int(r or 0)
+    return n
+
+
+def sync_delivery_window(days_back: int, by_status: bool = True) -> int:
+    """15-min: orders OPENED in the window + orders whose STATUS changed in the window
+    (a delivery note flips the status, so that is how an old order's shipment shows up).
+    Nightly: a wide CURDATE window only — the promise is 2–6 weeks, so 120 days covers
+    the whole open population and the deep rotation re-reads older history."""
+    today = dt.datetime.now(IL).date()
+    lo = today - dt.timedelta(days=days_back)
+    orders = delivery_pull(lo, today, "CURDATE")
+    if by_status:
+        seen = {o["o"] for o in orders}
+        orders += [o for o in delivery_pull(lo, today, "STATUSDATE") if o["o"] not in seen]
+    return delivery_push(orders)
 
 
 # ---------- website price snapshot (vdivani.co.il) → bi_web_prices ----------
@@ -1662,6 +1818,10 @@ def _refresher():
                 sync_service_notes_window(3)   # today's service/activity records
             except Exception as e:
                 print("service-notes auto-sync failed:", repr(e)[:300], flush=True)
+            try:
+                sync_delivery_window(3)        # אספקות: הזמנות חדשות + שינויי סטטוס
+            except Exception as e:
+                print("delivery auto-sync failed:", repr(e)[:300], flush=True)
             if ANTHROPIC_KEY:  # without vision there are no slip amounts — nothing to show
                 try:
                     _scan_pending_transfers()
@@ -1690,6 +1850,10 @@ def _refresher():
                     sync_service_notes_window(DEEP_DAYS)
                 except Exception as e:
                     print("service-notes nightly-sync failed:", repr(e)[:300], flush=True)
+                try:
+                    sync_delivery_window(120, by_status=False)   # כל האוכלוסייה הפתוחה
+                except Exception as e:
+                    print("delivery nightly-sync failed:", repr(e)[:300], flush=True)
                 try:
                     sb_rpc("bi_refresh_firsts", {})  # first-purchase table
                 except Exception as e:
