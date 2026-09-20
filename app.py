@@ -1282,6 +1282,87 @@ def classify_feedback(limit: int = FB_BATCH) -> int:
     return n
 
 
+# ---------- היסטוריה: ינואר–13.6.2026 מהייבוא הישן (glassix_messages) ----------
+# דורון 20.9.2026: רשימת המרוצים צריכה לכסות מתחילת השנה. הוובהוק מתחיל ב-14.6;
+# לפני כן יש 50,245 הודעות לקוח ב-glassix_messages (12,450 יחידות כרטיס×יום).
+# רץ פעם אחת בחוט משלו (סמן bi_job 'fb_legacy'), בלי SQL חדש — קורא דרך REST.
+def _fb_legacy_units():
+    rows, off = [], 0
+    while True:
+        page = sb_select("glassix_messages?select=ticket_id,customer_id,dt,body&role=eq.c"
+                         "&dt=gte.2026-01-01&dt=lt.2026-06-14&order=dt.asc&limit=1000&offset=%d" % off)
+        rows += page
+        off += 1000
+        if len(page) < 1000:
+            break
+    units = {}
+    for m in rows:
+        body = (m.get("body") or "").strip()
+        if len(body) < 2:
+            continue
+        # יום מקומי (UTC+3 בקיץ, +2 בחורף) — קירוב מספיק ליחידת יום
+        ts = dt.datetime.fromisoformat(m["dt"].replace("Z", "+00:00")).astimezone(IL)
+        key = "%s|%s" % (m["ticket_id"], ts.date().isoformat())
+        u = units.setdefault(key, {"ref_id": key, "custname": m.get("customer_id") or "", "ordname": "",
+                                   "first_dt": ts.isoformat(), "txt": "", "ctx": ""})
+        u["txt"] = (u["txt"] + "\n" + body[:600]).strip()
+    done = set()
+    off = 0
+    while True:
+        page = sb_select("bi_feedback?select=ref_id&src=eq.glassix&limit=1000&offset=%d" % off)
+        done |= {r["ref_id"] for r in page}
+        off += 1000
+        if len(page) < 1000:
+            break
+    return [u for k, u in sorted(units.items(), key=lambda kv: kv[1]["first_dt"])
+            if k not in done and len(u["txt"]) >= 4]
+
+
+def classify_feedback_legacy():
+    if not ANTHROPIC_KEY:
+        return
+    today = dt.datetime.now(IL).date()
+    if _job_last("fb_legacy"):
+        return
+    try:
+        units = _fb_legacy_units()
+    except Exception as e:
+        print("fb-legacy units failed:", repr(e)[:200], flush=True)
+        return
+    print("fb-legacy: %d units to classify" % len(units), flush=True)
+    n = 0
+    for i in range(0, len(units), FB_PER_CALL):
+        chunk = units[i:i + FB_PER_CALL]
+        try:
+            res, _, _ = _fb_call(chunk)
+        except Exception as e:
+            print("fb-legacy call failed:", repr(e)[:150], flush=True)
+            time.sleep(5)
+            continue
+        by_i = {int(x.get("i", -1)): x for x in res if isinstance(x, dict)}
+        rows = []
+        for j, u in enumerate(chunk):
+            x = by_i.get(j)
+            if not x:
+                continue
+            kind = x.get("kind") or "neutral"
+            if kind == "thanks" and not _FB_PRAISE.search(u.get("txt") or ""):
+                kind = "neutral"
+            rows.append({"src": "glassix", "ref": u["ref_id"], "cn": u["custname"], "o": "", "b": "",
+                         "dt": u["first_dt"], "kind": kind, "sent": x.get("sent") or 0,
+                         "prod": x.get("prod") or "", "q": x.get("q") or "", "conf": x.get("conf"),
+                         "model": FB_MODEL})
+        if rows:
+            try:
+                n += int(sb_rpc("bi_feedback_upsert", {"p_rows": rows}) or 0)
+            except Exception as e:
+                print("fb-legacy upsert failed:", repr(e)[:150], flush=True)
+        if (i // FB_PER_CALL) % 50 == 0:
+            print("fb-legacy progress: %d/%d" % (i, len(units)), flush=True)
+    _job_mark("fb_legacy", today)
+    print("fb-legacy done: %d units" % n, flush=True)
+
+
 # ---------- website price snapshot (vdivani.co.il) → bi_web_prices ----------
 # Price control compares every order line to the website price of that day. The site
 # keeps NO price history: a day that was not captured can never be reconstructed
@@ -2033,6 +2114,7 @@ if not DASH_PASS_IDO:
 # compete with production's refresher on the same Supabase windows)
 if _configured() and os.environ.get("DISABLE_REFRESH") != "1":
     threading.Thread(target=_refresher, daemon=True).start()
+    threading.Thread(target=classify_feedback_legacy, daemon=True).start()   # חד-פעמי, סמן fb_legacy
 
 
 # ---------- routes ----------
