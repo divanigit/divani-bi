@@ -1193,7 +1193,7 @@ def sync_delivery_window(days_back: int, by_status: bool = True) -> int:
 # פרטיות: לשרת נשלח הטקסט בלבד (בלי שם/טלפון); נשמר ציטוט של עד 120 תווים.
 # SQL: cloud/sql/bi_feedback.sql
 FB_MODEL = os.environ.get("FB_MODEL", "claude-haiku-4-5-20251001")
-FB_BATCH = 300          # units per refresher cycle (15 calls, ~1 min); ~6,200 historical units clear in ~5 hours
+FB_BATCH = 1500         # units per refresher cycle (75 calls, ~5 min). 20.9: הרשימה צריכה להיות מוכנה מחר — ההיסטוריה נגמרת תוך שעה
 FB_PER_CALL = 20        # units per API call
 FB_SYSTEM = """אתה מסווג הודעות של לקוחות של חנות רהיטים ישראלית (ויטוריו דיוואני: ספות, פינות אוכל, כיסאות, מיטות, מזרנים, ארונות, כורסאות).
 לכל יחידה (הודעות שלקוח כתב באותו יום בשיחה אחת, ולפעמים ההודעה האחרונה של הנציג לפניהן כהקשר) החזר שורה אחת.
