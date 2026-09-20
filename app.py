@@ -1214,6 +1214,9 @@ conf — ביטחון 0 עד 1.
 החזר JSON בלבד: מערך של אובייקטים {"i":<מספר היחידה>,"kind":"...","sent":<int>,"prod":"...","q":"...","conf":<num>} — לכל יחידה שקיבלת, באותו סדר. בלי טקסט נוסף."""
 
 
+_FB_PRAISE = re.compile("שירות|מקצוע|אדיב|מרוצ|מהיר|יפה|איכות|נהנ|ממליצ|מדהי|מעל המצופה|בזמן|מצוי[ןנ]|מושלם|יחס|נחמד|סבלנ|אכפת|אלופ|תותח|כיף|מצוין|נפלא|מעולה")
+
+
 def _fb_call(units: list) -> list:
     """One API call for up to FB_PER_CALL units. Returns list of dicts keyed by unit index."""
     parts = []
@@ -1259,9 +1262,16 @@ def classify_feedback(limit: int = FB_BATCH) -> int:
             x = by_i.get(j)
             if not x:
                 continue
+            kind = x.get("kind") or "neutral"
+            # Haiku still files a bare "תודה" / "תודה רבה" as thanks despite the prompt
+            # (7 of 23 in the first batch). A thank-you with no praise word in the whole
+            # unit is courtesy, not satisfaction — Doron asked for customers who praised
+            # on their own initiative, so this is downgraded deterministically.
+            if kind == "thanks" and not _FB_PRAISE.search(u.get("txt") or ""):
+                kind = "neutral"
             rows.append({"src": "glassix", "ref": u["ref_id"], "cn": u.get("custname") or "",
                          "o": u.get("ordname") or "", "b": "", "dt": u["first_dt"],
-                         "kind": x.get("kind") or "neutral", "sent": x.get("sent") or 0,
+                         "kind": kind, "sent": x.get("sent") or 0,
                          "prod": x.get("prod") or "", "q": x.get("q") or "",
                          "conf": x.get("conf"), "model": FB_MODEL})
     n = 0
