@@ -210,6 +210,26 @@ body.loading .stale{display:inline-block}
 }
 /* רשת ביטחון: שום אלמנט לא יגלוש את רוחב המסך בטלפון */
 html,body{overflow-x:hidden}
+
+/* ---------- ייצוא PDF: הדפסה נקייה עם כל הנתונים פרושים ---------- */
+@media print{
+  @page{margin:12mm}
+  :root{--bg:#fff!important;--surface:#fff!important;--line:#cfcfcf!important;--line2:#bcbcbc!important;
+        --tx:#111!important;--tx2:#3a3a3a!important;--tx3:#6a6a6a!important;--shadow:none!important}
+  body{background:#fff!important;color:#111!important}
+  .owlbar,.loadbar,.loadpill,.stale,.explain{display:none!important}
+  .card:has(.seg){display:none!important}
+  .seg,.dates,.foldchev,.ahead .chev,.alertbar .ax{display:none!important}
+  .owlov,.dov{display:none!important}
+  .foldcard.collapsed .foldbody{display:block!important}
+  .alertbar.collapsed .alist{display:block!important}
+  .card{box-shadow:none!important;border:1px solid #cfcfcf!important;break-inside:avoid;margin-bottom:10px}
+  .tblwrap{overflow:visible!important}
+  table{font-size:10px}
+  a{color:#111!important;text-decoration:none}
+  h1{font-size:22px}
+  .chart{max-height:220px}
+}
 </style>
 </head>
 <body>
@@ -241,6 +261,7 @@ html,body{overflow-x:hidden}
     <div class="owlacts">
       <button type="button" class="owlxls" id="explbtn" aria-pressed="false" title="הסבר פשוט לכל מספר">הסברים</button>
       <button type="button" class="owlxls" id="refbtn" title="רענון">רענון</button>
+      <button type="button" class="owlxls" id="pdfbtn" title="ייצוא כל הדוח כ-PDF לשליחה">ייצא PDF</button>
     </div>
   </div>
 
@@ -779,6 +800,7 @@ $('dGo').addEventListener('click', function(){
 });
 $('refbtn').addEventListener('click', load);
 $('explbtn').addEventListener('click', function(){ var on = document.body.classList.toggle('explain'); $('explbtn').setAttribute('aria-pressed', on ? 'true' : 'false'); });
+$('pdfbtn') && $('pdfbtn').addEventListener('click', function(){ window.print(); });
 load();
 setInterval(function(){ if (!dov.classList.contains('on')) load(); }, 60000);
 
