@@ -213,7 +213,7 @@ html,body{overflow-x:hidden}
 
 /* ---------- ייצוא PDF: הדפסה נקייה עם כל הנתונים פרושים ---------- */
 @media print{
-  @page{margin:12mm}
+  @page{size:A4 landscape;margin:10mm}
   :root{--bg:#fff!important;--surface:#fff!important;--line:#cfcfcf!important;--line2:#bcbcbc!important;
         --tx:#111!important;--tx2:#3a3a3a!important;--tx3:#6a6a6a!important;--shadow:none!important}
   body{background:#fff!important;color:#111!important}
@@ -223,12 +223,14 @@ html,body{overflow-x:hidden}
   .owlov,.dov{display:none!important}
   .foldcard.collapsed .foldbody{display:block!important}
   .alertbar.collapsed .alist{display:block!important}
-  .card{box-shadow:none!important;border:1px solid #cfcfcf!important;break-inside:avoid;margin-bottom:10px}
-  .tblwrap{overflow:visible!important}
-  table{font-size:10px}
+  /* בלי שום חיתוך — כל האירועים וכל שורות הטבלה נכנסים ל-PDF */
+  .alist,.list,.foldbody,.tblwrap,.alertbar{max-height:none!important;overflow:visible!important}
+  .card{box-shadow:none!important;border:1px solid #cfcfcf!important;break-inside:avoid;margin-bottom:9px}
+  table{font-size:9.5px;width:100%}
+  th,td{padding:5px 6px!important;white-space:normal!important}
   a{color:#111!important;text-decoration:none}
   h1{font-size:22px}
-  .chart{max-height:220px}
+  .chart{max-height:200px}
 }
 </style>
 </head>
