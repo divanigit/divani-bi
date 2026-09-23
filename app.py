@@ -4013,6 +4013,37 @@ def _anthropic_call(messages):
     return json.loads(out.decode("utf-8"))
 
 
+def _anthropic_err_text(e) -> str:
+    """HTTPError מ-Anthropic -> הסיבה האמיתית, בעברית כשהיא מוכרת.
+    repr(HTTPError) מראה רק "400 Bad Request" — הסיבה עצמה יושבת בגוף התשובה,
+    ובלי לקרוא אותו אי אפשר לדעת אם נגמר הקרדיט, המודל לא קיים או הבקשה פסולה."""
+    if not isinstance(e, urllib.error.HTTPError):
+        return repr(e)[:200]
+    try:
+        raw = e.read().decode("utf-8", "replace")
+    except Exception:
+        raw = ""
+    msg = raw
+    try:
+        msg = str(((json.loads(raw) or {}).get("error") or {}).get("message") or raw)
+    except ValueError:
+        pass
+    print("anthropic http %d: %s" % (e.code, msg[:500]), flush=True)
+    low = msg.lower()
+    if "credit balance" in low:
+        return ("נגמר הקרדיט בחשבון Anthropic — צריך לטעון ב-console.anthropic.com "
+                "תחת Billing. (%d)" % e.code)
+    if e.code in (401, 403):
+        return "מפתח הבינה המלאכותית נפסל או בוטל — צריך מפתח חדש. (%d)" % e.code
+    if e.code == 404 or "model" in low and "not" in low and "found" in low:
+        return "המודל %s לא קיים יותר ב-Anthropic — צריך להחליף ב-ASK_MODEL. (%d)" % (ASK_MODEL, e.code)
+    if e.code == 429:
+        return "יותר מדי בקשות ל-Anthropic ברגע זה — נסה שוב בעוד דקה. (429)"
+    if e.code in (500, 502, 503, 529):
+        return "השרת של Anthropic עמוס או לא זמין כרגע — נסה שוב בעוד כמה דקות. (%d)" % e.code
+    return "Anthropic %d: %s" % (e.code, msg[:200])
+
+
 @app.post("/api/ask")
 async def api_ask(request: Request):
     if not _logged_in(request):
@@ -4081,7 +4112,7 @@ async def api_ask(request: Request):
                                      "ms": int((time.time() - t0) * 1000), "sqls": sqls})
         except Exception:
             pass
-        return JSONResponse({"error": "api", "detail": repr(e)[:200]})
+        return JSONResponse({"error": "api", "detail": _anthropic_err_text(e)})
 
 
 @app.post("/api/refresh")
