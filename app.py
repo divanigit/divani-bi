@@ -900,13 +900,10 @@ def priority_pull_receipts(d_from: dt.date, d_to: dt.date):
     hi = (d_to + dt.timedelta(days=2)).isoformat() + "T00:00:00%2B02:00"
     url = (f"{PRI_BASE}/TINVOICES?$filter=IVDATE%20ge%20{lo}%20and%20IVDATE%20lt%20{hi}"
            "&$expand=TPAYMENT_SUBFORM,TPAYMENT2_SUBFORM")
-    recs, guard = [], 0
-    while url and guard < 100:
-        guard += 1
-        j = json.loads(_http(url, {"Authorization": auth, "Accept": "application/json"},
-                             timeout=180).decode("utf-8"))
-        recs += j.get("value", [])
-        url = j.get("@odata.nextLink")
+    # _pri_pages raises when the page guard runs out. The old loop stopped quietly,
+    # and bi_replace_rc_window then deleted the whole window and wrote back only
+    # the part that was read — cash too low, with nothing in the log to say so.
+    recs = list(_pri_pages(url, auth, guard_max=100))
     rows, n_receipts = [], 0
     lo_s, hi_s = d_from.isoformat(), d_to.isoformat()
     for r in recs:
