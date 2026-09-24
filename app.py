@@ -3586,7 +3586,14 @@ def api_pending(request: Request):
 PENDING_SCAN_DAYS = 14
 SLIP_IMG_SUFFIX = {"jpg", "jpeg", "png"}
 SLIP_MAX_BYTES = 4_500_000      # over this the API refuses the image anyway
-SLIP_MAX_TRIES = 3              # a file that keeps failing stops costing us
+# A file that keeps failing stops costing us. 6, not 3, from 24.9.2026: until then
+# an Anthropic outage (the 400s of 23.9) was counted against the image, three
+# 15-minute cycles used up every try, and the slips uploaded during the outage
+# were never read again — their transfers never reached the cash screen. Outages
+# no longer count (SLIP_API_DOWN); the three extra tries let the files that were
+# stranded before this fix be read once more.
+SLIP_MAX_TRIES = 6
+SLIP_API_DOWN = "api_down"      # _read_slip result that is never written to bi_slip_reads
 SLIP_MAX_READS = 60             # per cycle; a runaway can never empty the budget
 
 SLIP_PROMPT = (
@@ -3652,6 +3659,24 @@ def _slip_payload(ordname: str, filenum: int):
     return None
 
 
+def _slip_api_down(e) -> bool:
+    """Did the read fail because Anthropic is unavailable, not because of the image?
+    No credit (a 400 whose body says so), a dead key, a missing model, rate limit,
+    overload, or no network at all. Any other 400 or a 413 is about this image."""
+    if isinstance(e, urllib.error.HTTPError):
+        if e.code == 400:
+            try:
+                body = e.read().decode("utf-8", "replace").lower()
+            except Exception:
+                body = ""
+            if "credit balance" in body:
+                print("slip read: Anthropic credit balance is empty", flush=True)
+                return True
+            return False
+        return e.code in (401, 403, 404, 429) or e.code >= 500
+    return True
+
+
 def _read_slip(ordname: str, filenum: int):
     """Read one image once. Returns a dict for bi_slip_mark — always, including
     the failure shapes, so a file is never silently read twice."""
@@ -3693,6 +3718,8 @@ def _read_slip(ordname: str, filenum: int):
                              data=body, timeout=120).decode("utf-8"))
     except Exception as e:
         print("slip read failed:", ordname, filenum, repr(e)[:150], flush=True)
+        if _slip_api_down(e):
+            out["kind"] = SLIP_API_DOWN    # the service's failure, not this file's
         return out                     # kind='error' -> retried up to SLIP_MAX_TRIES
     u = r.get("usage") or {}
     out["in_tok"] = u.get("input_tokens")
@@ -3829,10 +3856,10 @@ def _scan_pending_transfers():
             return          # without the memory we would re-read and re-pay. Stop.
 
     if ANTHROPIC_KEY:
-        budget, skipped = SLIP_MAX_READS, 0
+        budget, skipped, api_down = SLIP_MAX_READS, 0, False
         for on, item in orders.items():
             for c in item["cands"]:
-                if budget <= 0:
+                if budget <= 0 or api_down:
                     skipped += 1        # never silently: the count is logged below
                     continue
                 prev = seen.get((on, c["num"]))
@@ -3843,6 +3870,13 @@ def _scan_pending_transfers():
                         continue
                 budget -= 1
                 res = _read_slip(on, c["num"])
+                if res["kind"] == SLIP_API_DOWN:
+                    # Not marked, so no try is spent: the file is read as soon as
+                    # Anthropic answers again. The rest of this cycle waits too —
+                    # every other read would fail the same way.
+                    api_down = True
+                    skipped += 1
+                    continue
                 try:
                     sb_rpc("bi_slip_mark", {
                         "p_ordname": on, "p_filenum": c["num"],
@@ -3856,7 +3890,10 @@ def _scan_pending_transfers():
                                             "tries": 1}
                 except Exception as e:
                     print("slip mark failed:", on, c["num"], repr(e)[:200], flush=True)
-        if skipped:
+        if api_down:
+            print(f"slip reads paused: Anthropic unavailable, {skipped} file(s) wait "
+                  f"for the next cycle", flush=True)
+        elif skipped:
             # a cap that hides what it dropped reads as "everything was covered"
             print(f"slip budget: {SLIP_MAX_READS} read, {skipped} left for the "
                   f"next cycle", flush=True)
