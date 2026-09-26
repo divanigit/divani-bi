@@ -1852,6 +1852,98 @@ def sync_web_orders():
     return len(heads)
 
 
+# ---------------------------------------------------------------------------
+# מונה "נשארו" למבצע עודפי יבוא (חול המועד, 27–30.9.2026).
+# רץ כל 15 דקות בתוך הרפרשר, אחרי משיכת ההזמנות והברידג'. לכל מק"ט במבצע:
+# נשארו = הוקצה + נוסף − נמכר בפריוריטי (כל הערוצים) − הזמנות אתר שעדיין לא הגיעו
+# לפריוריטי (לפי webref, בלי כפילות). החישוב ב-RPC bi_sale_remaining().
+# מגודר: פועל רק אם SALE_STOCK_ON=1 ורק בחלון התאריכים. מצב יבש (ברירת מחדל) רק
+# רושם ל-bi_sale_stock_log; מצב חי (SALE_STOCK_WRITE=1 + מפתח כתיבה) קובע את מלאי
+# המוצר ב-WooCommerce — רק ל-20 המק"טים, רק שדה המלאי, שום דבר אחר.
+SALE_FROM = dt.date(2026, 9, 27)
+SALE_TO = dt.date(2026, 9, 30)
+
+
+def _woo_auth_write():
+    ck, cs = os.environ.get("WOO_CK_WRITE", ""), os.environ.get("WOO_CS_WRITE", "")
+    if not (ck and cs):
+        return None
+    return "Basic " + base64.b64encode(f"{ck}:{cs}".encode("utf-8")).decode("ascii")
+
+
+def _woo_get_stock(auth, pid):
+    try:
+        req = urllib.request.Request(f"{WOO_API}/products/{pid}?_fields=stock_quantity",
+                                     headers={"Authorization": auth, "User-Agent": "divani-bi/1.0",
+                                              "Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            v = json.loads(r.read().decode("utf-8")).get("stock_quantity")
+        return None if v is None else int(v)
+    except Exception:
+        return None
+
+
+def _sale_alert(key, title, body):
+    """התראה לדורון דרך bi_alerts (ה-cron דוחף ל-ntfy). best-effort — לא שובר את המונה."""
+    try:
+        now = dt.datetime.now(IL).isoformat()
+        sb_upsert("bi_alerts?on_conflict=key", [{"key": key, "kind": "sale", "title": title,
+                                                 "body": body, "opened_at": now, "last_seen_at": now}])
+    except Exception as e:
+        print("sale-alert failed:", repr(e)[:200], flush=True)
+
+
+def sync_sale_stock():
+    """מונה 'נשארו' + עדכון מלאי האתר למבצע עודפי היבוא. אינרטי עד SALE_STOCK_ON=1."""
+    if os.environ.get("SALE_STOCK_ON", "") != "1":
+        return
+    today = dt.datetime.now(IL).date()
+    if not (SALE_FROM <= today <= SALE_TO):
+        return
+    write = os.environ.get("SALE_STOCK_WRITE", "") == "1"
+    wauth = _woo_auth_write() if write else None
+    rauth = _woo_auth()
+    try:
+        rows = sb_rpc("bi_sale_remaining", {"p_from": SALE_FROM.isoformat()}) or []
+    except Exception as e:
+        print("sale-stock rpc failed:", repr(e)[:200], flush=True)
+        return
+    changed = 0
+    for r in rows:
+        sku, pid, rem = r.get("sku"), r.get("product_id"), r.get("remaining")
+        raw = (float(r.get("allocated") or 0) + float(r.get("added") or 0)
+               - float(r.get("sold_pri") or 0) - float(r.get("pending_web") or 0))
+        if raw < 0:
+            _sale_alert(f"sale_neg_{sku}", f"מבצע: {sku} ירד מתחת ל-0",
+                        f"חישוב {raw:.0f} → נקבע 0. נמכר {float(r.get('sold_pri') or 0):.0f}, "
+                        f"אתר-ממתין {float(r.get('pending_web') or 0):.0f}.")
+        if r.get("unmapped") or not pid:
+            _sale_alert(f"sale_unmapped_{sku}", f"מבצע: {sku} לא ממופה למוצר באתר",
+                        "אין קישור למוצר — המלאי באתר לא עודכן. צריך את כתובת המוצר.")
+            sb_insert("bi_sale_stock_log", {"sku": sku, "from_qty": None, "to_qty": rem,
+                                            "applied": False, "note": "unmapped"})
+            continue
+        cur = _woo_get_stock(rauth, pid) if rauth else None
+        if cur is not None and cur == rem:
+            continue
+        applied = False
+        if write and wauth:
+            try:
+                body = json.dumps({"manage_stock": True, "stock_quantity": int(rem)}).encode("utf-8")
+                req = urllib.request.Request(f"{WOO_API}/products/{pid}", data=body, method="PUT",
+                                             headers={"Authorization": wauth, "User-Agent": "divani-bi/1.0",
+                                                      "Content-Type": "application/json", "Accept": "application/json"})
+                with urllib.request.urlopen(req, timeout=60) as rr:
+                    rr.read()
+                applied = True
+            except Exception as e:
+                _sale_alert(f"sale_write_{sku}", f"מבצע: כתיבת מלאי נכשלה {sku}", repr(e)[:200])
+        sb_insert("bi_sale_stock_log", {"sku": sku, "from_qty": cur, "to_qty": rem, "applied": applied,
+                                        "note": None if applied else ("dry-run" if not write else "write-skipped")})
+        changed += 1
+    print(f"sale-stock: {len(rows)} skus, {changed} change(s), write={write}", flush=True)
+
+
 def freeze_new_lines():
     """Stamp today's list price on every line we have never seen before.
     Everything that existed on 17.8.26 was seeded as 'seed' with no price, so a
@@ -1977,6 +2069,12 @@ def _refresher():
                 sync_web_orders()
             except Exception as e:
                 print("web-orders failed:", repr(e)[:300], flush=True)
+            # מונה "נשארו" למבצע עודפי יבוא — אחרי הברידג', כדי שהזמנות אתר שכבר
+            # הגיעו לפריוריטי לא ייספרו פעמיים. אינרטי עד SALE_STOCK_ON=1.
+            try:
+                sync_sale_stock()
+            except Exception as e:
+                print("sale-stock failed:", repr(e)[:300], flush=True)
             try:
                 # RC_AUTO_DAYS, not 1. The back office keys receipts in with an
                 # EARLIER business date than the day it types them: on 23.8 it
