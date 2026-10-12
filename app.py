@@ -55,6 +55,7 @@ DASH_PASS_SHARON = os.environ.get("DASH_PASS_SHARON", "")  # Sharon: own credent
 DASH_PASS_ITAMAR = os.environ.get("DASH_PASS_ITAMAR", "")  # Itamar: own credential, owner rights
 DASH_PASS_RACHEL = os.environ.get("DASH_PASS_RACHEL", "")  # רחל (כספים ועיצוב): own credential, owner rights (דורון, שאלה 114, 27.9.2026)
 DASH_PASS_IDO = os.environ.get("DASH_PASS_IDO", "")  # עידו אהרון: regular view, without any profit figure
+DASH_PASS_YOATZ = os.environ.get("DASH_PASS_YOATZ", "")  # חברת היועצים המלווה (MVP): own credential, regular view access, no owner/ask rights (דורון, 12.10.2026)
 OWL_CART_SECRET = os.environ.get("OWL_CART_SECRET", "")  # לכידת עגלות מהאתר: חתימת HMAC משותפת עם התוסף
 HEALTH_SHARE_TOKEN = os.environ.get("HEALTH_SHARE_TOKEN", "")  # קישור בריאות האתר לדיגיטאץ' — טוקן נפרד, מסך אחד בלבד, בלי שום גישה לינשוף
 if not HEALTH_SHARE_TOKEN and OWL_CART_SECRET:
@@ -126,6 +127,18 @@ def _ido_token() -> str:
     return hmac.new(DASH_PASS_IDO.encode("utf-8"), b"divani-bi-ido-v1", hashlib.sha256).hexdigest()
 
 
+def _yoatz_token() -> str:
+    # keyed on the consultants' own password: clearing DASH_PASS_YOATZ ends their sessions
+    return hmac.new(DASH_PASS_YOATZ.encode("utf-8"), b"divani-bi-yoatz-v1", hashlib.sha256).hexdigest()
+
+
+def _is_yoatz(request: Request) -> bool:
+    if not DASH_PASS_YOATZ:
+        return False
+    tok = request.cookies.get(COOKIE_NAME, "")
+    return hmac.compare_digest(tok, _yoatz_token())
+
+
 def _is_noprofit(request: Request) -> bool:
     if not DASH_PASS_IDO:
         return False
@@ -164,7 +177,7 @@ def _logged_in(request: Request) -> bool:
         return False
     tok = request.cookies.get(COOKIE_NAME, "")
     return (hmac.compare_digest(tok, _session_token()) or _is_admin(request)
-            or _is_ask2(request) or _is_noprofit(request))
+            or _is_ask2(request) or _is_noprofit(request) or _is_yoatz(request))
 
 
 def _health_ok(request: Request) -> bool:
@@ -184,13 +197,15 @@ def _pass_ok(p: str) -> bool:
     return (_match(p, DASH_PASS) or _match(p, DASH_PASS_ADMIN)
             or _match(p, DASH_PASS_ASK2) or _match(p, DASH_PASS_DOV)
             or _match(p, DASH_PASS_SHARON) or _match(p, DASH_PASS_ITAMAR)
-            or _match(p, DASH_PASS_IDO) or _match(p, DASH_PASS_RACHEL))
+            or _match(p, DASH_PASS_IDO) or _match(p, DASH_PASS_RACHEL)
+            or _match(p, DASH_PASS_YOATZ))
 
 
 _ALL_PASS = (("DASH_PASS", "המשותפת"), ("DASH_PASS_ADMIN", "דורון"),
              ("DASH_PASS_ASK2", "חיים"), ("DASH_PASS_DOV", "דב"),
              ("DASH_PASS_SHARON", "שרון"), ("DASH_PASS_ITAMAR", "איתמר"),
-             ("DASH_PASS_IDO", "עידו"), ("DASH_PASS_RACHEL", "רחל"))
+             ("DASH_PASS_IDO", "עידו"), ("DASH_PASS_RACHEL", "רחל"),
+             ("DASH_PASS_YOATZ", "יועצים"))
 
 
 def _pass_collisions():
@@ -220,6 +235,8 @@ def _identity(p: str):
     """
     if _match(p, DASH_PASS_IDO):
         return "עידו", _ido_token()
+    if _match(p, DASH_PASS_YOATZ):
+        return "יועצים", _yoatz_token()
     if _match(p, DASH_PASS_DOV):
         return "דב", _session_token()
     if _match(p, DASH_PASS_SHARON):
@@ -255,6 +272,8 @@ def _who_cookie(request: Request) -> str:
         return "חיים"
     if DASH_PASS_IDO and hmac.compare_digest(tok, _ido_token()):
         return "עידו"
+    if DASH_PASS_YOATZ and hmac.compare_digest(tok, _yoatz_token()):
+        return "יועצים"
     return "צוות"
 
 
