@@ -4978,7 +4978,8 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       }
       var nsy=document.getElementById('navsys'); if(nsy)nsy.remove();
       // בלי ייצוא: לא PDF ולא אקסל (דורון, 12.10.2026). השרת חוסם גם את /api/xlsx.
-      ['pdfbtn','xlsbtn'].forEach(function(id){var e=document.getElementById(id);if(e)e.remove();});
+      // בלי הפס האדום של התראות האתר (דורון, 12.10.2026); השרת חוסם גם את /api/alerts.
+      ['pdfbtn','xlsbtn','sitealert'].forEach(function(id){var e=document.getElementById(id);if(e)e.remove();});
     }
     // the explanations go in preview too, or the preview would show a screen
     // nobody else gets, וזו בדיוק הבדיקה שהוא בא לעשות.
