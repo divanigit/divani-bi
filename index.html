@@ -1091,7 +1091,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       .then(ok)
       // j.dev = the server refused this screen for this user. It has no agg, so keeping only
       // j.agg threw the refusal away and the screen rendered as a real, empty result.
-      .then(function(j){if(desiredKey()!==key)return;cache.key=key;cache.dev=!!j.dev;cache.mode=j.mode;cache.panel=j.panel||null;cache.rows=j.rows||null;cache.agg=j.agg||null;cache.gross=(j.gross===undefined?null:j.gross);cache.grossBr=j.gross_by_branch||null;if(j.pending!==undefined){cache.pending=j.pending;cache.pendingAt=j.pending_at;cache.slipcost=j.slipcost||null;}cb();})
+      .then(function(j){if(desiredKey()!==key)return;cache.key=key;cache.dev=!!j.dev;cache.mode=j.mode;cache.panel=j.panel||null;cache.rows=j.rows||null;cache.agg=j.agg||null;cache.gross=(j.gross===undefined?null:j.gross);cache.grossBr=j.gross_by_branch||null;if(j.pending!==undefined){cache.pending=j.pending;cache.pendingAt=j.pending_at;cache.slipHalt=j.slip_halt||null;cache.slipcost=j.slipcost||null;}cb();})
       .catch(fail);
   }
 
@@ -1515,6 +1515,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
          '<span class="mut2">'+esc(brName(p.b))+'</span>'+
          (p.d?'<span class="mut2">אסמכתא '+heDate(p.d)+'</span>':'')+'</div>';
     });
+    if(cache.slipHalt)h+='<div class="pn" style="color:#b42318;font-weight:500">קריאת האסמכתאות עצורה — העברות בנקאיות חדשות אינן נספרות במזומן. הסיבה: '+esc(cache.slipHalt)+'</div>';
     h+='<div class="pn">נזקפו לסך המזומן לפי תאריך האסמכתא, עוד לפני הפקת הקבלה בפריוריטי. אם לא תופק קבלה תוך כמה ימים — יופיעו בהתראות.'+(cache.pendingAt?' נסרק '+esc(cache.pendingAt)+'.':'')+'</div>';
     // מד עלות — לדורון בלבד, ומהחיוב האמיתי שהוחזר מה-API
     var sc=cache.slipcost;

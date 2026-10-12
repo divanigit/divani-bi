@@ -87,7 +87,7 @@ ASK_USD_ILS = float(os.environ.get("ASK_USD_ILS", "3.7"))
 app = FastAPI(title="Divani BI", docs_url=None, redoc_url=None, openapi_url=None)
 
 _state = {"last_sync": None, "last_rc": None, "last_manual": 0.0, "minmax": None,
-          "minmax_at": 0.0, "pending": [], "pending_at": None,
+          "minmax_at": 0.0, "pending": [], "pending_at": None, "slip_halt": None,
           "last_web": None, "last_prices": None, "last_pulse": None,
           "last_weborders": None}
 
@@ -3537,7 +3537,7 @@ def api_cash(request: Request, d_from: str = "", d_to: str = ""):
     if f > t:
         f, t = t, f
     _pl, _pat = _pending_now()
-    pend = {"pending": _pl, "pending_at": _pat}
+    pend = {"pending": _pl, "pending_at": _pat, "slip_halt": _state.get("slip_halt")}
     # מה עלתה קריאת האסמכתאות בפועל — לדורון בלבד, ומהטוקנים שה-API החזיר,
     # לא מהערכה. שאלה מפורשת שלו: "מהי עלות קריאה של כל תמונה בכל הזמנה".
     if _is_admin(request):
@@ -3713,7 +3713,8 @@ def api_pending(request: Request):
     if not _logged_in(request):
         return JSONResponse({"error": "auth"}, status_code=401)
     pend, at = _pending_now()
-    return JSONResponse({"pending": pend, "pending_at": at})
+    return JSONResponse({"pending": pend, "pending_at": at,
+                         "slip_halt": _state.get("slip_halt")})
 
 
 # ---------- pending bank transfers (העברות בהמתנה לקבלה) ----------
@@ -3862,7 +3863,19 @@ def _read_slip(ordname: str, filenum: int):
                               "Content-Type": "application/json"},
                              data=body, timeout=120).decode("utf-8"))
     except Exception as e:
-        print("slip read failed:", ordname, filenum, repr(e)[:150], flush=True)
+        # 12.10.2026: from 20.9 every read came back 400 and repr() only said
+        # "Bad Request". The body said "credit balance is too low". Three such
+        # failures burned a file's tries and it was never read again — so the
+        # cash total quietly lost every bank transfer for three weeks. An
+        # account-level failure (credit, key, rate) is not the file's fault:
+        # stop the scan, keep the file unread, and tell the cash screen why.
+        reason = _anthropic_err_text(e)
+        code = getattr(e, "code", None)
+        if code in (401, 403, 429) or "קרדיט" in reason or "credit" in reason.lower():
+            out["kind"] = "halt"
+            out["why"] = reason
+            return out
+        print("slip read failed:", ordname, filenum, reason[:150], flush=True)
         return out                     # kind='error' -> retried up to SLIP_MAX_TRIES
     u = r.get("usage") or {}
     out["in_tok"] = u.get("input_tokens")
@@ -4013,6 +4026,13 @@ def _scan_pending_transfers():
                         continue
                 budget -= 1
                 res = _read_slip(on, c["num"])
+                if res["kind"] == "halt":
+                    # account problem, not a file problem: nothing is marked,
+                    # every file stays unread, and the next cycle tries again.
+                    _state["slip_halt"] = res.get("why") or "קריאת האסמכתאות נכשלה"
+                    print("slip scan halted:", _state["slip_halt"][:200], flush=True)
+                    break
+                _state["slip_halt"] = None
                 try:
                     sb_rpc("bi_slip_mark", {
                         "p_ordname": on, "p_filenum": c["num"],
@@ -4026,6 +4046,8 @@ def _scan_pending_transfers():
                                             "tries": 1}
                 except Exception as e:
                     print("slip mark failed:", on, c["num"], repr(e)[:200], flush=True)
+            if _state.get("slip_halt"):
+                break
         if skipped:
             # a cap that hides what it dropped reads as "everything was covered"
             print(f"slip budget: {SLIP_MAX_READS} read, {skipped} left for the "
