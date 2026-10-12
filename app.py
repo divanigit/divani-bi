@@ -404,6 +404,7 @@ def _np_scrub(x):
 # (סוכנים, סניפים, מזומן, מקדמות, שירות, מקורות הגעה, פילוח). כל דף אחר מחזיר
 # אותם לדף הבית, וכל קריאת נתונים אחרת עונה "בפיתוח" — גם אם הכתובת מוקלדת ביד.
 _YZ_API_ALLOW = {"/api/meta", "/api/range", "/api/cash", "/api/collect", "/api/branchsrc",
+                 "/api/products",
                  "/api/pending", "/api/tree", "/api/segdrill", "/api/dim", "/api/alerts",
                  "/api/messages", "/api/refresh", "/api/xlsx"}
 _YZ_PAGE_BLOCK = {"/agent-report", "/conversion", "/traffic", "/customers", "/abandoned",

@@ -4330,7 +4330,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
 
   /* ---- view toggle ---- */
   // חברת היועצים (MVP): רק שבעת המסכים האלה. כל מסך אחר נופל לסוכנים, בלי הודעה.
-  var YZ_KEEP={agents:1,branches:1,cash:1,collect:1,service:1,branchsrc:1,dim:1};
+  var YZ_KEEP={agents:1,branches:1,products:1,cash:1,collect:1,service:1,branchsrc:1,dim:1};
   function isYoatz(){return !!(META&&META.yoatz);}
   function setView(v){
     if(isYoatz()&&!YZ_KEEP[v])v='agents';
