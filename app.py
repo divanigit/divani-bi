@@ -400,6 +400,28 @@ def _np_scrub(x):
     return x
 
 
+# חברת היועצים (MVP) — דורון, 12.10.2026: רואים רק את שבעת המסכים הרגילים
+# (סוכנים, סניפים, מזומן, מקדמות, שירות, מקורות הגעה, פילוח). כל דף אחר מחזיר
+# אותם לדף הבית, וכל קריאת נתונים אחרת עונה "בפיתוח" — גם אם הכתובת מוקלדת ביד.
+_YZ_API_ALLOW = {"/api/meta", "/api/range", "/api/cash", "/api/collect", "/api/branchsrc",
+                 "/api/pending", "/api/tree", "/api/segdrill", "/api/dim", "/api/alerts",
+                 "/api/messages", "/api/refresh", "/api/xlsx"}
+_YZ_PAGE_BLOCK = {"/agent-report", "/conversion", "/traffic", "/customers", "/abandoned",
+                  "/site", "/status", "/logins", "/nav-preview"}
+
+
+@app.middleware("http")
+async def _yz_gate(request: Request, call_next):
+    path = request.url.path
+    if not _is_yoatz(request):
+        return await call_next(request)
+    if path.startswith("/api/") and path not in _YZ_API_ALLOW:
+        return JSONResponse({"dev": True})
+    if path in _YZ_PAGE_BLOCK or path.startswith("/form/"):
+        return RedirectResponse("/", status_code=303)
+    return await call_next(request)
+
+
 @app.middleware("http")
 async def _np_gate(request: Request, call_next):
     path = request.url.path
@@ -2588,7 +2610,8 @@ def api_meta(request: Request):
                          "line_span_days": MAX_LINE_SPAN_DAYS,
                          "admin": _can_ask(request),
                          "owner": _is_admin(request),
-                         "noprofit": _is_noprofit(request)})
+                         "noprofit": _is_noprofit(request),
+                         "yoatz": _is_yoatz(request)})
 
 
 @app.get("/api/range")
