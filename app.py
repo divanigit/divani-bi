@@ -954,13 +954,10 @@ def priority_pull_receipts(d_from: dt.date, d_to: dt.date):
     hi = (d_to + dt.timedelta(days=2)).isoformat() + "T00:00:00%2B02:00"
     url = (f"{PRI_BASE}/TINVOICES?$filter=IVDATE%20ge%20{lo}%20and%20IVDATE%20lt%20{hi}"
            "&$expand=TPAYMENT_SUBFORM,TPAYMENT2_SUBFORM")
-    recs, guard = [], 0
-    while url and guard < 100:
-        guard += 1
-        j = json.loads(_http(url, {"Authorization": auth, "Accept": "application/json"},
-                             timeout=180).decode("utf-8"))
-        recs += j.get("value", [])
-        url = j.get("@odata.nextLink")
+    # _pri_pages raises when the page guard runs out. The old loop stopped quietly,
+    # and bi_replace_rc_window then deleted the whole window and wrote back only
+    # the part that was read — cash too low, with nothing in the log to say so.
+    recs = list(_pri_pages(url, auth, guard_max=100))
     rows, n_receipts = [], 0
     lo_s, hi_s = d_from.isoformat(), d_to.isoformat()
     for r in recs:
@@ -3757,7 +3754,14 @@ def api_pending(request: Request):
 PENDING_SCAN_DAYS = 14
 SLIP_IMG_SUFFIX = {"jpg", "jpeg", "png"}
 SLIP_MAX_BYTES = 4_500_000      # over this the API refuses the image anyway
-SLIP_MAX_TRIES = 3              # a file that keeps failing stops costing us
+# A file that keeps failing stops costing us. 6, not 3, from 24.9.2026: until then
+# an Anthropic outage (the 400s of 23.9) was counted against the image, three
+# 15-minute cycles used up every try, and the slips uploaded during the outage
+# were never read again — their transfers never reached the cash screen. Outages
+# no longer count (_read_slip returns kind='halt' and nothing is marked); the
+# three extra tries let the files that were stranded before that fix be read
+# once more.
+SLIP_MAX_TRIES = 6
 SLIP_MAX_READS = 60             # per cycle; a runaway can never empty the budget
 
 SLIP_PROMPT = (
@@ -3869,11 +3873,16 @@ def _read_slip(ordname: str, filenum: int):
         # cash total quietly lost every bank transfer for three weeks. An
         # account-level failure (credit, key, rate) is not the file's fault:
         # stop the scan, keep the file unread, and tell the cash screen why.
+        # A missing model (404), an overloaded server (5xx) and no network at
+        # all are not the file's fault either.
         reason = _anthropic_err_text(e)
         code = getattr(e, "code", None)
-        if code in (401, 403, 429) or "קרדיט" in reason or "credit" in reason.lower():
+        no_network = code is None and isinstance(e, OSError)
+        if (code in (401, 403, 404, 429) or (code is not None and code >= 500)
+                or no_network or "קרדיט" in reason or "credit" in reason.lower()):
             out["kind"] = "halt"
-            out["why"] = reason
+            out["why"] = ("אין חיבור ל-Anthropic כרגע — ננסה שוב בסבב הבא."
+                          if no_network else reason)
             return out
         print("slip read failed:", ordname, filenum, reason[:150], flush=True)
         return out                     # kind='error' -> retried up to SLIP_MAX_TRIES
