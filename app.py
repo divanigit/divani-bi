@@ -878,6 +878,14 @@ def sync_window(kind: str, d_from: dt.date, d_to: dt.date, skip_if_empty: bool =
         return
     sb_rpc("bi_replace_window", {"p_from": d_from.isoformat(), "p_to": d_to.isoformat(),
                                  "p_rows": rows})
+    # פיזור הנחות ("קיזוז") לפריטים בחלון שנכתב עכשיו (דורון, 14.10.2026, שאלה 114=א):
+    # הגולמי (מחירון) נשמר ב-qprice_list/qprofit_list, והנטו אחרי ההנחה ב-qprice/qprofit,
+    # כך שכל מסך מראה רווח לפי פריט על המחיר ששולם. סכום ההזמנה לא משתנה. ה-RPC אידמפוטנטי.
+    # מגודר: כשל כאן לעולם לא מפיל את הסנכרון.
+    try:
+        sb_rpc("bi_alloc_discounts", {"p_from": d_from.isoformat(), "p_to": d_to.isoformat()})
+    except Exception as e:
+        print("alloc-discounts failed:", repr(e)[:300], flush=True)
     took = int((time.time() - t0) * 1000)
     # A sale can use a SKU created minutes earlier (the generator mints them per order).
     # Until the catalog knows it, the line has no family and falls into the unclassified
