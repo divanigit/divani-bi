@@ -53,7 +53,9 @@ DASH_PASS_ASK2 = os.environ.get("DASH_PASS_ASK2", "")  # Haim: ask-enabled perso
 DASH_PASS_DOV = os.environ.get("DASH_PASS_DOV", "")  # Dov (operations mgr): own credential, regular view access
 DASH_PASS_SHARON = os.environ.get("DASH_PASS_SHARON", "")  # Sharon: own credential, regular view access
 DASH_PASS_ITAMAR = os.environ.get("DASH_PASS_ITAMAR", "")  # Itamar: own credential, owner rights
+DASH_PASS_RACHEL = os.environ.get("DASH_PASS_RACHEL", "")  # רחל (כספים ועיצוב): own credential, owner rights (דורון, שאלה 114, 27.9.2026)
 DASH_PASS_IDO = os.environ.get("DASH_PASS_IDO", "")  # עידו אהרון: regular view, without any profit figure
+DASH_PASS_YOATZ = os.environ.get("DASH_PASS_YOATZ", "")  # חברת היועצים המלווה (MVP): own credential, regular view access, no owner/ask rights (דורון, 12.10.2026)
 OWL_CART_SECRET = os.environ.get("OWL_CART_SECRET", "")  # לכידת עגלות מהאתר: חתימת HMAC משותפת עם התוסף
 HEALTH_SHARE_TOKEN = os.environ.get("HEALTH_SHARE_TOKEN", "")  # קישור בריאות האתר לדיגיטאץ' — טוקן נפרד, מסך אחד בלבד, בלי שום גישה לינשוף
 if not HEALTH_SHARE_TOKEN and OWL_CART_SECRET:
@@ -85,7 +87,7 @@ ASK_USD_ILS = float(os.environ.get("ASK_USD_ILS", "3.7"))
 app = FastAPI(title="Divani BI", docs_url=None, redoc_url=None, openapi_url=None)
 
 _state = {"last_sync": None, "last_rc": None, "last_manual": 0.0, "minmax": None,
-          "minmax_at": 0.0, "pending": [], "pending_at": None,
+          "minmax_at": 0.0, "pending": [], "pending_at": None, "slip_halt": None,
           "last_web": None, "last_prices": None, "last_pulse": None,
           "last_weborders": None}
 
@@ -110,6 +112,12 @@ def _itamar_token() -> str:
                     hashlib.sha256).hexdigest()
 
 
+def _rachel_token() -> str:
+    # Same shape as Itamar: owner rights, keyed on her own password.
+    return hmac.new(DASH_PASS_RACHEL.encode("utf-8"), b"divani-bi-rachel-v1",
+                    hashlib.sha256).hexdigest()
+
+
 def _ask2_token() -> str:
     return hmac.new(DASH_PASS_ASK2.encode("utf-8"), b"divani-bi-ask2-v1", hashlib.sha256).hexdigest()
 
@@ -117,6 +125,18 @@ def _ask2_token() -> str:
 def _ido_token() -> str:
     # keyed on his own password, so the shared password cannot produce this cookie
     return hmac.new(DASH_PASS_IDO.encode("utf-8"), b"divani-bi-ido-v1", hashlib.sha256).hexdigest()
+
+
+def _yoatz_token() -> str:
+    # keyed on the consultants' own password: clearing DASH_PASS_YOATZ ends their sessions
+    return hmac.new(DASH_PASS_YOATZ.encode("utf-8"), b"divani-bi-yoatz-v1", hashlib.sha256).hexdigest()
+
+
+def _is_yoatz(request: Request) -> bool:
+    if not DASH_PASS_YOATZ:
+        return False
+    tok = request.cookies.get(COOKIE_NAME, "")
+    return hmac.compare_digest(tok, _yoatz_token())
 
 
 def _is_noprofit(request: Request) -> bool:
@@ -147,6 +167,8 @@ def _is_admin(request: Request) -> bool:
         return True
     if DASH_PASS_ITAMAR and hmac.compare_digest(tok, _itamar_token()):
         return True
+    if DASH_PASS_RACHEL and hmac.compare_digest(tok, _rachel_token()):
+        return True
     return False
 
 
@@ -155,7 +177,7 @@ def _logged_in(request: Request) -> bool:
         return False
     tok = request.cookies.get(COOKIE_NAME, "")
     return (hmac.compare_digest(tok, _session_token()) or _is_admin(request)
-            or _is_ask2(request) or _is_noprofit(request))
+            or _is_ask2(request) or _is_noprofit(request) or _is_yoatz(request))
 
 
 def _health_ok(request: Request) -> bool:
@@ -175,13 +197,15 @@ def _pass_ok(p: str) -> bool:
     return (_match(p, DASH_PASS) or _match(p, DASH_PASS_ADMIN)
             or _match(p, DASH_PASS_ASK2) or _match(p, DASH_PASS_DOV)
             or _match(p, DASH_PASS_SHARON) or _match(p, DASH_PASS_ITAMAR)
-            or _match(p, DASH_PASS_IDO))
+            or _match(p, DASH_PASS_IDO) or _match(p, DASH_PASS_RACHEL)
+            or _match(p, DASH_PASS_YOATZ))
 
 
 _ALL_PASS = (("DASH_PASS", "המשותפת"), ("DASH_PASS_ADMIN", "דורון"),
              ("DASH_PASS_ASK2", "חיים"), ("DASH_PASS_DOV", "דב"),
              ("DASH_PASS_SHARON", "שרון"), ("DASH_PASS_ITAMAR", "איתמר"),
-             ("DASH_PASS_IDO", "עידו"))
+             ("DASH_PASS_IDO", "עידו"), ("DASH_PASS_RACHEL", "רחל"),
+             ("DASH_PASS_YOATZ", "יועצים"))
 
 
 def _pass_collisions():
@@ -211,6 +235,8 @@ def _identity(p: str):
     """
     if _match(p, DASH_PASS_IDO):
         return "עידו", _ido_token()
+    if _match(p, DASH_PASS_YOATZ):
+        return "יועצים", _yoatz_token()
     if _match(p, DASH_PASS_DOV):
         return "דב", _session_token()
     if _match(p, DASH_PASS_SHARON):
@@ -223,6 +249,8 @@ def _identity(p: str):
         return "אדמין", _admin_token()
     if _match(p, DASH_PASS_ITAMAR):
         return "איתמר", _itamar_token()
+    if _match(p, DASH_PASS_RACHEL):
+        return "רחל", _rachel_token()
     return "?", ""
 
 
@@ -238,10 +266,14 @@ def _who_cookie(request: Request) -> str:
         return "דורון"
     if DASH_PASS_ITAMAR and hmac.compare_digest(tok, _itamar_token()):
         return "איתמר"
+    if DASH_PASS_RACHEL and hmac.compare_digest(tok, _rachel_token()):
+        return "רחל"
     if DASH_PASS_ASK2 and hmac.compare_digest(tok, _ask2_token()):
         return "חיים"
     if DASH_PASS_IDO and hmac.compare_digest(tok, _ido_token()):
         return "עידו"
+    if DASH_PASS_YOATZ and hmac.compare_digest(tok, _yoatz_token()):
+        return "יועצים"
     return "צוות"
 
 
@@ -366,6 +398,28 @@ def _np_scrub(x):
         for v in x:
             _np_scrub(v)
     return x
+
+
+# חברת היועצים (MVP) — דורון, 12.10.2026: רואים רק את שבעת המסכים הרגילים
+# (סוכנים, סניפים, מזומן, מקדמות, שירות, מקורות הגעה, פילוח). כל דף אחר מחזיר
+# אותם לדף הבית, וכל קריאת נתונים אחרת עונה "בפיתוח" — גם אם הכתובת מוקלדת ביד.
+_YZ_API_ALLOW = {"/api/meta", "/api/range", "/api/cash", "/api/collect",
+                 "/api/pending",
+                 "/api/messages", "/api/refresh"}
+_YZ_PAGE_BLOCK = {"/agent-report", "/conversion", "/traffic", "/customers", "/abandoned",
+                  "/site", "/status", "/logins", "/nav-preview"}
+
+
+@app.middleware("http")
+async def _yz_gate(request: Request, call_next):
+    path = request.url.path
+    if not _is_yoatz(request):
+        return await call_next(request)
+    if path.startswith("/api/") and path not in _YZ_API_ALLOW:
+        return JSONResponse({"dev": True})
+    if path in _YZ_PAGE_BLOCK or path.startswith("/form/"):
+        return RedirectResponse("/", status_code=303)
+    return await call_next(request)
 
 
 @app.middleware("http")
@@ -1849,6 +1903,112 @@ def sync_web_orders():
     return len(heads)
 
 
+# ---------------------------------------------------------------------------
+# מונה "נשארו" למבצע טירוף חול המועד (27–30.9.2026).
+# רץ כל 15 דקות בתוך הרפרשר, אחרי משיכת ההזמנות והברידג'. לכל מק"ט במבצע (שולחן או כיסא):
+# נשארו = הוקצה + נוסף − נמכר בפריוריטי (כל הערוצים) − הזמנות אתר שעדיין לא הגיעו
+# לפריוריטי (לפי webref, בלי כפילות). החישוב ב-RPC bi_sale_sku_remaining() ו-bi_sale_set_remaining().
+# מגודר: פועל רק אם SALE_STOCK_ON=1 ורק בחלון התאריכים. מצב יבש (ברירת מחדל) רק
+# רושם ל-bi_sale_stock_log; מצב חי (SALE_STOCK_WRITE=1 + מפתח כתיבה) קובע את מלאי
+# המוצר ב-WooCommerce — רק לפינות שב-bi_sale_sets, רק שדה המלאי, שום דבר אחר.
+SALE_FROM = dt.date(2026, 9, 27)
+SALE_TO = dt.date(2026, 9, 30)
+
+
+def _woo_auth_write():
+    ck, cs = os.environ.get("WOO_CK_WRITE", ""), os.environ.get("WOO_CS_WRITE", "")
+    if not (ck and cs):
+        return None
+    return "Basic " + base64.b64encode(f"{ck}:{cs}".encode("utf-8")).decode("ascii")
+
+
+def _woo_item_url(pid, vid=0):
+    """מוצר רגיל או וריאציה מסוימת שלו."""
+    return f"{WOO_API}/products/{pid}/variations/{vid}" if vid else f"{WOO_API}/products/{pid}"
+
+
+def _woo_get_stock(auth, pid, vid=0):
+    try:
+        req = urllib.request.Request(_woo_item_url(pid, vid) + "?_fields=stock_quantity",
+                                     headers={"Authorization": auth, "User-Agent": "divani-bi/1.0",
+                                              "Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            v = json.loads(r.read().decode("utf-8")).get("stock_quantity")
+        return None if v is None else int(v)
+    except Exception:
+        return None
+
+
+def _sale_alert(key, title, body):
+    """התראה לדורון דרך bi_alerts (ה-cron דוחף ל-ntfy). best-effort — לא שובר את המונה."""
+    try:
+        now = dt.datetime.now(IL).isoformat()
+        sb_upsert("bi_alerts?on_conflict=key", [{"key": key, "kind": "sale", "title": title,
+                                                 "body": body, "opened_at": now, "last_seen_at": now}])
+    except Exception as e:
+        print("sale-alert failed:", repr(e)[:200], flush=True)
+
+
+def sync_sale_stock():
+    """מונה 'נשארו' + עדכון מלאי האתר למבצע טירוף חול המועד. אינרטי עד SALE_STOCK_ON=1.
+    היתרה נספרת לכל מק"ט (שולחן או כיסא) ב-bi_sale_sku_remaining; פינה באתר מקבלת את
+    המינימום בין השולחנות שנשארו לבין הכיסאות שנשארו חלקי מספר הכיסאות בפינה
+    (bi_sale_set_remaining). כיסא משותף לכמה פינות יורד לכולן."""
+    if os.environ.get("SALE_STOCK_ON", "") != "1":
+        return
+    today = dt.datetime.now(IL).date()
+    if not (SALE_FROM <= today <= SALE_TO):
+        return
+    write = os.environ.get("SALE_STOCK_WRITE", "") == "1"
+    wauth = _woo_auth_write() if write else None
+    rauth = _woo_auth()
+    try:
+        skus = sb_rpc("bi_sale_sku_remaining", {"p_from": SALE_FROM.isoformat()}) or []
+        sets = sb_rpc("bi_sale_set_remaining", {"p_from": SALE_FROM.isoformat()}) or []
+    except Exception as e:
+        print("sale-stock rpc failed:", repr(e)[:200], flush=True)
+        return
+    for r in skus:
+        raw = float(r.get("raw_left") or 0)
+        if raw < 0:
+            sku = r.get("sku")
+            _sale_alert(f"sale_neg_{sku}", f"מבצע: {sku} ירד מתחת ל-0",
+                        f"חישוב {raw:.0f} → נקבע 0. נמכר {float(r.get('sold_pri') or 0):.0f}, "
+                        f"אתר-ממתין {float(r.get('pending_web') or 0):.0f}.")
+    changed = 0
+    for r in sets:
+        key = f"set{r.get('set_id')}"
+        name, pid, vid, rem = r.get("name") or key, r.get("product_id"), int(r.get("variation_id") or 0), r.get("remaining")
+        if r.get("missing_sku"):
+            _sale_alert(f"sale_missing_{key}", f"מבצע: {name} — מק\"ט {r['missing_sku']} לא ברשימת הכמויות",
+                        "אין כמות שהוקצתה למק\"ט הזה, ולכן הפינה נספרת כ-0. צריך להוסיף אותו ל-bi_sale_stock.")
+        if not pid:
+            _sale_alert(f"sale_unmapped_{key}", f"מבצע: {name} לא מקושרת למוצר באתר",
+                        "אין קישור למוצר — המלאי באתר לא עודכן. צריך את כתובת המוצר.")
+            sb_insert("bi_sale_stock_log", {"sku": key, "from_qty": None, "to_qty": rem,
+                                            "applied": False, "note": "unmapped"})
+            continue
+        cur = _woo_get_stock(rauth, pid, vid) if rauth else None
+        if cur is not None and cur == rem:
+            continue
+        applied = False
+        if write and wauth:
+            try:
+                body = json.dumps({"manage_stock": True, "stock_quantity": int(rem)}).encode("utf-8")
+                req = urllib.request.Request(_woo_item_url(pid, vid), data=body, method="PUT",
+                                             headers={"Authorization": wauth, "User-Agent": "divani-bi/1.0",
+                                                      "Content-Type": "application/json", "Accept": "application/json"})
+                with urllib.request.urlopen(req, timeout=60) as rr:
+                    rr.read()
+                applied = True
+            except Exception as e:
+                _sale_alert(f"sale_write_{key}", f"מבצע: כתיבת מלאי נכשלה — {name}", repr(e)[:200])
+        sb_insert("bi_sale_stock_log", {"sku": key, "from_qty": cur, "to_qty": rem, "applied": applied,
+                                        "note": None if applied else ("dry-run" if not write else "write-skipped")})
+        changed += 1
+    print(f"sale-stock: {len(skus)} skus, {len(sets)} sets, {changed} change(s), write={write}", flush=True)
+
+
 def freeze_new_lines():
     """Stamp today's list price on every line we have never seen before.
     Everything that existed on 17.8.26 was seeded as 'seed' with no price, so a
@@ -1974,6 +2134,12 @@ def _refresher():
                 sync_web_orders()
             except Exception as e:
                 print("web-orders failed:", repr(e)[:300], flush=True)
+            # מונה "נשארו" למבצע עודפי יבוא — אחרי הברידג', כדי שהזמנות אתר שכבר
+            # הגיעו לפריוריטי לא ייספרו פעמיים. אינרטי עד SALE_STOCK_ON=1.
+            try:
+                sync_sale_stock()
+            except Exception as e:
+                print("sale-stock failed:", repr(e)[:300], flush=True)
             try:
                 # RC_AUTO_DAYS, not 1. The back office keys receipts in with an
                 # EARLIER business date than the day it types them: on 23.8 it
@@ -2441,7 +2607,8 @@ def api_meta(request: Request):
                          "line_span_days": MAX_LINE_SPAN_DAYS,
                          "admin": _can_ask(request),
                          "owner": _is_admin(request),
-                         "noprofit": _is_noprofit(request)})
+                         "noprofit": _is_noprofit(request),
+                         "yoatz": _is_yoatz(request)})
 
 
 @app.get("/api/range")
@@ -3367,7 +3534,7 @@ def api_cash(request: Request, d_from: str = "", d_to: str = ""):
     if f > t:
         f, t = t, f
     _pl, _pat = _pending_now()
-    pend = {"pending": _pl, "pending_at": _pat}
+    pend = {"pending": _pl, "pending_at": _pat, "slip_halt": _state.get("slip_halt")}
     # מה עלתה קריאת האסמכתאות בפועל — לדורון בלבד, ומהטוקנים שה-API החזיר,
     # לא מהערכה. שאלה מפורשת שלו: "מהי עלות קריאה של כל תמונה בכל הזמנה".
     if _is_admin(request):
@@ -3543,7 +3710,8 @@ def api_pending(request: Request):
     if not _logged_in(request):
         return JSONResponse({"error": "auth"}, status_code=401)
     pend, at = _pending_now()
-    return JSONResponse({"pending": pend, "pending_at": at})
+    return JSONResponse({"pending": pend, "pending_at": at,
+                         "slip_halt": _state.get("slip_halt")})
 
 
 # ---------- pending bank transfers (העברות בהמתנה לקבלה) ----------
@@ -3590,10 +3758,10 @@ SLIP_MAX_BYTES = 4_500_000      # over this the API refuses the image anyway
 # an Anthropic outage (the 400s of 23.9) was counted against the image, three
 # 15-minute cycles used up every try, and the slips uploaded during the outage
 # were never read again — their transfers never reached the cash screen. Outages
-# no longer count (SLIP_API_DOWN); the three extra tries let the files that were
-# stranded before this fix be read once more.
+# no longer count (_read_slip returns kind='halt' and nothing is marked); the
+# three extra tries let the files that were stranded before that fix be read
+# once more.
 SLIP_MAX_TRIES = 6
-SLIP_API_DOWN = "api_down"      # _read_slip result that is never written to bi_slip_reads
 SLIP_MAX_READS = 60             # per cycle; a runaway can never empty the budget
 
 SLIP_PROMPT = (
@@ -3659,24 +3827,6 @@ def _slip_payload(ordname: str, filenum: int):
     return None
 
 
-def _slip_api_down(e) -> bool:
-    """Did the read fail because Anthropic is unavailable, not because of the image?
-    No credit (a 400 whose body says so), a dead key, a missing model, rate limit,
-    overload, or no network at all. Any other 400 or a 413 is about this image."""
-    if isinstance(e, urllib.error.HTTPError):
-        if e.code == 400:
-            try:
-                body = e.read().decode("utf-8", "replace").lower()
-            except Exception:
-                body = ""
-            if "credit balance" in body:
-                print("slip read: Anthropic credit balance is empty", flush=True)
-                return True
-            return False
-        return e.code in (401, 403, 404, 429) or e.code >= 500
-    return True
-
-
 def _read_slip(ordname: str, filenum: int):
     """Read one image once. Returns a dict for bi_slip_mark — always, including
     the failure shapes, so a file is never silently read twice."""
@@ -3717,9 +3867,24 @@ def _read_slip(ordname: str, filenum: int):
                               "Content-Type": "application/json"},
                              data=body, timeout=120).decode("utf-8"))
     except Exception as e:
-        print("slip read failed:", ordname, filenum, repr(e)[:150], flush=True)
-        if _slip_api_down(e):
-            out["kind"] = SLIP_API_DOWN    # the service's failure, not this file's
+        # 12.10.2026: from 20.9 every read came back 400 and repr() only said
+        # "Bad Request". The body said "credit balance is too low". Three such
+        # failures burned a file's tries and it was never read again — so the
+        # cash total quietly lost every bank transfer for three weeks. An
+        # account-level failure (credit, key, rate) is not the file's fault:
+        # stop the scan, keep the file unread, and tell the cash screen why.
+        # A missing model (404), an overloaded server (5xx) and no network at
+        # all are not the file's fault either.
+        reason = _anthropic_err_text(e)
+        code = getattr(e, "code", None)
+        no_network = code is None and isinstance(e, OSError)
+        if (code in (401, 403, 404, 429) or (code is not None and code >= 500)
+                or no_network or "קרדיט" in reason or "credit" in reason.lower()):
+            out["kind"] = "halt"
+            out["why"] = ("אין חיבור ל-Anthropic כרגע — ננסה שוב בסבב הבא."
+                          if no_network else reason)
+            return out
+        print("slip read failed:", ordname, filenum, reason[:150], flush=True)
         return out                     # kind='error' -> retried up to SLIP_MAX_TRIES
     u = r.get("usage") or {}
     out["in_tok"] = u.get("input_tokens")
@@ -3856,10 +4021,10 @@ def _scan_pending_transfers():
             return          # without the memory we would re-read and re-pay. Stop.
 
     if ANTHROPIC_KEY:
-        budget, skipped, api_down = SLIP_MAX_READS, 0, False
+        budget, skipped = SLIP_MAX_READS, 0
         for on, item in orders.items():
             for c in item["cands"]:
-                if budget <= 0 or api_down:
+                if budget <= 0:
                     skipped += 1        # never silently: the count is logged below
                     continue
                 prev = seen.get((on, c["num"]))
@@ -3870,13 +4035,13 @@ def _scan_pending_transfers():
                         continue
                 budget -= 1
                 res = _read_slip(on, c["num"])
-                if res["kind"] == SLIP_API_DOWN:
-                    # Not marked, so no try is spent: the file is read as soon as
-                    # Anthropic answers again. The rest of this cycle waits too —
-                    # every other read would fail the same way.
-                    api_down = True
-                    skipped += 1
-                    continue
+                if res["kind"] == "halt":
+                    # account problem, not a file problem: nothing is marked,
+                    # every file stays unread, and the next cycle tries again.
+                    _state["slip_halt"] = res.get("why") or "קריאת האסמכתאות נכשלה"
+                    print("slip scan halted:", _state["slip_halt"][:200], flush=True)
+                    break
+                _state["slip_halt"] = None
                 try:
                     sb_rpc("bi_slip_mark", {
                         "p_ordname": on, "p_filenum": c["num"],
@@ -3890,10 +4055,9 @@ def _scan_pending_transfers():
                                             "tries": 1}
                 except Exception as e:
                     print("slip mark failed:", on, c["num"], repr(e)[:200], flush=True)
-        if api_down:
-            print(f"slip reads paused: Anthropic unavailable, {skipped} file(s) wait "
-                  f"for the next cycle", flush=True)
-        elif skipped:
+            if _state.get("slip_halt"):
+                break
+        if skipped:
             # a cap that hides what it dropped reads as "everything was covered"
             print(f"slip budget: {SLIP_MAX_READS} read, {skipped} left for the "
                   f"next cycle", flush=True)

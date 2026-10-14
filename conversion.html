@@ -1282,20 +1282,26 @@ loadHyg();
 
    קורא את מה שצויר, לא שואל את השרת מחדש: הקובץ הוא בדיוק המסך שרואים.
    המספרים נשלחים כמספרים עם סוג ולא כטקסט מעוצב — זו כל הנקודה, שאפשר
-   יהיה לסכם ולמיין אותם בקובץ. */
+   יהיה לסכם ולמיין אותם בקובץ.
+
+   הבקשה (12.10.2026): "שתאפשר לי לבחור בייצוא ל-PDF ו/או אקסל צ'ק-בוקסים
+   מה לבחור שיהיה כלול ומה לא". לכן לפני כל ייצוא נפתח חלון בחירה: שורה
+   לכרטיסים העליונים ושורה לכל טבלה במסך, הכל מסומן מראש. באקסל — מה
+   שלא סומן לא נשלח לשרת; ב-PDF — מה שלא סומן מוסתר לרגע ההדפסה בלבד
+   וחוזר מיד אחריה. */
 (function(){
-  var SKIP='#navov,#owlsheet,.owlsheet,#srsheet,.vaovl,.sheet,.overlay,[hidden]';
+  var SKIP='#navov,#owlsheet,.owlsheet,#srsheet,.vaovl,.sheet,.overlay,[hidden],#owlpick';
   /* סימני כיווניות אינם חלק מהמספר והם שוברים כל ניתוח שלו. */
-  var MARK=/[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g;
+  var MARK=/[‎‏‪-‮⁦-⁩]/g;
   function cell(txt){
     var t=String(txt==null?'':txt).replace(MARK,'').replace(/\s+/g,' ').trim();
     if(!t||t==='—'||t==='–'||t==='-')return {v:'',t:'s'};
     /* יום.חודש נראה בדיוק כמו מספר עשרוני. תאריך שהופך ל-31.08 בעמודת
        מספרים הוא בדיוק סוג הטעות שאיש לא מוצא אחר כך. */
     if(/^\d{1,2}\.\d{1,2}$/.test(t))return {v:t,t:'s'};
-    var pct=t.indexOf('%')>=0, ils=t.indexOf('\u20aa')>=0;
+    var pct=t.indexOf('%')>=0, ils=t.indexOf('₪')>=0;
     var num=t.replace(/[^\d.\-]/g,'');
-    if(num&&/^-?\d+(\.\d+)?$/.test(num)&&!/[A-Za-z\u0590-\u05FF]/.test(t)){
+    if(num&&/^-?\d+(\.\d+)?$/.test(num)&&!/[A-Za-z֐-׿]/.test(t)){
       var n=parseFloat(num);
       if(t.indexOf('-')===0)n=-Math.abs(n);
       if(pct)return {v:n/100,t:'p'};
@@ -1309,17 +1315,25 @@ loadHyg();
     for(i=0;i<c.length;i++)out.push(cell(c[i].textContent));
     return out;
   }
-  /* שם הגיליון מהכותרת שמעל הטבלה, כדי שקובץ עם כמה טבלאות יהיה קריא. */
-  function tname(tb,n){
-    var p=tb,e,lab='';
+  /* שם הגיליון מהכותרת שמעל הטבלה, כדי שקובץ עם כמה טבלאות יהיה קריא.
+     מחזיר גם את אלמנט הכותרת, כדי שב-PDF הכותרת תוסתר יחד עם הטבלה שלה. */
+  function tlabel(tb){
+    var p=tb,e,lab=null;
     while(p&&p!==document.body&&!lab){
       for(e=p.previousElementSibling;e&&!lab;e=e.previousElementSibling)
         if(/^H[1-3]$/.test(e.tagName)||e.classList.contains('eyebrow'))
-          lab=(e.textContent||'').trim();
+          lab=e;
       p=p.parentElement;
     }
-    return lab?lab.slice(0,28):('\u05d8\u05d1\u05dc\u05d4 '+n);
+    return lab;
   }
+  function tname(tb,n){
+    var e=tlabel(tb),lab=e?(e.textContent||'').replace(MARK,'').trim():'';
+    /* בלי כותרת מעל הטבלה: הטבלה הראשונה נקראת על שם המסך, הבאות ממוספרות. */
+    if(!lab)lab=n===1?title():('טבלה '+n);
+    return lab.slice(0,28);
+  }
+  /* כל הטבלאות שעל המסך, עם האלמנטים שמסתירים אותן בהדפסה. */
   function grab(){
     var out=[],tbs=document.querySelectorAll('table'),i,r;
     for(i=0;i<tbs.length;i++){
@@ -1341,18 +1355,24 @@ loadHyg();
         if(fr.length)rows.push(fr);
       }
       if(!rows.length)continue;
-      out.push({name:tname(tb,out.length+1),head:head,rows:rows});
+      var els=[tb.closest('.tw')||tb],lab=tlabel(tb);
+      if(lab)els.push(lab);
+      out.push({name:tname(tb,out.length+1),head:head,rows:rows,els:els});
     }
     return out;
   }
   function kpis(){
-    var out=[],ks=document.querySelectorAll('.kpi'),i;
+    var out=[],els=[],ks=document.querySelectorAll('.kpi'),i;
     for(i=0;i<ks.length&&out.length<24;i++){
       if(ks[i].closest(SKIP))continue;
       var l=ks[i].querySelector('.l,.k'),v=ks[i].querySelector('.v');
-      if(l&&v)out.push([(l.textContent||'').trim(),(v.textContent||'').replace(MARK,'').trim()]);
+      if(l&&v){
+        out.push([(l.textContent||'').trim(),(v.textContent||'').replace(MARK,'').trim()]);
+        var w=ks[i].closest('.kpis')||ks[i];
+        if(els.indexOf(w)<0)els.push(w);
+      }
     }
-    return out;
+    return {rows:out,els:els};
   }
   function title(){
     var e=document.getElementById('h1t')||document.querySelector('.owlnow .v')
@@ -1363,12 +1383,10 @@ loadHyg();
     var e=document.getElementById('sellbl')||document.getElementById('sub');
     return e?(e.textContent||'').trim():'';
   }
-  function run(btn){
-    var sheets=grab();
-    if(!sheets.length){alert('\u05d0\u05d9\u05df \u05d8\u05d1\u05dc\u05ea \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05d1\u05de\u05e1\u05da \u05d4\u05d6\u05d4.');return;}
+  function send(btn,sheets,kp){
     if(btn)btn.disabled=true;
     fetch('/api/xlsx',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({title:title(),sub:sub(),kpis:kpis(),sheets:sheets})})
+      body:JSON.stringify({title:title(),sub:sub(),kpis:kp,sheets:sheets})})
       .then(function(r){if(!r.ok)throw new Error('http '+r.status);return r.blob();})
       .then(function(b){
         var u=URL.createObjectURL(b),a=document.createElement('a');
@@ -1376,24 +1394,147 @@ loadHyg();
         document.body.appendChild(a);a.click();
         setTimeout(function(){URL.revokeObjectURL(u);a.parentNode.removeChild(a);},600);
       })
-      .catch(function(){alert('\u05d4\u05d9\u05d9\u05e6\u05d5\u05d0 \u05e0\u05db\u05e9\u05dc. \u05e0\u05e1\u05d4 \u05e9\u05d5\u05d1.');})
+      .catch(function(){alert('הייצוא נכשל. נסה שוב.');})
       .then(function(){if(btn)btn.disabled=false;});
   }
   /* PDF. אותה הדפסה בכל המסכים: הכותרת והחותמת נכתבות לתוך שורה שמופיעה
-     בהדפסה בלבד, ואם אין כזו במסך — פשוט מדפיסים. */
+     בהדפסה בלבד, ואם אין כזו במסך — פשוט מדפיסים. מה שלא נבחר מקבל
+     owlnoprint לזמן ההדפסה בלבד ומשתחרר מיד אחריה. */
   function stamp(){
     var n=new Date(),p=function(x){return (x<10?'0':'')+x;};
     return p(n.getDate())+'.'+p(n.getMonth()+1)+'.'+n.getFullYear()
       +' '+p(n.getHours())+':'+p(n.getMinutes());
   }
-  function prt(){
+  function prt(hide){
     var t=document.getElementById('printtitle'),s=document.getElementById('printsub');
     if(t)t.textContent=title();
-    if(s)s.textContent=sub()+(sub()?' \u00b7 ':'')+'\u05d4\u05d5\u05e4\u05e7 '+stamp();
+    if(s)s.textContent=sub()+(sub()?' · ':'')+'הופק '+stamp();
+    var i;for(i=0;i<hide.length;i++)hide[i].classList.add('owlnoprint');
+    function back(){for(var j=0;j<hide.length;j++)hide[j].classList.remove('owlnoprint');
+      window.removeEventListener('afterprint',back);}
+    window.addEventListener('afterprint',back);
     window.print();
+    setTimeout(back,1500);
+  }
+  /* חלון הבחירה. נבנה פעם אחת, מתמלא מחדש בכל לחיצה לפי מה שיש על המסך. */
+  var CSS='#owlpick{position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.45);'
+    +'display:flex;align-items:flex-end;justify-content:center;direction:rtl;font-family:inherit}'
+    +'#owlpick .pk{background:var(--bg,var(--panel,#fff));color:var(--tx,var(--ink,#111));'
+    +'width:100%;max-width:440px;max-height:85vh;overflow:auto;border-radius:16px 16px 0 0;'
+    +'padding:14px 16px 18px;box-shadow:0 -8px 30px rgba(0,0,0,.25);box-sizing:border-box}'
+    +'@media(min-width:600px){#owlpick{align-items:center}#owlpick .pk{border-radius:16px}}'
+    +'#owlpick .ph{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 6px}'
+    +'#owlpick .ph b{font-size:17px;font-weight:700}'
+    +'#owlpick .px{min-width:44px;min-height:44px;border:0;background:none;color:inherit;font-size:24px;cursor:pointer;border-radius:10px}'
+    +'#owlpick .px:hover{background:rgba(127,127,127,.15)}'
+    +'#owlpick .pn{font-size:13px;color:var(--tx2,var(--ink2,#666));margin:0 0 8px}'
+    +'#owlpick .pa{display:flex;gap:14px;font-size:13px;margin:0 0 6px}'
+    +'#owlpick .pa button{border:0;background:none;color:inherit;text-decoration:underline;cursor:pointer;font:inherit;padding:6px 0;min-height:36px}'
+    +'#owlpick label{display:flex;align-items:center;gap:12px;min-height:46px;padding:0 4px;'
+    +'border-top:1px solid var(--line2,#e4e4e4);cursor:pointer;font-size:15px}'
+    +'#owlpick label input{width:22px;height:22px;margin:0;flex:none;accent-color:currentColor}'
+    +'#owlpick .pf{display:flex;gap:10px;margin:14px 0 0}'
+    +'#owlpick .pf button{flex:1;min-height:46px;border-radius:12px;font:inherit;font-size:15px;cursor:pointer;'
+    +'border:1px solid var(--line2,#ccc);background:none;color:inherit}'
+    +'#owlpick .pf .go{background:var(--tx,var(--ink,#111));color:var(--bg,var(--panel,#fff));border-color:transparent;font-weight:700}'
+    +'#owlpick .pf .go:disabled{opacity:.4;cursor:default}'
+    +'@media print{#owlpick,.owlnoprint{display:none !important}}';
+  var box=null;
+  function ensure(){
+    if(box)return box;
+    var st=document.createElement('style');st.textContent=CSS;document.head.appendChild(st);
+    box=document.createElement('div');box.id='owlpick';box.hidden=true;
+    box.setAttribute('role','dialog');box.setAttribute('aria-modal','true');
+    box.innerHTML='<div class="pk">'
+      +'<div class="ph"><b id="owlpick_t"></b>'
+      +'<button type="button" class="px" id="owlpick_x" aria-label="סגירה" title="סגירה">×</button></div>'
+      +'<div class="pn">סמן מה ייכנס לקובץ. מה שלא מסומן נשאר בחוץ.</div>'
+      +'<div class="pa"><button type="button" id="owlpick_all">בחר הכל</button>'
+      +'<button type="button" id="owlpick_none">נקה הכל</button></div>'
+      +'<div id="owlpick_l"></div>'
+      +'<div class="pf"><button type="button" id="owlpick_c">ביטול</button>'
+      +'<button type="button" class="go" id="owlpick_go"></button></div></div>';
+    document.body.appendChild(box);
+    function close(){box.hidden=true;}
+    box.addEventListener('click',function(e){if(e.target===box)close();});
+    document.getElementById('owlpick_x').addEventListener('click',close);
+    document.getElementById('owlpick_c').addEventListener('click',close);
+    document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!box.hidden)close();});
+    function setAll(v){
+      var cs=box.querySelectorAll('input'),i;
+      for(i=0;i<cs.length;i++)cs[i].checked=v;
+      refresh();
+    }
+    document.getElementById('owlpick_all').addEventListener('click',function(){setAll(true);});
+    document.getElementById('owlpick_none').addEventListener('click',function(){setAll(false);});
+    box.addEventListener('change',refresh);
+    return box;
+  }
+  function refresh(){
+    var n=box.querySelectorAll('input:checked').length;
+    document.getElementById('owlpick_go').disabled=n===0;
+  }
+  /* mode: 'xlsx' או 'pdf'. parts: [{name, kind:'kpi'|'table', idx, els}] */
+  function pick(mode,parts,onGo){
+    ensure();
+    document.getElementById('owlpick_t').textContent=
+      mode==='pdf'?'מה לכלול ב-PDF':'מה לכלול באקסל';
+    var go=document.getElementById('owlpick_go');
+    go.textContent=mode==='pdf'?'ייצא PDF':'ייצא לאקסל';
+    var l=document.getElementById('owlpick_l'),i;
+    l.innerHTML='';
+    for(i=0;i<parts.length;i++){
+      var lab=document.createElement('label'),c=document.createElement('input');
+      c.type='checkbox';c.checked=true;c.setAttribute('data-i',i);
+      lab.appendChild(c);
+      var s=document.createElement('span');
+      s.textContent=parts[i].name+(parts[i].kind==='table'&&parts[i].n?' ('+parts[i].n+' שורות)':'');
+      lab.appendChild(s);
+      l.appendChild(lab);
+    }
+    refresh();
+    var ng=go.cloneNode(true);go.parentNode.replaceChild(ng,go);
+    ng.addEventListener('click',function(){
+      var cs=l.querySelectorAll('input'),on=[],off=[],k;
+      for(k=0;k<cs.length;k++)(cs[k].checked?on:off).push(parts[+cs[k].getAttribute('data-i')]);
+      box.hidden=true;
+      onGo(on,off);
+    });
+    box.hidden=false;
+  }
+  function parts(){
+    var out=[],kp=kpis(),sh=grab(),i;
+    if(kp.rows.length)out.push({name:'הכרטיסים העליונים',kind:'kpi',kp:kp,els:kp.els});
+    for(i=0;i<sh.length;i++)out.push({name:sh[i].name,kind:'table',sheet:sh[i],n:sh[i].rows.length,els:sh[i].els});
+    return out;
+  }
+  function run(btn){
+    var ps=parts(),hasTable=false,i;
+    for(i=0;i<ps.length;i++)if(ps[i].kind==='table')hasTable=true;
+    if(!hasTable){alert('אין טבלת נתונים במסך הזה.');return;}
+    pick('xlsx',ps,function(on){
+      var sheets=[],kp=[],j;
+      for(j=0;j<on.length;j++){
+        if(on[j].kind==='kpi')kp=on[j].kp.rows;
+        else sheets.push({name:on[j].sheet.name,head:on[j].sheet.head,rows:on[j].sheet.rows});
+      }
+      if(!sheets.length&&!kp.length)return;
+      /* רק הכרטיסים סומנו: השרת כותב אותם בראש הגיליון הראשון, אז נותנים לו גיליון ריק לשם כך. */
+      if(!sheets.length)sheets=[{name:'הכרטיסים',head:[],rows:[]}];
+      send(btn,sheets,kp);
+    });
+  }
+  function pdf(){
+    var ps=parts();
+    if(!ps.length){prt([]);return;}
+    pick('pdf',ps,function(on,off){
+      var hide=[],j,k;
+      for(j=0;j<off.length;j++)for(k=0;k<off[j].els.length;k++)hide.push(off[j].els[k]);
+      prt(hide);
+    });
   }
   var pb=document.getElementById('pdfbtn');
-  if(pb)pb.addEventListener('click',prt);
+  if(pb)pb.addEventListener('click',pdf);
   window.owlXlsx=function(){run(document.getElementById('xlsbtn'));};
   var b=document.getElementById('xlsbtn');
   if(b)b.addEventListener('click',function(){run(b);});
