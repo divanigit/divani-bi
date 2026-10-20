@@ -56,6 +56,8 @@ DASH_PASS_ITAMAR = os.environ.get("DASH_PASS_ITAMAR", "")  # Itamar: own credent
 DASH_PASS_RACHEL = os.environ.get("DASH_PASS_RACHEL", "")  # רחל (כספים ועיצוב): own credential, owner rights (דורון, שאלה 114, 27.9.2026)
 DASH_PASS_IDO = os.environ.get("DASH_PASS_IDO", "")  # עידו אהרון: regular view, without any profit figure
 DASH_PASS_YOATZ = os.environ.get("DASH_PASS_YOATZ", "")  # חברת היועצים המלווה (MVP): own credential, regular view access, no owner/ask rights (דורון, 12.10.2026)
+DASH_PASS_KEREN = os.environ.get("DASH_PASS_KEREN", "")  # קרן (ספקית האתר): רק בריאות האתר + קלריטי, בלי שמות לקוחות (דורון, 20.10.2026)
+CLARITY_TOKEN = os.environ.get("CLARITY_TOKEN", "")  # Microsoft Clarity → Settings → Data export → API token
 OWL_CART_SECRET = os.environ.get("OWL_CART_SECRET", "")  # לכידת עגלות מהאתר: חתימת HMAC משותפת עם התוסף
 HEALTH_SHARE_TOKEN = os.environ.get("HEALTH_SHARE_TOKEN", "")  # קישור בריאות האתר לדיגיטאץ' — טוקן נפרד, מסך אחד בלבד, בלי שום גישה לינשוף
 if not HEALTH_SHARE_TOKEN and OWL_CART_SECRET:
@@ -132,6 +134,18 @@ def _yoatz_token() -> str:
     return hmac.new(DASH_PASS_YOATZ.encode("utf-8"), b"divani-bi-yoatz-v1", hashlib.sha256).hexdigest()
 
 
+def _keren_token() -> str:
+    # keyed on her own password: clearing DASH_PASS_KEREN ends her sessions
+    return hmac.new(DASH_PASS_KEREN.encode("utf-8"), b"divani-bi-keren-v1", hashlib.sha256).hexdigest()
+
+
+def _is_keren(request: Request) -> bool:
+    if not DASH_PASS_KEREN:
+        return False
+    tok = request.cookies.get(COOKIE_NAME, "")
+    return hmac.compare_digest(tok, _keren_token())
+
+
 def _is_yoatz(request: Request) -> bool:
     if not DASH_PASS_YOATZ:
         return False
@@ -177,7 +191,8 @@ def _logged_in(request: Request) -> bool:
         return False
     tok = request.cookies.get(COOKIE_NAME, "")
     return (hmac.compare_digest(tok, _session_token()) or _is_admin(request)
-            or _is_ask2(request) or _is_noprofit(request) or _is_yoatz(request))
+            or _is_ask2(request) or _is_noprofit(request) or _is_yoatz(request)
+            or _is_keren(request))
 
 
 def _health_ok(request: Request) -> bool:
@@ -198,14 +213,14 @@ def _pass_ok(p: str) -> bool:
             or _match(p, DASH_PASS_ASK2) or _match(p, DASH_PASS_DOV)
             or _match(p, DASH_PASS_SHARON) or _match(p, DASH_PASS_ITAMAR)
             or _match(p, DASH_PASS_IDO) or _match(p, DASH_PASS_RACHEL)
-            or _match(p, DASH_PASS_YOATZ))
+            or _match(p, DASH_PASS_YOATZ) or _match(p, DASH_PASS_KEREN))
 
 
 _ALL_PASS = (("DASH_PASS", "המשותפת"), ("DASH_PASS_ADMIN", "דורון"),
              ("DASH_PASS_ASK2", "חיים"), ("DASH_PASS_DOV", "דב"),
              ("DASH_PASS_SHARON", "שרון"), ("DASH_PASS_ITAMAR", "איתמר"),
              ("DASH_PASS_IDO", "עידו"), ("DASH_PASS_RACHEL", "רחל"),
-             ("DASH_PASS_YOATZ", "יועצים"))
+             ("DASH_PASS_YOATZ", "יועצים"), ("DASH_PASS_KEREN", "קרן"))
 
 
 def _pass_collisions():
@@ -233,6 +248,8 @@ def _identity(p: str):
     in the same place as the cookie, so /logins can no longer name one person while the
     browser is holding someone else's session.
     """
+    if _match(p, DASH_PASS_KEREN):
+        return "קרן", _keren_token()
     if _match(p, DASH_PASS_IDO):
         return "עידו", _ido_token()
     if _match(p, DASH_PASS_YOATZ):
@@ -274,6 +291,8 @@ def _who_cookie(request: Request) -> str:
         return "עידו"
     if DASH_PASS_YOATZ and hmac.compare_digest(tok, _yoatz_token()):
         return "יועצים"
+    if DASH_PASS_KEREN and hmac.compare_digest(tok, _keren_token()):
+        return "קרן"
     return "צוות"
 
 
@@ -410,6 +429,35 @@ _YZ_PAGE_BLOCK = {"/agent-report", "/conversion", "/traffic", "/customers", "/ab
                   "/site", "/status", "/logins", "/nav-preview"}
 
 
+# קרן, ספקית האתר (דורון, 20.10.2026): רק בריאות האתר וקלריטי. אין לה גישה לשמות
+# לקוחות — לא מכירות, לא נטישות, לא יומן ההודעות הפנימי. רשימה מותרת בלבד: כל
+# כתובת אחרת, גם שתתווסף בעתיד, חוסמת. דף הבית מעביר אותה לבריאות האתר.
+_KR_PAGE_ALLOW = {"/site", "/clarity", "/logout", "/login"}
+_KR_API_ALLOW = {"/api/site", "/api/site/now", "/api/site/drill", "/api/clarity"}
+# התראות שקרן רואה: רק של האתר עצמו. התראת מכירה/עגלה יכולה לשאת שם לקוח בגוף ההודעה.
+_KR_ALERT_KINDS = {"down", "slow", "cert"}
+
+
+def _kr_alerts(rows):
+    if not isinstance(rows, list):
+        return rows
+    return [r for r in rows if isinstance(r, dict) and r.get("kind") in _KR_ALERT_KINDS]
+
+
+@app.middleware("http")
+async def _kr_gate(request: Request, call_next):
+    if not _is_keren(request):
+        return await call_next(request)
+    path = request.url.path
+    if path.startswith("/api/"):
+        if path not in _KR_API_ALLOW:
+            return JSONResponse({"error": "auth"}, status_code=403)
+        return await call_next(request)
+    if path in _KR_PAGE_ALLOW:
+        return await call_next(request)
+    return RedirectResponse("/site", status_code=303)
+
+
 @app.middleware("http")
 async def _yz_gate(request: Request, call_next):
     path = request.url.path
@@ -489,6 +537,10 @@ def site_health(request: Request):
     role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s};</script>' % (
         "true" if _is_noprofit(request) else "false",
         "true" if _is_admin(request) else "false")
+    if _is_keren(request):
+        # קרן: בלי תפריט הינשוף, בלי יומן ההודעות הפנימי ובלי "ראיתי"; במקומם קישור לקלריטי
+        role += ('<script>window.OWL_KEREN=1;</script>'
+                 '<style>.owlham,.card:has(#msgList),.alertbar .ax{display:none!important}</style>')
     html = html.replace("</head>", role + chr(10) + "</head>", 1)
     return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
@@ -512,7 +564,7 @@ def site_health_share(request: Request):
     k = json.dumps(HEALTH_SHARE_TOKEN)
     inject = (
         '<script>window.OWL_ROLE={"noprofit":true,"owner":false};window.OWL_SHARE=1;</script>'
-        '<style>.owlham,.brandcol .out{display:none!important}'
+        '<style>.owlham,.brandcol .out,#clarbtn{display:none!important}'
         '.card:has(#msgList){display:none!important}'
         '.alertbar .ax{display:none!important}</style>'
         "<script>(function(){var K=" + k + ";var of=window.fetch;"
@@ -638,6 +690,9 @@ def api_site(request: Request, h: int = 24, strategy: str = "mobile", f: str = "
             out[key] = val
     if isinstance(out.get("health"), list):
         out["health"] = [r for r in out["health"] if r.get("flow_group") == "אתר האינטרנט"]
+    if _is_keren(request):
+        out["alerts_open"] = _kr_alerts(out.get("alerts_open"))
+        out["alerts_recent"] = _kr_alerts(out.get("alerts_recent"))
     try:
         out["cert"] = (sb_select("bi_site_cert?select=host,issuer,not_after,days_left,ok,err,checked_at&host=eq.vdivani.co.il") or [None])[0]
     except Exception as e:
@@ -668,11 +723,128 @@ def api_site_drill(request: Request, what: str = "", h: int = 24, f: str = "", t
                                                  "p_strategy": strategy, "p_bucket": bucket or None})
         elif what == "alert":
             rows = sb_rpc("bi_alert_detail", {"p_id": int(id)})
+            if _is_keren(request):
+                rows = _kr_alerts(rows or [])
         else:
             return JSONResponse({"error": "what?"}, status_code=400)
         return JSONResponse({"rows": rows or []})
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=502)
+
+
+# ---------- קלריטי (Microsoft Clarity) ----------
+# Data Export API: עד 10 קריאות ביום לפרויקט, נתונים של 1–3 הימים האחרונים בלבד.
+# לכן כל תשובה נשמרת בזיכרון 6 שעות, ויש תקרה של 9 קריאות ביום (שעון ישראל) —
+# אחרי התקרה מוצגת התשובה האחרונה שנשמרה. חינם, לא נוגע בקרדיט של Anthropic.
+CLARITY_URL = "https://www.clarity.ms/export-data/api/v1/project-live-insights"
+CLARITY_TTL = 6 * 3600
+CLARITY_DAY_CAP = 9
+_CLARITY_DIMS = {"": None, "url": "URL", "device": "Device", "browser": "Browser"}
+_clarity_cache = {}                       # (days, dim) -> (fetched_at, rows)
+_clarity_budget = {"day": "", "used": 0}
+_clarity_lock = threading.Lock()
+# עמודים שיכולים לשאת פרטי לקוח (הזמנה, חשבון) — לא מוצגים בכלל
+_CLARITY_PRIVATE = re.compile(r"order-received|my-account|view-order|lost-password|order-pay|/wp-admin", re.I)
+_EMAIL_RE = re.compile(r"[^\s@/?&=]+@[^\s@/?&=]+\.[a-z]{2,}", re.I)
+
+
+def _clarity_clean(rows):
+    """בלי שמות לקוחות: כתובות בלי פרמטרים (שם יושבים מפתחות הזמנה ומיילים),
+    עמודי הזמנה/חשבון נמחקים, וכל דבר שנראה כמו מייל מוסתר."""
+    out = []
+    for m in rows if isinstance(rows, list) else []:
+        info = []
+        for r in (m.get("information") or []) if isinstance(m, dict) else []:
+            if not isinstance(r, dict):
+                continue
+            r2, drop = {}, False
+            for k, v in r.items():
+                if isinstance(v, str):
+                    if v.startswith("http") or v.startswith("/"):
+                        if _CLARITY_PRIVATE.search(v):
+                            drop = True
+                        v = v.split("?", 1)[0].split("#", 1)[0]
+                    v = _EMAIL_RE.sub("[מוסתר]", v)
+                r2[k] = v
+            if not drop:
+                info.append(r2)
+        out.append({"metricName": m.get("metricName") if isinstance(m, dict) else "", "information": info})
+    return out
+
+
+def _clarity_fetch(days: int, dim: str):
+    key = (days, dim)
+    now = time.time()
+    with _clarity_lock:
+        hit = _clarity_cache.get(key)
+        if hit and now - hit[0] < CLARITY_TTL:
+            return hit[1], hit[0], ""
+        today = dt.datetime.now(IL).strftime("%Y-%m-%d")
+        if _clarity_budget["day"] != today:
+            _clarity_budget.update(day=today, used=0)
+        if _clarity_budget["used"] >= CLARITY_DAY_CAP:
+            if hit:
+                return hit[1], hit[0], "נוצלו הקריאות של היום — מוצג העדכון האחרון"
+            return None, None, "נוצלו הקריאות של היום לקלריטי. מחר בבוקר יתעדכן."
+        _clarity_budget["used"] += 1
+    q = {"numOfDays": str(days)}
+    if _CLARITY_DIMS.get(dim):
+        q["dimension1"] = _CLARITY_DIMS[dim]
+    req = urllib.request.Request(CLARITY_URL + "?" + urllib.parse.urlencode(q),
+                                 headers={"Authorization": "Bearer " + CLARITY_TOKEN,
+                                          "Content-Type": "application/json",
+                                          "User-Agent": "divani-bi/1.0"})
+    try:
+        with urllib.request.urlopen(req, timeout=40) as r:
+            rows = _clarity_clean(json.loads(r.read().decode("utf-8")))
+    except urllib.error.HTTPError as e:
+        if hit:
+            return hit[1], hit[0], "קלריטי לא ענה (קוד %s) — מוצג העדכון האחרון" % e.code
+        msg = {401: "המפתח של קלריטי לא תקין או פג.", 403: "המפתח של קלריטי לא תקין או פג.",
+               429: "נוצלו הקריאות של היום לקלריטי. מחר בבוקר יתעדכן."}.get(e.code, "קלריטי לא ענה (קוד %s)." % e.code)
+        return None, None, msg
+    except Exception as e:
+        if hit:
+            return hit[1], hit[0], "קלריטי לא ענה — מוצג העדכון האחרון"
+        return None, None, "קלריטי לא ענה: " + type(e).__name__
+    with _clarity_lock:
+        _clarity_cache[key] = (now, rows)
+    return rows, now, ""
+
+
+@app.get("/clarity")
+def clarity_page(request: Request):
+    """קלריטי — איך גולשים מתנהגים באתר: ביקורים, גלילה, הקלקות כועסות, שגיאות. בלי שמות לקוחות."""
+    if not _logged_in(request):
+        return RedirectResponse("/login", status_code=303)
+    try:
+        with open(os.path.join(HERE, "clarity.html"), encoding="utf-8") as f:
+            html = f.read()
+    except Exception:
+        return HTMLResponse("<div dir='rtl' style='font-family:sans-serif;padding:40px'>"
+                            "המסך לא נמצא.</div>", status_code=404)
+    role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s,"keren":%s};</script>' % (
+        "true" if _is_noprofit(request) else "false",
+        "true" if _is_admin(request) else "false",
+        "true" if _is_keren(request) else "false")
+    html = html.replace("</head>", role + chr(10) + "</head>", 1)
+    return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
+
+
+@app.get("/api/clarity")
+def api_clarity(request: Request, days: int = 3, dim: str = ""):
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    if not CLARITY_TOKEN:
+        return JSONResponse({"error": "חסר מפתח של קלריטי (CLARITY_TOKEN ב-Render)."})
+    days = 1 if days <= 1 else (2 if days == 2 else 3)
+    dim = dim if dim in _CLARITY_DIMS else ""
+    rows, at, note = _clarity_fetch(days, dim)
+    if rows is None:
+        return JSONResponse({"error": note})
+    at_il = dt.datetime.fromtimestamp(at, IL).strftime("%d.%m %H:%M")
+    return JSONResponse({"days": days, "dim": dim, "metrics": rows, "at": at_il, "note": note},
+                        headers={"Cache-Control": "no-store"})
 
 
 @app.get("/abandoned")
