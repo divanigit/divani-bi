@@ -261,6 +261,7 @@ html,body{overflow-x:hidden}
     </button>
     <div class="owlnow"><span class="v">בריאות האתר</span></div>
     <div class="owlacts">
+      <a class="owlxls" id="clarbtn" href="/clarity" title="התנהגות הגולשים באתר (Microsoft Clarity)" style="text-decoration:none">קלריטי</a>
       <button type="button" class="owlxls" id="explbtn" aria-pressed="false" title="הסבר פשוט לכל מספר">הסברים</button>
       <button type="button" class="owlxls" id="refbtn" title="רענון">רענון</button>
       <button type="button" class="owlxls" id="pdfbtn" title="ייצוא כל הדוח כ-PDF לשליחה">ייצא PDF</button>
@@ -419,6 +420,7 @@ window.OWL_NAV = [
   ['g', 'האתר'],
   ['a', '/site',         'בריאות האתר'],
   ['a', '/abandoned',    'נטישות בקופה'],
+  ['a', '/clarity',      'קלריטי — התנהגות גולשים'],
   ['g', 'מערכת ניטור ואנליטיקת פרסום', 'profit'],
   ['a', '/traffic',      'תמהיל מקורות התנועה', 'profit']
 ];
@@ -841,7 +843,7 @@ document.addEventListener('click', function(e){ var h = e.target.closest && e.ta
 
 /* ---------- יומן הודעות ---------- */
 function loadMessages(){
-  var el = $('msgList'); if (!el) return;
+  var el = $('msgList'); if (!el || window.OWL_KEREN || window.OWL_SHARE) return;
   fetch('/api/messages?' + (typeof qs === 'function' ? qs().replace(/^&/, '') : 'h=720'), { cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(d){
     var rows = Array.isArray(d.rows) ? d.rows : [];
     el.innerHTML = rows.length ? '<ul class="list">' + rows.map(function(m){ return '<li><span class="tag ' + (m.kind === 'התראה' ? 'd' : m.kind === 'חזר לתקין' ? 'ok' : 'n') + '">' + esc(m.kind) + '</span><b>' + esc(m.title || '') + '</b><span class="muted" style="white-space:pre-line;flex-basis:100%">' + esc(niceBody(m.msg || '', m.title)) + '</span><span class="when">' + esc(m.at_il) + (m.sent ? '' : ' · לא נשלחה') + '</span></li>'; }).join('') + '</ul>' : '<p class="empty">לא נשלחו הודעות בתקופה.</p>';

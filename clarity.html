@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>קלריטי — ויטוריו דיוואני</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@700&display=swap">
+<style>
+:root{
+  --font: system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Hebrew",Arial,sans-serif;
+  --bg:#ffffff; --surface:#f4f8f6; --line:#e2e9e5; --line2:#cdd8d2;
+  --tx:#18241f; --tx2:#53635c; --tx3:#8a978f;
+  --brand:#0d9668; --sys:#4a3aa7; --sysSoft:rgba(74,58,167,.07);
+  --okbg:#e3f3ec; --okfg:#0b6e4f; --wbg:#fbf0da; --wfg:#8f5f08; --dbg:#fbe6e4; --dfg:#a3271f;
+  --shadow:0 1px 2px rgba(16,24,32,.05),0 6px 18px rgba(16,24,32,.05);
+  --r:14px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0f1512; --surface:#19211d; --line:#26302b; --line2:#35423b;
+    --tx:#e9efeb; --tx2:#a2b0a9; --tx3:#6f7d76;
+    --brand:#2fbf8f; --sys:#9085e9; --sysSoft:rgba(144,133,233,.10);
+    --okbg:#12312765; --okfg:#63d3a6; --wbg:#2e241065; --wfg:#e0b25a; --dbg:#3a1a1765; --dfg:#f0968f;
+    --shadow:0 1px 2px rgba(0,0,0,.5),0 6px 18px rgba(0,0,0,.35);
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--font)}
+.wrap{max-width:900px;margin:0 auto;padding:12px 16px 40px}
+.hdr{display:flex;align-items:flex-start;justify-content:space-between;margin:0 0 6px}
+.hdr .out{font-size:11.5px;color:var(--tx3);text-decoration:none;padding:6px 2px}
+.owlbrand{display:flex;align-items:flex-start;gap:7px}
+.owllogo{width:30px;height:auto;color:#111}
+.owleye{fill:#4a3aa7}
+.owlword{font-family:"Space Mono",ui-monospace,Menlo,Consolas,monospace;font-weight:700;font-size:17px;letter-spacing:.04em;color:#111;line-height:1;margin-top:2px;direction:ltr;unicode-bidi:isolate}
+@media (prefers-color-scheme:dark){.owllogo,.owlword{color:#e9efeb}.owleye{fill:#9085e9}}
+.owlbar{display:flex;align-items:center;gap:8px;margin:0 0 12px;flex-wrap:wrap}
+.owlbar .v{font-size:18px;font-weight:700}
+.acts{margin-inline-start:auto;display:flex;gap:6px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;font-family:inherit;font-size:12.5px;border:1px solid var(--line2);background:var(--bg);color:var(--tx2);padding:7px 12px;min-height:38px;border-radius:999px;cursor:pointer;text-decoration:none}
+.btn[aria-pressed="true"]{background:var(--sysSoft);border-color:var(--sys);color:var(--sys);font-weight:700}
+h1{font-size:22px;margin:4px 0 2px}
+.sub{color:var(--tx3);font-size:13px;margin:0 0 14px}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin:0 0 14px}
+.card h2{font-size:16px;margin:0 0 10px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.tile{background:var(--surface);border-radius:12px;padding:10px 12px}
+.tile .k{font-size:12px;color:var(--tx2)}
+.tile .val{font-size:22px;font-weight:700;margin-top:3px}
+.tile .m{font-size:11.5px;color:var(--tx3);margin-top:2px}
+.tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;font-weight:600}
+.tag.ok{background:var(--okbg);color:var(--okfg)}.tag.w{background:var(--wbg);color:var(--wfg)}.tag.d{background:var(--dbg);color:var(--dfg)}
+.tblwrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:start;white-space:nowrap}
+th{font-size:11.5px;color:var(--tx3);font-weight:600}
+td.pg{white-space:normal;max-width:300px;word-break:break-word}
+td.n,th.n{text-align:end;font-variant-numeric:tabular-nums}
+.explain{font-size:12.5px;color:var(--tx2);line-height:1.6;margin:10px 0 0}
+.empty,.err{color:var(--tx3);font-size:13px;padding:8px 0}
+.err{color:var(--dfg)}
+.note{background:var(--wbg);color:var(--wfg);font-size:12.5px;border-radius:10px;padding:8px 10px;margin:0 0 12px;display:none}
+.seg{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hdr">
+    <div class="owlbrand">
+      <svg class="owllogo" viewBox="0 5 48 39" aria-label="owl">
+        <g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+          <circle cx="16.5" cy="20" r="7.5"/><circle cx="31.5" cy="20" r="7.5"/>
+          <path d="M11 13.2 L8.6 6.5"/><path d="M37 13.2 L39.4 6.5"/>
+          <path d="M16.5 42.5 L16.5 38.5"/><path d="M24 42.5 L24 36"/>
+          <path d="M31.5 42.5 L31.5 32.5"/></g>
+        <circle class="owleye" cx="16.5" cy="20" r="2.6"/>
+        <circle class="owleye" cx="31.5" cy="20" r="2.6"/>
+        <path d="M24 28 L26.4 32 L21.6 32 Z" fill="currentColor"/>
+      </svg><span class="owlword">owl</span>
+    </div>
+    <a class="out" href="/logout">יציאה</a>
+  </div>
+
+  <div class="owlbar">
+    <a class="btn" href="/site">→ בריאות האתר</a>
+    <span class="v">קלריטי</span>
+    <div class="acts" id="segD">
+      <button type="button" class="btn" data-d="1" aria-pressed="false">יום אחרון</button>
+      <button type="button" class="btn" data-d="3" aria-pressed="true">3 ימים</button>
+    </div>
+  </div>
+
+  <h1>איך גולשים מתנהגים באתר</h1>
+  <p class="sub" id="sub">vdivani.co.il · Microsoft Clarity · טוען…</p>
+  <div class="note" id="note"></div>
+
+  <section class="card">
+    <h2>תמונה כללית</h2>
+    <div class="tiles" id="tiles"><p class="empty">טוען…</p></div>
+    <p class="explain">"הקלקה כועסת" = גולש לחץ כמה פעמים ברצף על אותו מקום, בדרך כלל כי משהו לא עבד. "הקלקה מתה" = לחיצה על משהו שלא הגיב. "חזרה מהירה" = נכנס לעמוד ויצא מיד חזרה. "שגיאת קוד" = תקלה בקוד של העמוד אצל הגולש. האחוז = מתוך כל הביקורים. ירוק = תקין, צהוב = לבדוק, אדום = בעיה.</p>
+  </section>
+
+  <section class="card">
+    <h2>לפי עמוד</h2>
+    <div class="seg" id="segX">
+      <button type="button" class="btn" data-x="url" aria-pressed="true">עמודים</button>
+      <button type="button" class="btn" data-x="device" aria-pressed="false">מכשיר</button>
+      <button type="button" class="btn" data-x="browser" aria-pressed="false">דפדפן</button>
+    </div>
+    <div class="tblwrap" id="tbl"><p class="empty">טוען…</p></div>
+    <p class="explain">ממוין לפי מספר הביקורים. עמודי הזמנה וחשבון אישי לא מוצגים, ואין כאן שום פרט של לקוח.</p>
+  </section>
+
+  <section class="card">
+    <h2>העמודים הנצפים ומאיפה מגיעים</h2>
+    <div id="pop"><p class="empty">טוען…</p></div>
+  </section>
+
+  <p class="explain" id="foot">הנתונים מתעדכנים כל כמה שעות (קלריטי מרשה רק 10 בקשות ביום). קלריטי שומר רק את 3 הימים האחרונים בממשק הזה.</p>
+</div>
+
+<script>
+var $ = function(id){ return document.getElementById(id); };
+var NF = new Intl.NumberFormat('he-IL');
+var state = { d: 3, x: 'url' };
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function num(v){ var x = parseFloat(v); return isNaN(x) ? null : x; }
+function n(v){ v = num(v); return v == null ? '—' : NF.format(Math.round(v)); }
+function pct(v){ v = num(v); return v == null ? '—' : (v < 10 ? v.toFixed(1) : Math.round(v)) + '%'; }
+/* שדות של קלריטי מגיעים לפעמים באותיות שונות — חיפוש בלי תלות ברישיות */
+function f(o, k){ if (!o) return null; if (k in o) return o[k]; var lk = k.toLowerCase(); for (var key in o) if (key.toLowerCase() === lk) return o[key]; return null; }
+function metric(ms, name){ var m = (ms || []).filter(function(x){ return (x.metricName || '').toLowerCase() === name.toLowerCase(); })[0]; return m ? (m.information || []) : []; }
+function tag(v, warn, bad){ v = num(v); if (v == null) return ''; return ' <span class="tag ' + (v >= bad ? 'd' : v >= warn ? 'w' : 'ok') + '">' + (v >= bad ? 'בעיה' : v >= warn ? 'לבדוק' : 'תקין') + '</span>'; }
+function short(u){ try { var p = decodeURIComponent(new URL(u, 'https://vdivani.co.il').pathname); return p.replace(/^\/product-category\//, 'קטגוריה: ').replace(/^\/product\//, 'מוצר: ').replace(/\/$/, '').replace(/-/g, ' ') || 'עמוד הבית'; } catch (e) { return u; } }
+
+function api(dim){
+  return fetch('/api/clarity?days=' + state.d + '&dim=' + dim, { cache: 'no-store' }).then(function(r){ return r.json(); });
+}
+function showNote(d){ if (d && d.note) { $('note').textContent = d.note; $('note').style.display = 'block'; } }
+
+var BAD = [ // [שם המדד בקלריטי, כותרת, סף צהוב, סף אדום]
+  ['RageClickCount', 'הקלקות כועסות', 2, 5],
+  ['DeadClickCount', 'הקלקות מתות', 10, 20],
+  ['QuickbackClick', 'חזרות מהירות', 10, 20],
+  ['ScriptErrorCount', 'שגיאות קוד', 3, 10],
+  ['ErrorClickCount', 'לחיצות שנתקלו בשגיאה', 2, 5],
+  ['ExcessiveScroll', 'גלילה מוגזמת', 5, 15]
+];
+
+function loadMain(){
+  $('tiles').innerHTML = '<p class="empty">טוען…</p>'; $('pop').innerHTML = '<p class="empty">טוען…</p>';
+  api('').then(function(d){
+    if (d.error) { $('tiles').innerHTML = '<p class="err">' + esc(d.error) + '</p>'; $('pop').innerHTML = ''; $('sub').textContent = 'vdivani.co.il · Microsoft Clarity'; return; }
+    showNote(d);
+    $('sub').textContent = 'vdivani.co.il · Microsoft Clarity · ' + (state.d === 1 ? 'היום האחרון' : '3 הימים האחרונים') + ' · עודכן ' + d.at;
+    var ms = d.metrics, tr = metric(ms, 'Traffic')[0] || {}, sc = metric(ms, 'ScrollDepth')[0] || {}, en = metric(ms, 'EngagementTime')[0] || {};
+    var h = '';
+    h += '<div class="tile"><div class="k">ביקורים</div><div class="val">' + n(f(tr, 'totalSessionCount')) + '</div><div class="m">' + n(f(tr, 'distinctUserCount') || f(tr, 'distantUserCount')) + ' גולשים שונים</div></div>';
+    h += '<div class="tile"><div class="k">עמודים לביקור</div><div class="val">' + (num(f(tr, 'pagesPerSessionPercentage')) == null ? '—' : num(f(tr, 'pagesPerSessionPercentage')).toFixed(1)) + '</div><div class="m">' + n(f(tr, 'totalBotSessionCount')) + ' ביקורי רובוטים (לא נספרים)</div></div>';
+    h += '<div class="tile"><div class="k">גלילה ממוצעת</div><div class="val">' + pct(f(sc, 'averageScrollDepth')) + '</div><div class="m">כמה מהעמוד רואים</div></div>';
+    var act = num(f(en, 'activeTime')); h += '<div class="tile"><div class="k">זמן פעיל בביקור</div><div class="val">' + (act == null ? '—' : Math.round(act) + ' שנ\'') + '</div><div class="m">מתוך ' + (num(f(en, 'totalTime')) == null ? '—' : Math.round(num(f(en, 'totalTime'))) + ' שנ\'') + ' באתר</div></div>';
+    BAD.forEach(function(b){ var r = metric(ms, b[0])[0] || {}; var p = f(r, 'sessionsWithMetricPercentage');
+      h += '<div class="tile"><div class="k">' + b[1] + '</div><div class="val">' + pct(p) + tag(p, b[2], b[3]) + '</div><div class="m">' + n(f(r, 'sessionsCount')) + ' ביקורים</div></div>'; });
+    $('tiles').innerHTML = h;
+    var pop = metric(ms, 'PopularPages').slice(0, 15), ref = metric(ms, 'ReferrerUrl').slice(0, 10);
+    var p = '';
+    p += pop.length ? '<div class="tblwrap"><table><thead><tr><th>עמוד</th><th class="n">כניסות</th></tr></thead><tbody>' + pop.map(function(r){ var u = f(r, 'url') || f(r, 'URL') || ''; return '<tr><td class="pg" title="' + esc(u) + '">' + esc(short(u)) + '</td><td class="n">' + n(f(r, 'visitsCount')) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="empty">אין נתוני עמודים.</p>';
+    if (ref.length) p += '<h2 style="margin-top:14px">מאיפה הגיעו</h2><div class="tblwrap"><table><thead><tr><th>מקור</th><th class="n">ביקורים</th></tr></thead><tbody>' + ref.map(function(r){ var nm = f(r, 'name') || f(r, 'ReferrerUrl') || f(r, 'url') || 'ישיר'; return '<tr><td class="pg">' + esc(nm) + '</td><td class="n">' + n(f(r, 'sessionsCount') || f(r, 'visitsCount')) + '</td></tr>'; }).join('') + '</tbody></table></div>';
+    $('pop').innerHTML = p;
+  }).catch(function(e){ $('tiles').innerHTML = '<p class="err">לא הצלחתי לטעון: ' + esc(e) + '</p>'; });
+}
+
+var DIMKEY = { url: 'URL', device: 'Device', browser: 'Browser' };
+var DIMTTL = { url: 'עמוד', device: 'מכשיר', browser: 'דפדפן' };
+function loadTable(){
+  $('tbl').innerHTML = '<p class="empty">טוען…</p>';
+  api(state.x).then(function(d){
+    if (d.error) { $('tbl').innerHTML = '<p class="err">' + esc(d.error) + '</p>'; return; }
+    showNote(d);
+    var key = DIMKEY[state.x], rows = {};
+    function row(r){ var v = f(r, key) || 'לא ידוע'; return rows[v] || (rows[v] = { v: v }); }
+    metric(d.metrics, 'Traffic').forEach(function(r){ row(r).s = num(f(r, 'totalSessionCount')); });
+    metric(d.metrics, 'ScrollDepth').forEach(function(r){ row(r).sc = f(r, 'averageScrollDepth'); });
+    BAD.forEach(function(b){ metric(d.metrics, b[0]).forEach(function(r){ row(r)[b[0]] = f(r, 'sessionsWithMetricPercentage'); }); });
+    var list = Object.keys(rows).map(function(k){ return rows[k]; }).filter(function(r){ return r.s; }).sort(function(a, b){ return (b.s || 0) - (a.s || 0); }).slice(0, 40);
+    if (!list.length) { $('tbl').innerHTML = '<p class="empty">אין נתונים בתקופה.</p>'; return; }
+    var cols = BAD.slice(0, 4);
+    var h = '<table><thead><tr><th>' + DIMTTL[state.x] + '</th><th class="n">ביקורים</th><th class="n">גלילה</th>' + cols.map(function(b){ return '<th class="n">' + b[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
+    h += list.map(function(r){ return '<tr><td class="pg" title="' + esc(r.v) + '">' + esc(state.x === 'url' ? short(r.v) : r.v) + '</td><td class="n">' + n(r.s) + '</td><td class="n">' + pct(r.sc) + '</td>' + cols.map(function(b){ return '<td class="n">' + pct(r[b[0]]) + tag(r[b[0]], b[2], b[3]) + '</td>'; }).join('') + '</tr>'; }).join('');
+    $('tbl').innerHTML = h + '</tbody></table>';
+  }).catch(function(e){ $('tbl').innerHTML = '<p class="err">לא הצלחתי לטעון: ' + esc(e) + '</p>'; });
+}
+
+function seg(id, attr, cb){
+  Array.prototype.forEach.call($(id).querySelectorAll('button'), function(b){ b.addEventListener('click', function(){
+    Array.prototype.forEach.call($(id).querySelectorAll('button'), function(x){ x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+    cb(b.getAttribute(attr));
+  }); });
+}
+seg('segD', 'data-d', function(v){ state.d = +v; $('note').style.display = 'none'; loadMain(); loadTable(); });
+seg('segX', 'data-x', function(v){ state.x = v; loadTable(); });
+loadMain(); loadTable();
+</script>
+</body>
+</html>
