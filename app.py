@@ -1145,6 +1145,143 @@ def view_as_off(request: Request):
     return resp
 
 
+# ---------- חיפוש הזמנות (דורון, 25.10.2026) ----------
+# לבעלים בלבד. מחפש לפי מספר הזמנה, שם, טלפון, מייל או מספר לקוח, בשני מקורות:
+# הזמנות פריוריטי (bi_order_lines) והזמנות האתר (bi_web_orders). הטלפון של לקוחות
+# פריוריטי לא נשמר אצלנו בכלל (רק גיבוב, מטעמי פרטיות), ולכן חיפוש בטלפון מוצא את
+# הזמנת האתר, ומשם את הזמנת פריוריטי שמקושרת אליה דרך מספר ההזמנה באתר (REFERENCE).
+_OS_LINES = "bi_order_lines"
+_OS_REF_COLS = ("wr", "wref", "web_ref", "reference", "woo_ref")   # שם העמודה של REFERENCE לא מתועד
+_os_ref_col = {"v": None}
+
+
+def _os_sel(path):
+    try:
+        return sb_select(path) or []
+    except Exception as e:
+        print("ordersearch:", path.split("?")[0], repr(e)[:160], flush=True)
+        return []
+
+
+def _os_like(v):
+    return urllib.parse.quote("*" + v.replace("*", "").replace(",", " ") + "*")
+
+
+def _os_ref_column():
+    if _os_ref_col["v"] is None:
+        for c in _OS_REF_COLS:
+            try:
+                sb_select("%s?select=%s&limit=1" % (_OS_LINES, c))
+                _os_ref_col["v"] = c
+                break
+            except Exception:
+                continue
+        else:
+            _os_ref_col["v"] = ""
+    return _os_ref_col["v"]
+
+
+def _os_pri(filter_qs):
+    ref = _os_ref_column()
+    cols = "ordname,ord_date,cdes,custname,branch,agent,status,otype,pdes,qprice" + ("," + ref if ref else "")
+    return _os_sel("%s?select=%s&%s&order=ord_date.desc&limit=600" % (_OS_LINES, cols, filter_qs))
+
+
+_OS_WEB_COLS = "number,date_created,status,total,billing_name,billing_phone,billing_city,customer_email,payment_method"
+
+
+def _os_web(filter_qs, limit=60):
+    return _os_sel("bi_web_orders?select=%s&%s&order=date_created.desc&limit=%d" % (_OS_WEB_COLS, filter_qs, limit))
+
+
+def _os_digits(v):
+    return re.sub(r"\D", "", v or "")
+
+
+@app.get("/api/ordersearch")
+def api_ordersearch(request: Request, q: str = ""):
+    if not _is_admin(request):
+        return JSONResponse({"error": "auth"}, status_code=403)
+    q = (q or "").strip()[:80]
+    if len(q) < 2:
+        return JSONResponse({"error": "צריך לפחות 2 תווים"}, status_code=400)
+    digits = _os_digits(q)
+    has_letters = bool(re.search(r"[A-Za-z\u0590-\u05FF]", q))
+    pri, web = [], []
+    if "@" in q:
+        web += _os_web("customer_email=ilike." + _os_like(q))
+    if has_letters:
+        # מספר הזמנה בפריוריטי (SO26INT000624) או שם לקוח
+        pri += _os_pri("or=(ordname.ilike.%s,cdes.ilike.%s,custname.eq.%s)"
+                       % (_os_like(q), _os_like(q), urllib.parse.quote(q)))
+        web += _os_web("billing_name=ilike." + _os_like(q))
+    if digits and not has_letters:
+        if len(digits) >= 7:                       # טלפון
+            tail = digits[-9:]
+            cand = _os_web("billing_phone=ilike." + _os_like(digits[-4:]), limit=400)
+            web += [w for w in cand if _os_digits(w.get("billing_phone")).endswith(tail)]
+        if len(digits) <= 8:                       # מספר הזמנה באתר / מספר לקוח / סוף מספר הזמנה
+            web += _os_web("number=eq." + digits)
+            pri += _os_pri("or=(ordname.ilike.%s,custname.eq.%s)" % (_os_like(digits), urllib.parse.quote(q)))
+    # קישור בין שני המקורות דרך מספר ההזמנה באתר
+    ref = _os_ref_column()
+    if ref:
+        nums = sorted({str(w.get("number")) for w in web if w.get("number")} - {""})
+        if nums:
+            pri += _os_pri("%s=in.(%s)" % (ref, ",".join(urllib.parse.quote(n) for n in nums[:50])))
+        refs = sorted({str(r.get(ref) or "").strip() for r in pri} - {""})
+        refs = [x for x in refs if x.isdigit()]
+        if refs:
+            web += _os_web("number=in.(%s)" % ",".join(refs[:50]))
+    orders = {}
+    for r in pri:
+        o = r.get("ordname") or ""
+        if not o:
+            continue
+        g = orders.setdefault(o, {"ordname": o, "date": r.get("ord_date"), "name": r.get("cdes") or "",
+                                  "cust": r.get("custname") or "", "branch": r.get("branch") or "",
+                                  "agent": r.get("agent") or "", "status": r.get("status") or "",
+                                  "type": r.get("otype") or "", "web": (r.get(ref) or "") if ref else "",
+                                  "total": 0.0, "items": [], "_k": set()})
+        k = (r.get("pdes"), r.get("qprice"))
+        if k in g["_k"]:
+            continue
+        g["_k"].add(k)
+        price = float(r.get("qprice") or 0)
+        g["total"] += price
+        if price and r.get("pdes"):
+            g["items"].append({"d": r.get("pdes"), "s": round(price)})
+    pri_out = sorted(orders.values(), key=lambda g: str(g["date"] or ""), reverse=True)[:60]
+    for g in pri_out:
+        g.pop("_k", None)
+        g["total"] = round(g["total"])
+    seen, web_out = set(), []
+    for w in web:
+        n = str(w.get("number") or "")
+        if n and n not in seen:
+            seen.add(n)
+            web_out.append(w)
+    web_out.sort(key=lambda w: str(w.get("date_created") or ""), reverse=True)
+    return JSONResponse({"q": q, "priority": pri_out, "web": web_out[:60]},
+                        headers={"Cache-Control": "no-store"})
+
+
+@app.get("/orders")
+def orders_page(request: Request):
+    """חיפוש הזמנות — לבעלים בלבד."""
+    if not _logged_in(request):
+        return RedirectResponse("/login", status_code=303)
+    if not _is_admin(request):
+        return RedirectResponse("/", status_code=303)
+    try:
+        with open(os.path.join(HERE, "orders.html"), encoding="utf-8") as f:
+            html = f.read()
+    except Exception:
+        return HTMLResponse("<div dir='rtl' style='font-family:sans-serif;padding:40px'>המסך לא נמצא.</div>",
+                            status_code=404)
+    return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
+
+
 @app.get("/clarity")
 def clarity_page(request: Request):
     """קלריטי — איך גולשים מתנהגים באתר: ביקורים, גלילה, הקלקות כועסות, שגיאות. בלי שמות לקוחות."""

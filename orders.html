@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>חיפוש הזמנות — ויטוריו דיוואני</title>
+<style>
+:root{
+  --font: system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Hebrew",Arial,sans-serif;
+  --bg:#ffffff; --surface:#f4f8f6; --line:#e2e9e5; --line2:#cdd8d2;
+  --tx:#18241f; --tx2:#53635c; --tx3:#8a978f;
+  --brand:#0d9668; --sys:#4a3aa7; --sysSoft:rgba(74,58,167,.07);
+  --shadow:0 1px 2px rgba(16,24,32,.05),0 6px 18px rgba(16,24,32,.05);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0f1512; --surface:#19211d; --line:#26302b; --line2:#35423b;
+    --tx:#e9efeb; --tx2:#a2b0a9; --tx3:#6f7d76;
+    --brand:#2fbf8f; --sys:#9085e9; --sysSoft:rgba(144,133,233,.10);
+    --shadow:0 1px 2px rgba(0,0,0,.5),0 6px 18px rgba(0,0,0,.35);
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--font)}
+.wrap{max-width:820px;margin:0 auto;padding:12px 16px 40px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 12px}
+.btn{display:inline-flex;align-items:center;font-family:inherit;font-size:13px;border:1px solid var(--line2);background:var(--bg);color:var(--tx2);padding:7px 12px;min-height:38px;border-radius:999px;cursor:pointer;text-decoration:none}
+h1{font-size:22px;margin:4px 0 4px}
+.sub{color:var(--tx3);font-size:13px;margin:0 0 14px;line-height:1.5}
+form{display:flex;gap:8px;margin:0 0 16px}
+input{flex:1;min-width:0;font:inherit;font-size:16px;padding:11px 14px;border:1px solid var(--line2);border-radius:12px;background:var(--surface);color:var(--tx)}
+button.go{font:inherit;font-size:15px;font-weight:600;border:0;border-radius:12px;background:var(--brand);color:#fff;padding:0 18px;cursor:pointer}
+h2{font-size:15px;margin:18px 0 8px;color:var(--tx2)}
+.card{border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:12px 14px;margin:0 0 10px}
+.row1{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}
+.nm{font-size:16px;font-weight:700}
+.amt{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.meta{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--tx2);margin-top:6px}
+.meta b{color:var(--tx);font-weight:600}
+.tag{display:inline-block;font-size:11px;padding:1px 8px;border-radius:999px;background:var(--sysSoft);color:var(--sys);font-weight:600}
+.items{margin:8px 0 0;padding:0;list-style:none;font-size:13px;color:var(--tx2)}
+.items li{display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-top:1px dashed var(--line)}
+.items li span:last-child{white-space:nowrap;font-variant-numeric:tabular-nums}
+a.tel{color:var(--brand);font-weight:600;text-decoration:none;direction:ltr;unicode-bidi:isolate}
+.empty,.err{color:var(--tx3);font-size:13.5px;padding:6px 0}
+.err{color:#a3271f}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="btn" href="/">→ חזרה לינשוף</a>
+    <a class="btn" href="/logout" style="border:0;color:var(--tx3)">יציאה</a>
+  </div>
+  <h1>חיפוש הזמנות</h1>
+  <p class="sub">מקלידים מספר הזמנה (פריוריטי או אתר), שם לקוח, טלפון, מייל או מספר לקוח. החיפוש עובר על הזמנות פריוריטי ועל הזמנות האתר. טלפון נמצא דרך הזמנות האתר, כי הטלפונים של פריוריטי לא נשמרים בינשוף.</p>
+  <form id="f" autocomplete="off">
+    <input id="q" type="search" placeholder="למשל SO26INT000624, דנה כהן, 0501234567" autofocus>
+    <button class="go" type="submit">חפש</button>
+  </form>
+  <div id="out"></div>
+</div>
+<script>
+var $ = function(id){ return document.getElementById(id); };
+var NF = new Intl.NumberFormat('he-IL');
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function ils(v){ var x = Math.round(+v || 0); return '₪' + NF.format(x); }
+function dt(s){ if (!s) return ''; var d = String(s).slice(0, 10).split('-'); return d.length === 3 ? d[2] + '.' + d[1] + '.' + d[0] : s; }
+var WST = { completed: 'הושלמה', processing: 'בטיפול', 'on-hold': 'בהמתנה', pending: 'ממתינה לתשלום', cancelled: 'בוטלה', failed: 'התשלום נכשל', refunded: 'הוחזרה' };
+function pri(o){
+  var h = '<div class="card"><div class="row1"><span class="nm">' + esc(o.name || 'ללא שם') + '</span><span class="amt">' + ils(o.total) + ' <small style="font-weight:400;color:var(--tx3)">לפני מע"מ</small></span></div>';
+  h += '<div class="meta"><span>הזמנה <b>' + esc(o.ordname) + '</b></span><span>' + dt(o.date) + '</span>';
+  if (o.cust) h += '<span>מס\' לקוח <b>' + esc(o.cust) + '</b></span>';
+  if (o.branch) h += '<span>סניף <b>' + esc(o.branch) + '</b></span>';
+  if (o.agent) h += '<span>סוכן <b>' + esc(o.agent) + '</b></span>';
+  if (o.status) h += '<span class="tag">' + esc(o.status) + '</span>';
+  if (o.web) h += '<span>הזמנת אתר <b>' + esc(o.web) + '</b></span>';
+  h += '</div>';
+  if (o.items && o.items.length) h += '<ul class="items">' + o.items.map(function(i){ return '<li><span>' + esc(i.d) + '</span><span>' + ils(i.s) + '</span></li>'; }).join('') + '</ul>';
+  return h + '</div>';
+}
+function web(w){
+  var ph = w.billing_phone || '';
+  var h = '<div class="card"><div class="row1"><span class="nm">' + esc(w.billing_name || 'ללא שם') + '</span><span class="amt">' + ils(w.total) + '</span></div>';
+  h += '<div class="meta"><span>הזמנת אתר <b>' + esc(w.number) + '</b></span><span>' + dt(w.date_created) + '</span>';
+  if (ph) h += '<span><a class="tel" href="tel:' + esc(ph.replace(/[^\d+]/g, '')) + '">' + esc(ph) + '</a></span>';
+  if (w.customer_email) h += '<span>' + esc(w.customer_email) + '</span>';
+  if (w.billing_city) h += '<span>' + esc(w.billing_city) + '</span>';
+  if (w.payment_method) h += '<span>' + esc(w.payment_method) + '</span>';
+  if (w.status) h += '<span class="tag">' + esc(WST[w.status] || w.status) + '</span>';
+  return h + '</div></div>';
+}
+function search(q){
+  $('out').innerHTML = '<p class="empty">מחפש…</p>';
+  try { history.replaceState(null, '', '?q=' + encodeURIComponent(q)); } catch (e) {}
+  fetch('/api/ordersearch?q=' + encodeURIComponent(q), { cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(d){
+    if (d.error) { $('out').innerHTML = '<p class="err">' + esc(d.error) + '</p>'; return; }
+    var h = '';
+    h += '<h2>הזמנות בפריוריטי · ' + d.priority.length + '</h2>' + (d.priority.length ? d.priority.map(pri).join('') : '<p class="empty">לא נמצאו.</p>');
+    h += '<h2>הזמנות באתר · ' + d.web.length + '</h2>' + (d.web.length ? d.web.map(web).join('') : '<p class="empty">לא נמצאו.</p>');
+    $('out').innerHTML = h;
+  }).catch(function(e){ $('out').innerHTML = '<p class="err">החיפוש נכשל: ' + esc(e) + '</p>'; });
+}
+$('f').addEventListener('submit', function(e){ e.preventDefault(); var q = $('q').value.trim(); if (q.length >= 2) search(q); });
+try { var q0 = new URLSearchParams(location.search).get('q'); if (q0) { $('q').value = q0; search(q0); } } catch (e) {}
+</script>
+</body>
+</html>
