@@ -145,8 +145,14 @@ def _keren_token() -> str:
 PREVIEW_COOKIE = "dvbi_as"
 
 
+def _is_doron(request: Request) -> bool:
+    # כפתור "קרן" ותצוגת קרן — לדורון בלבד, לא לאיתמר ולא לרחל (דורון, 25.10.2026)
+    tok = request.cookies.get(COOKIE_NAME, "")
+    return bool(DASH_PASS_ADMIN) and hmac.compare_digest(tok, _admin_token())
+
+
 def _keren_preview(request: Request) -> bool:
-    return request.cookies.get(PREVIEW_COOKIE, "") == "keren" and _is_admin(request, raw=True)
+    return request.cookies.get(PREVIEW_COOKIE, "") == "keren" and _is_doron(request)
 
 
 def _is_keren(request: Request) -> bool:
@@ -999,7 +1005,7 @@ def _clarity_avail():
 def _owner_keren(request: Request) -> str:
     """כפתור "קרן" לבעלים בכל מסך, לא רק במסך הראשי (דורון, 25.10.2026: חיפש אותו
     בבריאות האתר ולא מצא). נכנס לשורת הכפתורים העליונה של המסך."""
-    if not _is_admin(request):
+    if not (_is_admin(request) and _is_doron(request)):
         return ""
     return ('<script>document.addEventListener("DOMContentLoaded",function(){'
             'if(document.getElementById("kerenbtn"))return;'
@@ -1044,7 +1050,7 @@ def _keren_bar(request: Request) -> str:
 
 @app.get("/view-as/keren")
 def view_as_keren(request: Request):
-    if not _is_admin(request, raw=True):
+    if not _is_doron(request):
         return RedirectResponse("/", status_code=303)
     resp = RedirectResponse("/site", status_code=303)
     resp.set_cookie(PREVIEW_COOKIE, "keren", max_age=8 * 3600, httponly=True,
@@ -2857,6 +2863,7 @@ def agent_report(request: Request):
 
 # הגושים מסומנים בקובץ עצמו, כדי שאפשר יהיה להוסיף עוד הסבר לבעלים
 # בלי לגעת בשרת שוב.
+_DORON_BLOCK = re.compile(r"<!--DORON-->.*?<!--/DORON-->", re.S)
 _OWNER_BLOCK = re.compile(r"<!--OWNER-->.*?<!--/OWNER-->"
                           r"|/\*OWNER\*/.*?/\*ENDOWNER\*/", re.S)
 
@@ -3030,7 +3037,7 @@ def index(request: Request):
         return RedirectResponse("/login", status_code=303)
     hdr = {"Cache-Control": "no-cache, must-revalidate"}
     admin, np = _is_admin(request), _is_noprofit(request)
-    if admin and not np:
+    if admin and not np and _is_doron(request):
         return FileResponse(INDEX, media_type="text/html; charset=utf-8", headers=hdr)
     with open(INDEX, encoding="utf-8") as f:
         html = f.read()
@@ -3038,6 +3045,8 @@ def index(request: Request):
     # ב-style.display; הסתרה אינה מניעה.
     if not admin:
         html = _OWNER_BLOCK.sub("", html)
+    if not _is_doron(request):
+        html = _DORON_BLOCK.sub("", html)      # כפתור "קרן" — לדורון בלבד
     if np:
         html = _NOPROFIT_BLOCK.sub("", html)
     return HTMLResponse(html, headers=hdr)
