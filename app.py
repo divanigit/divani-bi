@@ -842,7 +842,9 @@ def _clarity_merge(info):
             else:
                 merged[k] = sum(v for v, _ in vals)
         out.append(merged)
-    return out
+    # אחרי האיחוד הסדר של קלריטי כבר לא נכון — ממיינים מחדש לפי הספירה
+    cnt = lambda r: -(_clarity_num(r.get("totalSessionCount") or r.get("sessionsCount") or r.get("visitsCount")) or 0)
+    return sorted(out, key=cnt)
 
 
 def _clarity_fetch(days: int, dim: str):
@@ -948,7 +950,16 @@ def api_clarity(request: Request, days: int = 3, dim: str = ""):
     if rows is None:
         return JSONResponse({"error": note})
     at_il = dt.datetime.fromtimestamp(at, IL).strftime("%d.%m %H:%M")
-    return JSONResponse({"days": days, "dim": dim, "metrics": rows, "at": at_il, "note": note},
+    cover = None
+    if dim == "url":
+        # קלריטי שולח בפילוח לפי עמוד רק חלק מהשורות (כל הקלקה על מודעה היא כתובת נפרדת,
+        # והן נחתכות). 25.10: 1,358 ביקורים מתוך 15,486. המסך מציג את זה במפורש.
+        main = _clarity_cache.get((days, ""))
+        tot = [r for m in (main[1] if main else []) if m.get("metricName") == "Traffic" for r in m["information"]]
+        got = sum(_clarity_num(r.get("totalSessionCount")) or 0
+                  for m in rows if m.get("metricName") == "Traffic" for r in m["information"])
+        cover = {"pages": round(got), "total": round(_clarity_num(tot[0].get("totalSessionCount")) or 0) if tot else None}
+    return JSONResponse({"days": days, "dim": dim, "metrics": rows, "at": at_il, "note": note, "cover": cover},
                         headers={"Cache-Control": "no-store"})
 
 
