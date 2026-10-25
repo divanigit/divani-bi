@@ -787,6 +787,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     <button type="button" class="rfr" id="viewasbtn" title="בחירת תצוגה" aria-label="בחירת תצוגה" aria-haspopup="dialog" aria-expanded="false" style="display:none;padding:8px 11px">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
     </button>
+    <a class="rfr" id="kerenbtn" href="/view-as/keren" title="לראות את הינשוף בדיוק כמו קרן (ספקית האתר)" style="display:none;text-decoration:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      קרן
+    </a>
 <!--/OWNER-->
     <button type="button" class="rfr" id="rfr" title="רענון נתונים מפריוריטי עכשיו">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
@@ -4993,7 +4997,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     /*OWNER*/var vb=document.getElementById('viewasbtn');
     if(vb){ vb.style.display=(owner&&!prevVideo())?'':'none';
             vb.classList.toggle('on',prev);
-            vb.title='בחירת תצוגה'; }/*ENDOWNER*/
+            vb.title='בחירת תצוגה'; }
+    var kb=document.getElementById('kerenbtn');
+    if(kb)kb.style.display=(owner&&!prevVideo())?'':'none';/*ENDOWNER*/
     // words, not colour: the owner must never have to guess whose view he is looking at
     // בלי כיתוב. הוא בחר מהרשימה, והעין הדלוקה היא כל הסימון שצריך;
     // אם ירצה לדעת איזו תצוגה — הוא פותח את הרשימה ורואה מה מסומן.
