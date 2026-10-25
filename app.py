@@ -522,11 +522,6 @@ def _kr_scrub(x, _maps=None):
     return x
 
 
-def _kr_alerts(rows):
-    if not isinstance(rows, list):
-        return rows
-    return [r for r in rows if isinstance(r, dict) and r.get("kind") in _KR_ALERT_KINDS]
-
 
 @app.middleware("http")
 async def _kr_gate(request: Request, call_next):
@@ -644,7 +639,8 @@ def site_health(request: Request):
         role += _keren_bar(request) + _keren_nav(request, "/site")
         # קרן: בלי תפריט הינשוף, בלי יומן ההודעות הפנימי ובלי "ראיתי"; במקומם קישור לקלריטי
         role += ('<script>window.OWL_KEREN=1;</script>'
-                 '<style>.owlham,.card:has(#msgList),.alertbar .ax{display:none!important}</style>')
+                 '<style>.owlham,.card:has(#msgList),#alertbar,.card:has(#alertsList),'
+                 '.vbox[data-drill="alerts"]{display:none!important}</style>')
     html = html.replace("</head>", role + _owner_keren(request) + chr(10) + "</head>", 1)
     return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
@@ -690,7 +686,10 @@ def api_site_now(request: Request):
     if not (_logged_in(request) or _health_ok(request)):
         return JSONResponse({"error": "auth"}, status_code=401)
     try:
-        return JSONResponse(sb_rpc("bi_site_now", {}) or {}, headers={"Cache-Control": "no-store"})
+        d = sb_rpc("bi_site_now", {}) or {}
+        if _is_keren(request) and isinstance(d, dict):
+            d["alerts_open"] = 0
+        return JSONResponse(d, headers={"Cache-Control": "no-store"})
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=502)
 
@@ -795,8 +794,9 @@ def api_site(request: Request, h: int = 24, strategy: str = "mobile", f: str = "
     if isinstance(out.get("health"), list):
         out["health"] = [r for r in out["health"] if r.get("flow_group") == "אתר האינטרנט"]
     if _is_keren(request):
-        out["alerts_open"] = _kr_alerts(out.get("alerts_open"))
-        out["alerts_recent"] = _kr_alerts(out.get("alerts_recent"))
+        # בלי התראות בכלל אצל קרן (דורון, 25.10.2026)
+        out["alerts_open"] = []
+        out["alerts_recent"] = []
     try:
         out["cert"] = (sb_select("bi_site_cert?select=host,issuer,not_after,days_left,ok,err,checked_at&host=eq.vdivani.co.il") or [None])[0]
     except Exception as e:
@@ -828,7 +828,7 @@ def api_site_drill(request: Request, what: str = "", h: int = 24, f: str = "", t
         elif what == "alert":
             rows = sb_rpc("bi_alert_detail", {"p_id": int(id)})
             if _is_keren(request):
-                rows = _kr_alerts(rows or [])
+                rows = []
         else:
             return JSONResponse({"error": "what?"}, status_code=400)
         return JSONResponse({"rows": rows or []})
