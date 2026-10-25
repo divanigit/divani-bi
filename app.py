@@ -468,6 +468,32 @@ _KR_SALES_API = {"/api/meta", "/api/range", "/api/dim", "/api/tree", "/api/produ
                  "/api/segdrill", "/api/branchsrc", "/api/sitesales", "/api/series", "/api/xlsx"}
 _KR_API_ALLOW = _KR_SITE_API | _KR_SALES_API
 _KR_DIMS = {"fam", "grp", "part", "city", "sector", "source", "branch", "branchp"}
+
+# במסכי המכירות אסור לקרן לראות שם לקוח או כל פרט מזהה שלו (דורון, 25.10.2026;
+# נטישות וקלריטי — "זה בסדר", נשארים פתוחים). כל תשובת מכירות עוברת כאן: שמות לקוחות,
+# מספרי לקוח, טלפון, מייל, כתובת ומספרי הזמנה נמחקים; שמות סוכנים גם (הוא לא רוצה
+# שתראה סוכנים). מספרים לא נוגעים — "c" ו-"o" הם גם ספירות, ורק מחרוזת נמחקת.
+_KR_ID_STR = {"c", "cn", "cd", "cdes", "cust", "custname", "customer", "name", "fname", "lname",
+              "phone", "phone2", "tel", "mobile", "email", "mail", "address", "addr", "street",
+              "o", "order", "ordname", "number", "outcome_ref", "glassix", "called_by", "a", "agent",
+              "agentname", "note", "reason"}
+_KR_ID_DROP = {"agents", "customers", "cust_list", "orders_list", "other_orders"}
+
+
+def _kr_scrub(x):
+    if isinstance(x, dict):
+        for k in list(x.keys()):
+            v = x[k]
+            if k in _KR_ID_DROP and isinstance(v, (list, dict)):
+                x.pop(k)
+            elif k in _KR_ID_STR and isinstance(v, str):
+                x[k] = "לקוחות" if k == "c" else ""
+            else:
+                _kr_scrub(v)
+    elif isinstance(x, list):
+        for v in x:
+            _kr_scrub(v)
+    return x
 # התראות שקרן רואה: רק של האתר עצמו. התראת מכירה/עגלה יכולה לשאת שם לקוח בגוף ההודעה.
 _KR_ALERT_KINDS = {"down", "slow", "cert"}
 
@@ -492,7 +518,18 @@ async def _kr_gate(request: Request, call_next):
             return JSONResponse({"error": "auth"}, status_code=403)
         if path in ("/api/dim", "/api/series") and q.get("dim") and q.get("dim") not in _KR_DIMS:
             return JSONResponse({"error": "auth"}, status_code=403)
-        return await call_next(request)
+        resp = await call_next(request)
+        if path not in _KR_SALES_API:
+            return resp          # נטישות (בהסכמת דורון, הסכם סודיות), בריאות האתר וקלריטי — בלי ניקוי
+        ctype = (resp.headers.get("content-type") or "").lower()
+        if not hasattr(resp, "body_iterator") or "json" not in ctype:
+            return resp
+        body = b"".join([chunk async for chunk in resp.body_iterator])
+        try:
+            payload = json.loads(body.decode("utf-8"))
+        except Exception:
+            return JSONResponse({"error": "auth"}, status_code=403)
+        return JSONResponse(_kr_scrub(payload), status_code=resp.status_code)
     if path in _KR_PAGE_ALLOW:
         return await call_next(request)
     return RedirectResponse("/site", status_code=303)
