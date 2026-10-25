@@ -4339,8 +4339,12 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   // חברת היועצים (MVP): רק שבעת המסכים האלה. כל מסך אחר נופל לסוכנים, בלי הודעה.
   var YZ_KEEP={agents:1,branches:1,cash:1,collect:1,service:1};
   function isYoatz(){return !!(META&&META.yoatz);}
+  // קרן (ספקית האתר, דורון 25.10.2026): מחזורים והתפלגויות בלבד, בלי רווח ובלי סוכנים
+  var KR_KEEP={branches:1,site:1,products:1,dim:1,branchsrc:1};
+  function isKeren(){return !!(META&&META.keren);}
   function setView(v){
     if(isYoatz()&&!YZ_KEEP[v])v='agents';
+    if(isKeren()&&!KR_KEEP[v])v='branches';
     if(v==='mdown'&&(!META||noProfit()))v='agents';   // before META lands we do not yet know
     // this view is blocked for the no-profit role; the button is removed
     // בשרת, וזה מכסה מצב שנשמר בדפדפן מלפני החסימה.
@@ -4971,6 +4975,20 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
 
   function applyOwnerUI(){
     var owner=!!(META&&META.owner), prev=owner&&previewUser;
+    if(isKeren()){
+      var sgk=document.getElementById('seg');
+      if(sgk){
+        Array.prototype.slice.call(sgk.querySelectorAll('button')).forEach(function(b){
+          if(!KR_KEEP[b.getAttribute('data-v')||''])b.remove();
+        });
+        Array.prototype.slice.call(sgk.querySelectorAll('.navgroup')).forEach(function(g){
+          var n=g.nextElementSibling;
+          if(!n||!(n.tagName==='BUTTON'))g.remove();
+        });
+      }
+      var nsk=document.getElementById('navsys'); if(nsk)nsk.remove();
+      ['sitealert','rfr'].forEach(function(id){var e=document.getElementById(id);if(e)e.remove();});
+    }
     if(isYoatz()){
       // remove, לא hide: לא נשאר זכר בתפריט למסכים שהיועצים לא צריכים לראות.
       var sg=document.getElementById('seg');
@@ -5032,6 +5050,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         syncPreview();    // only now do we know whether a preview applies to this person at all
         applyOwnerUI();   // gate the owner-only chrome first — it must never flash for a regular user
         if(view==='mdown'&&noProfit())setView('agents');   // tapped during the cold start
+        if(isKeren()&&!KR_KEEP[view])setView('branches');
         if(!META.min){stage.innerHTML='<div class="empty">המסד עדיין מתמלא בנתונים — נסה שוב בעוד כמה דקות.</div>';return;}
         var ms=document.getElementById('msel'),ys=document.getElementById('ysel'),yo=document.getElementById('yosel');
         ms.innerHTML=MONTHS.map(function(n,i){return '<option value="'+(i+1)+'">'+n+'</option>';}).join('');

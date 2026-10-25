@@ -172,6 +172,9 @@ def _is_yoatz(request: Request) -> bool:
 
 
 def _is_noprofit(request: Request) -> bool:
+    # קרן רואה מחזורים בלי רווח, בדיוק כמו עידו (דורון, 25.10.2026)
+    if _is_keren(request):
+        return True
     if not DASH_PASS_IDO:
         return False
     tok = request.cookies.get(COOKIE_NAME, "")
@@ -453,11 +456,18 @@ _YZ_PAGE_BLOCK = {"/agent-report", "/conversion", "/traffic", "/customers", "/ab
 # קרן, ספקית האתר (דורון, 20.10.2026): רק בריאות האתר וקלריטי. אין לה גישה לשמות
 # לקוחות — לא מכירות, לא נטישות, לא יומן ההודעות הפנימי. רשימה מותרת בלבד: כל
 # כתובת אחרת, גם שתתווסף בעתיד, חוסמת. דף הבית מעביר אותה לבריאות האתר.
-_KR_PAGE_ALLOW = {"/site", "/clarity", "/abandoned", "/logout", "/login", "/view-as/off"}
+_KR_PAGE_ALLOW = {"/", "/site", "/clarity", "/abandoned", "/logout", "/login", "/view-as/off"}
 # נטישות בקופה (דורון, 25.10.2026): קרן רואה את הרשימה ואת ההזמנה לעומק — כולל שם וטלפון,
 # בהחלטת דורון (הסכם סודיות). צפייה בלבד: /api/abandoned/action (רישום שיחה) חסום לה.
-_KR_API_ALLOW = {"/api/site", "/api/site/now", "/api/site/drill", "/api/clarity",
-                 "/api/abandoned", "/api/abandoned/order"}
+_KR_SITE_API = {"/api/site", "/api/site/now", "/api/site/drill", "/api/clarity",
+                "/api/abandoned", "/api/abandoned/order"}
+# מכירות (דורון, 25.10.2026): מחזורים לכל תקופה — סניפים כולל טלפוני, אתר, מוצרים,
+# פילוח לפי קטגוריה/מוצר/עיר/מגזר/מקור הגעה. בלי רווח (קרן נחשבת "בלי רווח",
+# ושער _np_gate מנקה כל תשובה) ובלי מסך סוכנים.
+_KR_SALES_API = {"/api/meta", "/api/range", "/api/dim", "/api/tree", "/api/products",
+                 "/api/segdrill", "/api/branchsrc", "/api/sitesales", "/api/series", "/api/xlsx"}
+_KR_API_ALLOW = _KR_SITE_API | _KR_SALES_API
+_KR_DIMS = {"fam", "grp", "part", "city", "sector", "source", "branch", "branchp"}
 # התראות שקרן רואה: רק של האתר עצמו. התראת מכירה/עגלה יכולה לשאת שם לקוח בגוף ההודעה.
 _KR_ALERT_KINDS = {"down", "slow", "cert"}
 
@@ -475,6 +485,12 @@ async def _kr_gate(request: Request, call_next):
     path = request.url.path
     if path.startswith("/api/"):
         if path not in _KR_API_ALLOW:
+            return JSONResponse({"error": "auth"}, status_code=403)
+        q = request.query_params
+        # בלי שמות סוכנים: טבלת הסניפים בלבד, ופילוח רק לפי המימדים שלמעלה
+        if path == "/api/range" and q.get("by", "a") != "b":
+            return JSONResponse({"error": "auth"}, status_code=403)
+        if path in ("/api/dim", "/api/series") and q.get("dim") and q.get("dim") not in _KR_DIMS:
             return JSONResponse({"error": "auth"}, status_code=403)
         return await call_next(request)
     if path in _KR_PAGE_ALLOW:
@@ -499,6 +515,8 @@ async def _np_gate(request: Request, call_next):
     path = request.url.path
     if not (path.startswith("/api/") and _is_noprofit(request)):
         return await call_next(request)        # everybody else: nothing changes
+    if path in _KR_SITE_API and _is_keren(request):
+        return await call_next(request)        # מסכי האתר של קרן: אין בהם רווח, ושער _kr_gate כבר סינן
     if path in _NP_HIDE:
         return JSONResponse({"detail": "Not Found"}, status_code=404)
     if path in _NP_BLOCK or path not in _NP_STRIP:
@@ -1022,7 +1040,7 @@ def _keren_nav(request: Request, here: str) -> str:
     """שורת ניווט קטנה בין שלושת המסכים של קרן (אצלה תפריט הינשוף מוסתר)."""
     if not _is_keren(request):
         return ""
-    items = (("/site", "בריאות האתר"), ("/clarity", "קלריטי"), ("/abandoned", "נטישות בקופה"))
+    items = (("/", "מכירות"), ("/site", "בריאות האתר"), ("/clarity", "קלריטי"), ("/abandoned", "נטישות בקופה"))
     links = "".join('<a href="%s"%s>%s</a>' % (u, ' class="on"' if u == here else "", t) for u, t in items)
     return ('<style>#krnav{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}'
             '#krnav a{font:500 13px system-ui,sans-serif;padding:7px 12px;border-radius:999px;'
@@ -1030,7 +1048,8 @@ def _keren_nav(request: Request, here: str) -> str:
             '#krnav a.on{background:#4a3aa7;border-color:#4a3aa7;color:#fff}</style>'
             '<script>window.OWL_KEREN=1;document.addEventListener("DOMContentLoaded",function(){'
             'var n=document.createElement("nav");n.id="krnav";n.innerHTML=%s;'
-            'var h=document.querySelector("h1");if(h)h.parentNode.insertBefore(n,h);});</script>'
+            'var h=document.querySelector("h1");if(h)h.parentNode.insertBefore(n,h);'
+            'else{n.style.padding="10px 16px 0";document.body.insertBefore(n,document.body.firstChild);}});</script>'
             % json.dumps(links, ensure_ascii=False))
 
 
@@ -3049,6 +3068,8 @@ def index(request: Request):
         html = _DORON_BLOCK.sub("", html)      # כפתור "קרן" — לדורון בלבד
     if np:
         html = _NOPROFIT_BLOCK.sub("", html)
+    if _is_keren(request):
+        html = html.replace("</head>", _keren_bar(request) + _keren_nav(request, "/") + "\n</head>", 1)
     return HTMLResponse(html, headers=hdr)
 
 
@@ -3088,7 +3109,8 @@ def api_meta(request: Request):
                          "admin": _can_ask(request),
                          "owner": _is_admin(request),
                          "noprofit": _is_noprofit(request),
-                         "yoatz": _is_yoatz(request)})
+                         "yoatz": _is_yoatz(request),
+                         "keren": _is_keren(request)})
 
 
 @app.get("/api/range")
