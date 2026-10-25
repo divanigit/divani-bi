@@ -447,8 +447,11 @@ _YZ_PAGE_BLOCK = {"/agent-report", "/conversion", "/traffic", "/customers", "/ab
 # קרן, ספקית האתר (דורון, 20.10.2026): רק בריאות האתר וקלריטי. אין לה גישה לשמות
 # לקוחות — לא מכירות, לא נטישות, לא יומן ההודעות הפנימי. רשימה מותרת בלבד: כל
 # כתובת אחרת, גם שתתווסף בעתיד, חוסמת. דף הבית מעביר אותה לבריאות האתר.
-_KR_PAGE_ALLOW = {"/site", "/clarity", "/logout", "/login", "/view-as/off"}
-_KR_API_ALLOW = {"/api/site", "/api/site/now", "/api/site/drill", "/api/clarity"}
+_KR_PAGE_ALLOW = {"/site", "/clarity", "/abandoned", "/logout", "/login", "/view-as/off"}
+# נטישות בקופה (דורון, 25.10.2026): קרן רואה את הרשימה ואת ההזמנה לעומק — כולל שם וטלפון,
+# בהחלטת דורון (הסכם סודיות). צפייה בלבד: /api/abandoned/action (רישום שיחה) חסום לה.
+_KR_API_ALLOW = {"/api/site", "/api/site/now", "/api/site/drill", "/api/clarity",
+                 "/api/abandoned", "/api/abandoned/order"}
 # התראות שקרן רואה: רק של האתר עצמו. התראת מכירה/עגלה יכולה לשאת שם לקוח בגוף ההודעה.
 _KR_ALERT_KINDS = {"down", "slow", "cert"}
 
@@ -553,7 +556,7 @@ def site_health(request: Request):
         "true" if _is_noprofit(request) else "false",
         "true" if _is_admin(request) else "false")
     if _is_keren(request):
-        role += _keren_bar(request)
+        role += _keren_bar(request) + _keren_nav(request, "/site")
         # קרן: בלי תפריט הינשוף, בלי יומן ההודעות הפנימי ובלי "ראיתי"; במקומם קישור לקלריטי
         role += ('<script>window.OWL_KEREN=1;</script>'
                  '<style>.owlham,.card:has(#msgList),.alertbar .ax{display:none!important}</style>')
@@ -993,6 +996,22 @@ def _clarity_avail():
         return None
 
 
+def _keren_nav(request: Request, here: str) -> str:
+    """שורת ניווט קטנה בין שלושת המסכים של קרן (אצלה תפריט הינשוף מוסתר)."""
+    if not _is_keren(request):
+        return ""
+    items = (("/site", "בריאות האתר"), ("/clarity", "קלריטי"), ("/abandoned", "נטישות בקופה"))
+    links = "".join('<a href="%s"%s>%s</a>' % (u, ' class="on"' if u == here else "", t) for u, t in items)
+    return ('<style>#krnav{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}'
+            '#krnav a{font:500 13px system-ui,sans-serif;padding:7px 12px;border-radius:999px;'
+            'border:1px solid #cdd8d2;color:inherit;text-decoration:none}'
+            '#krnav a.on{background:#4a3aa7;border-color:#4a3aa7;color:#fff}</style>'
+            '<script>window.OWL_KEREN=1;document.addEventListener("DOMContentLoaded",function(){'
+            'var n=document.createElement("nav");n.id="krnav";n.innerHTML=%s;'
+            'var h=document.querySelector("h1");if(h)h.parentNode.insertBefore(n,h);});</script>'
+            % json.dumps(links, ensure_ascii=False))
+
+
 def _keren_bar(request: Request) -> str:
     """תגית קטנה "קרן" בפינה השמאלית העליונה כשבעלים רואה כמו קרן. לחיצה עליה מחזירה
     לתצוגה שלו (דורון, 25.10.2026: במקום פס רחב — הוא יודע שזה הכפתור לחזרה)."""
@@ -1039,7 +1058,7 @@ def clarity_page(request: Request):
         "true" if _is_noprofit(request) else "false",
         "true" if _is_admin(request) else "false",
         "true" if _is_keren(request) else "false")
-    role += _keren_bar(request)
+    role += _keren_bar(request) + _keren_nav(request, "/clarity")
     html = html.replace("</head>", role + chr(10) + "</head>", 1)
     return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
@@ -1108,6 +1127,10 @@ def abandoned_page(request: Request):
     role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s};</script>' % (
         "true" if _is_noprofit(request) else "false",
         "true" if _is_admin(request) else "false")
+    if _is_keren(request):
+        # קרן: צפייה בלבד — בלי תפריט הינשוף, בלי יומן ההודעות הפנימי ובלי רישום שיחות
+        role += (_keren_bar(request) + _keren_nav(request, "/abandoned")
+                 + '<style>.owlham,.card:has(#msgList),#actChips,#actMsg{display:none!important}</style>')
     html = html.replace("</head>", role + chr(10) + "</head>", 1)
     return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
