@@ -560,7 +560,7 @@ def site_health(request: Request):
         # קרן: בלי תפריט הינשוף, בלי יומן ההודעות הפנימי ובלי "ראיתי"; במקומם קישור לקלריטי
         role += ('<script>window.OWL_KEREN=1;</script>'
                  '<style>.owlham,.card:has(#msgList),.alertbar .ax{display:none!important}</style>')
-    html = html.replace("</head>", role + chr(10) + "</head>", 1)
+    html = html.replace("</head>", role + _owner_keren(request) + chr(10) + "</head>", 1)
     return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
 
@@ -996,6 +996,22 @@ def _clarity_avail():
         return None
 
 
+def _owner_keren(request: Request) -> str:
+    """כפתור "קרן" לבעלים בכל מסך, לא רק במסך הראשי (דורון, 25.10.2026: חיפש אותו
+    בבריאות האתר ולא מצא). נכנס לשורת הכפתורים העליונה של המסך."""
+    if not _is_admin(request):
+        return ""
+    return ('<script>document.addEventListener("DOMContentLoaded",function(){'
+            'if(document.getElementById("kerenbtn"))return;'
+            'var a=document.createElement("a");a.id="kerenbtn";a.href="/view-as/keren";'
+            'a.title="לראות את הינשוף בדיוק כמו קרן";a.textContent="קרן";a.style.whiteSpace="nowrap";'
+            'var box=document.querySelector(".owlacts")||document.querySelector(".acts");'
+            'if(box){a.className=box.querySelector(".owlxls")?"owlxls":"btn";a.style.textDecoration="none";box.insertBefore(a,box.firstChild);}'
+            'else{a.style.cssText="position:fixed;bottom:12px;left:12px;z-index:200;background:#4a3aa7;color:#fff;'
+            'font:600 13px system-ui,sans-serif;padding:7px 12px;border-radius:999px;text-decoration:none";'
+            'document.body.appendChild(a);}});</script>')
+
+
 def _keren_nav(request: Request, here: str) -> str:
     """שורת ניווט קטנה בין שלושת המסכים של קרן (אצלה תפריט הינשוף מוסתר)."""
     if not _is_keren(request):
@@ -1059,7 +1075,7 @@ def clarity_page(request: Request):
         "true" if _is_admin(request) else "false",
         "true" if _is_keren(request) else "false")
     role += _keren_bar(request) + _keren_nav(request, "/clarity")
-    html = html.replace("</head>", role + chr(10) + "</head>", 1)
+    html = html.replace("</head>", role + _owner_keren(request) + chr(10) + "</head>", 1)
     return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
 
@@ -1131,7 +1147,7 @@ def abandoned_page(request: Request):
         # קרן: צפייה בלבד — בלי תפריט הינשוף, בלי יומן ההודעות הפנימי ובלי רישום שיחות
         role += (_keren_bar(request) + _keren_nav(request, "/abandoned")
                  + '<style>.owlham,.card:has(#msgList),#actChips,#actMsg{display:none!important}</style>')
-    html = html.replace("</head>", role + chr(10) + "</head>", 1)
+    html = html.replace("</head>", role + _owner_keren(request) + chr(10) + "</head>", 1)
     return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
 
@@ -2868,7 +2884,7 @@ def conversion(request: Request):
     role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s};</script>' % (
         "true" if _is_noprofit(request) else "false",
         "true" if _is_admin(request) else "false")
-    html = html.replace("</head>", role + chr(10) + "</head>", 1)
+    html = html.replace("</head>", role + _owner_keren(request) + chr(10) + "</head>", 1)
     return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
 
@@ -2905,7 +2921,7 @@ def traffic(request: Request):
         role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s};</script>' % (
             "true" if _is_noprofit(request) else "false",
             "true" if _is_admin(request) else "false")
-        html = html.replace("</head>", role + "\n</head>", 1)
+        html = html.replace("</head>", role + _owner_keren(request) + "\n</head>", 1)
         # בלי הכותרת הזו הדפדפן מחזיק את העמוד וממשיך להציג גרסה ישנה.
         # דורון דיווח על באנר שכבר נמחק מהקוד — זו היתה הסיבה.
         return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
@@ -3703,7 +3719,7 @@ def customers_page(request: Request):
     role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s};</script>' % (
         "true" if _is_noprofit(request) else "false",
         "true" if _is_admin(request) else "false")
-    html = html.replace("</head>", role + chr(10) + "</head>", 1)
+    html = html.replace("</head>", role + _owner_keren(request) + chr(10) + "</head>", 1)
     return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
 
