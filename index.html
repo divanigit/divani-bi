@@ -3052,8 +3052,25 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(b==='w')return 'שבוע '+heDate(t);
     return heDate(t);
   }
+  // חלון הגרף. כשבוחרים יומי/שבועי/חודשי והתקופה שלמעלה קצרה מדי (למשל "היום"),
+  // החלון מתרחב אחורה: 14 ימים / 12 שבועות / 12 חודשים שמסתיימים בסוף התקופה.
+  // אחרת "חודשי" על יום אחד הציג עמודה אחת של היום תחת "אוק׳", ונראה כאילו
+  // מניין הלקוחות זהה בכל תקופה (דורון, 25.10.2026).
+  function srWin(b){
+    var f=state.from,t=state.to;
+    if(!b||!f||!t)return [f,t,false];
+    var T=new Date(t+'T12:00:00'),F=new Date(f+'T12:00:00'),days=Math.round((T-F)/864e5)+1,nf2;
+    if(b==='d'&&days<14){nf2=new Date(T);nf2.setDate(nf2.getDate()-13);}
+    else if(b==='w'&&days<84){nf2=new Date(T);nf2.setDate(nf2.getDate()-83);}
+    else if(b==='m'&&days<365){nf2=new Date(T.getFullYear(),T.getMonth()-11,1,12);}
+    if(!nf2)return [f,t,false];
+    var nfs=iso(nf2);
+    if(META&&META.min&&nfs<META.min)nfs=META.min;
+    return [nfs<f?nfs:f,t,nfs<f];
+  }
   function srUrl(m,d,k,b){
-    return '/api/series?d_from='+state.from+'&d_to='+state.to+'&measure='+encodeURIComponent(m)
+    var w=srWin(b);
+    return '/api/series?d_from='+w[0]+'&d_to='+w[1]+'&measure='+encodeURIComponent(m)
       +(d?('&dim='+encodeURIComponent(d)+'&key='+encodeURIComponent(k==null?'':k)):'')
       +(b?('&bucket='+encodeURIComponent(b)):'');
   }
@@ -3103,7 +3120,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   function srDraw(){
     var j=srEff();if(!j)return;
     var rows=j.rows||[],n=rows.length,i;
-    var head='<div class="srmeta">'+esc(j.bucket_label||'')+' · '+esc(rangeLbl(state.from,state.to))+'</div>';
+    var sw=srWin(srBucket);
+    var head='<div class="srmeta">'+esc(j.bucket_label||'')+' · '+esc(rangeLbl(sw[0],sw[1]))
+      +(sw[2]?' <span style="opacity:.75">(חלון רחב מהתקופה שבחרת, כדי שיהיה מה להשוות)</span>':'')+'</div>';
     // אפס הוא מדידה, לא היעדר נתונים: "לא בוטל כלום" הוא ₪0, ורק סדרה בלי אף דלי
     // מדוד היא באמת "אין נתונים". ליחס אין דלי אפס — מכנה חסר מגיע כ-null.
     var any=false,got=false;
