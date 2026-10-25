@@ -140,6 +140,7 @@ td a{color:var(--tx);text-decoration:none;border-bottom:1px dotted var(--tx3)}
 .list li{padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px;display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}
 .list li.rowbtn{cursor:pointer}
 .list li:last-child{border-bottom:0}
+.list li>*{min-width:0;overflow-wrap:anywhere}/*long-url*/
 .list .when{color:var(--tx3);font-size:12px;direction:ltr}
 
 /* ---------- חלון העומק (דריל) ---------- */
@@ -505,7 +506,7 @@ load();
 
 /* ---------- יומן הודעות ---------- */
 function loadMessages(){
-  var el = $('msgList'); if (!el) return;
+  var el = $('msgList'); if (!el || window.OWL_KEREN) return;
   fetch('/api/messages?' + (typeof qs === 'function' ? qs().replace(/^&/, '') : 'h=720'), { cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(d){
     var rows = Array.isArray(d.rows) ? d.rows : [];
     el.innerHTML = rows.length ? '<ul class="list">' + rows.map(function(m){ return '<li><span class="tag ' + (m.kind === 'התראה' ? 'd' : m.kind === 'חזר לתקין' ? 'ok' : 'n') + '">' + esc(m.kind) + '</span><b>' + esc(m.title || '') + '</b><span class="muted" style="white-space:pre-line;flex-basis:100%">' + esc(m.msg || '') + '</span><span class="when">' + esc(m.at_il) + (m.sent ? '' : ' · לא נשלחה') + '</span></li>'; }).join('') + '</ul>' : '<p class="empty">לא נשלחו הודעות בתקופה.</p>';
