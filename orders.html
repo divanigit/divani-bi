@@ -43,6 +43,11 @@ h2{font-size:15px;margin:18px 0 8px;color:var(--tx2)}
 .items li{display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-top:1px dashed var(--line)}
 .items li span:last-child{white-space:nowrap;font-variant-numeric:tabular-nums}
 a.tel{color:var(--brand);font-weight:600;text-decoration:none;direction:ltr;unicode-bidi:isolate}
+.det{margin-top:10px}
+.det dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:6px 0 0;font-size:13.5px}
+.det dt{color:var(--tx3)}
+.det dd{margin:0;font-weight:600;word-break:break-word}
+.det h3{font-size:12.5px;color:var(--tx2);margin:10px 0 0}
 .empty,.err{color:var(--tx3);font-size:13.5px;padding:6px 0}
 .err{color:#a3271f}
 </style>
@@ -78,6 +83,7 @@ function pri(o){
   if (o.web) h += '<span>הזמנת אתר <b>' + esc(o.web) + '</b></span>';
   h += '</div>';
   if (o.items && o.items.length) h += '<ul class="items">' + o.items.map(function(i){ return '<li><span>' + esc(i.d) + '</span><span>' + ils(i.s) + '</span></li>'; }).join('') + '</ul>';
+  h += '<div class="det" data-ord="' + esc(o.ordname) + '" data-cn="' + esc(o.cust) + '"><button type="button" class="btn detbtn">פרטי לקוח מלאים (טלפון, כתובת, מייל)</button></div>';
   return h + '</div>';
 }
 function web(w){
@@ -91,6 +97,19 @@ function web(w){
   if (w.status) h += '<span class="tag">' + esc(WST[w.status] || w.status) + '</span>';
   return h + '</div></div>';
 }
+function telLink(f, v){ return /PHONE|TEL|SPEC2|CELL/i.test(f) ? '<a class="tel" href="tel:' + esc(String(v).replace(/[^\d+]/g, '')) + '">' + esc(v) + '</a>' : esc(v); }
+function dl(title, rows){ if (!rows || !rows.length) return ''; return (title ? '<h3>' + title + '</h3>' : '') + '<dl>' + rows.map(function(r){ return '<dt>' + esc(r.k) + '</dt><dd>' + telLink(r.f, r.v) + '</dd>'; }).join('') + '</dl>'; }
+function loadDet(box){
+  box.innerHTML = '<p class="empty">שולף מפריוריטי…</p>';
+  fetch('/api/ordersearch/detail?ord=' + encodeURIComponent(box.getAttribute('data-ord')) + '&cn=' + encodeURIComponent(box.getAttribute('data-cn')), { cache: 'no-store' })
+    .then(function(r){ return r.json(); }).then(function(d){
+      if (d.error) { box.innerHTML = '<p class="err">' + esc(d.error) + '</p>'; return; }
+      var h = dl('כרטיס לקוח', d.cust) + dl('כתובת למשלוח', d.ship) + dl('פרטים בהזמנה', d.order);
+      if (d.errors && d.errors.length) h += '<p class="err">' + esc(d.errors.join(' · ')) + '</p>';
+      box.innerHTML = h || '<p class="empty">פריוריטי לא החזיר פרטים.</p>';
+    }).catch(function(e){ box.innerHTML = '<p class="err">השליפה נכשלה: ' + esc(e) + '</p>'; });
+}
+document.addEventListener('click', function(e){ var b = e.target.closest && e.target.closest('.detbtn'); if (b) loadDet(b.parentNode); });
 function search(q){
   $('out').innerHTML = '<p class="empty">מחפש…</p>';
   try { history.replaceState(null, '', '?q=' + encodeURIComponent(q)); } catch (e) {}
@@ -100,6 +119,8 @@ function search(q){
     h += '<h2>הזמנות בפריוריטי · ' + d.priority.length + '</h2>' + (d.priority.length ? d.priority.map(pri).join('') : '<p class="empty">לא נמצאו.</p>');
     h += '<h2>הזמנות באתר · ' + d.web.length + '</h2>' + (d.web.length ? d.web.map(web).join('') : '<p class="empty">לא נמצאו.</p>');
     $('out').innerHTML = h;
+    var boxes = document.querySelectorAll('.det');
+    if (boxes.length && boxes.length <= 3) Array.prototype.forEach.call(boxes, loadDet);   // תוצאה אחת עד שלוש — נשלף מיד
   }).catch(function(e){ $('out').innerHTML = '<p class="err">החיפוש נכשל: ' + esc(e) + '</p>'; });
 }
 $('f').addEventListener('submit', function(e){ e.preventDefault(); var q = $('q').value.trim(); if (q.length >= 2) search(q); });
