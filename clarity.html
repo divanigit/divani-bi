@@ -222,7 +222,10 @@ function loadTable(){
     var cols = BAD.slice(0, 4);
     var h = '<table><thead><tr><th>' + DIMTTL[state.x] + '</th><th class="n">ביקורים</th><th class="n">גלילה</th>' + cols.map(function(b){ return '<th class="n">' + b[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
     h += list.map(function(r){ return '<tr><td class="pg" title="' + esc(r.v) + '">' + esc(state.x === 'url' ? short(r.v) : r.v) + '</td><td class="n">' + n(r.s) + '</td><td class="n">' + pct(r.sc) + '</td>' + cols.map(function(b){ return '<td class="n">' + pct(r[b[0]]) + tag(r[b[0]], b[2], b[3]) + '</td>'; }).join('') + '</tr>'; }).join('');
-    $('tbl').innerHTML = h + '</tbody></table>';
+    var cv = d.cover, c = '';
+    if (state.x === 'url' && cv && cv.total && cv.pages < cv.total * 0.8)
+      c = '<p class="explain" style="margin:0 0 8px">קלריטי שולח פילוח לפי עמוד רק לחלק מהביקורים: כאן ' + n(cv.pages) + ' ביקורים מתוך ' + n(cv.total) + '. ביקורים שהגיעו ממודעות (כל הקלקה היא כתובת נפרדת) נחתכים. הטבלה טובה להשוואה בין עמודים (גלילה, הקלקות), לא לספירת ביקורים. הספירה המלאה — ב"עמודים מובילים" למעלה.</p>';
+    $('tbl').innerHTML = c + h + '</tbody></table>';
   }).catch(function(e){ $('tbl').innerHTML = '<p class="err">לא הצלחתי לטעון: ' + esc(e) + '</p>'; });
 }
 

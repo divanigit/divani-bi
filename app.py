@@ -842,7 +842,9 @@ def _clarity_merge(info):
             else:
                 merged[k] = sum(v for v, _ in vals)
         out.append(merged)
-    return out
+    # אחרי האיחוד הסדר של קלריטי כבר לא נכון — ממיינים מחדש לפי הספירה
+    cnt = lambda r: -(_clarity_num(r.get("totalSessionCount") or r.get("sessionsCount") or r.get("visitsCount")) or 0)
+    return sorted(out, key=cnt)
 
 
 def _clarity_call(days: int, dim: str):
@@ -973,6 +975,15 @@ def _clarity_range(f: str, t: str, dim: str):
     return [{"metricName": n, "information": _clarity_merge(by_metric[n])} for n in order], len(rows)
 
 
+def _clarity_cover(total_metrics, url_metrics):
+    """כמה ביקורים נכנסו לפילוח לפי עמוד, מול הסה"כ."""
+    tot = [r for m in (total_metrics or []) if m.get("metricName") == "Traffic" for r in m.get("information") or []]
+    got = sum(_clarity_num(r.get("totalSessionCount")) or 0
+              for m in url_metrics if m.get("metricName") == "Traffic" for r in m.get("information") or [])
+    return {"pages": round(got),
+            "total": round(_clarity_num(tot[0].get("totalSessionCount")) or 0) if tot else None}
+
+
 def _clarity_avail():
     try:
         a = sb_select("bi_clarity_daily?select=day&dim=eq.&order=day.asc&limit=1") or []
@@ -1059,15 +1070,27 @@ def api_clarity(request: Request, days: int = 3, dim: str = "", f: str = "", t: 
             return JSONResponse({"error": "אין נתונים שמורים לתקופה הזו. השמירה הלילית התחילה "
                                           + (("ב-" + avail["min"]) if avail else "רק עכשיו")
                                           + ", ומה שלפני כן קלריטי לא מוסר.", "avail": avail})
+        cover = None
+        if dim == "url":
+            try:
+                cover = _clarity_cover(_clarity_range(d0.isoformat(), d1.isoformat(), "")[0], rows)
+            except Exception:
+                pass
         return JSONResponse({"from": d0.isoformat(), "to": d1.isoformat(), "dim": dim, "metrics": rows,
                              "stored_days": n, "span_days": (d1 - d0).days + 1, "avail": avail,
-                             "at": "", "note": ""}, headers={"Cache-Control": "no-store"})
+                             "cover": cover, "at": "", "note": ""}, headers={"Cache-Control": "no-store"})
     days = 1 if days <= 1 else 3
     rows, at, note = _clarity_fetch(days, dim)
     if rows is None:
         return JSONResponse({"error": note, "avail": _clarity_avail()})
     at_il = dt.datetime.fromtimestamp(at, IL).strftime("%d.%m %H:%M")
-    return JSONResponse({"days": days, "dim": dim, "metrics": rows, "at": at_il, "note": note,
+    cover = None
+    if dim == "url":
+        # קלריטי שולח בפילוח לפי עמוד רק חלק מהשורות (כל הקלקה על מודעה היא כתובת נפרדת,
+        # והן נחתכות). 25.10: 1,358 ביקורים מתוך 15,486. המסך מציג את זה במפורש.
+        main = _clarity_cache.get((days, ""))
+        cover = _clarity_cover(main[1] if main else [], rows)
+    return JSONResponse({"days": days, "dim": dim, "metrics": rows, "at": at_il, "note": note, "cover": cover,
                          "avail": _clarity_avail()}, headers={"Cache-Control": "no-store"})
 
 
