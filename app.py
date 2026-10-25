@@ -784,7 +784,64 @@ def _clarity_clean(rows):
                 r2[k] = v
             if not drop:
                 info.append(r2)
-        out.append({"metricName": m.get("metricName") if isinstance(m, dict) else "", "information": info})
+        out.append({"metricName": m.get("metricName") if isinstance(m, dict) else "",
+                    "information": _clarity_merge(info)})
+    return out
+
+
+def _clarity_num(v):
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def _clarity_url(v: str) -> str:
+    # אותו עמוד מגיע בכמה כתיבים: מקודד/עברית, עם/בלי / בסוף, אותיות גדולות בדומיין
+    v = urllib.parse.unquote(v)
+    if v.startswith("http"):
+        pr = urllib.parse.urlsplit(v)
+        v = pr.scheme + "://" + pr.netloc.lower() + (pr.path.rstrip("/") or "/")
+    return v
+
+
+def _clarity_merge(info):
+    """קלריטי מחזיר שורה לכל כתובת מלאה, כולל פרמטרים (fbclid, gclid, utm) שייחודיים
+    לכל הקלקה על מודעה. אחרי שהפרמטרים נחתכים, עמוד אחד מתפצל למאות שורות.
+    כאן הן מאוחדות: ספירות מסוכמות, אחוזים וממוצעים לפי משקל הביקורים של כל שורה.
+    בלי זה המסך הציג רק את השורה האחרונה (12 ביקורים לעמוד מתוך 15 אלף)."""
+    groups, order = {}, []
+    for r in info:
+        key = []
+        for k, v in r.items():
+            if isinstance(v, str) and _clarity_num(v) is None:
+                if v.startswith("http") or v.startswith("/"):
+                    v = _clarity_url(v)
+                    r[k] = v
+                key.append((k, v))
+        key = tuple(sorted(key))
+        if key not in groups:
+            groups[key] = []
+            order.append(key)
+        groups[key].append(r)
+    out = []
+    for key in order:
+        rows = groups[key]
+        if len(rows) == 1:
+            out.append(rows[0])
+            continue
+        merged = dict(key)
+        w = [(_clarity_num(r.get("sessionsCount") or r.get("totalSessionCount")) or 1) for r in rows]
+        num_keys = {k for r in rows for k, v in r.items() if k not in merged and _clarity_num(v) is not None}
+        for k in num_keys:
+            vals = [(_clarity_num(r.get(k)), wi) for r, wi in zip(rows, w) if _clarity_num(r.get(k)) is not None]
+            kl = k.lower()
+            if "percentage" in kl or "average" in kl or kl.endswith("time"):
+                tw = sum(wi for _, wi in vals) or 1
+                merged[k] = round(sum(v * wi for v, wi in vals) / tw, 2)
+            else:
+                merged[k] = sum(v for v, _ in vals)
+        out.append(merged)
     return out
 
 
