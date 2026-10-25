@@ -845,20 +845,15 @@ def _clarity_merge(info):
     return out
 
 
-def _clarity_fetch(days: int, dim: str):
-    key = (days, dim)
-    now = time.time()
+def _clarity_call(days: int, dim: str):
+    """קריאה אחת לקלריטי, בתוך תקרת היום. מחזיר (rows, "") או (None, הודעה).
+    יום התקרה לפי UTC: כנראה זה גם היום של קלריטי, והוא מתחלף ב-02:00/03:00 שעון ישראל."""
     with _clarity_lock:
-        hit = _clarity_cache.get(key)
-        if hit and now - hit[0] < CLARITY_TTL:
-            return hit[1], hit[0], ""
-        today = dt.datetime.now(IL).strftime("%Y-%m-%d")
-        if _clarity_budget["day"] != today:
-            _clarity_budget.update(day=today, used=0)
+        day = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
+        if _clarity_budget["day"] != day:
+            _clarity_budget.update(day=day, used=0)
         if _clarity_budget["used"] >= CLARITY_DAY_CAP:
-            if hit:
-                return hit[1], hit[0], "נוצלו הקריאות של היום — מוצג העדכון האחרון"
-            return None, None, "נוצלו הקריאות של היום לקלריטי. מחר בבוקר יתעדכן."
+            return None, "נוצלו הקריאות של היום לקלריטי. מחר בבוקר יתעדכן."
         _clarity_budget["used"] += 1
     q = {"numOfDays": str(days)}
     if _CLARITY_DIMS.get(dim):
@@ -869,20 +864,122 @@ def _clarity_fetch(days: int, dim: str):
                                           "User-Agent": "divani-bi/1.0"})
     try:
         with urllib.request.urlopen(req, timeout=40) as r:
-            rows = _clarity_clean(json.loads(r.read().decode("utf-8")))
+            return _clarity_clean(json.loads(r.read().decode("utf-8"))), ""
     except urllib.error.HTTPError as e:
-        if hit:
-            return hit[1], hit[0], "קלריטי לא ענה (קוד %s) — מוצג העדכון האחרון" % e.code
-        msg = {401: "המפתח של קלריטי לא תקין או פג.", 403: "המפתח של קלריטי לא תקין או פג.",
-               429: "נוצלו הקריאות של היום לקלריטי. מחר בבוקר יתעדכן."}.get(e.code, "קלריטי לא ענה (קוד %s)." % e.code)
-        return None, None, msg
+        return None, {401: "המפתח של קלריטי לא תקין או פג.", 403: "המפתח של קלריטי לא תקין או פג.",
+                      429: "נוצלו הקריאות של היום לקלריטי. מחר בבוקר יתעדכן."}.get(
+                          e.code, "קלריטי לא ענה (קוד %s)." % e.code)
     except Exception as e:
+        return None, "קלריטי לא ענה: " + type(e).__name__
+
+
+def _clarity_db_get(day: str, key: str):
+    try:
+        r = sb_select("bi_clarity_daily?select=metrics,fetched_at&day=eq.%s&dim=eq.%s"
+                      % (day, urllib.parse.quote(key)))
+        return r[0] if r else None
+    except Exception:
+        return None
+
+
+def _clarity_db_put(day: str, key: str, rows):
+    try:
+        sb_upsert("bi_clarity_daily?on_conflict=day,dim",
+                  [{"day": day, "dim": key, "metrics": rows,
+                    "fetched_at": dt.datetime.now(dt.timezone.utc).isoformat()}])
+        return True
+    except Exception as e:
+        print("clarity save failed:", repr(e)[:200], flush=True)
+        return False
+
+
+def _clarity_fetch(days: int, dim: str):
+    """נתוני "חי" (1 או 3 ימים אחרונים). נשמרים בזיכרון ובמסד 6 שעות, כך שהעלאה
+    מחדש של השרת לא שורפת שוב קריאות מתוך ה-10 של היום."""
+    key = (days, dim)
+    now = time.time()
+    with _clarity_lock:
+        hit = _clarity_cache.get(key)
+    if not hit:
+        row = _clarity_db_get(dt.datetime.now(IL).date().isoformat(), "live%d:%s" % (days, dim))
+        if row:
+            try:
+                at = dt.datetime.fromisoformat(row["fetched_at"].replace("Z", "+00:00")).timestamp()
+                hit = (at, row["metrics"])
+                with _clarity_lock:
+                    _clarity_cache[key] = hit
+            except Exception:
+                pass
+    if hit and now - hit[0] < CLARITY_TTL:
+        return hit[1], hit[0], ""
+    rows, err = _clarity_call(days, dim)
+    if rows is None:
         if hit:
-            return hit[1], hit[0], "קלריטי לא ענה — מוצג העדכון האחרון"
-        return None, None, "קלריטי לא ענה: " + type(e).__name__
+            return hit[1], hit[0], err + " — מוצג העדכון האחרון"
+        return None, None, err
     with _clarity_lock:
         _clarity_cache[key] = (now, rows)
+    _clarity_db_put(dt.datetime.now(IL).date().isoformat(), "live%d:%s" % (days, dim), rows)
     return rows, now, ""
+
+
+# ---- שמירה לילית: היסטוריה שקלריטי עצמו לא שומר (דורון, 25.10.2026) ----
+# קלריטי מוסר רק 1–3 ימים אחרונים. כל לילה אחרי 03:30 (אחרי שהתקרה של קלריטי
+# מתאפסת) הינשוף מושך "24 השעות האחרונות" לכל מבט ושומר כ"יום של אתמול".
+# 4 קריאות בלילה מתוך 10. ממנה בונים כל תקופה: שבוע, חודש, מתאריך עד תאריך.
+CLARITY_NIGHT_AT = (3, 30)
+_clarity_night = {"done": None}
+
+
+def sync_clarity_daily():
+    if not CLARITY_TOKEN:
+        return
+    now = dt.datetime.now(IL)
+    if (now.hour, now.minute) < CLARITY_NIGHT_AT or _clarity_night["done"] == now.date():
+        return
+    day = (now.date() - dt.timedelta(days=1)).isoformat()
+    try:
+        have = {r["dim"] for r in sb_select("bi_clarity_daily?select=dim&day=eq." + day) or []}
+    except Exception as e:
+        print("clarity daily: table read failed:", repr(e)[:200], flush=True)
+        return
+    for dim in _CLARITY_DIMS:
+        if dim in have:
+            continue
+        rows, err = _clarity_call(1, dim)
+        if rows is None:
+            print("clarity daily %s/%s: %s" % (day, dim or "total", err), flush=True)
+            return                       # ננסה שוב בסבב הבא (כל 15 דקות)
+        if not _clarity_db_put(day, dim, rows):
+            return
+        have.add(dim)
+    _clarity_night["done"] = now.date()
+
+
+def _clarity_range(f: str, t: str, dim: str):
+    """איחוד ימים שמורים לתקופה אחת: ספירות מסוכמות, אחוזים בשקלול ביקורים
+    (אותו _clarity_merge שמאחד כתובות). "גולשים שונים" מסוכם, אז גולש שחזר בכמה
+    ימים נספר יותר מפעם אחת."""
+    rows = sb_select("bi_clarity_daily?select=day,metrics&dim=eq.%s&day=gte.%s&day=lte.%s&order=day.asc"
+                     % (urllib.parse.quote(dim), f, t)) or []
+    by_metric, order = {}, []
+    for r in rows:
+        for m in r.get("metrics") or []:
+            name = m.get("metricName") or ""
+            if name not in by_metric:
+                by_metric[name] = []
+                order.append(name)
+            by_metric[name].extend(dict(x) for x in (m.get("information") or []))
+    return [{"metricName": n, "information": _clarity_merge(by_metric[n])} for n in order], len(rows)
+
+
+def _clarity_avail():
+    try:
+        a = sb_select("bi_clarity_daily?select=day&dim=eq.&order=day.asc&limit=1") or []
+        b = sb_select("bi_clarity_daily?select=day&dim=eq.&order=day.desc&limit=1") or []
+        return {"min": a[0]["day"], "max": b[0]["day"]} if a and b else None
+    except Exception:
+        return None
 
 
 def _keren_bar(request: Request) -> str:
@@ -937,19 +1034,41 @@ def clarity_page(request: Request):
 
 
 @app.get("/api/clarity")
-def api_clarity(request: Request, days: int = 3, dim: str = ""):
+def api_clarity(request: Request, days: int = 3, dim: str = "", f: str = "", t: str = ""):
+    """days=1/3: חי מקלריטי. f/t (YYYY-MM-DD): מהשמירה הלילית, בלי לגעת במכסה."""
     if not _logged_in(request):
         return JSONResponse({"error": "auth"}, status_code=401)
     if not CLARITY_TOKEN:
         return JSONResponse({"error": "חסר מפתח של קלריטי (CLARITY_TOKEN ב-Render)."})
-    days = 1 if days <= 1 else (2 if days == 2 else 3)
     dim = dim if dim in _CLARITY_DIMS else ""
+    if f:
+        try:
+            d0 = dt.date.fromisoformat(f)
+            d1 = dt.date.fromisoformat(t) if t else d0
+        except ValueError:
+            return JSONResponse({"error": "תאריך לא תקין."}, status_code=400)
+        if d1 < d0:
+            d0, d1 = d1, d0
+        try:
+            rows, n = _clarity_range(d0.isoformat(), d1.isoformat(), dim)
+        except Exception:
+            return JSONResponse({"error": "השמירה הלילית עוד לא הופעלה (חסרה הטבלה bi_clarity_daily).",
+                                 "avail": None})
+        avail = _clarity_avail()
+        if not n:
+            return JSONResponse({"error": "אין נתונים שמורים לתקופה הזו. השמירה הלילית התחילה "
+                                          + (("ב-" + avail["min"]) if avail else "רק עכשיו")
+                                          + ", ומה שלפני כן קלריטי לא מוסר.", "avail": avail})
+        return JSONResponse({"from": d0.isoformat(), "to": d1.isoformat(), "dim": dim, "metrics": rows,
+                             "stored_days": n, "span_days": (d1 - d0).days + 1, "avail": avail,
+                             "at": "", "note": ""}, headers={"Cache-Control": "no-store"})
+    days = 1 if days <= 1 else 3
     rows, at, note = _clarity_fetch(days, dim)
     if rows is None:
-        return JSONResponse({"error": note})
+        return JSONResponse({"error": note, "avail": _clarity_avail()})
     at_il = dt.datetime.fromtimestamp(at, IL).strftime("%d.%m %H:%M")
-    return JSONResponse({"days": days, "dim": dim, "metrics": rows, "at": at_il, "note": note},
-                        headers={"Cache-Control": "no-store"})
+    return JSONResponse({"days": days, "dim": dim, "metrics": rows, "at": at_il, "note": note,
+                         "avail": _clarity_avail()}, headers={"Cache-Control": "no-store"})
 
 
 @app.get("/abandoned")
@@ -2391,6 +2510,10 @@ def _refresher():
                     _job_mark("site_cert", today)
                 except Exception as e:
                     print("site-cert check failed:", repr(e)[:300], flush=True)
+            try:
+                sync_clarity_daily()
+            except Exception as e:
+                print("clarity-daily failed:", repr(e)[:300], flush=True)
             if now.hour >= PRICE_HOUR and _due(last_prices, "part_prices", today):
                 try:
                     sync_part_prices()
