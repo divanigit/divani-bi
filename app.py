@@ -139,7 +139,19 @@ def _keren_token() -> str:
     return hmac.new(DASH_PASS_KEREN.encode("utf-8"), b"divani-bi-keren-v1", hashlib.sha256).hexdigest()
 
 
+# בעלים יכול לראות את הינשוף בדיוק כמו קרן (דורון, 25.10.2026): כפתור "קרן" במסך הראשי
+# שם עוגייה נפרדת. כל עוד היא קיימת, השרת מתייחס אליו כאל קרן לכל דבר — אותם שערים,
+# אותו סינון — ולא כבעלים. העוגייה לבדה לא שווה כלום: בלי עוגיית בעלים אמיתית היא נבדקת ונזרקת.
+PREVIEW_COOKIE = "dvbi_as"
+
+
+def _keren_preview(request: Request) -> bool:
+    return request.cookies.get(PREVIEW_COOKIE, "") == "keren" and _is_admin(request, raw=True)
+
+
 def _is_keren(request: Request) -> bool:
+    if _keren_preview(request):
+        return True
     if not DASH_PASS_KEREN:
         return False
     tok = request.cookies.get(COOKIE_NAME, "")
@@ -171,11 +183,14 @@ def _can_ask(request: Request) -> bool:
     return _is_admin(request) or _is_ask2(request)
 
 
-def _is_admin(request: Request) -> bool:
+def _is_admin(request: Request, raw: bool = False) -> bool:
     # Two credentials carry owner rights, each with its own cookie value. The
     # empty check per entry is not decoration: an unset env var would otherwise
     # produce a real digest of the empty key, and anyone able to compute it
     # would be an owner.
+    # raw=True: מי הוא באמת, גם כשהוא כרגע רואה את הינשוף כמו קרן
+    if not raw and request.cookies.get(PREVIEW_COOKIE, "") == "keren":
+        return False
     tok = request.cookies.get(COOKIE_NAME, "")
     if DASH_PASS_ADMIN and hmac.compare_digest(tok, _admin_token()):
         return True
@@ -432,7 +447,7 @@ _YZ_PAGE_BLOCK = {"/agent-report", "/conversion", "/traffic", "/customers", "/ab
 # קרן, ספקית האתר (דורון, 20.10.2026): רק בריאות האתר וקלריטי. אין לה גישה לשמות
 # לקוחות — לא מכירות, לא נטישות, לא יומן ההודעות הפנימי. רשימה מותרת בלבד: כל
 # כתובת אחרת, גם שתתווסף בעתיד, חוסמת. דף הבית מעביר אותה לבריאות האתר.
-_KR_PAGE_ALLOW = {"/site", "/clarity", "/logout", "/login"}
+_KR_PAGE_ALLOW = {"/site", "/clarity", "/logout", "/login", "/view-as/off"}
 _KR_API_ALLOW = {"/api/site", "/api/site/now", "/api/site/drill", "/api/clarity"}
 # התראות שקרן רואה: רק של האתר עצמו. התראת מכירה/עגלה יכולה לשאת שם לקוח בגוף ההודעה.
 _KR_ALERT_KINDS = {"down", "slow", "cert"}
@@ -538,6 +553,7 @@ def site_health(request: Request):
         "true" if _is_noprofit(request) else "false",
         "true" if _is_admin(request) else "false")
     if _is_keren(request):
+        role += _keren_bar(request)
         # קרן: בלי תפריט הינשוף, בלי יומן ההודעות הפנימי ובלי "ראיתי"; במקומם קישור לקלריטי
         role += ('<script>window.OWL_KEREN=1;</script>'
                  '<style>.owlham,.card:has(#msgList),.alertbar .ax{display:none!important}</style>')
@@ -812,6 +828,39 @@ def _clarity_fetch(days: int, dim: str):
     return rows, now, ""
 
 
+def _keren_bar(request: Request) -> str:
+    """פס עליון כשבעלים רואה כמו קרן — כדי שלא ישכח באיזו תצוגה הוא, ודרך חזרה בלחיצה."""
+    if not _keren_preview(request):
+        return ""
+    return ('<style>#krbar{position:sticky;top:0;z-index:200;background:#4a3aa7;color:#fff;'
+            'font:600 14px system-ui,sans-serif;padding:10px 16px;display:flex;gap:12px;'
+            'align-items:center;justify-content:space-between;direction:rtl}'
+            '#krbar a{color:#fff;background:rgba(255,255,255,.18);padding:6px 12px;'
+            'border-radius:999px;text-decoration:none;white-space:nowrap}</style>'
+            '<script>document.addEventListener("DOMContentLoaded",function(){'
+            'var b=document.createElement("div");b.id="krbar";'
+            'b.innerHTML="<span>אתה רואה את הינשוף בדיוק כמו קרן</span>'
+            '<a href=\\"/view-as/off\\">חזרה לתצוגה שלי</a>";'
+            'document.body.insertBefore(b,document.body.firstChild);});</script>')
+
+
+@app.get("/view-as/keren")
+def view_as_keren(request: Request):
+    if not _is_admin(request, raw=True):
+        return RedirectResponse("/", status_code=303)
+    resp = RedirectResponse("/site", status_code=303)
+    resp.set_cookie(PREVIEW_COOKIE, "keren", max_age=8 * 3600, httponly=True,
+                    secure=True, samesite="lax")
+    return resp
+
+
+@app.get("/view-as/off")
+def view_as_off(request: Request):
+    resp = RedirectResponse("/", status_code=303)
+    resp.delete_cookie(PREVIEW_COOKIE)
+    return resp
+
+
 @app.get("/clarity")
 def clarity_page(request: Request):
     """קלריטי — איך גולשים מתנהגים באתר: ביקורים, גלילה, הקלקות כועסות, שגיאות. בלי שמות לקוחות."""
@@ -827,6 +876,7 @@ def clarity_page(request: Request):
         "true" if _is_noprofit(request) else "false",
         "true" if _is_admin(request) else "false",
         "true" if _is_keren(request) else "false")
+    role += _keren_bar(request)
     html = html.replace("</head>", role + chr(10) + "</head>", 1)
     return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
@@ -2656,6 +2706,7 @@ def nav_preview(request: Request):
 def logout():
     resp = RedirectResponse("/login", status_code=303)
     resp.delete_cookie(COOKIE_NAME)
+    resp.delete_cookie(PREVIEW_COOKIE)
     return resp
 
 
