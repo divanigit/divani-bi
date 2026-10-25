@@ -1266,6 +1266,74 @@ def api_ordersearch(request: Request, q: str = ""):
                         headers={"Cache-Control": "no-store"})
 
 
+# פרטי לקוח מלאים להזמנה (דורון, 25.10.2026: "אני צריך שייתן את כל הפרטים המזהים כולל
+# טלפונים. הכל"). נשלף מפריוריטי בזמן הצפייה בלבד ולא נשמר אצלנו — הטלפון של לקוחות
+# פריוריטי לא נכנס למסד (מזעור מידע). בלי $select: שדה שלא קיים בפריוריטי מחזיר 400
+# ומפיל את כל הבקשה (לקח CELLPHONE מ-17.9), ולכן מושכים הכל ובוחרים כאן.
+_OS_ID_FIELD = re.compile(r"PHONE|TEL|FAX|MAIL|ADDR|CITY|STATE|ZIP|COUNTRY|CUSTDES|CDES|NAME|SPEC2|"
+                          r"WTAXNUM|VATNUM|IDNUM|CONTACT|NOTE|REMARK|SHIP|DETAILS", re.I)
+_OS_LABELS = {"CUSTDES": "שם", "CDES": "שם", "CUSTNAME": "מס' לקוח", "PHONE": "טלפון", "SPEC2": "טלפון נוסף",
+              "FAX": "פקס", "EMAIL": "מייל", "ADDRESS": "כתובת", "ADDRESS2": "כתובת 2", "ADDRESS3": "כתובת 3",
+              "STATE": "עיר", "STATEA": "עיר", "CITYNAME": "עיר", "ZIP": "מיקוד", "COUNTRYNAME": "ארץ",
+              "WTAXNUM": "ת.ז./ח.פ.", "VATNUM": "מספר עוסק", "PHONENUM": "טלפון", "CELLPHONE": "נייד",
+              "NAME": "שם איש קשר", "ORDNAME": "מס' הזמנה", "DETAILS": "פרטים", "SHIPREMARK": "הערת משלוח"}
+
+
+def _os_pri_get(path):
+    auth = "Basic " + base64.b64encode(f"{PRI_USER}:{PRI_PASS}".encode("utf-8")).decode("ascii")
+    j = json.loads(_http(f"{PRI_BASE}/{path}", {"Authorization": auth, "Accept": "application/json"},
+                         timeout=60).decode("utf-8"))
+    return j.get("value", []) if isinstance(j, dict) else []
+
+
+def _os_pick(rec):
+    out = []
+    for k, v in (rec or {}).items():
+        if isinstance(v, (int, float)) and not isinstance(v, bool) and k in ("ZIP",):
+            v = str(v)
+        if not isinstance(v, str) or not v.strip() or not _OS_ID_FIELD.search(k):
+            continue
+        if k.endswith("_SUBFORM"):
+            continue
+        out.append({"k": _OS_LABELS.get(k, k), "v": v.strip(), "f": k})
+    return out
+
+
+@app.get("/api/ordersearch/detail")
+def api_ordersearch_detail(request: Request, ord: str = "", cn: str = ""):
+    if not _is_admin(request):
+        return JSONResponse({"error": "auth"}, status_code=403)
+    if not (PRI_BASE and PRI_USER):
+        return JSONResponse({"error": "אין חיבור לפריוריטי."})
+    o = re.sub(r"[^A-Za-z0-9_-]", "", ord or "")[:30]
+    c = re.sub(r"[^A-Za-z0-9_-]", "", cn or "")[:30]
+    out = {"cust": [], "order": [], "ship": [], "errors": []}
+    if c:
+        try:
+            recs = _os_pri_get("CUSTOMERS?$filter=CUSTNAME%20eq%20'" + urllib.parse.quote(c) + "'")
+            out["cust"] = _os_pick(recs[0]) if recs else []
+        except Exception as e:
+            out["errors"].append("כרטיס לקוח: " + type(e).__name__)
+    if o:
+        recs = []
+        try:
+            recs = _os_pri_get("ORDERS?$filter=ORDNAME%20eq%20'" + urllib.parse.quote(o) + "'&$expand=SHIPTO2_SUBFORM")
+        except Exception:
+            try:
+                recs = _os_pri_get("ORDERS?$filter=ORDNAME%20eq%20'" + urllib.parse.quote(o) + "'")
+            except Exception as e:
+                out["errors"].append("הזמנה: " + type(e).__name__)
+        if recs:
+            r0 = recs[0]
+            out["order"] = [x for x in _os_pick(r0) if x["f"] not in ("CDES", "CUSTNAME", "ORDNAME", "AGENTNAME", "BRANCHNAME")]
+            ship = r0.get("SHIPTO2_SUBFORM")
+            if isinstance(ship, dict):
+                ship = [ship]
+            for srec in ship or []:
+                out["ship"] += _os_pick(srec)
+    return JSONResponse(out, headers={"Cache-Control": "no-store"})
+
+
 @app.get("/orders")
 def orders_page(request: Request):
     """חיפוש הזמנות — לבעלים בלבד."""
