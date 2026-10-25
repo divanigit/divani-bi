@@ -886,19 +886,17 @@ def _clarity_fetch(days: int, dim: str):
 
 
 def _keren_bar(request: Request) -> str:
-    """פס עליון כשבעלים רואה כמו קרן — כדי שלא ישכח באיזו תצוגה הוא, ודרך חזרה בלחיצה."""
+    """תגית קטנה "קרן" בפינה השמאלית העליונה כשבעלים רואה כמו קרן. לחיצה עליה מחזירה
+    לתצוגה שלו (דורון, 25.10.2026: במקום פס רחב — הוא יודע שזה הכפתור לחזרה)."""
     if not _keren_preview(request):
         return ""
-    return ('<style>#krbar{position:sticky;top:0;z-index:200;background:#4a3aa7;color:#fff;'
-            'font:600 14px system-ui,sans-serif;padding:10px 16px;display:flex;gap:12px;'
-            'align-items:center;justify-content:space-between;direction:rtl}'
-            '#krbar a{color:#fff;background:rgba(255,255,255,.18);padding:6px 12px;'
-            'border-radius:999px;text-decoration:none;white-space:nowrap}</style>'
+    return ('<style>#krbar{position:fixed;top:8px;left:8px;z-index:200;background:#4a3aa7;color:#fff;'
+            'font:600 12px system-ui,sans-serif;padding:4px 10px;border-radius:999px;'
+            'text-decoration:none;opacity:.9}</style>'
             '<script>document.addEventListener("DOMContentLoaded",function(){'
-            'var b=document.createElement("div");b.id="krbar";'
-            'b.innerHTML="<span>אתה רואה את הינשוף בדיוק כמו קרן</span>'
-            '<a href=\\"/view-as/off\\">חזרה לתצוגה שלי</a>";'
-            'document.body.insertBefore(b,document.body.firstChild);});</script>')
+            'var b=document.createElement("a");b.id="krbar";b.href="/view-as/off";'
+            'b.title="חזרה לתצוגה שלי";b.textContent="קרן";'
+            'document.body.appendChild(b);});</script>')
 
 
 @app.get("/view-as/keren")
