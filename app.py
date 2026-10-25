@@ -480,22 +480,46 @@ _KR_ID_STR = {"c", "cn", "cd", "cdes", "cust", "custname", "customer", "name", "
 _KR_ID_DROP = {"agents", "customers", "cust_list", "orders_list", "other_orders"}
 
 
-def _kr_scrub(x):
+def _kr_scrub(x, _maps=None):
+    """מחיקת פרטים מזהים. לקוח והזמנה מקבלים כינוי ("לקוח 7", "הזמנה 3") ולא מחרוזת
+    ריקה: המסך סופר לקוחות ומחשב ממוצע ללקוח לפי מספר הלקוח, וריקון איחד את כולם
+    ללקוח אחד (דורון ראה "לקוחות 1" וממוצע ששווה לכל המכירות, 25.10.2026).
+    הכינוי עקבי בתוך תשובה אחת בלבד, ולכן לא ניתן לחבר אותו ללקוח אמיתי."""
+    if _maps is None:
+        _maps = {"c": {}, "o": {}}
+
+    def alias(kind, key):
+        m = _maps[kind]
+        if key not in m:
+            m[key] = len(m) + 1
+        return m[key]
+
     if isinstance(x, dict):
+        cust = x.get("cn") if isinstance(x.get("cn"), str) and x.get("cn") else None
+        if cust is None and isinstance(x.get("c"), str) and x.get("c"):
+            cust = x.get("c")
+        if cust is not None:
+            n = alias("c", cust)
+            if isinstance(x.get("cn"), str):
+                x["cn"] = "k%d" % n
+            if isinstance(x.get("c"), str):
+                x["c"] = "לקוח %d" % n
+        if isinstance(x.get("o"), str) and x.get("o"):
+            x["o"] = "הזמנה %d" % alias("o", x["o"])
         for k in list(x.keys()):
             v = x[k]
+            if k in ("c", "cn", "o"):
+                continue
             if k in _KR_ID_DROP and isinstance(v, (list, dict)):
                 x.pop(k)
             elif k in _KR_ID_STR and isinstance(v, str):
-                x[k] = "לקוחות" if k == "c" else ""
+                x[k] = ""
             else:
-                _kr_scrub(v)
+                _kr_scrub(v, _maps)
     elif isinstance(x, list):
         for v in x:
-            _kr_scrub(v)
+            _kr_scrub(v, _maps)
     return x
-# התראות שקרן רואה: רק של האתר עצמו. התראת מכירה/עגלה יכולה לשאת שם לקוח בגוף ההודעה.
-_KR_ALERT_KINDS = {"down", "slow", "cert"}
 
 
 def _kr_alerts(rows):
