@@ -4978,8 +4978,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(isKeren()){
       var sgk=document.getElementById('seg');
       if(sgk){
+        var seenk={};
         Array.prototype.slice.call(sgk.querySelectorAll('button')).forEach(function(b){
-          if(!KR_KEEP[b.getAttribute('data-v')||''])b.remove();
+          var dv=b.getAttribute('data-v')||'';
+          if(!KR_KEEP[dv]||seenk[dv])b.remove(); else seenk[dv]=1;   // "מכירות האתר" מופיע פעמיים בתפריט
         });
         Array.prototype.slice.call(sgk.querySelectorAll('.navgroup')).forEach(function(g){
           var n=g.nextElementSibling;
