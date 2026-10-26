@@ -845,7 +845,7 @@ CLARITY_TTL = 6 * 3600
 CLARITY_DAY_CAP = 9
 _CLARITY_DIMS = {"": None, "url": "URL", "device": "Device", "browser": "Browser"}
 _clarity_cache = {}                       # (days, dim) -> (fetched_at, rows)
-_clarity_budget = {"day": "", "used": 0}
+_clarity_budget = {"day": "", "used": 0, "block": 0.0, "last": ""}
 _clarity_lock = threading.Lock()
 # עמודים שיכולים לשאת פרטי לקוח (הזמנה, חשבון) — לא מוצגים בכלל
 _CLARITY_PRIVATE = re.compile(r"order-received|my-account|view-order|lost-password|order-pay|/wp-admin", re.I)
@@ -942,6 +942,8 @@ def _clarity_call(days: int, dim: str):
         day = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d")
         if _clarity_budget["day"] != day:
             _clarity_budget.update(day=day, used=0)
+        if time.time() < _clarity_budget["block"]:
+            return None, "קלריטי סירב בקריאה האחרונה — מנסים שוב בעוד פחות משעה."
         if _clarity_budget["used"] >= CLARITY_DAY_CAP:
             return None, "נוצלו הקריאות של היום לקלריטי. מחר בבוקר יתעדכן."
         _clarity_budget["used"] += 1
@@ -954,13 +956,31 @@ def _clarity_call(days: int, dim: str):
                                           "User-Agent": "divani-bi/1.0"})
     try:
         with urllib.request.urlopen(req, timeout=40) as r:
-            return _clarity_clean(json.loads(r.read().decode("utf-8"))), ""
+            rows = _clarity_clean(json.loads(r.read().decode("utf-8")))
+        _clarity_budget["last"] = "ok " + dt.datetime.now(IL).strftime("%d.%m %H:%M")
+        return rows, ""
     except urllib.error.HTTPError as e:
+        # 26.10: הקלריטי סירב בלילה, והשמירה הלילית ניסתה כל 15 דקות. כל סירוב נספר
+        # בתקרה, אז עד 05:45 התקרה נגמרה בלי שום תשובה, והינשוף לא ניסה שוב עד מחר.
+        # סירוב (429/401/403) לא נספר, ואחריו מחכים שעה לפני שמנסים שוב.
+        with _clarity_lock:
+            _clarity_budget["last"] = "HTTP %s %s" % (e.code, dt.datetime.now(IL).strftime("%d.%m %H:%M"))
+            if e.code in (401, 403, 429):
+                _clarity_budget["used"] = max(0, _clarity_budget["used"] - 1)
+                _clarity_budget["block"] = time.time() + 3600
         return None, {401: "המפתח של קלריטי לא תקין או פג.", 403: "המפתח של קלריטי לא תקין או פג.",
                       429: "נוצלו הקריאות של היום לקלריטי. מחר בבוקר יתעדכן."}.get(
                           e.code, "קלריטי לא ענה (קוד %s)." % e.code)
     except Exception as e:
+        _clarity_budget["last"] = "%s %s" % (type(e).__name__, dt.datetime.now(IL).strftime("%d.%m %H:%M"))
         return None, "קלריטי לא ענה: " + type(e).__name__
+
+
+def _clarity_state():
+    """מצב הקריאות לקלריטי, לבדיקה: כמה נוצלו היום, מה קרה בקריאה האחרונה."""
+    b = _clarity_budget
+    return {"used": b["used"], "cap": CLARITY_DAY_CAP, "last": b["last"],
+            "retry_at": dt.datetime.fromtimestamp(b["block"], IL).strftime("%H:%M") if b["block"] > time.time() else ""}
 
 
 def _clarity_db_get(day: str, key: str):
@@ -1408,7 +1428,7 @@ def api_clarity(request: Request, days: int = 3, dim: str = "", f: str = "", t: 
     days = 1 if days <= 1 else 3
     rows, at, note = _clarity_fetch(days, dim)
     if rows is None:
-        return JSONResponse({"error": note, "avail": _clarity_avail()})
+        return JSONResponse({"error": note, "avail": _clarity_avail(), "state": _clarity_state()})
     at_il = dt.datetime.fromtimestamp(at, IL).strftime("%d.%m %H:%M")
     cover = None
     if dim == "url":
@@ -1417,7 +1437,7 @@ def api_clarity(request: Request, days: int = 3, dim: str = "", f: str = "", t: 
         main = _clarity_cache.get((days, ""))
         cover = _clarity_cover(main[1] if main else [], rows)
     return JSONResponse({"days": days, "dim": dim, "metrics": rows, "at": at_il, "note": note, "cover": cover,
-                         "avail": _clarity_avail()}, headers={"Cache-Control": "no-store"})
+                         "avail": _clarity_avail(), "state": _clarity_state()}, headers={"Cache-Control": "no-store"})
 
 
 @app.get("/abandoned")
