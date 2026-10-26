@@ -1083,6 +1083,28 @@ def _clarity_range(f: str, t: str, dim: str):
     return [{"metricName": n, "information": _clarity_merge(by_metric[n])} for n in order], len(rows)
 
 
+def _clarity_odd_note(f: str, t: str) -> str:
+    """יום שנשמר לא בלילה (קלריטי סירב, והשמירה הצליחה רק בהמשך) מכסה 24 שעות שמסתיימות
+    בשעת השמירה, לא יום קלנדרי מלא. התאריך לא משתנה, רק מסבירים (26.10.2026)."""
+    try:
+        rows = sb_select("bi_clarity_daily?select=day,fetched_at&dim=eq.&day=gte.%s&day=lte.%s&order=day.asc"
+                         % (f, t)) or []
+    except Exception:
+        return ""
+    odd = []
+    for r in rows:
+        try:
+            at = dt.datetime.fromisoformat(r["fetched_at"].replace("Z", "+00:00")).astimezone(IL)
+        except Exception:
+            continue
+        if not ((3, 30) <= (at.hour, at.minute) <= (5, 0)):
+            odd.append("%s (עד %s)" % (dt.date.fromisoformat(r["day"]).strftime("%d.%m"), at.strftime("%H:%M")))
+    if not odd:
+        return ""
+    return ("חלק מהימים מכסים 24 שעות שמסתיימות בשעת השמירה, לא יום קלנדרי מלא: "
+            + ", ".join(odd) + ".")
+
+
 def _clarity_cover(total_metrics, url_metrics):
     """כמה ביקורים נכנסו לפילוח לפי עמוד, מול הסה"כ."""
     tot = [r for m in (total_metrics or []) if m.get("metricName") == "Traffic" for r in m.get("information") or []]
@@ -1424,7 +1446,7 @@ def api_clarity(request: Request, days: int = 3, dim: str = "", f: str = "", t: 
                 pass
         return JSONResponse({"from": d0.isoformat(), "to": d1.isoformat(), "dim": dim, "metrics": rows,
                              "stored_days": n, "span_days": (d1 - d0).days + 1, "avail": avail,
-                             "cover": cover, "at": "", "note": ""}, headers={"Cache-Control": "no-store"})
+                             "cover": cover, "at": "", "note": _clarity_odd_note(d0.isoformat(), d1.isoformat())}, headers={"Cache-Control": "no-store"})
     days = 1 if days <= 1 else 3
     rows, at, note = _clarity_fetch(days, dim)
     if rows is None:
