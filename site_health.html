@@ -815,10 +815,11 @@ function nowSec(ms){ return ms == null ? '—' : (ms / 1000).toFixed(ms < 1000 ?
 /* מאיזה אתר הגיעו המדידות של "מהירות אצל לקוחות": האתר החי או משהו אחר (פיתוח) */
 function rumSrc(s){
   if (!s || !s.n || !s.hosts || !s.hosts.length) return '';
-  var live = function(h){ return h === 'vdivani.co.il' || h === 'www.vdivani.co.il'; };
+  /* התוסף כותב site = 'live' באתר החי (27.10: כל 1,000 המדידות האחרונות) */
+  var live = function(h){ return h === 'live' || h === 'vdivani.co.il' || h === 'www.vdivani.co.il'; };
   var other = s.hosts.filter(function(x){ return !live(x.host); });
   var t = s.test ? ' · מתוכן ' + s.test + ' מדידות בדיקה' : '';
-  if (!other.length) return '<br>מקור: האתר החי (vdivani.co.il) · כל ' + s.n + ' המדידות האחרונות' + t;
+  if (!other.length) return '<br>מקור: האתר החי · כל ' + s.n + ' המדידות האחרונות' + t;
   return '<br><span style="color:var(--warn,#b26a00)">מקור: ' + s.hosts.map(function(x){ return esc(x.host) + ' ' + x.n; }).join(' · ') + ' (מתוך ' + s.n + ' המדידות האחרונות)' + t + '</span>';
 }
 function renderNow(d){
