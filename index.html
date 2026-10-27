@@ -1176,6 +1176,8 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         });
         return {n:ag.n,s:ag.s,profit:ag.profit,pm:ag.s>0?100*ag.profit/ag.s:null,k:custKids};
       });
+      // אתר דיוואני: רמת הנציג מיותרת (כל הזמנות האתר על רום) — ישר ללקוחות (דורון 27.10.2026)
+      if(String(br.raw)==='103'){agKids=[].concat.apply([],agKids.map(function(a){return a.k||[];}));}
       return {n:br.n,rawk:br.raw,s:bs,profit:bp,pm:bs>0?100*bp/bs:null,c:Object.keys(br.custIds).length,k:agKids};
     });
     var ts=0,tp=0;kids.forEach(function(a){ts+=a.s;tp+=a.profit;});
