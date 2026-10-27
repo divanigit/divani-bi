@@ -1709,6 +1709,103 @@ def priority_pull(d_from: dt.date, d_to: dt.date):
     return n_orders, rows
 
 
+# ---------- מכירות האתר בזמן אמת (דורון 27.10.2026, שאלה 116 = א) ----------
+# הזמנת אתר ששולמה באשראי (processing/completed) ועדיין לא הוקלדה לפריוריטי נכנסת מיד
+# ל-bi_order_lines כהזמנה זמנית (ordname WEB<מספר>, src='web', סניף 103), בתאריך הכניסה
+# האמיתי באתר. כשההזמנה מופיעה בפריוריטי (webref) הזמנית נמחקת ופריוריטי מנצחת על התוכן;
+# התאריך נשאר תאריך האתר, ואם רום הקליד תאריך אחר נרשם pri_date (סימן קריאה אדום במסך).
+# התוכנית נבנית ב-SQL (bi_site_sales_plan, קריאה בלבד); הכתיבה כאן דרך REST, כי מחיקה
+# ב-SQL שנשלח מהכלים חסומה על ידי מגן הבטיחות. רווח זמני מעלות האתר (raw_price_-_base).
+WEB_VAT = 1.18
+
+
+def _sb_req(method, path, body=None, prefer="return=minimal"):
+    data = json.dumps(body, ensure_ascii=False).encode("utf-8") if body is not None else None
+    req = urllib.request.Request(f"{SB_URL}/rest/v1/{path}", data=data, method=method,
+                                 headers={"apikey": SB_KEY, "Authorization": "Bearer " + SB_KEY,
+                                          "Content-Type": "application/json", "Prefer": prefer})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        return r.read()
+
+
+def sb_delete(path):
+    return _sb_req("DELETE", path)
+
+
+def sb_patch(path, row):
+    return _sb_req("PATCH", path, row)
+
+
+_web_cost_cache = {}
+
+
+def woo_product_cost(auth, pid):
+    """עלות המוצר באתר — מטא raw_price_-_base (המדויק, דורון 27.9.26). None אם אין."""
+    if pid in _web_cost_cache:
+        return _web_cost_cache[pid]
+    cost = None
+    try:
+        req = urllib.request.Request(f"{WOO_API}/products/{pid}?_fields=meta_data",
+                                     headers={"Authorization": auth, "User-Agent": "divani-bi/1.0",
+                                              "Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            for m in (json.loads(r.read().decode("utf-8")).get("meta_data") or []):
+                if m.get("key") == "raw_price_-_base" and m.get("value") not in (None, ""):
+                    cost = float(m.get("value"))
+    except Exception:
+        cost = None
+    _web_cost_cache[pid] = cost
+    return cost
+
+
+def sync_site_sales(d_from, d_to):
+    plan = sb_rpc("bi_site_sales_plan", {"p_from": d_from.isoformat(), "p_to": d_to.isoformat()}) or {}
+    auth = _woo_auth()
+    n_ret = n_red = n_prov = 0
+    # 1. הזמנה זמנית שפריוריטי כבר קלטה (או שבוטלה באתר) — נמחקת
+    for on in (plan.get("retire") or []):
+        sb_delete("bi_order_lines?ordname=eq." + urllib.parse.quote(on))
+        n_ret += 1
+    # 2. הזמנת אתר בפריוריטי שתאריכה שונה מתאריך האתר — התאריך חוזר להיות של האתר, pri_date נרשם
+    for r in (plan.get("redate") or []):
+        on, pri, site = r["ordname"], r["pri_date"], r["site_date"]
+        q = urllib.parse.quote(on)
+        sb_delete(f"bi_order_lines?ordname=eq.{q}&ord_date=neq.{pri}")   # עותקים שכבר הוזזו בסבב קודם
+        sb_patch(f"bi_order_lines?ordname=eq.{q}&ord_date=eq.{pri}", {"ord_date": site, "pri_date": pri})
+        n_red += 1
+    # 3. הזמנות ששולמו ועדיין לא בפריוריטי — נכתבות מחדש כזמניות
+    for o in (plan.get("provisional") or []):
+        num = str(o["number"]); on = "WEB" + num; site = o["site_date"]
+        sb_delete("bi_order_lines?ordname=eq." + on)
+        base = {"ordname": on, "ord_date": site, "agent": "אתר (זמני)", "custname": "",
+                "cdes": (o.get("cdes") or "")[:120], "branch": "103", "status": "אתר-זמני",
+                "otype": "אתר דיוואני", "webref": num, "src": "web"}
+        rows, ln, lines_total = [], 0, 0.0
+        for li in (o.get("lines") or []):
+            tot = float(li.get("total") or 0); qty = float(li.get("qty") or 1)
+            net = round(tot / WEB_VAT, 2); lines_total += tot
+            cost = woo_product_cost(auth, li.get("pid")) if (auth and li.get("pid")) else None
+            profit = round(net - cost * qty, 2) if cost is not None else 0.0
+            rows.append(dict(base, partname=(li.get("partname") or f"WEB-{li.get('pid')}"),
+                             pdes=(li.get("name") or "")[:120], qprice=net, qprofit=profit,
+                             line_no=ln, tquant=qty, qprice_list=net, qprofit_list=profit)); ln += 1
+        ship = float(o.get("shipping") or 0)
+        if ship > 0:
+            net = round(ship / WEB_VAT, 2)
+            rows.append(dict(base, partname="DELWEB", pdes="הובלה (אתר)", qprice=net, qprofit=0,
+                             line_no=ln, tquant=1, qprice_list=net, qprofit_list=0)); ln += 1
+        fee = round(float(o.get("total") or 0) - lines_total - ship, 2)   # הרכבה/עמלה שמעל השורות
+        if fee > 0.5:
+            net = round(fee / WEB_VAT, 2)
+            rows.append(dict(base, partname="003", pdes="הרכבה/עמלה (אתר)", qprice=net, qprofit=0,
+                             line_no=ln, tquant=1, qprice_list=net, qprofit_list=0)); ln += 1
+        for row in rows:
+            sb_insert("bi_order_lines", row)
+        n_prov += 1
+    if n_ret or n_red or n_prov:
+        print(f"site-sales: provisional {n_prov}, redated {n_red}, retired {n_ret}", flush=True)
+
+
 def sync_window(kind: str, d_from: dt.date, d_to: dt.date, skip_if_empty: bool = False):
     t0 = time.time()
     n_orders, rows = priority_pull(d_from, d_to)
@@ -1726,6 +1823,12 @@ def sync_window(kind: str, d_from: dt.date, d_to: dt.date, skip_if_empty: bool =
         sb_rpc("bi_alloc_discounts", {"p_from": d_from.isoformat(), "p_to": d_to.isoformat()})
     except Exception as e:
         print("alloc-discounts failed:", repr(e)[:300], flush=True)
+    # מכירות האתר בזמן אמת — הזמנות ששולמו באשראי ועוד לא בפריוריטי, תאריך האתר, סימון פערי תאריך.
+    # מגודר: כשל כאן לעולם לא מפיל את הסנכרון.
+    try:
+        sync_site_sales(d_from, d_to)
+    except Exception as e:
+        print("site-sales failed:", repr(e)[:300], flush=True)
     took = int((time.time() - t0) * 1000)
     # A sale can use a SKU created minutes earlier (the generator mints them per order).
     # Until the catalog knows it, the line has no family and falls into the unclassified
