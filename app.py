@@ -1777,7 +1777,7 @@ def sync_site_sales(d_from, d_to):
     for o in (plan.get("provisional") or []):
         num = str(o["number"]); on = "WEB" + num; site = o["site_date"]
         sb_delete("bi_order_lines?ordname=eq." + on)
-        base = {"ordname": on, "ord_date": site, "agent": "אתר (זמני)", "custname": "",
+        base = {"ordname": on, "ord_date": site, "agent": "אתר (זמני)", "custname": (o.get("cust") or ("W" + num)),
                 "cdes": (o.get("cdes") or "")[:120], "branch": "103", "status": "אתר-זמני",
                 "otype": "אתר דיוואני", "webref": "", "src": "web"}   # בלי webref: הגשר של האתר לא רואה שורות זמניות; המספר בשם ההזמנה (WEB<מספר>)
         rows, ln, lines_total = [], 0, 0.0
