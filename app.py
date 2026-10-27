@@ -713,7 +713,10 @@ def _rum_hosts():
                         break
             h = (h or "לא ידוע").lower()
             hosts[h] = hosts.get(h, 0) + 1
-        v = {"n": len(rows), "hosts": sorted(({"host": k, "n": c} for k, c in hosts.items()), key=lambda x: -x["n"])}
+        known = {k: c for k, c in hosts.items() if k != "לא ידוע"}
+        # שמות השדות בלבד (בלי ערכים), כדי לדעת איפה הכתובת יושבת אם לא נמצאה
+        v = {"n": len(rows), "hosts": sorted(({"host": k, "n": c} for k, c in hosts.items()), key=lambda x: -x["n"])
+             if known else [], "cols": sorted({k for r in rows[:50] for k in r})}
     _rum_src.update(at=time.time(), v=v)
     return v
 
