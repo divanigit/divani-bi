@@ -279,7 +279,7 @@ html,body{overflow-x:hidden}
     <div class="now" id="now"><div class="nbox"><div class="k">האתר עכשיו</div><div class="v"><span class="dot n"></span>טוען…</div></div></div>
     <div class="npages" id="nowpages"></div>
     <p class="nowtick" id="nowtick"></p>
-    <p class="explain">"עכשיו" = סבב הבדיקה האחרון של הינשוף, כל דקה, ארבעה עמודים. "תגובת שרת" = כמה זמן עובר מהבקשה עד שהשרת מתחיל לענות: ירוק עד 0.5 שנ', צהוב עד 1.5, אדום מעל או כשעמוד לא עונה. "מהירות אצל לקוחות" = מה שגולשים אמיתיים חוו בשעה האחרונה, זמן עד תוכן ראשי, אחוזון 75 (מתחיל עם עליית התוסף לאתר החי). מתרענן לבד כל 60 שניות.</p>
+    <p class="explain">"עכשיו" = סבב הבדיקה האחרון של הינשוף, כל דקה, ארבעה עמודים. "תגובת שרת" = כמה זמן עובר מהבקשה עד שהשרת מתחיל לענות: ירוק עד 0.5 שנ', צהוב עד 1.5, אדום מעל או כשעמוד לא עונה. "מהירות אצל לקוחות" = מה שגולשים אמיתיים חוו בשעה האחרונה, זמן עד תוכן ראשי, אחוזון 75, נמדד בדפדפן של הגולש על ידי התוסף של הינשוף באתר. מתחת למספר כתוב מאיזה אתר הגיעו המדידות. מתרענן לבד כל 60 שניות.</p>
   </section>
 
   <section class="card">
@@ -812,6 +812,14 @@ setInterval(function(){ if (!dov.classList.contains('on')) load(); }, 60000);
 /* ---------- עכשיו: סבב הבדיקה האחרון, מתרענן כל 60 שניות גם כשגיליון פתוח ---------- */
 function nowColorMs(ms){ if (ms == null) return 'n'; return ms <= 500 ? 'ok' : ms <= 1500 ? 'w' : 'd'; }
 function nowSec(ms){ return ms == null ? '—' : (ms / 1000).toFixed(ms < 1000 ? 2 : 1) + ' שנ\''; }
+/* מאיזה אתר הגיעו המדידות של "מהירות אצל לקוחות": האתר החי או משהו אחר (פיתוח) */
+function rumSrc(s){
+  if (!s || !s.n || !s.hosts || !s.hosts.length) return '';
+  var live = function(h){ return h === 'vdivani.co.il' || h === 'www.vdivani.co.il'; };
+  var other = s.hosts.filter(function(x){ return !live(x.host); });
+  if (!other.length) return '<br>מקור: האתר החי (vdivani.co.il) · כל ' + s.n + ' המדידות האחרונות';
+  return '<br><span style="color:var(--warn,#b26a00)">מקור: ' + s.hosts.map(function(x){ return esc(x.host) + ' ' + x.n; }).join(' · ') + ' (מתוך ' + s.n + ' המדידות האחרונות)</span>';
+}
 function renderNow(d){
   var pages = Array.isArray(d.pages) ? d.pages : [];
   var age = d.age_sec == null ? null : Math.max(0, d.age_sec);
@@ -824,7 +832,7 @@ function renderNow(d){
   var home = pages.filter(function(p){ return p.page === 'בית'; })[0];
   var slowest = pages.slice().sort(function(a, b){ return (b.ms || 0) - (a.ms || 0); })[0];
   var srv = home && home.ok ? ['' + nowColorMs(home.ms), nowSec(home.ms), 'דף הבית' + (slowest && slowest.page !== 'בית' ? ' · הכי איטי כרגע: ' + esc(slowest.page) + ' ' + nowSec(slowest.ms) : '')] : ['d', 'לא עונה', 'דף הבית'];
-  var rum = d.rum || {}; var rumBox = rum.n ? [nowColorMs(rum.p75_ms <= 2500 ? 400 : rum.p75_ms <= 4000 ? 1000 : 2000), nowSec(rum.p75_ms), rum.n + ' צפיות בשעה האחרונה · אחוזון 75'] : ['n', '—', 'יופעל עם עליית התוסף לאתר החי'];
+  var rum = d.rum || {}; var rumBox = rum.n ? [nowColorMs(rum.p75_ms <= 2500 ? 400 : rum.p75_ms <= 4000 ? 1000 : 2000), nowSec(rum.p75_ms), rum.n + ' צפיות בשעה האחרונה · אחוזון 75' + rumSrc(d.rum_src)] : ['n', '—', 'אין מדידות בשעה האחרונה' + rumSrc(d.rum_src)];
   var sp = d.speed || {}; var spT = sp.checked_at ? new Date(sp.checked_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) : '—';
   var lab = sp.lcp_ms ? [sp.lcp_ms <= 2500 ? 'ok' : sp.lcp_ms <= 4000 ? 'w' : 'd', (sp.lcp_ms / 1000).toFixed(1) + ' שנ\'', 'דף הבית בטלפון, ' + spT + ' · ציון ' + (sp.score == null ? '—' : sp.score) + ' · יעד 2.5'] : ['n', '—', 'אין מדידה'];
   function box(k, c){ return '<div class="nbox"><div class="k">' + k + '</div><div class="v"><span class="dot ' + c[0] + '"></span>' + c[1] + '</div><div class="m">' + c[2] + '</div></div>'; }

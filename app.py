@@ -678,6 +678,46 @@ def site_health_share(request: Request):
     return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
 
+_rum_src = {"at": 0.0, "v": None}
+
+
+def _rum_hosts():
+    """מאיזה אתר הגיעו מדידות "מהירות אצל לקוחות" (דורון, 27.10.2026: לוודא שזה האתר
+    החי ולא סביבת פיתוח). 1,000 המדידות האחרונות ב-bi_rum, ספירה לפי כתובת. שמות
+    העמודות לא מתועדים כאן, אז מנסים כמה שמות לעמודת הזמן ומחפשים כתובת בכל שדה.
+    נשמר 10 דקות, כי המסך מתרענן כל דקה."""
+    if time.time() - _rum_src["at"] < 600:
+        return _rum_src["v"]
+    rows = None
+    for col in ("created_at", "ts", "at", "measured_at", "recorded_at", "inserted_at"):
+        try:
+            rows = sb_select("bi_rum?select=*&order=%s.desc&limit=1000" % col)
+            break
+        except Exception:
+            continue
+    if rows is None:
+        try:
+            rows = sb_select("bi_rum?select=*&limit=1000")   # בלי עמודת זמן מוכרת: מדגם, לא האחרונות
+        except Exception:
+            rows = None
+    v = None
+    if rows is not None:
+        hosts = {}
+        for r in rows:
+            h = ""
+            for k in ("host", "hostname", "origin", "url", "page_url", "page", "href", "location"):
+                x = r.get(k)
+                if isinstance(x, str) and x:
+                    h = urllib.parse.urlsplit(x).netloc if "://" in x else ("" if x.startswith("/") else x)
+                    if h:
+                        break
+            h = (h or "לא ידוע").lower()
+            hosts[h] = hosts.get(h, 0) + 1
+        v = {"n": len(rows), "hosts": sorted(({"host": k, "n": c} for k, c in hosts.items()), key=lambda x: -x["n"])}
+    _rum_src.update(at=time.time(), v=v)
+    return v
+
+
 @app.get("/api/site/now")
 def api_site_now(request: Request):
     """"עכשיו" למסך בריאות האתר: סבב הבדיקה האחרון (כל דקה) לפי עמוד, מדידת המעבדה האחרונה לדף הבית,
@@ -689,6 +729,11 @@ def api_site_now(request: Request):
         d = sb_rpc("bi_site_now", {}) or {}
         if _is_keren(request) and isinstance(d, dict):
             d["alerts_open"] = 0
+        if isinstance(d, dict):
+            try:
+                d["rum_src"] = _rum_hosts()
+            except Exception:
+                d["rum_src"] = None
         return JSONResponse(d, headers={"Cache-Control": "no-store"})
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=502)
