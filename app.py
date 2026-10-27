@@ -705,7 +705,7 @@ def _rum_hosts():
         hosts = {}
         for r in rows:
             h = ""
-            for k in ("host", "hostname", "origin", "url", "page_url", "page", "href", "location"):
+            for k in ("site", "host", "hostname", "origin", "url", "page_url", "page", "href", "location"):
                 x = r.get(k)
                 if isinstance(x, str) and x:
                     h = urllib.parse.urlsplit(x).netloc if "://" in x else ("" if x.startswith("/") else x)
@@ -716,7 +716,8 @@ def _rum_hosts():
         known = {k: c for k, c in hosts.items() if k != "לא ידוע"}
         # שמות השדות בלבד (בלי ערכים), כדי לדעת איפה הכתובת יושבת אם לא נמצאה
         v = {"n": len(rows), "hosts": sorted(({"host": k, "n": c} for k, c in hosts.items()), key=lambda x: -x["n"])
-             if known else [], "cols": sorted({k for r in rows[:50] for k in r})}
+             if known else [], "cols": sorted({k for r in rows[:50] for k in r}),
+             "test": sum(1 for r in rows if r.get("is_test") in (True, 1, "true", "t"))}
     _rum_src.update(at=time.time(), v=v)
     return v
 
