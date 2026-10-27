@@ -1761,6 +1761,9 @@ def woo_product_cost(auth, pid):
 def sync_site_sales(d_from, d_to):
     plan = sb_rpc("bi_site_sales_plan", {"p_from": d_from.isoformat(), "p_to": d_to.isoformat()}) or {}
     auth = _woo_auth()
+    # האתר הוא סניף, לא נציג (דורון 27.10): הזמנה זמנית מקבלת את הנציג שפריוריטי מצמידה
+    # להזמנות אתר (ב-2026: רום ב-98.6%), כדי שלא ייווצר "נציג" מדומה בדוח הסוכנים.
+    site_agent = (plan.get("agent") or "רום")
     n_ret = n_red = n_prov = 0
     # 1. הזמנה זמנית שפריוריטי כבר קלטה (או שבוטלה באתר) — נמחקת
     for on in (plan.get("retire") or []):
@@ -1777,7 +1780,7 @@ def sync_site_sales(d_from, d_to):
     for o in (plan.get("provisional") or []):
         num = str(o["number"]); on = "WEB" + num; site = o["site_date"]
         sb_delete("bi_order_lines?ordname=eq." + on)
-        base = {"ordname": on, "ord_date": site, "agent": "אתר (זמני)", "custname": (o.get("cust") or ("W" + num)),
+        base = {"ordname": on, "ord_date": site, "agent": site_agent, "custname": (o.get("cust") or ("W" + num)),
                 "cdes": (o.get("cdes") or "")[:120], "branch": "103", "status": "אתר-זמני",
                 "otype": "אתר דיוואני", "webref": "", "src": "web"}   # בלי webref: הגשר של האתר לא רואה שורות זמניות; המספר בשם ההזמנה (WEB<מספר>)
         rows, ln, lines_total = [], 0, 0.0
