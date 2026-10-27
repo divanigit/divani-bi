@@ -662,6 +662,13 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .minibar i{display:block;background:var(--bd);height:100%;border-radius:4px 0 0 4px}
   @media (prefers-reduced-motion:reduce){.chev{transition:none}.spin{animation-duration:1.6s}}
   @media (max-width:420px){h1{font-size:19px}.kpi .v{font-size:16px}}
+
+  /* הזמנת אתר זמנית + פער תאריך מול פריוריטי (27.10.2026) */
+  .tmpchip{display:inline-block;margin-inline-start:6px;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;color:var(--tx3);border:1px solid var(--line,#d6ddd9);vertical-align:middle;white-space:nowrap}
+  tr.tmp .t{color:var(--tx3)}
+  .dflag{display:inline-block;margin-inline-start:6px;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:#c0392b;color:#fff;font-weight:800;font-size:12px;cursor:pointer;vertical-align:middle}
+  .dfold{display:none;margin-top:4px;padding:6px 10px;border-radius:8px;background:rgba(192,57,43,.08);color:var(--tx2);font-size:12.5px;line-height:1.5;white-space:normal}
+  .dfold.on{display:block}
 </style>
 </head>
 <body>
@@ -1111,7 +1118,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       var an=r.a||'ללא סוכן', ak='a_'+an, ck='c_'+r.cn;
       var ag=agents[ak]||(agents[ak]={n:an,raw:(r.a||''),s:0,profit:0,cu:{},custIds:{}});
       ag.custIds[ck]=1; custSet[ck]=1;
-      var cu=ag.cu[ck]||(ag.cu[ck]={n:r.c||r.cn,s:0,profit:0,k:[]});
+      var cu=ag.cu[ck]||(ag.cu[ck]={n:r.c||r.cn,s:0,profit:0,k:[]});if(r.w)cu.w=1;if(r.pd){cu.pd=r.pd;cu.d=r.d;}
       (r.k||[]).forEach(function(L){
         var s=L[2]||0,p=L[3]||0;
         ag.s+=s;ag.profit+=p;cu.s+=s;cu.profit+=p;
@@ -1123,7 +1130,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       var ag=agents[ak];
       var custKids=Object.keys(ag.cu).map(function(ck){
         var cu=ag.cu[ck];
-        return {n:cu.n,s:cu.s,profit:cu.profit,pm:cu.s>0?100*cu.profit/cu.s:null,k:cu.k};
+        return {n:cu.n,s:cu.s,profit:cu.profit,pm:cu.s>0?100*cu.profit/cu.s:null,k:cu.k,w:cu.w,pd:cu.pd,d:cu.d};
       });
       if(ag.s>0)posTotal+=ag.s;
       return {n:ag.n,rawk:ag.raw,s:ag.s,profit:ag.profit,pm:ag.s>0?100*ag.profit/ag.s:null,c:Object.keys(ag.custIds).length,k:custKids};
@@ -1150,7 +1157,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       var br=brs[bk]||(brs[bk]={n:bn,raw:((brPhoneSep&&r.ph)?'PHONE':(r.b==null?'':String(r.b))),custIds:{},ag:{}});
       br.custIds[ck]=1; custSet[ck]=1;
       var ag=br.ag[ak]||(br.ag[ak]={n:an,s:0,profit:0,cu:{}});
-      var cu=ag.cu[ck]||(ag.cu[ck]={n:r.c||r.cn,s:0,profit:0,k:[]});
+      var cu=ag.cu[ck]||(ag.cu[ck]={n:r.c||r.cn,s:0,profit:0,k:[]});if(r.w)cu.w=1;if(r.pd){cu.pd=r.pd;cu.d=r.d;}
       (r.k||[]).forEach(function(L){
         var s=L[2]||0,p=L[3]||0;
         ag.s+=s;ag.profit+=p;cu.s+=s;cu.profit+=p;
@@ -1165,7 +1172,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         if(ag.s>0)posTotal+=ag.s;
         var custKids=Object.keys(ag.cu).map(function(ck){
           var cu=ag.cu[ck];
-          return {n:cu.n,s:cu.s,profit:cu.profit,pm:cu.s>0?100*cu.profit/cu.s:null,k:cu.k};
+          return {n:cu.n,s:cu.s,profit:cu.profit,pm:cu.s>0?100*cu.profit/cu.s:null,k:cu.k,w:cu.w,pd:cu.pd,d:cu.d};
         });
         return {n:ag.n,s:ag.s,profit:ag.profit,pm:ag.s>0?100*ag.profit/ag.s:null,k:custKids};
       });
@@ -1316,6 +1323,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   }
   function chevSvg(o){return '<svg class="chev'+(o?' open':'')+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>';}
   function sortK(a){return a.slice().sort(function(x,y){return y.s-x.s;});}
+  function dateNote(c){var a=new Date(c.d),b=new Date(c.pd),dd=Math.round((b-a)/864e5);return 'תאריך הכניסה באתר: '+heShort(c.d)+' · הוקלד לפריוריטי בתאריך: '+heShort(c.pd)+' · הפרש '+Math.abs(dd)+' ימים'+(dd>0?' (רום הקליד מאוחר יותר)':' (בפריוריטי מוקדם יותר)')+'. המכירה נספרת לפי תאריך האתר.';}
+  document.addEventListener('click',function(e){var f=e.target.closest&&e.target.closest('.dflag');if(!f)return;e.stopPropagation();e.preventDefault();var t=f.closest('.nlab'),d=t&&t.querySelector('.dfold');if(d)d.classList.toggle('on');},true);
+  document.addEventListener('keydown',function(e){if(e.key!=='Enter'&&e.key!==' ')return;var f=e.target.closest&&e.target.closest('.dflag');if(!f)return;e.stopPropagation();e.preventDefault();var t=f.closest('.nlab'),d=t&&t.querySelector('.dfold');if(d)d.classList.toggle('on');},true);
   function walk(kids,depth,base,out){sortK(kids).forEach(function(c,i){var id=base+'/'+i;out.push({c:c,depth:depth,id:id,hasK:!!(c.k&&c.k.length)});if(eT[id]&&c.k)walk(c.k,depth+1,id,out);});}
 
   function emptyHtml(){
@@ -1335,7 +1345,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
          d:(view==='branches'?(brPhoneSep?'branchp':'branch'):'agent'),l:'מכירות'};
     var h='<div class="tw"><table><thead><tr><th class="nm">שם</th><th>'+(view==='service'?'חיובים':'מכירות')+'</th><th>אחוז מסה"כ</th>'+(NP?'':'<th>רווח</th><th>אחוז רווח</th>')+'<th>לקוחות</th><th>ממוצע</th></tr></thead><tbody>';
     rows.forEach(function(it){
-      var c=it.c, cls=it.depth===0?'d0':'dn', ind=it.depth*14;
+      var c=it.c, cls=(it.depth===0?'d0':'dn')+(c.w?' tmp':''), ind=it.depth*14;
       var pct=(R.pos>0&&c.s>0)?Math.round(c.s/R.pos*100)+'%':'—';
       var nc=c.c||1, avg=nc>0?c.s/nc:0;
       // רק שורת הראש נפתחת לגרף — רק לה יש מפתח שהסדרה יודעת לסנן לפיו
@@ -1345,7 +1355,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       var cC=d0?srNum(String(nc),SRT.c,SRT.d,rk,c.n+' · לקוחות'):'';
       var ch=it.hasK?chevSvg(!!eT[it.id]):'<span style="width:15px;flex:none"></span>';
       var sub=c.code?'<div class="c" title="'+esc(c.code)+'">'+esc(c.code)+'</div>':'';
-      h+='<tr class="'+cls+(it.hasK?' row':'')+'" '+(it.hasK?'data-t="'+it.id+'" role="button" tabindex="0"':'')+'><td class="nm"><div class="nmc" style="margin-right:'+ind+'px">'+ch+'<div class="nlab'+(it.depth?' rail':'')+'"><div class="t" style="font-weight:'+(it.depth===0?500:400)+'">'+esc(c.n)+'</div>'+sub+'</div></div></td><td>'+cS+'</td><td class="mut">'+pct+'</td>'+(NP?'':'<td>'+cP+'</td><td>'+pill(c)+'</td>')+'<td>'+cC+'</td><td class="mut">'+(it.depth===0?ils(avg):'')+'</td></tr>';
+      h+='<tr class="'+cls+(it.hasK?' row':'')+'" '+(it.hasK?'data-t="'+it.id+'" role="button" tabindex="0"':'')+'><td class="nm"><div class="nmc" style="margin-right:'+ind+'px">'+ch+'<div class="nlab'+(it.depth?' rail':'')+'"><div class="t" style="font-weight:'+(it.depth===0?500:400)+'">'+esc(c.n)+(c.w?' <span class="tmpchip" title="הזמנת אתר ששולמה באשראי ועדיין לא הוקלדה לפריוריטי">זמני</span>':'')+(c.pd?' <span class="dflag" role="button" tabindex="0" title="התאריך בפריוריטי שונה מתאריך הכניסה באתר">!</span>':'')+'</div>'+(c.pd?'<div class="dfold">'+esc(dateNote(c))+'</div>':'')+sub+'</div></div></td><td>'+cS+'</td><td class="mut">'+pct+'</td>'+(NP?'':'<td>'+cP+'</td><td>'+pill(c)+'</td>')+'<td>'+cC+'</td><td class="mut">'+(it.depth===0?ils(avg):'')+'</td></tr>';
     });
     h+='</tbody><tfoot><tr><td class="nm">סך הכל</td><td>'+ils(R.s)+'</td><td>'+(R.pos>0?'100%':'—')+'</td>'+(NP?'':'<td>'+ils(R.p)+'</td><td>'+pill({s:R.s,profit:R.p,pm:R.pm})+'</td>')+'<td>'+R.c+'</td><td>'+ils(R.av)+'</td></tr></tfoot></table></div>';
     stage.innerHTML=h;
@@ -1473,7 +1483,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var rows=[];walk(R.k,0,'',rows);
     var h='<div class="tw"><table><thead><tr><th class="nm">שם</th><th>מזומן</th><th>העברות</th><th>שיקים מזומן</th><th>סה"כ מזומן</th><th>שאר תקבולים</th><th>מחזור</th><th>מזומן מהמחזור</th></tr></thead><tbody>';
     rows.forEach(function(it){
-      var c=it.c, cls=it.depth===0?'d0':'dn', ind=it.depth*14;
+      var c=it.c, cls=(it.depth===0?'d0':'dn')+(c.w?' tmp':''), ind=it.depth*14;
       var ch=it.hasK?chevSvg(!!eT[it.id]):'<span style="width:15px;flex:none"></span>';
       var sub=c.code?'<div class="c" title="'+esc(c.code)+'">'+esc(c.code)+'</div>':'';
       // כמה מתוך שורת הסניף הוא אסמכתא שעדיין אין לה קבלה בפריוריטי

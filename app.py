@@ -1792,12 +1792,12 @@ def sync_site_sales(d_from, d_to):
         ship = float(o.get("shipping") or 0)
         if ship > 0:
             net = round(ship / WEB_VAT, 2)
-            rows.append(dict(base, partname="DELWEB", pdes="הובלה (אתר)", qprice=net, qprofit=0,
+            rows.append(dict(base, partname="DELWEB", pdes="הובלה", qprice=net, qprofit=0,
                              line_no=ln, tquant=1, qprice_list=net, qprofit_list=0)); ln += 1
         fee = round(float(o.get("total") or 0) - lines_total - ship, 2)   # הרכבה/עמלה שמעל השורות
         if fee > 0.5:
             net = round(fee / WEB_VAT, 2)
-            rows.append(dict(base, partname="003", pdes="הרכבה/עמלה (אתר)", qprice=net, qprofit=0,
+            rows.append(dict(base, partname="003", pdes="הרכבה", qprice=net, qprofit=0,
                              line_no=ln, tquant=1, qprice_list=net, qprofit_list=0)); ln += 1
         for row in rows:
             sb_insert("bi_order_lines", row)
