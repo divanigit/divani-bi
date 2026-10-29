@@ -56,6 +56,7 @@ DASH_PASS_ITAMAR = os.environ.get("DASH_PASS_ITAMAR", "")  # Itamar: own credent
 DASH_PASS_RACHEL = os.environ.get("DASH_PASS_RACHEL", "")  # רחל (כספים ועיצוב): own credential, owner rights (דורון, שאלה 114, 27.9.2026)
 DASH_PASS_IDO = os.environ.get("DASH_PASS_IDO", "")  # עידו אהרון: regular view, without any profit figure
 DASH_PASS_YOATZ = os.environ.get("DASH_PASS_YOATZ", "")  # חברת היועצים המלווה (MVP): own credential, regular view access, no owner/ask rights (דורון, 12.10.2026)
+DASH_PASS_ROM = os.environ.get("DASH_PASS_ROM", "")  # רום (הזמנות האתר): תצוגה רגילה + חיפוש הזמנה (דורון, שאלה 119, 29.10.2026)
 DASH_PASS_KEREN = os.environ.get("DASH_PASS_KEREN", "")  # קרן (ספקית האתר): רק בריאות האתר + קלריטי, בלי שמות לקוחות (דורון, 20.10.2026)
 CLARITY_TOKEN = os.environ.get("CLARITY_TOKEN", "")  # Microsoft Clarity → Settings → Data export → API token
 OWL_CART_SECRET = os.environ.get("OWL_CART_SECRET", "")  # לכידת עגלות מהאתר: חתימת HMAC משותפת עם התוסף
@@ -134,6 +135,11 @@ def _yoatz_token() -> str:
     return hmac.new(DASH_PASS_YOATZ.encode("utf-8"), b"divani-bi-yoatz-v1", hashlib.sha256).hexdigest()
 
 
+def _rom_token() -> str:
+    # מחיקת DASH_PASS_ROM ב-Render מנתקת את רום מיד
+    return hmac.new(DASH_PASS_ROM.encode("utf-8"), b"divani-bi-rom-v1", hashlib.sha256).hexdigest()
+
+
 def _keren_token() -> str:
     # keyed on her own password: clearing DASH_PASS_KEREN ends her sessions
     return hmac.new(DASH_PASS_KEREN.encode("utf-8"), b"divani-bi-keren-v1", hashlib.sha256).hexdigest()
@@ -169,6 +175,19 @@ def _is_yoatz(request: Request) -> bool:
         return False
     tok = request.cookies.get(COOKIE_NAME, "")
     return hmac.compare_digest(tok, _yoatz_token())
+
+
+def _is_rom(request: Request) -> bool:
+    if not DASH_PASS_ROM:
+        return False
+    tok = request.cookies.get(COOKIE_NAME, "")
+    return hmac.compare_digest(tok, _rom_token())
+
+
+def _can_search_orders(request: Request) -> bool:
+    """חיפוש הזמנה: בעלים, ורום (דורון, שאלה 119, 29.10.2026). רום מקליד את הזמנות האתר
+    בפריוריטי ורואה שם את פרטי הלקוח ממילא."""
+    return _is_admin(request) or _is_rom(request)
 
 
 def _is_noprofit(request: Request) -> bool:
@@ -216,7 +235,7 @@ def _logged_in(request: Request) -> bool:
     tok = request.cookies.get(COOKIE_NAME, "")
     return (hmac.compare_digest(tok, _session_token()) or _is_admin(request)
             or _is_ask2(request) or _is_noprofit(request) or _is_yoatz(request)
-            or _is_keren(request))
+            or _is_keren(request) or _is_rom(request))
 
 
 def _health_ok(request: Request) -> bool:
@@ -237,14 +256,16 @@ def _pass_ok(p: str) -> bool:
             or _match(p, DASH_PASS_ASK2) or _match(p, DASH_PASS_DOV)
             or _match(p, DASH_PASS_SHARON) or _match(p, DASH_PASS_ITAMAR)
             or _match(p, DASH_PASS_IDO) or _match(p, DASH_PASS_RACHEL)
-            or _match(p, DASH_PASS_YOATZ) or _match(p, DASH_PASS_KEREN))
+            or _match(p, DASH_PASS_YOATZ) or _match(p, DASH_PASS_KEREN)
+            or _match(p, DASH_PASS_ROM))
 
 
 _ALL_PASS = (("DASH_PASS", "המשותפת"), ("DASH_PASS_ADMIN", "דורון"),
              ("DASH_PASS_ASK2", "חיים"), ("DASH_PASS_DOV", "דב"),
              ("DASH_PASS_SHARON", "שרון"), ("DASH_PASS_ITAMAR", "איתמר"),
              ("DASH_PASS_IDO", "עידו"), ("DASH_PASS_RACHEL", "רחל"),
-             ("DASH_PASS_YOATZ", "יועצים"), ("DASH_PASS_KEREN", "קרן"))
+             ("DASH_PASS_YOATZ", "יועצים"), ("DASH_PASS_KEREN", "קרן"),
+             ("DASH_PASS_ROM", "רום"))
 
 
 def _pass_collisions():
@@ -284,6 +305,8 @@ def _identity(p: str):
         return "שרון", _session_token()
     if _match(p, DASH_PASS):
         return "משותף", _session_token()
+    if _match(p, DASH_PASS_ROM):
+        return "רום", _rom_token()
     if _match(p, DASH_PASS_ASK2):
         return "חיים", _ask2_token()
     if _match(p, DASH_PASS_ADMIN):
@@ -317,6 +340,8 @@ def _who_cookie(request: Request) -> str:
         return "יועצים"
     if DASH_PASS_KEREN and hmac.compare_digest(tok, _keren_token()):
         return "קרן"
+    if DASH_PASS_ROM and hmac.compare_digest(tok, _rom_token()):
+        return "רום"
     return "צוות"
 
 
@@ -1292,7 +1317,7 @@ def _os_digits(v):
 
 @app.get("/api/ordersearch")
 def api_ordersearch(request: Request, q: str = ""):
-    if not _is_admin(request):
+    if not _can_search_orders(request):
         return JSONResponse({"error": "auth"}, status_code=403)
     q = (q or "").strip()[:80]
     if len(q) < 2:
@@ -1393,7 +1418,7 @@ def _os_pick(rec):
 
 @app.get("/api/ordersearch/detail")
 def api_ordersearch_detail(request: Request, ord: str = "", cn: str = ""):
-    if not _is_admin(request):
+    if not _can_search_orders(request):
         return JSONResponse({"error": "auth"}, status_code=403)
     if not (PRI_BASE and PRI_USER):
         return JSONResponse({"error": "אין חיבור לפריוריטי."})
@@ -1428,10 +1453,10 @@ def api_ordersearch_detail(request: Request, ord: str = "", cn: str = ""):
 
 @app.get("/orders")
 def orders_page(request: Request):
-    """חיפוש הזמנות — לבעלים בלבד."""
+    """חיפוש הזמנות — לבעלים ולרום."""
     if not _logged_in(request):
         return RedirectResponse("/login", status_code=303)
-    if not _is_admin(request):
+    if not _can_search_orders(request):
         return RedirectResponse("/", status_code=303)
     try:
         with open(os.path.join(HERE, "orders.html"), encoding="utf-8") as f:
@@ -3347,6 +3372,7 @@ def agent_report(request: Request):
 # הגושים מסומנים בקובץ עצמו, כדי שאפשר יהיה להוסיף עוד הסבר לבעלים
 # בלי לגעת בשרת שוב.
 _DORON_BLOCK = re.compile(r"<!--DORON-->.*?<!--/DORON-->", re.S)
+_ORDERS_BLOCK = re.compile(r"<!--ORDERS-->.*?<!--/ORDERS-->", re.S)   # כפתור "חיפוש הזמנה": בעלים ורום
 _OWNER_BLOCK = re.compile(r"<!--OWNER-->.*?<!--/OWNER-->"
                           r"|/\*OWNER\*/.*?/\*ENDOWNER\*/", re.S)
 
@@ -3530,6 +3556,8 @@ def index(request: Request):
         html = _OWNER_BLOCK.sub("", html)
     if not _is_doron(request):
         html = _DORON_BLOCK.sub("", html)      # כפתור "קרן" — לדורון בלבד
+    if not _can_search_orders(request):
+        html = _ORDERS_BLOCK.sub("", html)     # "חיפוש הזמנה" — בעלים ורום
     if np:
         html = _NOPROFIT_BLOCK.sub("", html)
     if _is_keren(request):
@@ -3574,6 +3602,7 @@ def api_meta(request: Request):
                          "owner": _is_admin(request),
                          "noprofit": _is_noprofit(request),
                          "yoatz": _is_yoatz(request),
+                         "orders": _can_search_orders(request),
                          "keren": _is_keren(request)})
 
 
