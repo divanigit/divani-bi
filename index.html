@@ -5056,8 +5056,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
             vb.title='בחירת תצוגה'; }
     var kb=document.getElementById('kerenbtn');
     if(kb)kb.style.display=(owner&&!prevVideo())?'':'none';
+    // חיפוש הזמנה הוא כלי של הבעלים, כמו העין וכפתור קרן: נשאר גם כשהעין מכוונת לתצוגה
+    // של מישהו אחר (29.10.2026: העין נשארה דלוקה מפעם קודמת והכפתור 'נעלם'). נסתר רק בווידאו.
     var ob=document.getElementById('ordsbtn');
-    if(ob)ob.style.display=(owner&&!prev)?'':'none';/*ENDOWNER*/
+    if(ob)ob.style.display=(owner&&!prevVideo())?'':'none';/*ENDOWNER*/
     // words, not colour: the owner must never have to guess whose view he is looking at
     // בלי כיתוב. הוא בחר מהרשימה, והעין הדלוקה היא כל הסימון שצריך;
     // אם ירצה לדעת איזו תצוגה — הוא פותח את הרשימה ורואה מה מסומן.

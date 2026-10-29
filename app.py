@@ -1206,8 +1206,9 @@ def _keren_nav(request: Request, here: str) -> str:
 
 
 def _keren_bar(request: Request) -> str:
-    """תגית קטנה "קרן" בפינה השמאלית העליונה כשבעלים רואה כמו קרן. לחיצה עליה מחזירה
-    לתצוגה שלו (דורון, 25.10.2026: במקום פס רחב — הוא יודע שזה הכפתור לחזרה)."""
+    """תגית קטנה בפינה השמאלית העליונה כשבעלים רואה כמו קרן. לחיצה עליה מחזירה
+    לתצוגה שלו (דורון, 25.10.2026: במקום פס רחב). 29.10.2026: הכיתוב "קרן" לבדו נראה לו
+    ככפתור שקרן עצמה רואה — לכן "יציאה מתצוגת קרן"."""
     if not _keren_preview(request):
         return ""
     return ('<style>#krbar{position:fixed;top:8px;left:8px;z-index:200;background:#4a3aa7;color:#fff;'
@@ -1215,7 +1216,7 @@ def _keren_bar(request: Request) -> str:
             'text-decoration:none;opacity:.9}</style>'
             '<script>document.addEventListener("DOMContentLoaded",function(){'
             'var b=document.createElement("a");b.id="krbar";b.href="/view-as/off";'
-            'b.title="חזרה לתצוגה שלי";b.textContent="קרן";'
+            'b.title="חזרה לתצוגה שלי";b.textContent="יציאה מתצוגת קרן";'
             'document.body.appendChild(b);});</script>')
 
 
