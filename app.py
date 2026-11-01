@@ -453,6 +453,7 @@ _NP_STRIP = {
     "/api/pareto": None,
     "/api/baskets": None,
     "/api/branchsrc": None,
+    "/api/custcount": None,       # ספירת לקוחות בלבד. אין רווח.
     "/api/cancels": None,
     "/api/cancelorders": None,
     "/api/series": None,
@@ -4419,6 +4420,23 @@ def api_dow(request: Request, d_from: str = "", d_to: str = ""):
         f, t = t, f
     agg = sb_rpc("bi_dow", {"p_from": f.isoformat(), "p_to": t.isoformat()})
     return JSONResponse({"mode": "dow", "agg": agg or {}})
+
+
+@app.get("/api/custcount")
+def api_custcount(request: Request, d_from: str = "", d_to: str = "", cut: str = "month"):
+    """מספר לקוחות לתקופה (דורון, 1.11.2026): כמה לקוחות קנו, כמה חדשים וחוזרים,
+    לפי חודש/שבוע/רבעון, ופילוח לפי סניף/עיר/מגזר. אין בו שום שדה רווח."""
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    f, t = _parse_date(d_from), _parse_date(d_to)
+    if not f or not t:
+        return JSONResponse({"error": "bad dates"}, status_code=400)
+    if f > t:
+        f, t = t, f
+    if cut not in ("month", "week", "quarter"):
+        cut = "month"
+    agg = sb_rpc("bi_cust_count", {"p_from": f.isoformat(), "p_to": t.isoformat(), "p_cut": cut})
+    return JSONResponse({"mode": "custs", "agg": agg or {}})
 
 
 @app.get("/api/agentreport")

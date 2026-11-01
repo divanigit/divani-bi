@@ -705,6 +705,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         <div class="navgroup"><svg class="gico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M8 17v-5"/><path d="M13 17V8"/><path d="M18 17v-8"/></svg><span>אנליטיקה</span></div>
         <button type="button" data-v="site" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.8"/><path d="M3.2 12h17.6"/><path d="M12 3.2a13.5 13.5 0 0 1 0 17.6a13.5 13.5 0 0 1 0-17.6"/></svg><span class="rlbl">מכירות האתר</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="branchsrc" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3.5h3.5a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H15"/><path d="M10 16.5l4.5-4.5L10 7.5"/><path d="M14.5 12H3.5"/></svg><span class="rlbl">מקורות הגעה</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
+        <button type="button" data-v="custs" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.4"/><path d="M3.5 19.5c0-3.3 2.5-5.5 5.5-5.5s5.5 2.2 5.5 5.5"/><circle cx="17" cy="9.5" r="2.6"/><path d="M15.5 14.3c2.8 0 5 1.9 5 4.7"/></svg><span class="rlbl">מספר לקוחות לתקופה</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <button type="button" data-v="dim" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12V3.2A8.8 8.8 0 1 0 20.8 12H12z"/><path d="M14.5 3.9A8.8 8.8 0 0 1 20.1 9.5H14.5z"/></svg><span class="rlbl">פילוח</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
         <!--NOPROFIT--><button type="button" data-v="mdown" id="mdownbtn" aria-pressed="false" style="display:none"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v16.5"/><path d="M18.5 14L12 20.5 5.5 14"/></svg><span class="rlbl">מוריד כסף</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button><!--/NOPROFIT-->
         <button type="button" data-v="cancels" aria-pressed="false"><svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><path d="M6 6l12 12"/></svg><span class="rlbl">אחוז ביטולים</span><svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>
@@ -1026,6 +1027,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(view==='service')return state.from+'|'+state.to+'|S';
     if(view==='collect')return state.from+'|'+state.to+'|P';
     if(view==='branchsrc')return state.from+'|'+state.to+'|BS';
+    if(view==='custs')return state.from+'|'+state.to+'|CU|'+custCut;
     if(view==='baskets')return state.from+'|'+state.to+'|BK';
     if(view==='cannib')return 'CN';
     if(view==='mdown')return state.from+'|'+state.to+'|MD|'+mdScope+'|'+(mdDes||'');
@@ -1077,6 +1079,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var url=view==='cash'?('/api/cash?d_from='+state.from+'&d_to='+state.to)
            :view==='collect'?('/api/collect?d_from='+state.from+'&d_to='+state.to)
            :view==='branchsrc'?('/api/branchsrc?d_from='+state.from+'&d_to='+state.to)
+           :view==='custs'?('/api/custcount?d_from='+state.from+'&d_to='+state.to+'&cut='+custCut)
            :view==='baskets'?('/api/baskets?d_from='+state.from+'&d_to='+state.to)
            :view==='cannib'?('/api/panel?name=contrib')
            :view==='mdown'?('/api/moneydown?d_from='+state.from+'&d_to='+state.to+'&scope='+mdScope+(mdDes?'&des='+encodeURIComponent(mdDes):''))
@@ -2069,6 +2072,76 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         +'<span class="bsv"><b>'+pc.toFixed(1)+'%</b> '+ils(c.s)+' <i>'+c.o+' הז׳</i></span></div>';}
     stage.innerHTML=toggle+pills+head+'<div class="bswrap">'+rows+'</div>';
   }
+
+
+  /* ---- מספר לקוחות לתקופה (הבקשה, 1.11.2026) ----
+     ספירה בלבד, בלי שקלים ובלי רווח. אותה הגדרת קונה כמו מסכי הסניפים:
+     קריאות שירות אינן קנייה. החישוב כולו ב-RPC bi_cust_count. */
+  var custCut='month', custDim='branch', custAll=false;
+  var CU_MON=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+  function cuD(s){var p=String(s).split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
+  function cuIso(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
+  function cuDM(d){return d.getDate()+'.'+(d.getMonth()+1);}
+  function cuLabel(iso){
+    var d=cuD(iso),e;
+    if(custCut==='week'){e=new Date(d.getFullYear(),d.getMonth(),d.getDate()+6);}
+    else if(custCut==='quarter'){e=new Date(d.getFullYear(),d.getMonth()+3,0);}
+    else{e=new Date(d.getFullYear(),d.getMonth()+1,0);}
+    var s0=cuIso(d),e0=cuIso(e),clip=(s0<state.from||e0>state.to);
+    var a=s0<state.from?cuD(state.from):d,b=e0>state.to?cuD(state.to):e;
+    var name=custCut==='week'?('שבוע '+cuDM(d)+'.'+d.getFullYear())
+      :custCut==='quarter'?('רבעון '+(Math.floor(d.getMonth()/3)+1)+' '+d.getFullYear())
+      :(CU_MON[d.getMonth()]+' '+d.getFullYear());
+    // תקופה חתוכה על ידי הטווח שנבחר — אומרים את זה, לא מחליקים (כלל קבוע: בלי ממוצעים, בלי השלמות)
+    return name+(clip?' <i class="mut">רק '+cuDM(a)+' עד '+cuDM(b)+'</i>':'');
+  }
+  function cuPct(n,t){return t?(Math.round(100*(n||0)/t)+'%'):'—';}
+  function renderCustMeta(){
+    var t=(cache.agg||{}).tot||{};
+    document.getElementById('kpis').innerHTML=
+      '<div class="kpi"><div class="l">לקוחות שקנו</div><div class="v">'+nf(t.c||0)+'</div></div>'
+      +'<div class="kpi"><div class="l">חדשים · קנייה ראשונה בתקופה</div><div class="v">'+nf(t.n||0)+' <small class="mut">'+cuPct(t.n,t.c)+'</small></div></div>'
+      +'<div class="kpi"><div class="l">חוזרים · קנו גם לפני התקופה</div><div class="v">'+nf(t.r||0)+' <small class="mut">'+cuPct(t.r,t.c)+'</small></div></div>'
+      +'<div class="kpi"><div class="l">קנו יותר מפעם אחת בתקופה</div><div class="v">'+nf(t.m||0)+' <small class="mut">'+cuPct(t.m,t.c)+'</small></div></div>';
+    document.getElementById('sellbl').textContent=rangeLbl(state.from,state.to)+' · '+nf(t.o||0)+' הזמנות';
+    document.getElementById('builtlbl').textContent=META.last_sync?('עודכן '+META.last_sync):'';
+    document.getElementById('notice').style.display='none';
+  }
+  function renderCust(agg){
+    agg=agg||{};var rows=agg.rows||[],tot=agg.tot||{},dims=agg.dims||{};
+    var cuts=[['month','לפי חודש'],['week','לפי שבוע'],['quarter','לפי רבעון']],tog='<div class="bstog">';
+    for(var i=0;i<cuts.length;i++)tog+='<button type="button" class="'+(custCut===cuts[i][0]?'on':'')+'" data-cucut="'+cuts[i][0]+'">'+cuts[i][1]+'</button>';
+    tog+='</div>';
+    if(!rows.length){stage.innerHTML=tog+'<div class="empty">אין לקוחות שקנו בתקופה שנבחרה.</div>';return;}
+    var t='<div class="tw"><table class="tnarrow"><thead><tr><th class="nm">תקופה</th><th>לקוחות</th><th>חדשים</th><th>חוזרים</th><th>הזמנות</th></tr></thead><tbody>';
+    for(var j=0;j<rows.length;j++){var r=rows[j];
+      t+='<tr><td class="nm">'+cuLabel(r.d)+'</td><td>'+nf(r.c)+'</td><td>'+nf(r.n)+' <span class="mut">'+cuPct(r.n,r.c)+'</span></td><td>'+nf(r.r)+' <span class="mut">'+cuPct(r.r,r.c)+'</span></td><td>'+nf(r.o)+'</td></tr>';}
+    // שורת הסיכום היא מספר לקוחות שונים בכל הטווח — לקוח שקנה בשני חודשים נספר בה פעם אחת, ולכן היא קטנה מסכום השורות
+    t+='</tbody><tfoot><tr><td class="nm">כל התקופה · כל לקוח פעם אחת</td><td>'+nf(tot.c||0)+'</td><td>'+nf(tot.n||0)+' <span class="mut">'+cuPct(tot.n,tot.c)+'</span></td><td>'+nf(tot.r||0)+' <span class="mut">'+cuPct(tot.r,tot.c)+'</span></td><td>'+nf(tot.o||0)+'</td></tr></tfoot></table></div>';
+    var dl=[['branch','סניף'],['city','עיר'],['sector','מגזר']],pills='<div class="bspills" style="margin-top:14px">';
+    for(var k=0;k<dl.length;k++)pills+='<button type="button" class="'+(custDim===dl[k][0]?'on':'')+'" data-cudim="'+dl[k][0]+'">'+dl[k][1]+'</button>';
+    pills+='</div>';
+    var list=dims[custDim]||[],max=list.length?list[0].c:1,lim=(custDim==='city'&&!custAll)?12:list.length,out='';
+    for(var m=0;m<list.length&&m<lim;m++){var x=list[m],w=Math.max(2,100*x.c/max);
+      out+='<div class="bsrow"><span class="bsr">'+(m+1)+'</span><span class="bscn">'+esc(x.k)+'</span>'
+        +'<span class="bsmini"><span class="mf" style="width:'+w.toFixed(1)+'%"></span></span>'
+        +'<span class="bsv"><b>'+nf(x.c)+'</b> '+cuPct(x.c,tot.c)+' <i>'+nf(x.n)+' חדשים</i></span></div>';}
+    var more='';
+    if(custDim==='city'&&list.length>12)more=custAll
+      ?'<button type="button" class="sortreset" data-cuall="0">רק 12 הערים הגדולות</button>'
+      :'<button type="button" class="sortreset" data-cuall="1">כל '+list.length+' היישובים</button>';
+    var note=custDim==='branch'?'לקוח שקנה בשני סניפים נספר בשניהם. '
+      :custDim==='sector'?'המגזר כפי שהוא כתוב על כרטיס הלקוח בפריוריטי. '
+      :'העיר מכרטיס הלקוח בפריוריטי. ';
+    var hint='<div class="hintline">לקוח = כרטיס לקוח בפריוריטי עם הזמנה בתקופה. נספרות הזמנות שאינן מבוטלות, בלי תחזיות, תצוגות, דיוואני וקריאות שירות. חדש = הקנייה הראשונה שלו, בשנתיים שהינשוף מכיר, היא בתקופה הזו. '+note+'</div>';
+    stage.innerHTML=tog+t+pills+'<div class="bswrap">'+out+'</div>'+more+hint;
+  }
+  stage.addEventListener('click',function(e){
+    if(view!=='custs')return;
+    var c=e.target.closest('[data-cucut]');if(c){var v=c.getAttribute('data-cucut');if(v!==custCut){custCut=v;fetchRange(renderAll);}return;}
+    var d=e.target.closest('[data-cudim]');if(d){custDim=d.getAttribute('data-cudim');custAll=false;renderCust(cache.agg);return;}
+    var a=e.target.closest('[data-cuall]');if(a){custAll=a.getAttribute('data-cuall')==='1';renderCust(cache.agg);}
+  });
 
   /* ---- סל מכירות ממוצע ללקוח — כל הנציגים ברצף, המעצבת שורה נפרדת ---- */
   function renderBasketsMeta(){
@@ -3302,6 +3375,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(view==='likey'){renderLikeyMeta();renderLikey(cache.agg);return;}
     if(view==='ins'){renderInsMeta();renderInsStage();return;}
     if(view==='branchsrc'){renderBranchSrcMeta();renderBranchSrc(cache.agg);return;}
+    if(view==='custs'){renderCustMeta();renderCust(cache.agg);return;}
     if(view==='baskets'){renderBasketsMeta();renderBaskets(cache.agg);return;}
     if(view==='cannib'){renderCannibMeta();renderCannib(cache.agg);return;}
     // רצועת האחוזים שייכת למסך המזומן בלבד — מנקים אותה לפני כל מסך אחר,
@@ -4397,7 +4471,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(v!=='cancels'){cxSel=null;cxOrd=null;}
     if(v!=='comp')cpSel=null;
     view=v;
-    var H1={agents:'ביצועי סוכנים',branches:'מכירות לפי סניפים',cash:'תקבולים במזומן',service:'פעילות שירות',collect:'מקדמות והנחות',dim:'פילוח מכירות',branchsrc:'מקורות הגעה לסניף',baskets:'סל מכירות ממוצע ללקוח',cannib:'קניבליזציה — תמהיל ערוצים',/*NOPROFIT*/mdown:'מוריד כסף',/*ENDNOPROFIT*/cancels:'אחוז ביטולים',comp:'פיצויים ללקוחות',dow:'ימים חזקים בשבוע',site:'מכירות האתר',products:'מוצרים',hours:'שעות חזקות וחלשות',ins:'תובנות',/*NOPROFIT*/pctrl:'בקרת מחירים',/*ENDNOPROFIT*/likey:'מי עובד בלייקי'};
+    var H1={agents:'ביצועי סוכנים',branches:'מכירות לפי סניפים',cash:'תקבולים במזומן',service:'פעילות שירות',collect:'מקדמות והנחות',dim:'פילוח מכירות',branchsrc:'מקורות הגעה לסניף',custs:'מספר לקוחות לתקופה',baskets:'סל מכירות ממוצע ללקוח',cannib:'קניבליזציה — תמהיל ערוצים',/*NOPROFIT*/mdown:'מוריד כסף',/*ENDNOPROFIT*/cancels:'אחוז ביטולים',comp:'פיצויים ללקוחות',dow:'ימים חזקים בשבוע',site:'מכירות האתר',products:'מוצרים',hours:'שעות חזקות וחלשות',ins:'תובנות',/*NOPROFIT*/pctrl:'בקרת מחירים',/*ENDNOPROFIT*/likey:'מי עובד בלייקי'};
     document.getElementById('h1t').textContent=H1[v]||H1.agents;
     var bs=document.querySelectorAll('#seg button');
     for(var i=0;i<bs.length;i++){var on=bs[i].getAttribute('data-v')===v;bs[i].classList.toggle('on',on);bs[i].setAttribute('aria-pressed',on?'true':'false');}
