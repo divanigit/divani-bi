@@ -166,12 +166,19 @@ def _rom_preview(request: Request) -> bool:
     return request.cookies.get(PREVIEW_COOKIE, "") == "rom" and _is_doron(request)
 
 
+def _yoatz_preview(request: Request) -> bool:
+    # דורון רואה את הינשוף בדיוק כמו סבינה והיועצים (דורון, 1.11.2026): אותה עוגיית תצוגה, ערך "yoatz"
+    return request.cookies.get(PREVIEW_COOKIE, "") == "yoatz" and _is_doron(request)
+
+
 def _preview_label(request: Request) -> str:
     """שם התצוגה שהבעלים נמצא בה עכשיו, או ריק."""
     if _keren_preview(request):
         return "קרן"
     if _rom_preview(request):
         return "רום"
+    if _yoatz_preview(request):
+        return "סבינה"
     return ""
 
 
@@ -185,6 +192,8 @@ def _is_keren(request: Request) -> bool:
 
 
 def _is_yoatz(request: Request) -> bool:
+    if _yoatz_preview(request):
+        return True
     if not DASH_PASS_YOATZ:
         return False
     tok = request.cookies.get(COOKIE_NAME, "")
@@ -233,7 +242,7 @@ def _is_admin(request: Request, raw: bool = False) -> bool:
     # produce a real digest of the empty key, and anyone able to compute it
     # would be an owner.
     # raw=True: מי הוא באמת, גם כשהוא כרגע רואה את הינשוף כמו קרן
-    if not raw and request.cookies.get(PREVIEW_COOKIE, "") in ("keren", "rom"):
+    if not raw and request.cookies.get(PREVIEW_COOKIE, "") in ("keren", "rom", "yoatz"):
         return False
     tok = request.cookies.get(COOKIE_NAME, "")
     if DASH_PASS_ADMIN and hmac.compare_digest(tok, _admin_token()):
@@ -1278,6 +1287,16 @@ def view_as_rom(request: Request):
         return RedirectResponse("/", status_code=303)
     resp = RedirectResponse("/", status_code=303)
     resp.set_cookie(PREVIEW_COOKIE, "rom", max_age=8 * 3600, httponly=True,
+                    secure=True, samesite="lax")
+    return resp
+
+
+@app.get("/view-as/yoatz")
+def view_as_yoatz(request: Request):
+    if not _is_doron(request):
+        return RedirectResponse("/", status_code=303)
+    resp = RedirectResponse("/", status_code=303)
+    resp.set_cookie(PREVIEW_COOKIE, "yoatz", max_age=8 * 3600, httponly=True,
                     secure=True, samesite="lax")
     return resp
 
@@ -3589,7 +3608,7 @@ def index(request: Request):
         html = _NOPROFIT_BLOCK.sub("", html)
     if _is_keren(request):
         html = html.replace("</head>", _keren_bar(request) + _keren_nav(request, "/") + "\n</head>", 1)
-    elif _rom_preview(request):
+    elif _rom_preview(request) or _yoatz_preview(request):
         html = html.replace("</head>", _keren_bar(request) + "\n</head>", 1)
     return HTMLResponse(html, headers=hdr)
 
