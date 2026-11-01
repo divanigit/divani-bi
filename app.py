@@ -161,6 +161,20 @@ def _keren_preview(request: Request) -> bool:
     return request.cookies.get(PREVIEW_COOKIE, "") == "keren" and _is_doron(request)
 
 
+def _rom_preview(request: Request) -> bool:
+    # דורון רואה את הינשוף בדיוק כמו רום (דורון, 1.11.2026): אותה עוגיית תצוגה, ערך "rom"
+    return request.cookies.get(PREVIEW_COOKIE, "") == "rom" and _is_doron(request)
+
+
+def _preview_label(request: Request) -> str:
+    """שם התצוגה שהבעלים נמצא בה עכשיו, או ריק."""
+    if _keren_preview(request):
+        return "קרן"
+    if _rom_preview(request):
+        return "רום"
+    return ""
+
+
 def _is_keren(request: Request) -> bool:
     if _keren_preview(request):
         return True
@@ -178,6 +192,8 @@ def _is_yoatz(request: Request) -> bool:
 
 
 def _is_rom(request: Request) -> bool:
+    if _rom_preview(request):
+        return True
     if not DASH_PASS_ROM:
         return False
     tok = request.cookies.get(COOKIE_NAME, "")
@@ -217,7 +233,7 @@ def _is_admin(request: Request, raw: bool = False) -> bool:
     # produce a real digest of the empty key, and anyone able to compute it
     # would be an owner.
     # raw=True: מי הוא באמת, גם כשהוא כרגע רואה את הינשוף כמו קרן
-    if not raw and request.cookies.get(PREVIEW_COOKIE, "") == "keren":
+    if not raw and request.cookies.get(PREVIEW_COOKIE, "") in ("keren", "rom"):
         return False
     tok = request.cookies.get(COOKIE_NAME, "")
     if DASH_PASS_ADMIN and hmac.compare_digest(tok, _admin_token()):
@@ -1234,14 +1250,15 @@ def _keren_bar(request: Request) -> str:
     """תגית קטנה בפינה השמאלית העליונה כשבעלים רואה כמו קרן. לחיצה עליה מחזירה
     לתצוגה שלו (דורון, 25.10.2026: במקום פס רחב). 29.10.2026: הכיתוב "קרן" לבדו נראה לו
     ככפתור שקרן עצמה רואה — לכן "יציאה מתצוגת קרן"."""
-    if not _keren_preview(request):
+    who = _preview_label(request)
+    if not who:
         return ""
     return ('<style>#krbar{position:fixed;top:8px;left:8px;z-index:200;background:#4a3aa7;color:#fff;'
             'font:600 12px system-ui,sans-serif;padding:4px 10px;border-radius:999px;'
             'text-decoration:none;opacity:.9}</style>'
             '<script>document.addEventListener("DOMContentLoaded",function(){'
             'var b=document.createElement("a");b.id="krbar";b.href="/view-as/off";'
-            'b.title="חזרה לתצוגה שלי";b.textContent="יציאה מתצוגת קרן";'
+            'b.title="חזרה לתצוגה שלי";b.textContent="יציאה מתצוגת ' + who + '";'
             'document.body.appendChild(b);});</script>')
 
 
@@ -1251,6 +1268,16 @@ def view_as_keren(request: Request):
         return RedirectResponse("/", status_code=303)
     resp = RedirectResponse("/site", status_code=303)
     resp.set_cookie(PREVIEW_COOKIE, "keren", max_age=8 * 3600, httponly=True,
+                    secure=True, samesite="lax")
+    return resp
+
+
+@app.get("/view-as/rom")
+def view_as_rom(request: Request):
+    if not _is_doron(request):
+        return RedirectResponse("/", status_code=303)
+    resp = RedirectResponse("/", status_code=303)
+    resp.set_cookie(PREVIEW_COOKIE, "rom", max_age=8 * 3600, httponly=True,
                     secure=True, samesite="lax")
     return resp
 
@@ -3562,6 +3589,8 @@ def index(request: Request):
         html = _NOPROFIT_BLOCK.sub("", html)
     if _is_keren(request):
         html = html.replace("</head>", _keren_bar(request) + _keren_nav(request, "/") + "\n</head>", 1)
+    elif _rom_preview(request):
+        html = html.replace("</head>", _keren_bar(request) + "\n</head>", 1)
     return HTMLResponse(html, headers=hdr)
 
 
