@@ -3235,6 +3235,10 @@ def _refresher():
             except Exception as e:
                 print("delivery auto-sync failed:", repr(e)[:300], flush=True)
             try:
+                sync_stock()                   # מלאי חי → bi_stock (ינשוף גיבור, 2.11.2026)
+            except Exception as e:
+                print("stock auto-sync failed:", repr(e)[:300], flush=True)
+            try:
                 sb_rpc("bi_feedback_from_notes", {})   # קודי תקלה → פידבק (בלי LLM)
             except Exception as e:
                 print("feedback-from-notes failed:", repr(e)[:300], flush=True)
@@ -5413,6 +5417,304 @@ async def api_ask(request: Request):
         except Exception:
             pass
         return JSONResponse({"error": "api", "detail": _anthropic_err_text(e)})
+
+
+# ---------- ינשוף גיבור — אגף התפעול (דורון, שאלה 373 = א, 2.11.2026) ----------
+# מלאי חי מפריוריטי (PARTBAL, נפתח 2.11.2026 אחרי שרז המקסטמת פתחה הרשאות) מול ההזמנות
+# הפתוחות מהענן. לדורון בלבד בשלב זה (_is_doron). SQL: cloud/sql/bi_ops.sql.
+# כלל 374 (דורון 2.11.2026): יחידות באולמות התצוגה לא נספרות כמלאי למכירה.
+# כלל החלקים: שולחן/ספה — המלאי יושב על מק"טי הבן; סטים שלמים = המינימום בין החלקים.
+OPS_SELL = ("Main", "Outl", "100", "MAR")
+OPS_DISP = ("Show", "Rish", "HAIF", "JERU", "BSHE")
+OPS_WH_NAME = {"Main": "מרלוג", "Show": "נתניה", "Rish": "ראשל\"צ", "HAIF": "חיפה", "JERU": "ירושלים",
+               "BSHE": "בית שמש", "Outl": "עודפים", "REJ": "פגומים", "100": "אספקות ישירות",
+               "MAR": "מרלוג חיצוני"}
+OPS_NONSTOCK = {"הובלה", "שדרוגים", "שירות", "מוצרים כלליים", "רגל סלון יצור מיקומי"}
+OPS_BR = {"101": "נתניה", "102": "ראשל\"צ", "103": "אתר", "104": "מוקד משרדים", "105": "חיפה",
+          "106": "ירושלים", "107": "בית שמש"}
+_ops_cache = {"all": None, "at": 0.0, "docs": None, "docs_at": 0.0, "stock_at": ""}
+_ops_lock = threading.Lock()
+
+
+def sync_stock() -> int:
+    """PARTBAL → bi_stock. רק יתרות שונות מאפס; מה שלא חזר בסבב (ירד לאפס) נמחק לפי synced_at."""
+    auth = "Basic " + base64.b64encode(f"{PRI_USER}:{PRI_PASS}".encode("utf-8")).decode("ascii")
+    url = (f"{PRI_BASE}/PARTBAL?$select=WARHSNAME,PARTNAME,PARTDES,BALANCE,LASTDATE,PRIT_PARTCOSTNIS"
+           "&$filter=BALANCE%20ne%200")
+    stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f+00:00")
+    seen = {}
+    for r in _pri_pages(url, auth, guard_max=60):
+        p = (r.get("PARTNAME") or "").strip()
+        w = (r.get("WARHSNAME") or "").strip()
+        if not p or not w:
+            continue
+        k = (p, w)
+        row = seen.get(k) or {"partname": p, "warhs": w, "balance": 0.0,
+                              "lastdate": _d10(r.get("LASTDATE")) or None,
+                              "cost": _num(r.get("PRIT_PARTCOSTNIS")),
+                              "pdes": (r.get("PARTDES") or "")[:120], "synced_at": stamp}
+        row["balance"] += _num(r.get("BALANCE")) or 0.0
+        seen[k] = row
+    rows = list(seen.values())
+    if not rows:
+        raise RuntimeError("PARTBAL returned no rows — bi_stock left untouched")
+    for i in range(0, len(rows), 1000):
+        sb_upsert("bi_stock?on_conflict=partname,warhs", rows[i:i + 1000])
+    sb_delete("bi_stock?synced_at=lt." + urllib.parse.quote(stamp))
+    with _ops_lock:
+        _ops_cache["all"] = None
+        _ops_cache["stock_at"] = dt.datetime.now(IL).strftime("%d.%m.%Y %H:%M")
+    return len(rows)
+
+
+def _ops_select_all(path: str, page: int = 1000):
+    out, off = [], 0
+    while True:
+        chunk = sb_select(f"{path}&limit={page}&offset={off}") or []
+        out += chunk
+        if len(chunk) < page:
+            return out
+        off += page
+
+
+def _ops_stock():
+    stock, newest = {}, ""
+    for r in _ops_select_all("bi_stock?select=partname,warhs,balance,pdes,synced_at&order=partname.asc"):
+        p = r["partname"]
+        s = stock.setdefault(p, {"des": r.get("pdes") or "", "whd": {}, "sell": 0.0, "disp": 0.0, "kit": ""})
+        b = float(r.get("balance") or 0)
+        s["whd"][r["warhs"]] = s["whd"].get(r["warhs"], 0.0) + b
+        if r["warhs"] in OPS_SELL:
+            s["sell"] += b
+        elif r["warhs"] in OPS_DISP:
+            s["disp"] += b
+        newest = max(newest, r.get("synced_at") or "")
+    return stock, newest
+
+
+def _ops_family(p: str, f: str) -> str:
+    if f:
+        return f
+    if p.startswith(("SS", "SY")):
+        return "סט סלונים מחולל מק\"טים"
+    if p.startswith(("SERV", "SHID")):
+        return "שירות"
+    return ""
+
+
+def _ops_ddmm(d) -> str:
+    d = (d or "")[:10]
+    return f"{d[8:10]}.{d[5:7]}.{d[:4]}" if len(d) == 10 else ""
+
+
+def _ops_build():
+    """כל מה שהמסך צריך, בצורה אחת. מחושב פעם ב-15 דקות או אחרי סנכרון מלאי."""
+    stock, newest = _ops_stock()
+    lines = sb_rpc("bi_ops_open_lines_j", {}) or []
+    by_ord = {}
+    for l in lines:
+        by_ord.setdefault(l["ordname"], []).append(l)
+    # הרכב מוצר: בן שמופיע עם האב באותה הזמנה, או בן עם יתרה במלאי
+    bom = {}
+    for o, ls in by_ord.items():
+        parts = {(l.get("partname") or "").strip() for l in ls}
+        for p in parts:
+            m = re.match(r"^(.*?)-(\d+)$", p)
+            if m and m.group(1) in parts:
+                bom.setdefault(m.group(1), set()).add(p)
+    for k in list(stock):
+        m = re.match(r"^(.*?)-(\d+)$", k)
+        if m:
+            bom.setdefault(m.group(1), set()).add(k)
+    kit = {}
+    for parent, kids in bom.items():
+        if parent in stock or not kids:
+            continue
+        kids = sorted(kids)
+        whd = {w: min((stock[c]["whd"].get(w, 0.0) if c in stock else 0.0) for c in kids) for w in OPS_WH_NAME}
+        detail = " | ".join(f"{c}: {int(stock[c]['sell']) if c in stock else 0}" for c in kids)
+        stock[parent] = {"des": next((stock[c]["des"] for c in kids if c in stock), ""), "whd": whd,
+                         "sell": min(stock[c]["sell"] if c in stock else 0.0 for c in kids),
+                         "disp": min(stock[c]["disp"] if c in stock else 0.0 for c in kids), "kit": detail}
+        kit[parent] = detail
+    # שורות
+    L = []
+    for o, ls in by_ord.items():
+        parts = {(l.get("partname") or "").strip() for l in ls}
+        h = ls[0]
+        for l in ls:
+            p = (l.get("partname") or "").strip()
+            if not p:
+                continue
+            f = _ops_family(p, l.get("family") or "")
+            q = float(l.get("tquant") or 0)
+            m = re.match(r"^(.*?)-(\d+)$", p)
+            is_child = bool(m)
+            parent = m.group(1) if m else p
+            src = p if p in stock else (parent if (is_child and parent in stock) else "")
+            L.append({"ord": o, "date": _ops_ddmm(h.get("ord_date")), "status": h.get("status") or "",
+                      "branch": OPS_BR.get(h.get("branch") or "", h.get("branch") or ""),
+                      "due": _ops_ddmm(h.get("due_date")), "due_iso": (h.get("due_date") or "")[:10],
+                      "part": p, "pdes": l.get("pdes") or "", "fam": f, "qty": q,
+                      "is_child": is_child, "parent": parent, "parent_in_order": is_child and parent in parts,
+                      "src": src})
+    dem = {}
+    for x in L:
+        if x["is_child"] or x["qty"] > 100 or x["qty"] <= 0 or "מחולל" in x["fam"] or x["fam"] in OPS_NONSTOCK \
+                or x["part"].startswith(("SERV", "SHID")):
+            continue
+        k = x["src"] or x["part"]
+        d = dem.setdefault(k, {"qty": 0.0, "orders": set(), "pdes": x["pdes"], "fam": x["fam"]})
+        d["qty"] += x["qty"]
+        d["orders"].add(x["ord"])
+
+    def verdict(x):
+        f = x["fam"]
+        if "מחולל" in f:
+            return "ייצור לפי הזמנה"
+        if f in OPS_NONSTOCK or x["part"].startswith(("SERV", "SHID")):
+            return "לא מוצר"
+        if x["qty"] <= 0:
+            return "שורת קיזוז"
+        if x["qty"] > 100:
+            return "כמות חריגה"
+        if x["is_child"] and x["parent_in_order"]:
+            return "חלק מהמוצר"
+        if x["is_child"]:
+            return "חלק בודד"
+        s = stock.get(x["src"]) if x["src"] else None
+        if not s or s["sell"] <= 0:
+            return "אין במלאי"
+        need = dem.get(x["src"], {}).get("qty", 0)
+        return "יש במלאי" if s["sell"] >= need else "חלקי"
+    for x in L:
+        x["v"] = verdict(x)
+    # לפי מוצר
+    skus = []
+    for k, d in dem.items():
+        s = stock.get(k)
+        sell = s["sell"] if s else 0.0
+        st = "אין במלאי" if sell <= 0 else ("יש במלאי - מכסה הכל" if sell >= d["qty"] else "חלקי")
+        whd = s["whd"] if s else {}
+        skus.append({"sku": k, "des": d["pdes"] or (s["des"] if s else ""), "fam": d["fam"], "ordered": int(d["qty"]),
+                     "orders": len(d["orders"]), "stock": int(sell), "disp": int(s["disp"]) if s else 0,
+                     "status": st, "kit": kit.get(k, ""),
+                     "wh": {OPS_WH_NAME.get(w, w): int(b) for w, b in whd.items() if b}})
+    # לפי הזמנה
+    orders = {}
+    for x in L:
+        o = orders.setdefault(x["ord"], {"ord": x["ord"], "status": x["status"], "branch": x["branch"],
+                                         "due": x["due"], "due_iso": x["due_iso"], "lines": 0, "missing": [], "partial": []})
+        o["lines"] += 1
+        tag = f"{x['part']} {x['pdes']} ×{int(x['qty'])}"
+        if x["v"] == "אין במלאי":
+            o["missing"].append(tag)
+        elif x["v"] == "חלקי":
+            o["partial"].append(tag)
+    blocked = sorted([o for o in orders.values() if o["missing"]], key=lambda o: o["due_iso"] or "9999")
+    partial = sorted([o for o in orders.values() if o["partial"] and not o["missing"]], key=lambda o: o["due_iso"] or "9999")
+    status_count = {}
+    for o in orders.values():
+        status_count[o["status"]] = status_count.get(o["status"], 0) + 1
+    # מלאי לפי מחסן
+    wh_tot = {}
+    stock_rows = []
+    for p, s in stock.items():
+        if p in kit:
+            continue
+        for w, b in s["whd"].items():
+            t = wh_tot.setdefault(w, {"skus": 0, "units": 0.0})
+            t["skus"] += 1 if b else 0
+            t["units"] += b
+        stock_rows.append({"sku": p, "des": s["des"], "total": int(s["sell"]), "disp": int(s["disp"]),
+                           "wh": {OPS_WH_NAME.get(w, w): int(b) for w, b in s["whd"].items() if b}})
+    stock_rows.sort(key=lambda r: -(r["total"] + r["disp"]))
+    warehouses = [{"code": w, "name": OPS_WH_NAME.get(w, w), "skus": t["skus"], "units": int(t["units"]),
+                   "kind": "למכירה" if w in OPS_SELL else ("תצוגה" if w in OPS_DISP else "אחר")}
+                  for w, t in wh_tot.items() if w in OPS_WH_NAME]
+    as_of = _ops_cache.get("stock_at")
+    if not as_of and newest:
+        try:
+            as_of = dt.datetime.fromisoformat(newest.replace("Z", "+00:00")).astimezone(IL).strftime("%d.%m.%Y %H:%M")
+        except Exception:
+            as_of = newest[:16].replace("T", " ")
+    return {"as_of": as_of, "warehouses": sorted(warehouses, key=lambda w: -w["units"]),
+            "skus": sorted(skus, key=lambda s: -(s["ordered"] - s["stock"])),
+            "order_status": dict(sorted(status_count.items(), key=lambda kv: -kv[1])),
+            "orders_total": len(orders), "orders_blocked": len(blocked), "orders_partial": len(partial),
+            "blocked": blocked, "partial_orders": partial, "stock": stock_rows, "stock_skus": len(stock_rows)}
+
+
+def _ops_docs(days: int = 7):
+    lo = (dt.datetime.now(IL).date() - dt.timedelta(days=days)).isoformat()
+    j = _pri_get("DOCUMENTS_T?$select=CURDATE,DOCNO,WARHSNAME,WARHSDES,TOWARHSNAME,TOWARHSDES,STATDES,TOTQUANT,UDATE,ORDNAME"
+                 f"&$filter=CURDATE%20ge%20{lo}T00:00:00%2B02:00")
+    return [{"date": _d10(d.get("CURDATE")), "doc": d.get("DOCNO") or "", "from": d.get("WARHSDES") or "",
+             "to": d.get("TOWARHSDES") or "", "qty": int(_num(d.get("TOTQUANT")) or 0),
+             "status": d.get("STATDES") or "", "ord": d.get("ORDNAME") or ""} for d in j.get("value", [])]
+
+
+def _ops_all():
+    now = time.time()
+    with _ops_lock:
+        fresh = _ops_cache["all"] is not None and now - _ops_cache["at"] < REFRESH_MINUTES * 60
+        if fresh:
+            return _ops_cache["all"]
+    data = _ops_build()
+    try:
+        with _ops_lock:
+            if _ops_cache["docs"] is None or now - _ops_cache["docs_at"] > 900:
+                _ops_cache["docs"] = _ops_docs()
+                _ops_cache["docs_at"] = now
+            data["docs"] = _ops_cache["docs"]
+    except Exception as e:
+        data["docs"] = []
+        data["docs_err"] = repr(e)[:200]
+    with _ops_lock:
+        _ops_cache["all"] = data
+        _ops_cache["at"] = now
+    return data
+
+
+@app.get("/ops")
+def ops_page(request: Request):
+    """ינשוף גיבור — לדורון בלבד (2.11.2026)."""
+    if not _logged_in(request):
+        return RedirectResponse("/login", status_code=303)
+    if not _is_doron(request):
+        return RedirectResponse("/", status_code=303)
+    try:
+        with open(os.path.join(HERE, "ops.html"), encoding="utf-8") as f:
+            html = f.read()
+    except Exception:
+        return HTMLResponse("<div dir='rtl' style='font-family:sans-serif;padding:40px'>המסך לא נמצא.</div>",
+                            status_code=404)
+    return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
+
+
+@app.get("/api/ops/all")
+def api_ops_all(request: Request, fresh: int = 0):
+    if not _logged_in(request) or not _is_doron(request):
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    try:
+        if fresh:
+            with _ops_lock:
+                _ops_cache["all"] = None
+        return JSONResponse(_ops_all())
+    except Exception as e:
+        return JSONResponse({"error": repr(e)[:300]}, status_code=500)
+
+
+@app.post("/api/ops/sync")
+def api_ops_sync(request: Request):
+    """משיכת מלאי מפריוריטי עכשיו (לא מחכים לרבע השעה)."""
+    if not _logged_in(request) or not _is_doron(request):
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    try:
+        n = sync_stock()
+        return JSONResponse({"ok": True, "rows": n, "at": _ops_cache.get("stock_at")})
+    except Exception as e:
+        return JSONResponse({"error": repr(e)[:300]}, status_code=500)
 
 
 @app.post("/api/refresh")

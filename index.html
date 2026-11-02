@@ -803,6 +803,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>
       קרן
     </a>
+    <a class="rfr" id="opsbtn" href="/ops" title="ינשוף גיבור — מלאי חי מול הזמנות פתוחות (הבקשה 2.11.2026)" style="display:none;text-decoration:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-5 9 5v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 20v-6h6v6"/></svg>
+      ינשוף גיבור
+    </a>
 <!--/DORON-->
 <!--/OWNER-->
 <!--ORDERS-->
@@ -5144,6 +5148,8 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
             vb.title='בחירת תצוגה'; }
     var kb=document.getElementById('kerenbtn');
     if(kb)kb.style.display=(owner&&!prevVideo())?'':'none';
+    var opb=document.getElementById('opsbtn');
+    if(opb)opb.style.display=(owner&&!prevVideo())?'':'none';
 /*ENDOWNER*/
     // חיפוש הזמנה: בעלים ורום (META.orders; הגוש ORDERS נמחק בשרת לכל אחד אחר). נשאר גם כשהעין
     // מכוונת לתצוגה של מישהו אחר (29.10.2026: העין נשארה דלוקה והכפתור 'נעלם'). נסתר רק בווידאו.
