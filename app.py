@@ -5558,7 +5558,8 @@ def _ops_build():
             L.append({"ord": o, "date": _ops_ddmm(h.get("ord_date")), "status": h.get("status") or "",
                       "branch": OPS_BR.get(h.get("branch") or "", h.get("branch") or ""),
                       "due": _ops_ddmm(h.get("due_date")), "due_iso": (h.get("due_date") or "")[:10],
-                      "part": p, "pdes": l.get("pdes") or "", "fam": f, "qty": q,
+                      "cust": h.get("cdes") or "", "agent": h.get("agent") or "",
+                      "part": p, "pdes": l.get("pdes") or "", "fam": f, "qty": q, "price": float(l.get("qprice") or 0),
                       "is_child": is_child, "parent": parent, "parent_in_order": is_child and parent in parts,
                       "src": src})
     dem = {}
@@ -5607,7 +5608,8 @@ def _ops_build():
     orders = {}
     for x in L:
         o = orders.setdefault(x["ord"], {"ord": x["ord"], "status": x["status"], "branch": x["branch"],
-                                         "due": x["due"], "due_iso": x["due_iso"], "lines": 0, "missing": [], "partial": []})
+                                         "due": x["due"], "due_iso": x["due_iso"], "date": x["date"],
+                                         "cust": x["cust"], "agent": x["agent"], "lines": 0, "missing": [], "partial": []})
         o["lines"] += 1
         tag = f"{x['part']} {x['pdes']} ×{int(x['qty'])}"
         if x["v"] == "אין במלאי":
@@ -5669,6 +5671,29 @@ def _ops_build():
                      "last": _ops_ddmm(last), "days": days, "q90": int(float(sl.get("q90") or 0)),
                      "q180": int(float(sl.get("q180") or 0)), "q365": int(q365), "cover": cover, "cls": cls})
     slow.sort(key=lambda r: -(r["value"] or 0))
+    # פרטים לדריל (לא נשלחים ב-/all): שורות כל הזמנה, ומלאי + הזמנות לכל מק"ט
+    detail_orders = {}
+    for x in L:
+        s = stock.get(x["src"]) if x["src"] else None
+        detail_orders.setdefault(x["ord"], []).append(
+            {"part": x["part"], "pdes": x["pdes"], "fam": x["fam"], "qty": int(x["qty"]), "price": round(x["price"]),
+             "v": x["v"], "src": x["src"], "sell": int(s["sell"]) if s else None, "disp": int(s["disp"]) if s else None,
+             "wh": {OPS_WH_NAME.get(w, w): int(b) for w, b in (s["whd"] if s else {}).items() if b},
+             "kit": (s.get("kit") or "") if s else ""})
+    detail_skus = {}
+    for x in L:
+        k = x["src"] or x["part"]
+        if x["is_child"] or x["v"] in ("ייצור לפי הזמנה", "לא מוצר", "שורת קיזוז"):
+            continue
+        d = detail_skus.setdefault(k, [])
+        d.append({"ord": x["ord"], "status": x["status"], "branch": x["branch"], "due": x["due"], "due_iso": x["due_iso"],
+                  "cust": x["cust"], "qty": int(x["qty"]), "v": x["v"]})
+    with _ops_lock:
+        _ops_cache["_orders"] = {k: {"h": orders.get(k), "lines": v} for k, v in detail_orders.items()}
+        _ops_cache["_skus"] = {k: sorted(v, key=lambda r: r["due_iso"] or "9999") for k, v in detail_skus.items()}
+        _ops_cache["_stock_all"] = {k: {"sell": int(s["sell"]), "disp": int(s["disp"]), "kit": s.get("kit") or "",
+                                        "wh": {OPS_WH_NAME.get(w, w): int(b) for w, b in s["whd"].items() if b}}
+                                    for k, s in stock.items()}
     as_of = _ops_cache.get("stock_at")
     if not as_of and newest:
         try:
@@ -5739,6 +5764,36 @@ def api_ops_all(request: Request, fresh: int = 0):
             with _ops_lock:
                 _ops_cache["all"] = None
         return JSONResponse(_ops_all())
+    except Exception as e:
+        return JSONResponse({"error": repr(e)[:300]}, status_code=500)
+
+
+@app.get("/api/ops/order")
+def api_ops_order(request: Request, ord: str = ""):
+    """דריל להזמנה אחת: כותרת + כל השורות עם מצב המלאי של כל שורה."""
+    if not _logged_in(request) or not _is_doron(request):
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    try:
+        _ops_all()
+        d = (_ops_cache.get("_orders") or {}).get(ord.strip())
+        return JSONResponse(d or {"error": "ההזמנה לא נמצאה בין ההזמנות הפתוחות"})
+    except Exception as e:
+        return JSONResponse({"error": repr(e)[:300]}, status_code=500)
+
+
+@app.get("/api/ops/sku")
+def api_ops_sku(request: Request, sku: str = ""):
+    """דריל למוצר אחד: מלאי לפי מחסן + ההזמנות הפתוחות שצריכות אותו."""
+    if not _logged_in(request) or not _is_doron(request):
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    try:
+        _ops_all()
+        k = sku.strip()
+        st = (_ops_cache.get("_stock_all") or {}).get(k)
+        ords = (_ops_cache.get("_skus") or {}).get(k) or []
+        if st is None and not ords:
+            return JSONResponse({"error": "אין יתרה ואין הזמנות פתוחות למק\"ט הזה"})
+        return JSONResponse({"stock": st, "orders": ords})
     except Exception as e:
         return JSONResponse({"error": repr(e)[:300]}, status_code=500)
 

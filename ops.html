@@ -5,75 +5,105 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>ינשוף גיבור</title>
 <style>
-/* layout: one column, sticky header with ops accent, tabs as segmented row; tables scroll inside their own box */
-:root{--bd:#2457a6;--bg:#ffffff;--surface:#f3f6fa;--line:#e1e7ef;--line2:#c9d3e0;--tx:#17212e;--tx2:#52607a;--tx3:#8a95a8;--okbg:#e3f3ec;--okfg:#0b6e4f;--wbg:#fbf0da;--wfg:#8f5f08;--dbg:#fbe6e4;--dfg:#a3271f;--accentSoft:rgba(36,87,166,.10);--sales:#0d9668}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bd:#6f9ce8;--bg:#0e1319;--surface:#171e28;--line:#26303e;--line2:#364355;--tx:#e8edf4;--tx2:#a3afc2;--tx3:#6f7b90;--okbg:#12312765;--okfg:#63d3a6;--wbg:#2e241065;--wfg:#e0b25a;--dbg:#2e161465;--dfg:#f0968f;--accentSoft:rgba(111,156,232,.16);--sales:#2fbf8f;color-scheme:dark}}
-:root[data-theme="dark"]{--bd:#6f9ce8;--bg:#0e1319;--surface:#171e28;--line:#26303e;--line2:#364355;--tx:#e8edf4;--tx2:#a3afc2;--tx3:#6f7b90;--okbg:#12312765;--okfg:#63d3a6;--wbg:#2e241065;--wfg:#e0b25a;--dbg:#2e161465;--dfg:#f0968f;--accentSoft:rgba(111,156,232,.16);--sales:#2fbf8f;color-scheme:dark}
+/* ינשוף גיבור — אגף התפעול. כיוון: מסך אחד, שורות קצרות, כל מספר נפתח לרשימה, כל הזמנה ומוצר נפתחים בחלון תחתון (הבקשה 2.11.2026). */
+:root{--bd:#2457a6;--bg:#ffffff;--surface:#f3f6fa;--line:#e1e7ef;--line2:#c9d3e0;--tx:#17212e;--tx2:#52607a;--tx3:#8a95a8;--okbg:#e3f3ec;--okfg:#0b6e4f;--wbg:#fbf0da;--wfg:#8f5f08;--dbg:#fbe6e4;--dfg:#a3271f;--accentSoft:rgba(36,87,166,.10);--sales:#0d9668;--shadow:0 -12px 40px rgba(16,28,46,.22)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bd:#6f9ce8;--bg:#0e1319;--surface:#171e28;--line:#26303e;--line2:#364355;--tx:#e8edf4;--tx2:#a3afc2;--tx3:#6f7b90;--okbg:#12312765;--okfg:#63d3a6;--wbg:#2e241065;--wfg:#e0b25a;--dbg:#2e161465;--dfg:#f0968f;--accentSoft:rgba(111,156,232,.16);--sales:#2fbf8f;--shadow:0 -12px 40px rgba(0,0,0,.5);color-scheme:dark}}
+:root[data-theme="dark"]{--bd:#6f9ce8;--bg:#0e1319;--surface:#171e28;--line:#26303e;--line2:#364355;--tx:#e8edf4;--tx2:#a3afc2;--tx3:#6f7b90;--okbg:#12312765;--okfg:#63d3a6;--wbg:#2e241065;--wfg:#e0b25a;--dbg:#2e161465;--dfg:#f0968f;--accentSoft:rgba(111,156,232,.16);--sales:#2fbf8f;--shadow:0 -12px 40px rgba(0,0,0,.5);color-scheme:dark}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Hebrew",Arial,sans-serif;direction:rtl;font-size:14px;line-height:1.45;padding-block:0 32px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
-.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 0 8px;display:flex;flex-direction:column;gap:8px}
-.brand{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+html,body{background:var(--bg);color:var(--tx);margin:0}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Hebrew",Arial,sans-serif;direction:rtl;font-size:14px;line-height:1.45;padding-block:0 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit}
+.top{position:sticky;top:0;z-index:30;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 0 8px;display:flex;flex-direction:column;gap:8px}
+.brand{display:flex;align-items:center;gap:10px}
 .owl{width:34px;height:34px;border-radius:10px;background:var(--bd);color:#fff;display:grid;place-items:center;font-weight:700;font-size:15px;flex:none}
-.brand h1{margin:0;font-size:18px;font-weight:700;letter-spacing:-.01em}
+.brand h1{margin:0;font-size:18px;font-weight:700;letter-spacing:-.01em;line-height:1.2}
 .brand .sub{font-size:12px;color:var(--tx3)}
 .mode{margin-inline-start:auto;display:inline-flex;border:1px solid var(--line2);border-radius:999px;overflow:hidden;font-size:12.5px}
-.mode span{padding:6px 12px;color:var(--tx2)}
+.mode a,.mode span{padding:6px 12px;min-height:34px;display:inline-flex;align-items:center;text-decoration:none;color:var(--tx2)}
+.mode a{color:var(--sales)}
 .mode span.on{background:var(--accentSoft);color:var(--bd);font-weight:700}
-.mode span.sales{color:var(--sales)}
 .tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
 .tabs::-webkit-scrollbar{display:none}
-.tabs button{flex:none;min-height:40px;padding:8px 14px;border:1px solid var(--line2);border-radius:999px;background:var(--bg);color:var(--tx2);font:inherit;font-size:13.5px;font-weight:500;cursor:pointer}
+.tabs button{flex:none;min-height:40px;padding:8px 14px;border:1px solid var(--line2);border-radius:999px;background:var(--bg);color:var(--tx2);font-size:13.5px;font-weight:500;cursor:pointer}
 .tabs button.on{background:var(--accentSoft);border-color:var(--bd);color:var(--bd);font-weight:700}
-.tabs button:focus-visible{outline:2px solid var(--bd);outline-offset:2px}
+.tabs button:focus-visible,.tile:focus-visible,.row:focus-visible,.seg button:focus-visible,.x:focus-visible{outline:2px solid var(--bd);outline-offset:2px}
 .asof{font-size:12px;color:var(--tx3);display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0 2px}
 .asof .dot{width:8px;height:8px;border-radius:50%;background:var(--okfg);display:inline-block}
+.lnk{background:none;border:0;padding:6px 0;min-height:34px;color:var(--bd);font-size:12.5px;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 section{margin:12px 0 0}
 h2{font-size:16px;margin:16px 0 8px;font-weight:700;text-wrap:balance}
-h3{font-size:14px;margin:14px 0 6px;font-weight:700;color:var(--tx2)}
-p{margin:6px 0;max-width:68ch}
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
-.tile{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--bg);min-width:0}
+h3{font-size:13.5px;margin:18px 0 6px;font-weight:700;color:var(--tx2)}
+p{margin:6px 0;max-width:68ch;color:var(--tx2)}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media (min-width:700px){.tiles{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.tile{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--bg);min-width:0;text-align:start;cursor:pointer;display:grid;gap:2px;transition:background .18s ease-out}
+.tile:hover{background:var(--surface)}
+.tile:active{background:var(--accentSoft)}
 .tile .k{font-size:12px;color:var(--tx2)}
-.tile .v{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em;margin-top:2px}
+.tile .v{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1.1}
 .tile .s{font-size:12px;color:var(--tx3)}
+.tile .go{font-size:11.5px;color:var(--bd);font-weight:600;margin-top:2px}
 .tile.bad .v{color:var(--dfg)}.tile.warn .v{color:var(--wfg)}.tile.ok .v{color:var(--okfg)}
-.tw{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
-table{border-collapse:collapse;width:100%;min-width:560px;font-size:13px}
-th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);vertical-align:top;white-space:nowrap}
-th{font-size:12px;color:var(--tx2);font-weight:600;background:var(--surface);position:sticky;top:0}
-td.n,th.n{text-align:left;font-variant-numeric:tabular-nums;direction:ltr}
-td.wrap{white-space:normal;min-width:220px}
-tr:last-child td{border-bottom:0}
-.chip{display:inline-block;border:1px solid var(--line2);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;white-space:nowrap}
+.tile.static{cursor:default}.tile.static:hover{background:var(--bg)}
+.list{display:grid;gap:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--bg)}
+.row{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;width:100%;min-height:56px;padding:9px 12px;border:0;border-bottom:1px solid var(--line);background:var(--bg);text-align:start;cursor:pointer;transition:background .15s ease-out}
+.row:last-child{border-bottom:0}
+.row:hover{background:var(--surface)}
+.row:active{background:var(--accentSoft)}
+.row .a{font-weight:700;font-variant-numeric:tabular-nums;display:flex;gap:6px;align-items:center;flex-wrap:wrap;min-width:0}
+.row .a .nm{font-weight:500;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.row .b{font-size:12.5px;color:var(--tx2);display:flex;gap:6px;flex-wrap:wrap;align-items:center;grid-column:1}
+.row .c{grid-column:2;grid-row:1/3;text-align:end;font-variant-numeric:tabular-nums;font-size:13px;display:grid;gap:2px;justify-items:end}
+.row .c b{font-size:16px}
+.chip{display:inline-block;border:1px solid var(--line2);border-radius:999px;padding:1px 8px;font-size:11.5px;font-weight:600;white-space:nowrap;color:var(--tx2);line-height:1.5}
 .chip.ok{border-color:var(--okfg);color:var(--okfg)}
 .chip.warn{border-color:var(--wfg);color:var(--wfg)}
 .chip.bad{border-color:var(--dfg);color:var(--dfg)}
 .chip.gray{color:var(--tx3)}
 .chip.sys{border-color:var(--bd);color:var(--bd)}
 .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
-input[type=search]{font:inherit;font-size:14px;min-height:42px;padding:8px 12px;border:1px solid var(--line2);border-radius:12px;background:var(--bg);color:var(--tx);flex:1;min-width:180px}
+input[type=search]{font:inherit;font-size:14px;min-height:42px;padding:8px 12px;border:1px solid var(--line2);border-radius:12px;background:var(--bg);color:var(--tx);flex:1;min-width:160px}
 input:focus-visible{outline:2px solid var(--bd);outline-offset:1px}
 .seg{display:inline-flex;border:1px solid var(--line2);border-radius:10px;overflow:hidden}
-.seg button{font:inherit;font-size:12.5px;min-height:38px;padding:6px 11px;border:0;background:var(--bg);color:var(--tx2);cursor:pointer}
+.seg button{font-size:12.5px;min-height:40px;padding:6px 11px;border:0;background:var(--bg);color:var(--tx2);cursor:pointer}
 .seg button.on{background:var(--accentSoft);color:var(--bd);font-weight:700}
-.note{border:1px solid var(--line2);border-radius:10px;padding:8px 12px;background:var(--surface);font-size:13px;margin:10px 0;max-width:72ch}
+.note{border:1px solid var(--line2);border-radius:10px;padding:8px 12px;background:var(--surface);font-size:13px;margin:10px 0;max-width:72ch;color:var(--tx2)}
 .note.warn{border-color:var(--wfg);color:var(--wfg)}
 .note.bad{border-color:var(--dfg);color:var(--dfg)}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+table{border-collapse:collapse;width:100%;min-width:520px;font-size:13px}
+th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);vertical-align:top;white-space:nowrap}
+th{font-size:12px;color:var(--tx2);font-weight:600;background:var(--surface);position:sticky;top:0}
+td.n,th.n{text-align:left;font-variant-numeric:tabular-nums;direction:ltr}
+td.wrap{white-space:normal;min-width:200px}
+tr:last-child td{border-bottom:0}
+tr.clk{cursor:pointer}tr.clk:hover td{background:var(--surface)}
+.more{font-size:13px;min-height:40px;padding:8px 16px;border:1px solid var(--line2);border-radius:999px;background:var(--surface);color:var(--tx2);cursor:pointer;margin:8px auto 0;display:block}
 .spec{display:grid;gap:8px}
 .spec .it{border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:start}
 .spec .it b{font-size:14px}
 .spec .it .d{grid-column:1/-1;color:var(--tx2);font-size:13px;max-width:70ch}
 .spec .it .src{grid-column:1/-1;font-size:12px;color:var(--tx3)}
-.ord{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:0 0 8px;display:grid;gap:4px}
-.ord .h{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.ord .h b{font-variant-numeric:tabular-nums}
-.ord .m{font-size:13px;color:var(--tx2);white-space:normal}
-.ord .m span{display:block}
-.more{font:inherit;font-size:13px;min-height:40px;padding:8px 16px;border:1px solid var(--line2);border-radius:999px;background:var(--surface);color:var(--tx2);cursor:pointer;margin:8px auto 0;display:block}
 .foot{margin-top:28px;font-size:12px;color:var(--tx3);border-top:1px solid var(--line);padding-top:10px;max-width:72ch}
 .hide{display:none}
-@media (prefers-reduced-motion:no-preference){.tabs button,.seg button{transition:background .15s}}
+/* חלון תחתון — כמו בינשוף המכירות */
+.ov{position:fixed;inset:0;background:rgba(10,16,24,.45);z-index:100;display:none}
+.ov.on{display:block}
+.sheet{position:fixed;right:0;left:0;bottom:0;z-index:101;background:var(--bg);border-radius:18px 18px 0 0;border:1px solid var(--line);border-bottom:0;box-shadow:var(--shadow);padding:10px 16px calc(18px + env(safe-area-inset-bottom));max-height:88vh;overflow-y:auto;transform:translateY(102%);transition:transform .22s ease-out;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.sheet.on{transform:none}
+.sheet .hd{display:flex;align-items:center;gap:10px;position:sticky;top:-10px;background:var(--bg);padding:6px 0 8px;border-bottom:1px solid var(--line);margin-bottom:8px;z-index:2}
+.sheet .hd h4{margin:0;font-size:16px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.x{width:44px;height:44px;border-radius:12px;border:1px solid var(--line2);background:var(--bg);display:grid;place-items:center;cursor:pointer;flex:none}
+.x svg{width:18px;height:18px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round}
+.back{min-height:44px;padding:0 12px;border-radius:12px;border:1px solid var(--line2);background:var(--bg);cursor:pointer;font-size:13px;color:var(--tx2);flex:none}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px 12px;margin:6px 0 12px}
+.kv div{min-width:0}
+.kv .k{font-size:11.5px;color:var(--tx3)}
+.kv .v{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.whs{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 10px}
+.whs .chip{font-weight:500}
+.whs .chip b{font-weight:700}
+@media (prefers-reduced-motion:reduce){.sheet{transition:none}}
 </style>
 </head>
 <body>
@@ -82,7 +112,7 @@ input:focus-visible{outline:2px solid var(--bd);outline-offset:1px}
   <div class="brand">
     <div class="owl" aria-hidden="true">ג</div>
     <div><h1>ינשוף גיבור</h1><div class="sub">ויטוריו דיוואני · מלאי חי מול הזמנות פתוחות</div></div>
-    <div class="mode" title="מעבר בין האגפים"><a class="sales" href="/" style="padding:6px 12px;text-decoration:none;color:var(--sales)">מכירות</a><span class="on">תפעול</span></div>
+    <div class="mode" title="מעבר בין האגפים"><a href="/">מכירות</a><span class="on">תפעול</span></div>
   </div>
   <nav class="tabs" id="tabs" aria-label="מסכים">
     <button data-t="home" class="on">עכשיו</button>
@@ -94,7 +124,7 @@ input:focus-visible{outline:2px solid var(--bd);outline-offset:1px}
   </nav>
 </header>
 
-<div class="asof"><span class="dot"></span><span>מלאי מפריוריטי · עודכן <b id="asof">…</b></span><button type="button" class="more" id="syncbtn" style="margin:0;min-height:34px;padding:4px 12px">משוך מלאי עכשיו</button><span id="syncmsg"></span></div>
+<div class="asof"><span class="dot"></span><span>מלאי מפריוריטי · עודכן <b id="asof">…</b></span><button type="button" class="lnk" id="syncbtn">משוך מלאי עכשיו</button><span id="syncmsg"></span></div>
 <div id="loadmsg" class="note">טוען נתונים…</div>
 
 <!-- ===== עכשיו ===== -->
@@ -102,21 +132,23 @@ input:focus-visible{outline:2px solid var(--bd);outline-offset:1px}
   <h2>מה צריך תשומת לב היום</h2>
   <div class="tiles" id="hometiles"></div>
   <h3>הזמנות שמחכות לסחורה שאין — לפי תאריך אספקה מובטח</h3>
-  <div id="homeblocked"></div>
+  <div class="list" id="homeblocked"></div>
+  <button class="more" id="homeall">כל ההזמנות</button>
   <h3>מוצרים שהביקוש הפתוח גדול מהמלאי</h3>
-  <div class="tw"><table id="homeshort"><thead><tr><th>מק"ט</th><th>תיאור</th><th class="n">הוזמן (פתוח)</th><th class="n">הזמנות</th><th class="n">במלאי</th><th class="n">חסר</th><th>מצב</th></tr></thead><tbody></tbody></table></div>
+  <div class="list" id="homeshort"></div>
+  <button class="more" id="homeshortall">כל המוצרים</button>
 </section>
 
 <!-- ===== הזמנות מול מלאי ===== -->
 <section data-s="orders" class="hide">
   <h2>הזמנות פתוחות מול מלאי</h2>
-  <p>הזמנות מ-1.1.2026 שעוד לא סופקו ולא בוטלו, בלי שירות ובלי הזמנות דמה. מוצר שמיוצר לפי הזמנה (סלון, כורסה, הדום, כרית מהמחולל) לא נבדק מול מלאי.</p>
+  <p>הזמנות מ-1.1.2026 שעוד לא סופקו ולא בוטלו, בלי שירות ובלי הזמנות דמה. מוצר שמיוצר לפי הזמנה לא נבדק מול מלאי. לחיצה על הזמנה פותחת את כל השורות שלה.</p>
   <div class="tiles" id="ordtiles"></div>
-  <div class="bar"><div class="seg" id="ordseg"><button data-f="blocked" class="on">חסר מוצר</button><button data-f="partial">חלקי</button><button data-f="all">כל הסטטוסים</button></div></div>
-  <div id="ordlist"></div>
+  <div class="bar"><div class="seg" id="ordseg"><button data-f="blocked" class="on">חסר מוצר</button><button data-f="partial">חלקי</button><button data-f="all">לפי סטטוס</button></div></div>
+  <div class="list" id="ordlist"></div>
   <h3>לפי מוצר — ביקוש פתוח מול מלאי</h3>
   <div class="bar"><input type="search" id="skuq" placeholder="חיפוש מק"ט או תיאור" aria-label="חיפוש מוצר"><div class="seg" id="skuseg"><button data-f="short" class="on">חסר או חלקי</button><button data-f="all">הכל</button></div></div>
-  <div class="tw"><table id="skutab"><thead><tr><th>מק"ט</th><th>תיאור</th><th>משפחה</th><th class="n">הוזמן</th><th class="n">הזמנות</th><th class="n">במלאי</th><th class="n">פער</th><th>מצב</th><th>חלקים (חלק: מלאי)</th></tr></thead><tbody></tbody></table></div>
+  <div class="list" id="skulist"></div>
 </section>
 
 <!-- ===== מלאי לפי מחסן ===== -->
@@ -124,9 +156,9 @@ input:focus-visible{outline:2px solid var(--bd);outline-offset:1px}
   <h2>מלאי לפי מחסן</h2>
   <div class="tiles" id="whtiles"></div>
   <div class="note warn" id="rejnote"></div>
+  <div class="note">למכירה = מרלוג + עודפים. יחידות באולמות התצוגה מוצגות בנפרד ולא נספרות כמלאי למכירה (הבקשה, שאלה 374, 2.11.2026). לחיצה על מוצר מראה את המלאי שלו בכל מחסן ואת ההזמנות שצריכות אותו.</div>
   <div class="bar"><input type="search" id="stq" placeholder="חיפוש מק"ט או תיאור" aria-label="חיפוש במלאי"></div>
-  <div class="note">למכירה = מרלוג + עודפים. יחידות באולמות התצוגה מוצגות בנפרד ולא נספרות כמלאי למכירה (הבקשה, שאלה 374, 2.11.2026). לפעמים מוכרים מהתצוגה, אם המוצר פגום או כשמפנים תצוגה.</div>
-  <div class="tw"><table id="sttab"><thead><tr><th>מק"ט</th><th>תיאור</th><th class="n">למכירה</th><th class="n">מרלוג</th><th class="n">עודפים</th><th class="n">בתצוגה</th><th class="n">נתניה</th><th class="n">ראשל"צ</th><th class="n">חיפה</th><th class="n">ירושלים</th><th class="n">בית שמש</th><th class="n">פגומים</th></tr></thead><tbody></tbody></table></div>
+  <div class="list" id="stlist"></div>
   <button class="more" id="stmore">עוד 50 שורות</button>
 </section>
 
@@ -141,39 +173,112 @@ input:focus-visible{outline:2px solid var(--bd);outline-offset:1px}
 <section data-s="slow" class="hide">
   <h2>מלאי איטי ומת</h2>
   <p>מוצרים עם יחידות במלאי שלא נמכרים. המכירות מהענן (הזמנות, לא אספקות), שנתיים אחורה. העלות מפריוריטי — אומדן, באפור.</p>
-  <div class="note">ספים זמניים עד הכרעה (שאלה 376): <b>מת</b> = בלי מכירה 180 יום · <b>איטי</b> = בלי מכירה 90 יום, או מלאי ליותר מ-12 חודשי מכירה · <b>זז</b> = כל השאר. מוצרים שמיוצרים לפי הזמנה, הובלה ושדרוגים לא נכללים.</div>
+  <div class="note">ספים זמניים עד הכרעה (שאלה 376): <b>מת</b> = בלי מכירה 180 יום · <b>איטי</b> = בלי מכירה 90 יום, או מלאי ליותר מ-12 חודשי מכירה · <b>זז</b> = כל השאר.</div>
   <div class="tiles" id="slowtiles"></div>
   <div class="bar"><input type="search" id="slowq" placeholder="חיפוש מק"ט או תיאור" aria-label="חיפוש"><div class="seg" id="slowseg"><button data-f="מת" class="on">מת</button><button data-f="איטי">איטי</button><button data-f="זז">זז</button><button data-f="all">הכל</button></div></div>
-  <div class="tw"><table id="slowtab"><thead><tr><th>מק"ט</th><th>תיאור</th><th>משפחה</th><th class="n">למכירה</th><th class="n">בתצוגה</th><th class="n">עלות ליח' (אומדן)</th><th class="n">שווי במלאי (אומדן)</th><th>מכירה אחרונה</th><th class="n">ימים</th><th class="n">נמכרו 90</th><th class="n">נמכרו 365</th><th class="n">חודשי מלאי</th><th>מצב</th></tr></thead><tbody></tbody></table></div>
+  <div class="list" id="slowlist"></div>
   <button class="more" id="slowmore">עוד 50 שורות</button>
 </section>
 
 <!-- ===== אפיון ===== -->
 <section data-s="spec" class="hide">
-  <h2>מה יהיה בינשוף התפעול</h2>
-  <p>לפי מה שנהוג אצל קמעונאי רהיטים עם מחסן מרכזי ואולמות תצוגה. כל פריט: מה זה · מה עושים איתו · מה יוצא. התגית אומרת אם הנתון כבר בידינו.</p>
+  <h2>מה יהיה בינשוף גיבור</h2>
+  <p>לפי מה שנהוג אצל קמעונאי רהיטים עם מחסן מרכזי ואולמות תצוגה. כל פריט: מה זה · מה עושים איתו · מה יוצא.</p>
   <div class="spec" id="spec"></div>
 </section>
 
-<div class="foot">מקור: פריוריטי חי (יתרות מלאי, הזמנות, תעודות מלאי) · ספירת רום 19.10.2026 להשוואה בלבד · "במלאי" = מרלוג + עודפים; תצוגה לא נספרת (שאלה 374, 2.11.2026) · ההזמנות מהענן (כל רבע שעה), המלאי מפריוריטי (כל רבע שעה).</div>
+<div class="foot">מקור: פריוריטי חי (יתרות מלאי כל רבע שעה, תעודות מלאי) · ההזמנות מהענן (כל רבע שעה) · "במלאי" = מרלוג + עודפים; תצוגה לא נספרת (שאלה 374, 2.11.2026).</div>
+
+<!-- חלון תחתון -->
+<div class="ov" id="ov"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="shtitle">
+  <div class="hd"><button type="button" class="back" id="shback" hidden>חזרה</button><h4 id="shtitle"></h4><button type="button" class="x" id="shclose" aria-label="סגירה"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div id="shbody"></div>
+</div>
 
 <script>
 const $ = s => document.querySelector(s);
 const fmt = n => (n==null?'':Number(n).toLocaleString('he-IL'));
 const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const TODAY = new Date(); TODAY.setHours(0,0,0,0);
-function dueDays(d){ const [dd,mm,yy]=d.split('.'); return Math.round((new Date(+yy,+mm-1,+dd)-TODAY)/864e5); }
+function dueDays(d){ if(!d) return null; const [dd,mm,yy]=d.split('.'); return Math.round((new Date(+yy,+mm-1,+dd)-TODAY)/864e5); }
+const dueChip = d => { const n=dueDays(d); if(n==null) return '<span class="chip gray">בלי תאריך</span>'; if(n<0) return `<span class="chip bad">באיחור ${fmt(-n)} ימים</span>`; if(n===0) return '<span class="chip warn">היום</span>'; if(n<=7) return `<span class="chip warn">עוד ${n} ימים</span>`; return `<span class="chip gray">עוד ${n} ימים</span>`; };
+const vChip = v => v==='אין במלאי'?'<span class="chip bad">אין במלאי</span>':(v==='חלקי'||v==='יש במלאי חלקית')?'<span class="chip warn">חלקי</span>':v==='יש במלאי'||v==='יש במלאי - מכסה הכל'?'<span class="chip ok">יש</span>':`<span class="chip gray">${esc(v)}</span>`;
 let D = null;
+
+/* ---- חלון תחתון עם מחסנית (הזמנה → מוצר → הזמנה) ---- */
+const stack = [];
+function shOpen(title, html, push=true){
+  if(push && $('#sheet').classList.contains('on')) stack.push({t:$('#shtitle').textContent, h:$('#shbody').innerHTML});
+  $('#shtitle').textContent = title; $('#shbody').innerHTML = html;
+  $('#shback').hidden = stack.length===0;
+  $('#ov').classList.add('on'); $('#sheet').classList.add('on'); $('#sheet').scrollTop = 0;
+}
+function shClose(){ stack.length=0; $('#ov').classList.remove('on'); $('#sheet').classList.remove('on'); }
+function shBack(){ const p = stack.pop(); if(!p) return shClose(); shOpen(p.t, p.h, false); }
+$('#ov').onclick = shClose; $('#shclose').onclick = shClose; $('#shback').onclick = shBack;
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') shClose(); });
+
+/* ---- שורות ---- */
+function ordRow(o){
+  const miss = o.missing ? o.missing.length : (o.miss||0), part = o.partial ? o.partial.length : (o.part||0);
+  const right = miss ? `<b style="color:var(--dfg)">${fmt(miss)}</b><span style="font-size:11px;color:var(--tx3)">חסר</span>` : part ? `<b style="color:var(--wfg)">${fmt(part)}</b><span style="font-size:11px;color:var(--tx3)">חלקי</span>` : `<span class="chip ok">מכוסה</span>`;
+  return `<button type="button" class="row" data-ord="${esc(o.ord)}"><div class="a">${esc(o.ord)}<span class="chip">${esc(o.status)}</span><span class="chip gray">${esc(o.branch||'')}</span></div><div class="b">אספקה ${esc(o.due||'—')} ${dueChip(o.due)}${o.cust?`<span class="nm">· ${esc(o.cust)}</span>`:''}</div><div class="c">${right}</div></button>`;
+}
+function skuRow(s){
+  const gap = s.ordered - s.stock;
+  return `<button type="button" class="row" data-sku="${esc(s.sku)}"><div class="a">${esc(s.sku)}<span class="nm">${esc(s.des)}</span></div><div class="b">הוזמן ${fmt(s.ordered)} ב-${fmt(s.orders)} הזמנות · במלאי ${fmt(s.stock)}${s.disp?` · בתצוגה ${fmt(s.disp)}`:''}</div><div class="c">${gap>0?`<b style="color:${s.stock>0?'var(--wfg)':'var(--dfg)'}">${fmt(gap)}</b><span style="font-size:11px;color:var(--tx3)">חסר</span>`:vChip(s.status)}</div></button>`;
+}
+function stockRow(s){
+  return `<button type="button" class="row" data-sku="${esc(s.sku)}"><div class="a">${esc(s.sku)}<span class="nm">${esc(s.des)}</span></div><div class="b">${Object.entries(s.wh).filter(([k])=>k!=='פגומים').map(([k,v])=>`${esc(k)} ${fmt(v)}`).join(' · ')}</div><div class="c"><b>${fmt(s.total)}</b><span style="font-size:11px;color:var(--tx3)">למכירה${s.disp?` · ${fmt(s.disp)} בתצוגה`:''}</span></div></button>`;
+}
+function slowRow(s){
+  const cls = s.cls==='מת'?'bad':s.cls==='איטי'?'warn':'ok';
+  return `<button type="button" class="row" data-sku="${esc(s.sku)}"><div class="a">${esc(s.sku)}<span class="nm">${esc(s.des)}</span></div><div class="b">${s.last?`מכירה אחרונה ${esc(s.last)} (לפני ${fmt(s.days)} ימים)`:'בלי מכירה בשנתיים'} · נמכרו ${fmt(s.q365)} בשנה${s.cover!=null?` · ${fmt(s.cover)} חודשי מלאי`:''}</div><div class="c"><b>${fmt(s.sell)}</b><span style="font-size:11px;color:var(--tx3)">למכירה${s.value?` · כ-${fmt(s.value)} ₪`:''}</span><span class="chip ${cls}">${esc(s.cls)}</span></div></button>`;
+}
+document.body.addEventListener('click', e=>{
+  const r = e.target.closest('[data-ord],[data-sku]'); if(!r) return;
+  if(r.dataset.ord) openOrder(r.dataset.ord); else if(r.dataset.sku) openSku(r.dataset.sku);
+});
+
+/* ---- דריל: הזמנה ---- */
+async function openOrder(ord){
+  shOpen('הזמנה '+ord, '<div class="note">טוען…</div>');
+  let d; try{ d = await fetch('/api/ops/order?ord='+encodeURIComponent(ord),{cache:'no-store'}).then(r=>r.json()); }catch(e){ d={error:e.message}; }
+  if(!d || d.error){ $('#shbody').innerHTML = `<div class="note bad">${esc(d&&d.error||'שגיאה')}</div>`; return; }
+  const h = d.h||{};
+  const kv = [['לקוח',h.cust],['סניף',h.branch],['סוכן',h.agent],['תאריך הזמנה',h.date],['אספקה מובטחת',h.due],['סטטוס',h.status]].map(([k,v])=>`<div><div class="k">${k}</div><div class="v">${esc(v||'—')}</div></div>`).join('');
+  const rows = d.lines.map(l=>`<tr class="${l.src?'clk':''}" ${l.src?`data-sku="${esc(l.src)}"`:''}><td>${esc(l.part)}</td><td class="wrap">${esc(l.pdes)}</td><td class="n">${fmt(l.qty)}</td><td>${vChip(l.v)}</td><td class="n">${l.sell==null?'·':fmt(l.sell)}</td><td class="n" style="color:var(--tx3)">${l.disp?fmt(l.disp):'·'}</td></tr>`).join('');
+  $('#shbody').innerHTML = `<div class="kv">${kv}</div>${dueChip(h.due)}<h3>שורות ההזמנה (לחיצה על שורה = מלאי המוצר)</h3><div class="tw"><table><thead><tr><th>מק"ט</th><th>תיאור</th><th class="n">כמות</th><th>מצב</th><th class="n">למכירה</th><th class="n">בתצוגה</th></tr></thead><tbody>${rows}</tbody></table></div><div class="note" style="margin-top:10px">"למכירה" = המלאי הכולל של המוצר במרלוג ובעודפים, לא מה שהוקצה להזמנה הזו. "חלקי" = יש פחות ממה שכל ההזמנות הפתוחות יחד צריכות.</div>`;
+}
+/* ---- דריל: מוצר ---- */
+async function openSku(sku){
+  shOpen(sku, '<div class="note">טוען…</div>');
+  let d; try{ d = await fetch('/api/ops/sku?sku='+encodeURIComponent(sku),{cache:'no-store'}).then(r=>r.json()); }catch(e){ d={error:e.message}; }
+  const st = (D.stock||[]).find(x=>x.sku===sku) || (D.slow||[]).find(x=>x.sku===sku);
+  const des = st ? st.des : ((D.skus||[]).find(x=>x.sku===sku)||{}).des || '';
+  $('#shtitle').textContent = sku + (des?' · '+des:'');
+  const stock = (d && d.stock) || (st ? {sell: st.total!=null?st.total:st.sell, disp: st.disp, wh: st.wh||{}, kit:''} : null);
+  let html = '';
+  if(stock){
+    html += `<div class="kv"><div><div class="k">למכירה (מרלוג + עודפים)</div><div class="v" style="font-size:20px">${fmt(stock.sell)}</div></div><div><div class="k">בתצוגה (לא למכירה)</div><div class="v" style="font-size:20px;color:var(--tx2)">${fmt(stock.disp)}</div></div></div>`;
+    html += `<div class="whs">${Object.entries(stock.wh||{}).map(([k,v])=>`<span class="chip">${esc(k)} <b>${fmt(v)}</b></span>`).join('')||'<span class="chip gray">אין יתרה באף מחסן</span>'}</div>`;
+    if(stock.kit) html += `<div class="note">מוצר מורכב — המלאי על החלקים: ${esc(stock.kit)}. סטים שלמים = החלק שיש ממנו הכי מעט.</div>`;
+  } else html += '<div class="note bad">אין יתרה בפריוריטי לאף מחסן.</div>';
+  const ords = (d && d.orders) || [];
+  html += `<h3>הזמנות פתוחות שצריכות את המוצר (${fmt(ords.length)})</h3>`;
+  html += ords.length ? `<div class="list">${ords.map(o=>`<button type="button" class="row" data-ord="${esc(o.ord)}"><div class="a">${esc(o.ord)}<span class="chip">${esc(o.status)}</span><span class="chip gray">${esc(o.branch||'')}</span></div><div class="b">אספקה ${esc(o.due||'—')} ${dueChip(o.due)}${o.cust?`<span class="nm">· ${esc(o.cust)}</span>`:''}</div><div class="c"><b>${fmt(o.qty)}</b><span style="font-size:11px;color:var(--tx3)">יח'</span></div></button>`).join('')}</div>` : '<div class="note">אין הזמנות פתוחות למוצר הזה.</div>';
+  $('#shbody').innerHTML = html;
+}
+/* ---- דריל: רשימות מהאריחים ---- */
+function openList(title, rowsHtml){ shOpen(title, rowsHtml ? `<div class="list">${rowsHtml}</div>` : '<div class="note">אין פריטים.</div>'); }
+
+/* ---- טעינה וציור ---- */
 async function boot(){
   try{ const r = await fetch('/api/ops/all',{cache:'no-store'}); if(!r.ok) throw new Error('HTTP '+r.status); D = await r.json(); if(D.error) throw new Error(D.error); }
-  catch(e){ document.getElementById('loadmsg').textContent = 'לא הצלחתי לטעון: '+e.message; document.getElementById('loadmsg').className='note bad'; return; }
-  document.getElementById('loadmsg').hidden = true;
-  render();
+  catch(e){ $('#loadmsg').textContent = 'לא הצלחתי לטעון: '+e.message; $('#loadmsg').className='note bad'; return; }
+  $('#loadmsg').hidden = true; render();
 }
-function render(){
-$('#asof').textContent = D.as_of;
-
-/* tabs */
 const TOK = ['home','orders','stock','moves','slow','spec'];
 function show(t){
   if(!TOK.includes(t)) t='home';
@@ -182,122 +287,117 @@ function show(t){
   try{ if(location.hash!=='#'+t) history.replaceState(null,'','#'+t);}catch(e){}
   window.scrollTo({top:0});
 }
-if(!window._tabsBound){ window._tabsBound=true; $('#tabs').addEventListener('click',e=>{const b=e.target.closest('button'); if(b) show(b.dataset.t);}); }
+$('#tabs').onclick = e=>{const b=e.target.closest('button'); if(b) show(b.dataset.t);};
 window.onhashchange = ()=>show((location.hash||'#home').slice(1));
 show((location.hash||'#home').slice(1));
 
-/* ---- home ---- */
-const shortSkus = D.skus.filter(s=>s.status!=='יש במלאי - מכסה הכל').sort((a,b)=>(b.ordered-b.stock)-(a.ordered-a.stock));
-const none = D.skus.filter(s=>s.status==='אין במלאי').length, part = D.skus.filter(s=>s.status==='חלקי').length;
-const soon = D.blocked.filter(o=>o.due && dueDays(o.due)<=7).length;
-$('#hometiles').innerHTML = [
-  ['bad', 'הזמנות שחסר בהן מוצר', D.orders_blocked, 'מתוך '+fmt(D.orders_total)+' פתוחות'],
-  ['bad', 'מהן עם אספקה מובטחת עד 7 ימים', soon, 'לפי תאריך האספקה שהובטח'],
-  ['warn','מוצרים שהמלאי לא מכסה', none+part, none+' אין בכלל · '+part+' חלקי'],
-  ['ok',  'מוצרים עם מלאי מספיק', D.skus.length-none-part, 'מתוך '+D.skus.length+' מוצרי מלאי בהזמנות'],
-].map(t=>`<div class="tile ${t[0]}"><div class="k">${t[1]}</div><div class="v">${fmt(t[2])}</div><div class="s">${t[3]}</div></div>`).join('');
-function ordCard(o){
-  const dd = o.due? dueDays(o.due):null;
-  const chip = dd==null?'':(dd<0?`<span class="chip bad">באיחור ${-dd} ימים</span>`:dd<=7?`<span class="chip warn">עוד ${dd} ימים</span>`:`<span class="chip gray">עוד ${dd} ימים</span>`);
-  return `<div class="ord"><div class="h"><b>${esc(o.ord)}</b><span class="chip">${esc(o.status)}</span><span class="chip gray">${esc(o.branch||'')}</span><span>אספקה ${esc(o.due||'—')}</span>${chip}</div>
-  <div class="m">${o.missing.map(m=>`<span>חסר: ${esc(m)}</span>`).join('')}${o.partial.map(m=>`<span style="color:var(--wfg)">חלקי: ${esc(m)}</span>`).join('')}</div></div>`;
-}
-$('#homeblocked').innerHTML = D.blocked.slice(0,8).map(ordCard).join('') + `<button class="more" onclick="show('orders')">כל ${D.orders_blocked} ההזמנות</button>`;
-const chipOf = s => s==='אין במלאי'?'<span class="chip bad">אין במלאי</span>':s==='חלקי'?'<span class="chip warn">חלקי</span>':'<span class="chip ok">יש</span>';
-$('#homeshort tbody').innerHTML = shortSkus.slice(0,12).map(s=>`<tr><td>${esc(s.sku)}</td><td class="wrap">${esc(s.des)}</td><td class="n">${fmt(s.ordered)}</td><td class="n">${fmt(s.orders)}</td><td class="n">${fmt(s.stock)}</td><td class="n">${fmt(s.ordered-s.stock)}</td><td>${chipOf(s.status)}</td></tr>`).join('');
+function render(){
+  $('#asof').textContent = D.as_of || '';
+  const shortSkus = D.skus.filter(s=>s.status!=='יש במלאי - מכסה הכל');
+  const okSkus = D.skus.filter(s=>s.status==='יש במלאי - מכסה הכל');
+  const none = D.skus.filter(s=>s.status==='אין במלאי').length, part = D.skus.filter(s=>s.status==='חלקי').length;
+  const soon = D.blocked.filter(o=>{const n=dueDays(o.due); return n!=null && n<=7;});
+  const tiles = [
+    ['bad','הזמנות שחסר בהן מוצר',D.orders_blocked,'מתוך '+fmt(D.orders_total)+' פתוחות', ()=>openList(`${fmt(D.orders_blocked)} הזמנות שחסר בהן מוצר`, D.blocked.map(ordRow).join(''))],
+    ['bad','מהן עם אספקה מובטחת עד 7 ימים',soon.length,'כולל מה שכבר באיחור', ()=>openList(`${fmt(soon.length)} הזמנות חסרות עם אספקה עד 7 ימים`, soon.map(ordRow).join(''))],
+    ['warn','מוצרים שהמלאי לא מכסה',none+part,none+' אין בכלל · '+part+' חלקי', ()=>openList(`${fmt(none+part)} מוצרים שהמלאי לא מכסה`, shortSkus.map(skuRow).join(''))],
+    ['ok','מוצרים עם מלאי מספיק',okSkus.length,'מתוך '+D.skus.length+' מוצרי מלאי בהזמנות', ()=>openList(`${fmt(okSkus.length)} מוצרים עם מלאי מספיק`, okSkus.map(skuRow).join(''))],
+  ];
+  $('#hometiles').innerHTML = tiles.map((t,i)=>`<button type="button" class="tile ${t[0]}" data-tile="${i}"><div class="k">${t[1]}</div><div class="v">${fmt(t[2])}</div><div class="s">${t[3]}</div><div class="go">לרשימה ›</div></button>`).join('');
+  $('#hometiles').onclick = e=>{const b=e.target.closest('[data-tile]'); if(b) tiles[+b.dataset.tile][4]();};
+  $('#homeblocked').innerHTML = D.blocked.slice(0,8).map(ordRow).join('');
+  $('#homeall').textContent = `כל ${fmt(D.orders_blocked)} ההזמנות`; $('#homeall').onclick = tiles[0][4];
+  $('#homeshort').innerHTML = shortSkus.slice(0,10).map(skuRow).join('');
+  $('#homeshortall').textContent = `כל ${fmt(shortSkus.length)} המוצרים`; $('#homeshortall').onclick = tiles[2][4];
 
-/* ---- orders ---- */
-const partialOnly = D.orders_partial;
-$('#ordtiles').innerHTML = [
-  ['','הזמנות פתוחות',D.orders_total,'לא סופקו, לא בוטלו'],
-  ['bad','חסר בהן מוצר',D.orders_blocked,'לפחות שורה אחת בלי מלאי'],
-  ['warn','חלקי בלבד',partialOnly,'יש, אבל פחות מהביקוש הכולל'],
-  ['ok','מכוסות במלאי',D.orders_total-D.orders_blocked-partialOnly,'או ייצור לפי הזמנה'],
-].map(t=>`<div class="tile ${t[0]}"><div class="k">${t[1]}</div><div class="v">${fmt(t[2])}</div><div class="s">${t[3]}</div></div>`).join('');
-let ordF='blocked';
-function drawOrders(){
-  let list = D.blocked;
-  if(ordF==='all'){ $('#ordlist').innerHTML = '<div class="tw"><table><thead><tr><th>סטטוס הזמנה</th><th class="n">הזמנות</th></tr></thead><tbody>'+Object.entries(D.order_status).map(([k,v])=>`<tr><td>${esc(k)}</td><td class="n">${fmt(v)}</td></tr>`).join('')+'</tbody></table></div>'; return; }
-  if(ordF==='partial'){ $('#ordlist').innerHTML = (D.partial_orders||[]).map(ordCard).join('') || '<div class="note">אין הזמנות חלקיות.</div>'; return; }
-  $('#ordlist').innerHTML = list.map(ordCard).join('');
-}
-$('#ordseg').onclick=e=>{const b=e.target.closest('button'); if(!b) return; ordF=b.dataset.f; document.querySelectorAll('#ordseg button').forEach(x=>x.classList.toggle('on',x===b)); drawOrders();};
-drawOrders();
-let skuF='short';
-function drawSku(){
-  const q=($('#skuq').value||'').trim().toLowerCase();
-  let rows = skuF==='short'? shortSkus : D.skus.slice().sort((a,b)=>b.ordered-a.ordered);
-  if(q) rows = rows.filter(s=>(s.sku+' '+s.des).toLowerCase().includes(q));
-  $('#skutab tbody').innerHTML = rows.slice(0,150).map(s=>`<tr><td>${esc(s.sku)}</td><td class="wrap">${esc(s.des)}</td><td>${esc(s.fam)}</td><td class="n">${fmt(s.ordered)}</td><td class="n">${fmt(s.orders)}</td><td class="n">${fmt(s.stock)}</td><td class="n">${fmt(s.stock-s.ordered)}</td><td>${chipOf(s.status)}</td><td class="wrap" style="color:var(--tx3);font-size:12px">${esc(s.kit)}</td></tr>`).join('') || '<tr><td colspan="9">אין תוצאות</td></tr>';
-}
-$('#skuq').oninput=drawSku;
-$('#skuseg').onclick=e=>{const b=e.target.closest('button'); if(!b) return; skuF=b.dataset.f; document.querySelectorAll('#skuseg button').forEach(x=>x.classList.toggle('on',x===b)); drawSku();};
-drawSku();
+  /* הזמנות */
+  const partialOnly = D.orders_partial;
+  const otiles = [['','הזמנות פתוחות',D.orders_total,'לא סופקו, לא בוטלו'],['bad','חסר בהן מוצר',D.orders_blocked,'לפחות שורה אחת בלי מלאי'],['warn','חלקי בלבד',partialOnly,'יש, אבל פחות מהביקוש הכולל'],['ok','מכוסות במלאי',D.orders_total-D.orders_blocked-partialOnly,'או ייצור לפי הזמנה']];
+  $('#ordtiles').innerHTML = otiles.map(t=>`<div class="tile static ${t[0]}"><div class="k">${t[1]}</div><div class="v">${fmt(t[2])}</div><div class="s">${t[3]}</div></div>`).join('');
+  let ordF='blocked';
+  const drawOrders = ()=>{
+    if(ordF==='all'){ $('#ordlist').innerHTML = Object.entries(D.order_status).map(([k,v])=>`<div class="row" style="cursor:default"><div class="a">${esc(k)}</div><div class="c"><b>${fmt(v)}</b><span style="font-size:11px;color:var(--tx3)">הזמנות</span></div></div>`).join(''); return; }
+    const list = ordF==='partial' ? (D.partial_orders||[]) : D.blocked;
+    $('#ordlist').innerHTML = list.map(ordRow).join('') || '<div class="row" style="cursor:default">אין הזמנות.</div>';
+  };
+  $('#ordseg').onclick = e=>{const b=e.target.closest('button'); if(!b) return; ordF=b.dataset.f; document.querySelectorAll('#ordseg button').forEach(x=>x.classList.toggle('on',x===b)); drawOrders();};
+  drawOrders();
+  let skuF='short';
+  const drawSku = ()=>{
+    const q=($('#skuq').value||'').trim().toLowerCase();
+    let rows = skuF==='short'? shortSkus : D.skus.slice().sort((a,b)=>b.ordered-a.ordered);
+    if(q) rows = rows.filter(s=>(s.sku+' '+s.des).toLowerCase().includes(q));
+    $('#skulist').innerHTML = rows.slice(0,150).map(skuRow).join('') || '<div class="row" style="cursor:default">אין תוצאות</div>';
+  };
+  $('#skuq').oninput = drawSku;
+  $('#skuseg').onclick = e=>{const b=e.target.closest('button'); if(!b) return; skuF=b.dataset.f; document.querySelectorAll('#skuseg button').forEach(x=>x.classList.toggle('on',x===b)); drawSku();};
+  drawSku();
 
-/* ---- stock ---- */
-const whOrder=['מרלוג','עודפים','נתניה','ראשל"צ','חיפה','ירושלים','בית שמש','פגומים'];
-const whMap = Object.fromEntries(D.warehouses.map(w=>[w.name,w]));
-$('#whtiles').innerHTML = whOrder.filter(n=>whMap[n]).map(n=>{const w=whMap[n]; const k=w.kind==='למכירה'?'למכירה':w.kind==='תצוגה'?'תצוגה, לא למכירה':'לא קיים'; return `<div class="tile${n==='פגומים'?' warn':''}"><div class="k">${esc(n)} <span class="chip ${w.kind==='למכירה'?'ok':w.kind==='תצוגה'?'gray':'warn'}">${k}</span></div><div class="v">${fmt(w.units)}</div><div class="s">יחידות · ${fmt(w.skus)} מק"טים</div></div>`;}).join('');
-const rej = whMap['פגומים'];
-$('#rejnote').textContent = rej? `מחסן "פגומים וחלפים" (REJ) לא קיים יותר (הבקשה 2.11.2026), אבל בפריוריטי עדיין רשומות בו ${fmt(rej.units)} יחידות ב-${fmt(rej.skus)} מק"טים. לא נספר כמלאי זמין. צריך לנקות בפריוריטי.` : '';
-let stN=50;
-function drawStock(reset){
-  if(reset) stN=50;
-  const q=($('#stq').value||'').trim().toLowerCase();
-  let rows = D.stock; if(q) rows = rows.filter(s=>(s.sku+' '+s.des).toLowerCase().includes(q));
-  const cell = v => v?fmt(v):'<span style="color:var(--tx3)">·</span>';
-  $('#sttab tbody').innerHTML = rows.slice(0,stN).map(s=>`<tr><td>${esc(s.sku)}</td><td class="wrap">${esc(s.des)}</td><td class="n"><b>${fmt(s.total)}</b></td><td class="n">${cell(s.wh['מרלוג'])}</td><td class="n">${cell(s.wh['עודפים'])}</td><td class="n" style="color:var(--tx2)">${cell(s.disp)}</td>${['נתניה','ראשל"צ','חיפה','ירושלים','בית שמש','פגומים'].map(n=>`<td class="n" style="color:var(--tx3)">${cell(s.wh[n])}</td>`).join('')}</tr>`).join('') || '<tr><td colspan="12">אין תוצאות</td></tr>';
-  $('#stmore').hidden = rows.length<=stN;
-}
-$('#stq').oninput=()=>drawStock(true);
-$('#stmore').onclick=()=>{stN+=50;drawStock(false);};
-drawStock(true);
+  /* מלאי */
+  const whOrder=['מרלוג','עודפים','נתניה','ראשל"צ','חיפה','ירושלים','בית שמש','פגומים'];
+  const whMap = Object.fromEntries(D.warehouses.map(w=>[w.name,w]));
+  $('#whtiles').innerHTML = whOrder.filter(n=>whMap[n]).map(n=>{const w=whMap[n]; const k=w.kind==='למכירה'?'למכירה':w.kind==='תצוגה'?'תצוגה':'לא קיים'; return `<div class="tile static${n==='פגומים'?' warn':''}"><div class="k">${esc(n)} <span class="chip ${w.kind==='למכירה'?'ok':w.kind==='תצוגה'?'gray':'warn'}">${k}</span></div><div class="v">${fmt(w.units)}</div><div class="s">יחידות · ${fmt(w.skus)} מק"טים</div></div>`;}).join('');
+  const rej = whMap['פגומים'];
+  $('#rejnote').textContent = rej? `מחסן "פגומים וחלפים" (REJ) לא קיים יותר (הבקשה 2.11.2026), אבל בפריוריטי עדיין רשומות בו ${fmt(rej.units)} יחידות ב-${fmt(rej.skus)} מק"טים. לא נספר כמלאי זמין. צריך לנקות בפריוריטי.` : '';
+  $('#rejnote').hidden = !rej;
+  let stN=50;
+  const drawStock = reset=>{
+    if(reset) stN=50;
+    const q=($('#stq').value||'').trim().toLowerCase();
+    let rows = D.stock; if(q) rows = rows.filter(s=>(s.sku+' '+s.des).toLowerCase().includes(q));
+    $('#stlist').innerHTML = rows.slice(0,stN).map(stockRow).join('') || '<div class="row" style="cursor:default">אין תוצאות</div>';
+    $('#stmore').hidden = rows.length<=stN;
+  };
+  $('#stq').oninput = ()=>drawStock(true);
+  $('#stmore').onclick = ()=>{stN+=50;drawStock(false);};
+  drawStock(true);
 
-/* ---- moves ---- */
-if(D.docs_err){ const n=document.createElement('div'); n.className='note bad'; n.textContent='תנועות המחסן לא נטענו מפריוריטי: '+D.docs_err; document.querySelector('section[data-s="moves"] h2').after(n); }
-$('#mvtab tbody').innerHTML = (D.docs||[]).slice().sort((a,b)=>b.date.localeCompare(a.date)).map(d=>{const [y,m,dd]=d.date.split('-'); return `<tr><td>${dd}.${m}.${y}</td><td>${esc(d.doc)}</td><td>${esc(d.from)}</td><td>${esc(d.to)}</td><td class="n">${fmt(d.qty)}</td><td><span class="chip ${d.status==='סופית'?'ok':'gray'}">${esc(d.status)}</span></td></tr>`;}).join('');
+  /* תנועות */
+  const mv = $('#mvtab tbody');
+  if(D.docs_err){ const n=document.createElement('div'); n.className='note bad'; n.textContent='תנועות המחסן לא נטענו מפריוריטי: '+D.docs_err; document.querySelector('section[data-s="moves"] h2').after(n); }
+  mv.innerHTML = (D.docs||[]).slice().sort((a,b)=>b.date.localeCompare(a.date)).map(d=>{const [y,m,dd]=d.date.split('-'); return `<tr><td>${dd}.${m}.${y}</td><td>${esc(d.doc)}</td><td>${esc(d.from)}</td><td>${esc(d.to)}</td><td class="n">${fmt(d.qty)}</td><td><span class="chip ${d.status==='סופית'?'ok':'gray'}">${esc(d.status)}</span></td></tr>`;}).join('') || '<tr><td colspan="6">אין תנועות בשבוע האחרון.</td></tr>';
 
-/* ---- slow ---- */
-const SL = D.slow || [];
-const slSum = c => { const r = SL.filter(x=>x.cls===c); return [r.length, r.reduce((a,x)=>a+x.sell,0), r.reduce((a,x)=>a+(x.value||0),0)]; };
-$('#slowtiles').innerHTML = [['מת','bad'],['איטי','warn'],['זז','ok']].map(([c,k])=>{const [n,u,v]=slSum(c); return `<div class="tile ${k}"><div class="k">${c}</div><div class="v">${fmt(n)}</div><div class="s">מוצרים · ${fmt(u)} יח' למכירה · <span style="color:var(--tx3)">כ-${fmt(v)} ₪ בעלות</span></div></div>`;}).join('');
-let slF='מת', slN=50;
-const slChip = c => c==='מת'?'<span class="chip bad">מת</span>':c==='איטי'?'<span class="chip warn">איטי</span>':'<span class="chip ok">זז</span>';
-function drawSlow(reset){
-  if(reset) slN=50;
-  const q=($('#slowq').value||'').trim().toLowerCase();
-  let rows = slF==='all'? SL : SL.filter(x=>x.cls===slF);
-  if(q) rows = rows.filter(s=>(s.sku+' '+s.des).toLowerCase().includes(q));
-  $('#slowtab tbody').innerHTML = rows.slice(0,slN).map(s=>`<tr><td>${esc(s.sku)}</td><td class="wrap">${esc(s.des)}</td><td>${esc(s.fam)}</td><td class="n"><b>${fmt(s.sell)}</b></td><td class="n" style="color:var(--tx3)">${s.disp?fmt(s.disp):'·'}</td><td class="n" style="color:var(--tx3)">${s.cost?fmt(s.cost):'·'}</td><td class="n" style="color:var(--tx3)">${s.value?fmt(s.value):'·'}</td><td>${s.last||'<span style="color:var(--tx3)">אין בשנתיים</span>'}</td><td class="n">${s.days==null?'·':fmt(s.days)}</td><td class="n">${fmt(s.q90)}</td><td class="n">${fmt(s.q365)}</td><td class="n">${s.cover==null?'·':fmt(s.cover)}</td><td>${slChip(s.cls)}</td></tr>`).join('') || '<tr><td colspan="13">אין תוצאות</td></tr>';
-  $('#slowmore').hidden = rows.length<=slN;
-}
-$('#slowq').oninput=()=>drawSlow(true);
-$('#slowseg').onclick=e=>{const b=e.target.closest('button'); if(!b) return; slF=b.dataset.f; document.querySelectorAll('#slowseg button').forEach(x=>x.classList.toggle('on',x===b)); drawSlow(true);};
-$('#slowmore').onclick=()=>{slN+=50;drawSlow(false);};
-drawSlow(true);
+  /* איטי ומת */
+  const SL = D.slow || [];
+  const slSum = c => { const r = SL.filter(x=>x.cls===c); return [r.length, r.reduce((a,x)=>a+x.sell,0), r.reduce((a,x)=>a+(x.value||0),0)]; };
+  $('#slowtiles').innerHTML = [['מת','bad'],['איטי','warn'],['זז','ok']].map(([c,k])=>{const [n,u,v]=slSum(c); return `<button type="button" class="tile ${k}" data-slow="${c}"><div class="k">${c}</div><div class="v">${fmt(n)}</div><div class="s">מוצרים · ${fmt(u)} יח' למכירה</div><div class="s" style="color:var(--tx3)">כ-${fmt(v)} ₪ בעלות (אומדן)</div></button>`;}).join('');
+  let slF='מת', slN=50;
+  const drawSlow = reset=>{
+    if(reset) slN=50;
+    const q=($('#slowq').value||'').trim().toLowerCase();
+    let rows = slF==='all'? SL : SL.filter(x=>x.cls===slF);
+    if(q) rows = rows.filter(s=>(s.sku+' '+s.des).toLowerCase().includes(q));
+    $('#slowlist').innerHTML = rows.slice(0,slN).map(slowRow).join('') || '<div class="row" style="cursor:default">אין תוצאות</div>';
+    $('#slowmore').hidden = rows.length<=slN;
+  };
+  $('#slowtiles').onclick = e=>{const b=e.target.closest('[data-slow]'); if(!b) return; slF=b.dataset.slow; document.querySelectorAll('#slowseg button').forEach(x=>x.classList.toggle('on',x.dataset.f===slF)); drawSlow(true); $('#slowlist').scrollIntoView({behavior:'smooth',block:'start'});};
+  $('#slowq').oninput = ()=>drawSlow(true);
+  $('#slowseg').onclick = e=>{const b=e.target.closest('button'); if(!b) return; slF=b.dataset.f; document.querySelectorAll('#slowseg button').forEach(x=>x.classList.toggle('on',x===b)); drawSlow(true);};
+  $('#slowmore').onclick = ()=>{slN+=50;drawSlow(false);};
+  drawSlow(true);
 
-/* ---- spec ---- */
-const SPEC = [
- ['מלאי לפי מחסן','יתרות של כל מק"ט בכל מחסן, עם חיפוש.','מחפשים מוצר ורואים איפה הוא ואיזו כמות.','תשובה מיידית לנציג ולמחסן במקום טלפון לרום.','יש היום','פריוריטי, יתרות מלאי, כל רבע שעה'],
- ['הזמנות פתוחות מול מלאי','כל הזמנה שלא סופקה, מול המלאי שלה; שולחן וספה לפי חלקים.','מסננים "חסר מוצר" ומטפלים לפי תאריך האספקה המובטח.','יודעים מראש איזו הזמנה תאחר, לא כשהלקוח מתקשר.','יש היום','פריוריטי, הזמנות + יתרות'],
- ['מלאי פנוי להבטחה','מלאי פחות מה שכבר הוקצה להזמנות פתוחות.','הנציג רואה לפני שהוא מבטיח תאריך.','פחות הבטחות שלא עומדים בהן.','יש היום','חישוב: יתרה פחות ביקוש פתוח'],
- ['תנועות מחסן','משלוחים ללקוח, קליטות, העברות בין מחסנים, החזרות.','בודקים מה יצא ומה נכנס היום ואתמול.','תמונה יומית של המחסן בלי דוח ידני.','יש היום','פריוריטי, תעודות מלאי + תעודות משלוח'],
- ['סחורה בדרך','הזמנות רכש ומכולות עם תאריך הגעה צפוי.','רואים מתי מגיע מה שחסר להזמנות.','תאריך אמיתי ללקוח במקום "בקרוב".','חסום ברישיון','פריוריטי, הזמנות רכש — נבדק 1.8.2026, שגיאה 400. לבקש מרז'],
- ['מלאי איטי ומת','מוצרים בלי מכירה 90 ו-180 יום, לפי כמות ועלות.','מחליטים מה להוריד למבצע או לעודפים.','פחות כסף תקוע במחסן.','יש היום','הזמנות מהענן + יתרות; העלות מפריוריטי כאומדן (באתר מדויק יותר, רק למוצרי האתר)'],
- ['ספירה מול פריוריטי','הפרש בין ספירה פיזית ליתרה במערכת.','רום מעלה ספירה, המסך מראה פערים.','יתרות שאפשר לסמוך עליהן.','יש היום','קובץ ספירה + יתרות'],
- ['תצוגה מול סחורה למכירה','יחידות באולמות התצוגה בנפרד מהמחסן.','מחליטים אם יחידת תצוגה נמכרת ללקוח.','לא מבטיחים ללקוח ספה שעומדת בתצוגה.','צריך החלטה','שאלה 374 בצ\'אט'],
- ['עמידה בזמני אספקה','בזמן, מוקדם, מאוחר מול ההבטחה ללקוח.','כבר קיים במסך הלקוחות בינשוף המכירות.','יישאר שם, עם קישור מכאן.','יש היום','מסך הלקוחות'],
- ['התראות','הזמנה עם מוצר חסר ואספקה תוך 7 ימים; מוצר שירד מתחת לכמות סף.','מקבלים רשימה קצרה בבוקר במקום לחפש.','אין הפתעות.','צריך לבנות','חישוב על הנתונים שכבר יש'],
-];
-const tag = s => s==='יש היום'?'<span class="chip ok">יש היום</span>':s==='הוחלט'?'<span class="chip ok">הוחלט</span>':s==='חסום ברישיון'?'<span class="chip bad">חסום ברישיון</span>':s==='צריך החלטה'?'<span class="chip warn">צריך החלטה</span>':'<span class="chip gray">צריך לבנות</span>';
-$('#spec').innerHTML = SPEC.map(s=>`<div class="it"><b>${s[0]}</b>${tag(s[4])}<div class="d"><b>מה זה:</b> ${s[1]}<br><b>מה עושים:</b> ${s[2]}<br><b>מה יוצא:</b> ${s[3]}</div><div class="src">מקור: ${s[5]}</div></div>`).join('');
+  /* אפיון */
+  const SPEC = [
+   ['מלאי לפי מחסן','יתרות של כל מק"ט בכל מחסן, עם חיפוש.','מחפשים מוצר ורואים איפה הוא ואיזו כמות.','תשובה מיידית לנציג ולמחסן במקום טלפון לרום.','יש היום','פריוריטי, יתרות מלאי, כל רבע שעה'],
+   ['הזמנות פתוחות מול מלאי','כל הזמנה שלא סופקה, מול המלאי שלה; שולחן וספה לפי חלקים.','מסננים "חסר מוצר" ומטפלים לפי תאריך האספקה המובטח.','יודעים מראש איזו הזמנה תאחר, לא כשהלקוח מתקשר.','יש היום','פריוריטי + הענן'],
+   ['מלאי פנוי להבטחה','מלאי פחות מה שכבר הוקצה להזמנות פתוחות.','הנציג רואה לפני שהוא מבטיח תאריך.','פחות הבטחות שלא עומדים בהן.','יש היום','חישוב: יתרה פחות ביקוש פתוח'],
+   ['תנועות מחסן','משלוחים ללקוח, קליטות, העברות בין מחסנים, החזרות.','בודקים מה יצא ומה נכנס היום ואתמול.','תמונה יומית של המחסן בלי דוח ידני.','יש היום','פריוריטי, תעודות מלאי'],
+   ['סחורה בדרך','הזמנות רכש ומכולות עם תאריך הגעה צפוי.','רואים מתי מגיע מה שחסר להזמנות.','תאריך אמיתי ללקוח במקום "בקרוב".','חסום ברישיון','פריוריטי, הזמנות רכש — שגיאה 400. לבקש מרז'],
+   ['מלאי איטי ומת','מוצרים בלי מכירה 90 ו-180 יום, לפי כמות ועלות.','מחליטים מה להוריד למבצע או לעודפים.','פחות כסף תקוע במחסן.','יש היום','הזמנות מהענן + יתרות; העלות מפריוריטי כאומדן'],
+   ['ספירה מול פריוריטי','הפרש בין ספירה פיזית ליתרה במערכת.','רום מעלה ספירה, המסך מראה פערים.','יתרות שאפשר לסמוך עליהן.','צריך לבנות','קובץ ספירה + יתרות (נעשה פעם אחת באקסל 2.11.2026)'],
+   ['תצוגה מול סחורה למכירה','יחידות באולמות התצוגה בנפרד מהמחסן. לא נספרות כמלאי למכירה.','רואים "בתצוגה" ליד כל מוצר, בלי שזה מכסה הזמנה.','לא מבטיחים ללקוח ספה שעומדת בתצוגה.','הוחלט','שאלה 374, 2.11.2026'],
+   ['עמידה בזמני אספקה','בזמן, מוקדם, מאוחר מול ההבטחה ללקוח.','כבר קיים במסך הלקוחות בינשוף המכירות.','יישאר שם, עם קישור מכאן.','יש היום','מסך הלקוחות'],
+   ['התראות','הזמנה עם מוצר חסר ואספקה תוך 7 ימים; מוצר שירד מתחת לכמות סף.','מקבלים רשימה קצרה בבוקר במקום לחפש.','אין הפתעות.','צריך לבנות','חישוב על הנתונים שכבר יש'],
+  ];
+  const tag = s => s==='יש היום'?'<span class="chip ok">יש היום</span>':s==='הוחלט'?'<span class="chip ok">הוחלט</span>':s==='חסום ברישיון'?'<span class="chip bad">חסום ברישיון</span>':s==='צריך החלטה'?'<span class="chip warn">צריך החלטה</span>':'<span class="chip gray">צריך לבנות</span>';
+  $('#spec').innerHTML = SPEC.map(s=>`<div class="it"><b>${s[0]}</b>${tag(s[4])}<div class="d"><b>מה זה:</b> ${s[1]}<br><b>מה עושים:</b> ${s[2]}<br><b>מה יוצא:</b> ${s[3]}</div><div class="src">מקור: ${s[5]}</div></div>`).join('');
 }
-$('#syncbtn').addEventListener('click', async ()=>{
+$('#syncbtn').onclick = async ()=>{
   const b=$('#syncbtn'), m=$('#syncmsg'); b.disabled=true; m.textContent='מושך מפריוריטי…';
   try{ const r=await fetch('/api/ops/sync',{method:'POST'}); const j=await r.json(); if(j.error) throw new Error(j.error); m.textContent='נמשכו '+fmt(j.rows)+' שורות מלאי'; const r2=await fetch('/api/ops/all?fresh=1',{cache:'no-store'}); D=await r2.json(); render(); }
   catch(e){ m.textContent='נכשל: '+e.message; }
   b.disabled=false;
-});
+};
 boot();
 </script>
 </body>
