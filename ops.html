@@ -111,12 +111,10 @@ tr.clk{cursor:pointer}tr.clk:hover td{background:var(--surface)}
 
 /* ---- מיקרו-אנימציות (הבקשה 2.11.2026): משוב מיידי ללחיצה, מספרים שנספרים, שורות שנכנסות, חלון שעולה.
    150–250ms, ease-out (Material 3 motion); משוב על כל פעולה (Apple HIG); מכובה ב-prefers-reduced-motion. ---- */
-.tile,.row,.tabs button,.seg button,.x,.more,.back,.lnk,.mode a{transition:background .18s ease-out,transform .12s ease-out,box-shadow .18s ease-out,border-color .18s ease-out}
-.tile:active,.row:active,.tabs button:active,.seg button:active,.x:active,.more:active,.back:active{transform:scale(.97)}
+.tile,.row{transition:background .18s ease-out,transform .12s ease-out,box-shadow .18s ease-out}
+.tabs button,.seg button,.x,.more,.back{transition:background .18s ease-out,color .18s ease-out}
+.tile:active,.row:active{transform:scale(.985)}
 @media (hover:hover){.tile:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(16,28,46,.08)}.tile.static:hover{transform:none;box-shadow:none}}
-.tabs button.on{animation:pop .2s ease-out}
-.seg button.on{animation:pop .18s ease-out}
-@keyframes pop{0%{transform:scale(.96)}60%{transform:scale(1.03)}100%{transform:scale(1)}}
 .list .row,.tiles .tile,.spec .it{animation:rise .24s ease-out both;animation-delay:calc(var(--i,0) * 28ms)}
 @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .ov{opacity:0;transition:opacity .2s ease-out}
@@ -127,8 +125,6 @@ tr.clk{cursor:pointer}tr.clk:hover td{background:var(--surface)}
 @keyframes popin{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
 .busy{animation:pulse 1s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
-.asof .dot{animation:blink 2.4s ease-in-out infinite}
-@keyframes blink{0%,100%{box-shadow:0 0 0 0 rgba(11,110,79,.35)}50%{box-shadow:0 0 0 5px rgba(11,110,79,0)}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.tile:hover{transform:none}}
 </style>
 </head>
@@ -141,12 +137,12 @@ tr.clk{cursor:pointer}tr.clk:hover td{background:var(--surface)}
     <div class="mode" title="מעבר בין האגפים"><a href="/">מכירות</a><span class="on">תפעול</span></div>
   </div>
   <nav class="tabs" id="tabs" aria-label="מסכים">
+    <button data-t="alerts">התראות <span class="badge" id="alertbadge" hidden></span></button>
     <button data-t="home" class="on">עכשיו</button>
     <button data-t="orders">הזמנות מול מלאי</button>
     <button data-t="stock">מלאי לפי מחסן</button>
     <button data-t="moves">תנועות מחסן</button>
     <button data-t="slow">מלאי איטי ומת</button>
-    <button data-t="alerts">התראות <span class="badge" id="alertbadge" hidden></span></button>
 <!--OWNER-->    <button data-t="spec">מה יהיה במערכת</button>
 <!--/OWNER-->  </nav>
 </header>
