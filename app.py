@@ -5474,7 +5474,9 @@ async def api_ask(request: Request):
 # הפתוחות מהענן. לדורון בלבד בשלב זה (_is_doron). SQL: cloud/sql/bi_ops.sql.
 # כלל 374 (דורון 2.11.2026): יחידות באולמות התצוגה לא נספרות כמלאי למכירה.
 # כלל החלקים: שולחן/ספה — המלאי יושב על מק"טי הבן; סטים שלמים = המינימום בין החלקים.
-OPS_SELL = ("Main", "Outl", "100", "MAR")
+# עודפים (Outl) נמכרים בנפרד, כעודפים (בית שמש, מרלוג) — מוצגים, לא נספרים כמלאי להזמנות רגילות (הבקשה, 2.11.2026 22:3x)
+OPS_SELL = ("Main", "100", "MAR")
+OPS_OUTLET = ("Outl",)
 OPS_DISP = ("Show", "Rish", "HAIF", "JERU", "BSHE")
 OPS_WH_NAME = {"Main": "מרלוג", "Show": "נתניה", "Rish": "ראשל\"צ", "HAIF": "חיפה", "JERU": "ירושלים",
                "BSHE": "בית שמש", "Outl": "עודפים", "REJ": "פגומים", "100": "אספקות ישירות",
@@ -5689,7 +5691,7 @@ def _ops_build():
                            "wh": {OPS_WH_NAME.get(w, w): int(b) for w, b in s["whd"].items() if b}})
     stock_rows.sort(key=lambda r: -(r["total"] + r["disp"]))
     warehouses = [{"code": w, "name": OPS_WH_NAME.get(w, w), "skus": t["skus"], "units": int(t["units"]),
-                   "kind": "למכירה" if w in OPS_SELL else ("תצוגה" if w in OPS_DISP else "אחר")}
+                   "kind": "למכירה" if w in OPS_SELL else ("תצוגה" if w in OPS_DISP else ("עודפים" if w in OPS_OUTLET else "אחר"))}
                   for w, t in wh_tot.items() if w in OPS_WH_NAME]
     # מלאי איטי ומת: ברמת מוצר (אב), מכירות מהענן (הזמנות, לא אספקות), עלות מפריוריטי כאומדן אפור.
     # ספים (ברירת מחדל עד שדורון מכריע, שאלה 376): מת = בלי מכירה 180 יום; איטי = בלי מכירה 90 יום
