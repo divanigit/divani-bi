@@ -5821,8 +5821,15 @@ def ops_morning_alert(today) -> dict:
                  {"closed_at": now})
     except Exception as e:
         print("ops-morning close-yesterday failed:", repr(e)[:200], flush=True)
-    sb_upsert("bi_alerts?on_conflict=key", [{"key": key, "kind": "ops", "title": "ינשוף גיבור — רשימת הבוקר",
-                                             "body": body, "opened_at": now, "last_seen_at": now}])
+    # ל-bi_alerts אין מפתח ייחודי על key (אומת 2.11.2026: upsert on_conflict=key מחזיר 400) —
+    # לכן: אם יש כבר שורה של היום, מעדכנים אותה; אחרת מוסיפים.
+    have = sb_select("bi_alerts?select=id&key=eq." + urllib.parse.quote(key) + "&limit=1") or []
+    row = {"kind": "ops", "title": "ינשוף גיבור — רשימת הבוקר", "body": body, "opened_at": now,
+           "last_seen_at": now, "closed_at": None, "ack_at": None}
+    if have:
+        sb_patch("bi_alerts?id=eq." + str(have[0]["id"]), row)
+    else:
+        sb_insert("bi_alerts", dict(row, key=key))
     return {"key": key, "body": body}
 
 
