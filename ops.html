@@ -166,12 +166,16 @@ tr.clk{cursor:pointer}tr.clk:hover td{background:var(--surface)}
 <section data-s="orders" class="hide">
   <h2>הזמנות פתוחות מול מלאי</h2>
   <p>הזמנות מ-1.1.2026 שעוד לא סופקו ולא בוטלו, בלי שירות ובלי הזמנות דמה. מוצר שמיוצר לפי הזמנה לא נבדק מול מלאי. לחיצה על הזמנה פותחת את כל השורות שלה.</p>
-  <div class="tiles" id="ordtiles"></div>
-  <div class="bar"><div class="seg" id="ordseg"><button data-f="blocked" class="on">חסר מוצר</button><button data-f="partial">חלקי</button><button data-f="all">לפי סטטוס</button></div></div>
-  <div class="list" id="ordlist"></div>
-  <h3>לפי מוצר — ביקוש פתוח מול מלאי</h3>
-  <div class="bar"><input type="search" id="skuq" placeholder="חיפוש מק"ט או תיאור" aria-label="חיפוש מוצר"><div class="seg" id="skuseg"><button data-f="short" class="on">חסר או חלקי</button><button data-f="all">הכל</button></div></div>
-  <div class="list" id="skulist"></div>
+  <div class="bar"><div class="seg" id="ordview"><button data-v="orders" class="on">לפי הזמנה</button><button data-v="skus">לפי מוצר</button></div></div>
+  <div id="ov-orders">
+    <div class="tiles" id="ordtiles"></div>
+    <div class="bar"><div class="seg" id="ordseg"><button data-f="blocked" class="on">חסר מוצר</button><button data-f="partial">חלקי</button><button data-f="all">לפי סטטוס</button></div></div>
+    <div class="list" id="ordlist"></div>
+  </div>
+  <div id="ov-skus" class="hide">
+    <div class="bar"><input type="search" id="skuq" placeholder="חיפוש מוצר" aria-label="חיפוש מוצר"><div class="seg" id="skuseg"><button data-f="short" class="on">חסר או חלקי</button><button data-f="all">הכל</button></div></div>
+    <div class="list" id="skulist"></div>
+  </div>
 </section>
 
 <!-- ===== מלאי לפי מחסן ===== -->
@@ -180,7 +184,7 @@ tr.clk{cursor:pointer}tr.clk:hover td{background:var(--surface)}
   <div class="tiles" id="whtiles"></div>
   <div class="note warn" id="rejnote"></div>
   <div class="note">למכירה = מרלוג + עודפים. יחידות באולמות התצוגה מוצגות בנפרד ולא נספרות כמלאי למכירה. לחיצה על מוצר מראה את המלאי שלו בכל מחסן ואת ההזמנות שצריכות אותו.</div>
-  <div class="bar"><input type="search" id="stq" placeholder="חיפוש מק"ט או תיאור" aria-label="חיפוש במלאי"></div>
+  <div class="bar"><input type="search" id="stq" placeholder="חיפוש מוצר" aria-label="חיפוש במלאי"></div>
   <div class="list" id="stlist"></div>
   <button class="more" id="stmore">עוד 50 שורות</button>
 </section>
@@ -198,7 +202,7 @@ tr.clk{cursor:pointer}tr.clk:hover td{background:var(--surface)}
   <p>מוצרים עם יחידות במלאי שלא נמכרים. המכירות מהענן (הזמנות, לא אספקות), שנתיים אחורה. העלות מפריוריטי — אומדן, באפור.</p>
   <div class="note"><b>מת</b> = בלי מכירה 180 יום · <b>איטי</b> = בלי מכירה 90 יום, או מלאי ליותר מ-12 חודשי מכירה · <b>זז</b> = כל השאר.<!--OWNER--> ספים זמניים עד הכרעה (שאלה 376).<!--/OWNER--></div>
   <div class="tiles" id="slowtiles"></div>
-  <div class="bar"><input type="search" id="slowq" placeholder="חיפוש מק"ט או תיאור" aria-label="חיפוש"><div class="seg" id="slowseg"><button data-f="מת" class="on">מת</button><button data-f="איטי">איטי</button><button data-f="זז">זז</button><button data-f="all">הכל</button></div></div>
+  <div class="bar"><input type="search" id="slowq" placeholder="חיפוש מוצר" aria-label="חיפוש"><div class="seg" id="slowseg"><button data-f="מת" class="on">מת</button><button data-f="איטי">איטי</button><button data-f="זז">זז</button><button data-f="all">הכל</button></div></div>
   <div class="list" id="slowlist"></div>
   <button class="more" id="slowmore">עוד 50 שורות</button>
 </section>
@@ -373,6 +377,7 @@ function render(){
     const list = ordF==='partial' ? (D.partial_orders||[]) : D.blocked;
     $('#ordlist').innerHTML = list.map(ordRow).join('') || '<div class="row" style="cursor:default">אין הזמנות.</div>'; stagger($('#ordlist'));
   };
+  $('#ordview').onclick = e=>{const b=e.target.closest('button'); if(!b) return; document.querySelectorAll('#ordview button').forEach(x=>x.classList.toggle('on',x===b)); $('#ov-orders').classList.toggle('hide', b.dataset.v!=='orders'); $('#ov-skus').classList.toggle('hide', b.dataset.v!=='skus'); if(b.dataset.v==='skus') stagger($('#skulist')); else { stagger($('#ordtiles')); stagger($('#ordlist')); } };
   $('#ordseg').onclick = e=>{const b=e.target.closest('button'); if(!b) return; ordF=b.dataset.f; document.querySelectorAll('#ordseg button').forEach(x=>x.classList.toggle('on',x===b)); drawOrders();};
   drawOrders();
   let skuF='short';
