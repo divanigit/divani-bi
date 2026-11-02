@@ -14,9 +14,10 @@ html,body{background:var(--bg);color:var(--tx);margin:0}
 body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Hebrew",Arial,sans-serif;direction:rtl;font-size:14px;line-height:1.45;padding-block:0 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));-webkit-text-size-adjust:100%}
 button{font:inherit;color:inherit}
 .top{position:sticky;top:0;z-index:30;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 0 8px;display:flex;flex-direction:column;gap:8px}
-.brand{display:flex;align-items:center;gap:10px}
-.owlbrand{display:flex;align-items:flex-start;gap:6px;flex:none}
-.owllogo{width:30px;height:auto;flex:none;color:var(--tx)}
+.brand{display:flex;align-items:flex-start;gap:10px}
+.owllogo{display:block}
+.owlbrand{display:flex;align-items:center;flex:none}
+.owllogo{width:28px;height:auto;flex:none;color:var(--tx);margin-top:-1px}
 .owleye{fill:var(--bd)}
 .owlword{font-family:"Space Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;font-size:17px;letter-spacing:.04em;color:var(--tx);line-height:1;margin-top:2px;direction:ltr;unicode-bidi:isolate}
 .brand h1{margin:0;font-size:18px;font-weight:700;letter-spacing:-.01em;line-height:1.2}
@@ -29,6 +30,7 @@ button{font:inherit;color:inherit}
 .tabs::-webkit-scrollbar{display:none}
 .tabs button{flex:none;min-height:40px;padding:8px 14px;border:1px solid var(--line2);border-radius:999px;background:var(--bg);color:var(--tx2);font-size:13.5px;font-weight:500;cursor:pointer}
 .tabs button.on{background:var(--accentSoft);border-color:var(--bd);color:var(--bd);font-weight:700}
+.badge{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--dfg);color:#fff;font-size:11.5px;font-weight:700;margin-inline-start:4px;vertical-align:middle}
 .tabs button:focus-visible,.tile:focus-visible,.row:focus-visible,.seg button:focus-visible,.x:focus-visible{outline:2px solid var(--bd);outline-offset:2px}
 .asof{font-size:12px;color:var(--tx3);display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0 2px}
 .asof .dot{width:8px;height:8px;border-radius:50%;background:var(--okfg);display:inline-block}
@@ -134,7 +136,7 @@ tr.clk{cursor:pointer}tr.clk:hover td{background:var(--surface)}
 
 <header class="top">
   <div class="brand">
-    <div class="owlbrand"><svg class="owllogo" viewBox="0 5 48 39" aria-label="owl"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="16.5" cy="20" r="7.5"/><circle cx="31.5" cy="20" r="7.5"/><path d="M11 13.2 L8.6 6.5"/><path d="M37 13.2 L39.4 6.5"/><path d="M16.5 42.5 L16.5 38.5"/><path d="M24 42.5 L24 36"/><path d="M31.5 42.5 L31.5 32.5"/></g><circle class="owleye" cx="16.5" cy="20" r="2.6"/><circle class="owleye" cx="31.5" cy="20" r="2.6"/><path d="M24 28 L26.4 32 L21.6 32 Z" fill="currentColor"/></svg><span class="owlword">owl</span></div>
+    <div class="owlbrand"><svg class="owllogo" viewBox="0 5 48 39" aria-label="owl"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="16.5" cy="20" r="7.5"/><circle cx="31.5" cy="20" r="7.5"/><path d="M11 13.2 L8.6 6.5"/><path d="M37 13.2 L39.4 6.5"/><path d="M16.5 42.5 L16.5 38.5"/><path d="M24 42.5 L24 36"/><path d="M31.5 42.5 L31.5 32.5"/></g><circle class="owleye" cx="16.5" cy="20" r="2.6"/><circle class="owleye" cx="31.5" cy="20" r="2.6"/><path d="M24 28 L26.4 32 L21.6 32 Z" fill="currentColor"/></svg></div>
     <div><h1>ינשוף גיבור</h1><div class="sub">ויטוריו דיוואני · מלאי חי מול הזמנות פתוחות</div></div>
     <div class="mode" title="מעבר בין האגפים"><a href="/">מכירות</a><span class="on">תפעול</span></div>
   </div>
@@ -144,6 +146,7 @@ tr.clk{cursor:pointer}tr.clk:hover td{background:var(--surface)}
     <button data-t="stock">מלאי לפי מחסן</button>
     <button data-t="moves">תנועות מחסן</button>
     <button data-t="slow">מלאי איטי ומת</button>
+    <button data-t="alerts">התראות <span class="badge" id="alertbadge" hidden></span></button>
 <!--OWNER-->    <button data-t="spec">מה יהיה במערכת</button>
 <!--/OWNER-->  </nav>
 </header>
@@ -202,6 +205,20 @@ tr.clk{cursor:pointer}tr.clk:hover td{background:var(--surface)}
   <div class="bar"><input type="search" id="slowq" placeholder="חיפוש מק"ט או תיאור" aria-label="חיפוש"><div class="seg" id="slowseg"><button data-f="מת" class="on">מת</button><button data-f="איטי">איטי</button><button data-f="זז">זז</button><button data-f="all">הכל</button></div></div>
   <div class="list" id="slowlist"></div>
   <button class="more" id="slowmore">עוד 50 שורות</button>
+</section>
+
+<!-- ===== התראות ===== -->
+<section data-s="alerts" class="hide">
+  <h2>התראות — רשימת הבוקר</h2>
+  <p>אותה רשימה נשלחת כל בוקר ב-07:30 לפס ההתראות של הינשוף ולטלפון. כאן היא חיה כל היום.</p>
+  <div class="tiles" id="altiles"></div>
+  <h3>הזמנות עם מוצר חסר ואספקה מובטחת תוך 7 ימים (כולל מה שכבר באיחור)</h3>
+  <div class="list" id="alsoon"></div>
+  <h3>מוצרים שנגמרים — המלאי למכירה מספיק לפחות מ-30 יום בקצב המכירה של 90 הימים האחרונים</h3>
+  <div class="list" id="alrun"></div>
+<!--OWNER-->  <div class="note">הספים (7 ימים, 30 יום, לפחות 3 מכירות ב-90 יום) זמניים עד הכרעה — שאלה 379. כפתור "שלח את רשימת הבוקר עכשיו" שולח את ההתראה של היום מיד.</div>
+  <button type="button" class="more" id="morningbtn">שלח את רשימת הבוקר עכשיו</button><span id="morningmsg" style="display:block;text-align:center;font-size:12.5px;color:var(--tx2);margin-top:6px"></span>
+<!--/OWNER-->
 </section>
 
 <!-- ===== אפיון ===== -->
@@ -317,7 +334,7 @@ async function boot(){
   catch(e){ $('#loadmsg').textContent = 'לא הצלחתי לטעון: '+e.message; $('#loadmsg').className='note bad'; return; }
   $('#loadmsg').hidden = true; render();
 }
-const TOK = ['home','orders','stock','moves','slow','spec'];
+const TOK = ['home','orders','stock','moves','slow','alerts','spec'];
 function show(t){
   if(!TOK.includes(t)) t='home';
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
@@ -416,18 +433,26 @@ function render(){
   $('#slowmore').onclick = ()=>{slN+=50;drawSlow(false);};
   drawSlow(true);
 
+  /* התראות */
+  const AL = D.alerts || {soon:[],runout:[],n:0};
+  const bd = $('#alertbadge'); if(bd){ bd.textContent = fmt(AL.n); bd.hidden = !AL.n; }
+  const lateN = AL.soon.filter(o=>{const n=dueDays(o.due); return n!=null && n<0;}).length;
+  $('#altiles').innerHTML = [['bad','הזמנות חסרות דחופות',AL.soon.length,lateN+' מהן כבר באיחור'],['warn','מוצרים שנגמרים',AL.runout.length,'פחות מ-30 יום מלאי']].map(t=>`<div class="tile static ${t[0]}"><div class="k">${t[1]}</div><div class="v">${fmt(t[2])}</div><div class="s">${t[3]}</div></div>`).join('');
+  stagger($('#altiles'));
+  $('#alsoon').innerHTML = AL.soon.map(ordRow).join('') || '<div class="row" style="cursor:default">אין הזמנות חסרות עם אספקה קרובה.</div>'; stagger($('#alsoon'));
+  $('#alrun').innerHTML = AL.runout.map(s=>`<button type="button" class="row" data-sku="${esc(s.sku)}"><div class="a">${esc(s.sku)}<span class="nm">${esc(s.des)}</span></div><div class="b">נמכרו ${fmt(s.q90)} ב-90 יום · במלאי למכירה ${fmt(s.sell)}${s.disp?` · בתצוגה ${fmt(s.disp)}`:''}</div><div class="c"><b style="color:${s.cover_days<=7?'var(--dfg)':'var(--wfg)'}">${fmt(s.cover_days)}</b><span style="font-size:11px;color:var(--tx3)">ימי מלאי</span></div></button>`).join('') || '<div class="row" style="cursor:default">אין מוצרים שנגמרים.</div>'; stagger($('#alrun'));
+  const mb = $('#morningbtn'); if(mb) mb.onclick = async ()=>{ mb.disabled=true; $('#morningmsg').textContent='שולח…'; try{ const j=await fetch('/api/ops/morning',{method:'POST'}).then(r=>r.json()); if(j.error) throw new Error(j.error); $('#morningmsg').innerHTML='<span class="ok-pop">✓</span>נשלח: '+esc(j.body); }catch(e){ $('#morningmsg').textContent='נכשל: '+e.message; } mb.disabled=false; };
+
   /* אפיון */
   const SPEC = [
-   ['מלאי לפי מחסן','יתרות של כל מק"ט בכל מחסן, עם חיפוש.','מחפשים מוצר ורואים איפה הוא ואיזו כמות.','תשובה מיידית לנציג ולמחסן במקום טלפון לרום.','יש היום','פריוריטי, יתרות מלאי, כל רבע שעה'],
+   ['מלאי לפי מחסן','יתרות של כל מק"ט בכל מחסן, עם חיפוש.','מחפשים מוצר ורואים איפה הוא ואיזו כמות.','תשובה מיידית במקום טלפון לתפעול.','יש היום','פריוריטי, יתרות מלאי, כל רבע שעה'],
    ['הזמנות פתוחות מול מלאי','כל הזמנה שלא סופקה, מול המלאי שלה; שולחן וספה לפי חלקים.','מסננים "חסר מוצר" ומטפלים לפי תאריך האספקה המובטח.','יודעים מראש איזו הזמנה תאחר, לא כשהלקוח מתקשר.','יש היום','פריוריטי + הענן'],
    ['מלאי פנוי להבטחה','מלאי פחות מה שכבר הוקצה להזמנות פתוחות.','הנציג רואה לפני שהוא מבטיח תאריך.','פחות הבטחות שלא עומדים בהן.','יש היום','חישוב: יתרה פחות ביקוש פתוח'],
    ['תנועות מחסן','משלוחים ללקוח, קליטות, העברות בין מחסנים, החזרות.','בודקים מה יצא ומה נכנס היום ואתמול.','תמונה יומית של המחסן בלי דוח ידני.','יש היום','פריוריטי, תעודות מלאי'],
    ['סחורה בדרך','הזמנות רכש ומכולות עם תאריך הגעה צפוי.','רואים מתי מגיע מה שחסר להזמנות.','תאריך אמיתי ללקוח במקום "בקרוב".','חסום ברישיון','פריוריטי, הזמנות רכש — שגיאה 400. לבקש מרז'],
    ['מלאי איטי ומת','מוצרים בלי מכירה 90 ו-180 יום, לפי כמות ועלות.','מחליטים מה להוריד למבצע או לעודפים.','פחות כסף תקוע במחסן.','יש היום','הזמנות מהענן + יתרות; העלות מפריוריטי כאומדן'],
-   ['ספירה מול פריוריטי','הפרש בין ספירה פיזית ליתרה במערכת.','רום מעלה ספירה, המסך מראה פערים.','יתרות שאפשר לסמוך עליהן.','צריך לבנות','קובץ ספירה + יתרות (נעשה פעם אחת באקסל 2.11.2026)'],
-   ['תצוגה מול סחורה למכירה','יחידות באולמות התצוגה בנפרד מהמחסן. לא נספרות כמלאי למכירה.','רואים "בתצוגה" ליד כל מוצר, בלי שזה מכסה הזמנה.','לא מבטיחים ללקוח ספה שעומדת בתצוגה.','הוחלט','שאלה 374, 2.11.2026'],
    ['עמידה בזמני אספקה','בזמן, מוקדם, מאוחר מול ההבטחה ללקוח.','כבר קיים במסך הלקוחות בינשוף המכירות.','יישאר שם, עם קישור מכאן.','יש היום','מסך הלקוחות'],
-   ['התראות','הזמנה עם מוצר חסר ואספקה תוך 7 ימים; מוצר שירד מתחת לכמות סף.','מקבלים רשימה קצרה בבוקר במקום לחפש.','אין הפתעות.','צריך לבנות','חישוב על הנתונים שכבר יש'],
+   ['התראות','הזמנה עם מוצר חסר ואספקה תוך 7 ימים; מוצר שהמלאי שלו נגמר תוך פחות מ-30 יום.','מקבלים רשימה קצרה כל בוקר ב-07:30, בפס ההתראות ובטלפון.','אין הפתעות.','יש היום','חישוב על הנתונים שכבר יש; לשונית התראות'],
   ];
   const tag = s => s==='יש היום'?'<span class="chip ok">יש היום</span>':s==='הוחלט'?'<span class="chip ok">הוחלט</span>':s==='חסום ברישיון'?'<span class="chip bad">חסום ברישיון</span>':s==='צריך החלטה'?'<span class="chip warn">צריך החלטה</span>':'<span class="chip gray">צריך לבנות</span>';
   if($('#spec')) $('#spec').innerHTML = SPEC.map(s=>`<div class="it"><b>${s[0]}</b>${tag(s[4])}<div class="d"><b>מה זה:</b> ${s[1]}<br><b>מה עושים:</b> ${s[2]}<br><b>מה יוצא:</b> ${s[3]}</div><div class="src">מקור: ${s[5]}</div></div>`).join('');

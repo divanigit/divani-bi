@@ -843,7 +843,10 @@ def api_alerts(request: Request):
     if not _logged_in(request):
         return JSONResponse({"error": "auth"}, status_code=401)
     try:
-        return JSONResponse({"open": sb_rpc("bi_alerts_open", {}) or []})
+        rows = sb_rpc("bi_alerts_open", {}) or []
+        if not _can_ops(request):
+            rows = [r for r in rows if (r.get("kind") or "") != "ops"]   # רשימת הבוקר של ינשוף גיבור — רק למי שיש לו אותו
+        return JSONResponse({"open": rows})
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=502)
 
@@ -3173,6 +3176,7 @@ def _refresher():
     last_web = None
     last_prices = None
     last_cert = None
+    last_ops = None       # רשימת הבוקר של ינשוף גיבור (07:30)
     while True:
         try:
             now = dt.datetime.now(IL)
@@ -3269,6 +3273,13 @@ def _refresher():
                 sync_stock()                   # מלאי חי → bi_stock (ינשוף גיבור, 2.11.2026)
             except Exception as e:
                 print("stock auto-sync failed:", repr(e)[:300], flush=True)
+            if (now.hour > 7 or (now.hour == 7 and now.minute >= 30)) and _due(last_ops, "ops_morning", today):
+                try:
+                    ops_morning_alert(today)   # רשימת הבוקר: הזמנות חסרות דחופות + מוצרים שנגמרים
+                    last_ops = today
+                    _job_mark("ops_morning", today)
+                except Exception as e:
+                    print("ops-morning alert failed:", repr(e)[:300], flush=True)
             try:
                 sb_rpc("bi_feedback_from_notes", {})   # קודי תקלה → פידבק (בלי LLM)
             except Exception as e:
@@ -5698,6 +5709,8 @@ def _ops_build():
         days = (today - dt.date.fromisoformat(last)).days if last else None
         q365 = float(sl.get("q365") or 0)
         cover = round(s["sell"] / (q365 / 12.0), 1) if q365 > 0 and s["sell"] > 0 else None
+        q90 = float(sl.get("q90") or 0)
+        cover_days = int(round(s["sell"] / (q90 / 90.0))) if q90 > 0 else None   # לכמה ימים מספיק המלאי בקצב 90 הימים
         if days is None or days > 180:
             cls = "מת"
         elif days > 90 or (cover is not None and cover > 12):
@@ -5708,8 +5721,16 @@ def _ops_build():
         slow.append({"sku": p, "des": s["des"], "fam": f, "sell": int(s["sell"]), "disp": int(s["disp"]),
                      "cost": round(cost) if cost else None, "value": round(s["sell"] * cost) if cost else None,
                      "last": _ops_ddmm(last), "days": days, "q90": int(float(sl.get("q90") or 0)),
-                     "q180": int(float(sl.get("q180") or 0)), "q365": int(q365), "cover": cover, "cls": cls})
+                     "q180": int(float(sl.get("q180") or 0)), "q365": int(q365), "cover": cover, "cls": cls,
+                     "cover_days": cover_days})
     slow.sort(key=lambda r: -(r["value"] or 0))
+    # התראות (הבקשה 2.11.2026): הזמנות חסרות עם אספקה תוך 7 ימים (כולל מה שכבר באיחור),
+    # ומוצרים שנגמרים — המלאי למכירה מספיק לפחות מ-30 יום בקצב 90 הימים האחרונים (סף זמני, שאלה 379).
+    soon_iso = (today + dt.timedelta(days=7)).isoformat()
+    alert_soon = [o for o in blocked if o["due_iso"] and o["due_iso"] <= soon_iso]
+    alert_runout = sorted([r for r in slow if r["cover_days"] is not None and r["cover_days"] < 30 and r["q90"] >= 3],
+                          key=lambda r: r["cover_days"])
+    alerts = {"soon": alert_soon, "runout": alert_runout, "n": len(alert_soon) + len(alert_runout)}
     # פרטים לדריל (לא נשלחים ב-/all): שורות כל הזמנה, ומלאי + הזמנות לכל מק"ט
     detail_orders = {}
     for x in L:
@@ -5744,7 +5765,7 @@ def _ops_build():
             "order_status": dict(sorted(status_count.items(), key=lambda kv: -kv[1])),
             "orders_total": len(orders), "orders_blocked": len(blocked), "orders_partial": len(partial),
             "blocked": blocked, "partial_orders": partial, "stock": stock_rows, "stock_skus": len(stock_rows),
-            "slow": slow}
+            "slow": slow, "alerts": alerts}
 
 
 def _ops_docs(days: int = 7):
@@ -5776,6 +5797,27 @@ def _ops_all():
         _ops_cache["all"] = data
         _ops_cache["at"] = now
     return data
+
+
+def ops_morning_alert(today) -> dict:
+    """רשימת הבוקר של ינשוף גיבור: שורה אחת ב-bi_alerts (הפס האדום + דחיפה לטלפון דרך ה-cron),
+    מפתח יומי כדי שתהיה דחיפה חדשה כל בוקר; של אתמול נסגרת."""
+    d = _ops_all()
+    a = d.get("alerts") or {}
+    soon, run = a.get("soon") or [], a.get("runout") or []
+    late = [o for o in soon if o["due_iso"] < today.isoformat()]
+    body = (f"{len(soon)} הזמנות עם מוצר חסר ואספקה תוך 7 ימים ({len(late)} כבר באיחור) · "
+            f"{len(run)} מוצרים שהמלאי שלהם נגמר תוך פחות מ-30 יום. הרשימה: /ops#alerts")
+    now = dt.datetime.now(IL).isoformat()
+    key = "ops_morning_" + today.isoformat()
+    try:
+        sb_patch("bi_alerts?key=eq.ops_morning_" + (today - dt.timedelta(days=1)).isoformat() + "&closed_at=is.null",
+                 {"closed_at": now})
+    except Exception as e:
+        print("ops-morning close-yesterday failed:", repr(e)[:200], flush=True)
+    sb_upsert("bi_alerts?on_conflict=key", [{"key": key, "kind": "ops", "title": "ינשוף גיבור — רשימת הבוקר",
+                                             "body": body, "opened_at": now, "last_seen_at": now}])
+    return {"key": key, "body": body}
 
 
 @app.get("/ops")
@@ -5837,6 +5879,17 @@ def api_ops_sku(request: Request, sku: str = ""):
         if st is None and not ords:
             return JSONResponse({"error": "אין יתרה ואין הזמנות פתוחות למק\"ט הזה"})
         return JSONResponse({"stock": st, "orders": ords})
+    except Exception as e:
+        return JSONResponse({"error": repr(e)[:300]}, status_code=500)
+
+
+@app.post("/api/ops/morning")
+def api_ops_morning(request: Request):
+    """רשימת הבוקר עכשיו (לבעלים): אותה התראה שה-07:30 שולח."""
+    if not _logged_in(request) or not _ops_owner(request):
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    try:
+        return JSONResponse(ops_morning_alert(dt.datetime.now(IL).date()))
     except Exception as e:
         return JSONResponse({"error": repr(e)[:300]}, status_code=500)
 
