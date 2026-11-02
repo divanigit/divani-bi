@@ -820,7 +820,9 @@ window.OWL_NAV = [
 /*NOPROFIT*/  ['g', 'מערכת ניטור ואנליטיקת פרסום', 'profit'],
   ['a', '/traffic',      'תמהיל מקורות התנועה', 'profit'],
   ['a', '/site',         'בריאות האתר', 'profit'],
-  ['a', '/abandoned',    'נטישות בקופה', 'profit']/*ENDNOPROFIT*/
+  ['a', '/abandoned',    'נטישות בקופה', 'profit']/*ENDNOPROFIT*/,
+  ['g', 'ינשוף גיבור — תפעול', 'ops'],
+  ['a', '/ops',          'מלאי מול הזמנות פתוחות', 'ops']
 ];
 window.OWL_HERE = '/traffic';
 window.owlBuildNav = function(asNoProfit){
@@ -830,6 +832,7 @@ window.owlBuildNav = function(asNoProfit){
   var h = '', pend = null;
   window.OWL_NAV.forEach(function(it){
     if (it[it.length - 1] === 'profit' && np) return;
+    if (it[it.length - 1] === 'ops' && !((window.OWL_ROLE || {}).ops)) return;
     if (it[0] === 'g') { pend = it[1]; return; }
     if (pend) { h += '<div class="owlg">' + pend + '</div>'; pend = null; }
     var href = it[0] === 'a' ? it[1] : '/?v=' + it[1];

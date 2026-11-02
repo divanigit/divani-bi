@@ -725,9 +725,10 @@ def site_health(request: Request):
     except Exception:
         return HTMLResponse("<div dir='rtl' style='font-family:sans-serif;padding:40px'>"
                             "המסך לא נמצא.</div>", status_code=404)
-    role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s};</script>' % (
+    role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s,"ops":%s};</script>' % (
         "true" if _is_noprofit(request) else "false",
-        "true" if _is_admin(request) else "false")
+        "true" if _is_admin(request) else "false",
+        "true" if _can_ops(request) else "false")
     if _is_keren(request):
         role += _keren_bar(request) + _keren_nav(request, "/site")
         # קרן: בלי תפריט הינשוף, בלי יומן ההודעות הפנימי ובלי "ראיתי"; במקומם קישור לקלריטי
@@ -1663,9 +1664,10 @@ def abandoned_page(request: Request):
     except Exception:
         return HTMLResponse("<div dir='rtl' style='font-family:sans-serif;padding:40px'>"
                             "המסך לא נמצא.</div>", status_code=404)
-    role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s};</script>' % (
+    role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s,"ops":%s};</script>' % (
         "true" if _is_noprofit(request) else "false",
-        "true" if _is_admin(request) else "false")
+        "true" if _is_admin(request) else "false",
+        "true" if _can_ops(request) else "false")
     if _is_keren(request):
         # קרן: צפייה בלבד — בלי תפריט הינשוף, בלי יומן ההודעות הפנימי ובלי רישום שיחות
         role += (_keren_bar(request) + _keren_nav(request, "/abandoned")
@@ -3479,9 +3481,10 @@ def agent_report(request: Request):
     # עכשיו הבלוק נמחק בשרת, כמו בלוח התנועה.
     if not _is_admin(request):
         body = _OWNER_BLOCK.sub("", body)
-    role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s};</script>' % (
+    role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s,"ops":%s};</script>' % (
         "true" if _is_noprofit(request) else "false",
-        "true" if _is_admin(request) else "false")
+        "true" if _is_admin(request) else "false",
+        "true" if _can_ops(request) else "false")
     head = ('<!DOCTYPE html><meta charset="utf-8">'
             '<meta name="viewport" content="width=device-width,initial-scale=1">\n'
             + role + '\n')
@@ -3517,9 +3520,10 @@ def conversion(request: Request):
         html = _OWNER_BLOCK.sub("", html)
     if _is_noprofit(request):
         html = _NOPROFIT_BLOCK.sub("", html)
-    role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s};</script>' % (
+    role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s,"ops":%s};</script>' % (
         "true" if _is_noprofit(request) else "false",
-        "true" if _is_admin(request) else "false")
+        "true" if _is_admin(request) else "false",
+        "true" if _can_ops(request) else "false")
     html = html.replace("</head>", role + _owner_keren(request) + _ops_switch(request) + chr(10) + "</head>", 1)
     return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
@@ -3554,9 +3558,10 @@ def traffic(request: Request):
             html = _NOPROFIT_BLOCK.sub("", html)
         # התפריט צריך לדעת מי מסתכל. הדף אינו מנחש ואינו שואל — התפקיד מוזרק
         # כאן, כדי שכלל הרווח יחול גם על ממשק שאינו המסך הראשי.
-        role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s};</script>' % (
-            "true" if _is_noprofit(request) else "false",
-            "true" if _is_admin(request) else "false")
+        role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s,"ops":%s};</script>' % (
+        "true" if _is_noprofit(request) else "false",
+        "true" if _is_admin(request) else "false",
+        "true" if _can_ops(request) else "false")
         html = html.replace("</head>", role + _owner_keren(request) + _ops_switch(request) + "\n</head>", 1)
         # בלי הכותרת הזו הדפדפן מחזיק את העמוד וממשיך להציג גרסה ישנה.
         # דורון דיווח על באנר שכבר נמחק מהקוד — זו היתה הסיבה.
@@ -4366,9 +4371,10 @@ def customers_page(request: Request):
         html = _OWNER_BLOCK.sub("", html)
     if _is_noprofit(request):
         html = _NOPROFIT_BLOCK.sub("", html)
-    role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s};</script>' % (
+    role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s,"ops":%s};</script>' % (
         "true" if _is_noprofit(request) else "false",
-        "true" if _is_admin(request) else "false")
+        "true" if _is_admin(request) else "false",
+        "true" if _can_ops(request) else "false")
     html = html.replace("</head>", role + _owner_keren(request) + _ops_switch(request) + chr(10) + "</head>", 1)
     return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
