@@ -803,12 +803,14 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>
       קרן
     </a>
-    <a class="rfr" id="opsbtn" href="/ops" title="ינשוף גיבור — מלאי חי מול הזמנות פתוחות (הבקשה 2.11.2026)" style="display:none;text-decoration:none">
+<!--/DORON-->
+<!--/OWNER-->
+<!--OPS-->
+    <a class="rfr" id="opsbtn" href="/ops" title="ינשוף גיבור — מלאי חי מול הזמנות פתוחות (בעלים ודב, הבקשה 2.11.2026)" style="text-decoration:none">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-5 9 5v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 20v-6h6v6"/></svg>
       ינשוף גיבור
     </a>
-<!--/DORON-->
-<!--/OWNER-->
+<!--/OPS-->
 <!--ORDERS-->
     <a class="rfr" id="ordsbtn" href="/orders" title="חיפוש הזמנה לפי מספר, שם, טלפון או מייל" style="display:none;text-decoration:none">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
@@ -913,7 +915,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     <!-- סבינה והיועצים: תצוגה מהשרת (עוגייה), כמו רום. חמישה מסכים בלבד. בלי data-va בכוונה. -->
     <a class="varow" id="vayoatz" href="/view-as/yoatz" role="link"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>סבינה (היועצים)<span class="vasub">חמישה מסכים בלבד</span></span></a>
     <!-- דב: תצוגה מהשרת (עוגייה), כמו רום. משתמש רגיל + "מי עובד בלייקי". בלי data-va בכוונה. -->
-    <a class="varow" id="vadov" href="/view-as/dov" role="link"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>דב<span class="vasub">משתמש רגיל + מי עובד בלייקי</span></span></a>
+    <a class="varow" id="vadov" href="/view-as/dov" role="link"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>דב<span class="vasub">משתמש רגיל + מי עובד בלייקי + ינשוף גיבור</span></span></a>
     <button type="button" class="varow" data-va="ido" role="radio" aria-checked="false"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>עידו אהרון</span></button>
     <button type="button" class="varow" data-va="user-video" role="radio" aria-checked="false"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>משתמש רגיל — לסרטון<span class="vasub">בלי העין, להקלטת מסך</span></span></button>
     <button type="button" class="varow" data-va="ido-video" role="radio" aria-checked="false"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>עידו אהרון — לסרטון<span class="vasub">בלי העין, להקלטת מסך</span></span></button>
@@ -5148,8 +5150,6 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
             vb.title='בחירת תצוגה'; }
     var kb=document.getElementById('kerenbtn');
     if(kb)kb.style.display=(owner&&!prevVideo())?'':'none';
-    var opb=document.getElementById('opsbtn');
-    if(opb)opb.style.display=(owner&&!prevVideo())?'':'none';
 /*ENDOWNER*/
     // חיפוש הזמנה: בעלים ורום (META.orders; הגוש ORDERS נמחק בשרת לכל אחד אחר). נשאר גם כשהעין
     // מכוונת לתצוגה של מישהו אחר (29.10.2026: העין נשארה דלוקה והכפתור 'נעלם'). נסתר רק בווידאו.

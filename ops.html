@@ -120,8 +120,8 @@ tr.clk{cursor:pointer}tr.clk:hover td{background:var(--surface)}
     <button data-t="stock">מלאי לפי מחסן</button>
     <button data-t="moves">תנועות מחסן</button>
     <button data-t="slow">מלאי איטי ומת</button>
-    <button data-t="spec">מה יהיה במערכת</button>
-  </nav>
+<!--OWNER-->    <button data-t="spec">מה יהיה במערכת</button>
+<!--/OWNER-->  </nav>
 </header>
 
 <div class="asof"><span class="dot"></span><span>מלאי מפריוריטי · עודכן <b id="asof">…</b></span><button type="button" class="lnk" id="syncbtn">משוך מלאי עכשיו</button><span id="syncmsg"></span></div>
@@ -156,7 +156,7 @@ tr.clk{cursor:pointer}tr.clk:hover td{background:var(--surface)}
   <h2>מלאי לפי מחסן</h2>
   <div class="tiles" id="whtiles"></div>
   <div class="note warn" id="rejnote"></div>
-  <div class="note">למכירה = מרלוג + עודפים. יחידות באולמות התצוגה מוצגות בנפרד ולא נספרות כמלאי למכירה (הבקשה, שאלה 374, 2.11.2026). לחיצה על מוצר מראה את המלאי שלו בכל מחסן ואת ההזמנות שצריכות אותו.</div>
+  <div class="note">למכירה = מרלוג + עודפים. יחידות באולמות התצוגה מוצגות בנפרד ולא נספרות כמלאי למכירה. לחיצה על מוצר מראה את המלאי שלו בכל מחסן ואת ההזמנות שצריכות אותו.</div>
   <div class="bar"><input type="search" id="stq" placeholder="חיפוש מק"ט או תיאור" aria-label="חיפוש במלאי"></div>
   <div class="list" id="stlist"></div>
   <button class="more" id="stmore">עוד 50 שורות</button>
@@ -173,7 +173,7 @@ tr.clk{cursor:pointer}tr.clk:hover td{background:var(--surface)}
 <section data-s="slow" class="hide">
   <h2>מלאי איטי ומת</h2>
   <p>מוצרים עם יחידות במלאי שלא נמכרים. המכירות מהענן (הזמנות, לא אספקות), שנתיים אחורה. העלות מפריוריטי — אומדן, באפור.</p>
-  <div class="note">ספים זמניים עד הכרעה (שאלה 376): <b>מת</b> = בלי מכירה 180 יום · <b>איטי</b> = בלי מכירה 90 יום, או מלאי ליותר מ-12 חודשי מכירה · <b>זז</b> = כל השאר.</div>
+  <div class="note"><b>מת</b> = בלי מכירה 180 יום · <b>איטי</b> = בלי מכירה 90 יום, או מלאי ליותר מ-12 חודשי מכירה · <b>זז</b> = כל השאר.<!--OWNER--> ספים זמניים עד הכרעה (שאלה 376).<!--/OWNER--></div>
   <div class="tiles" id="slowtiles"></div>
   <div class="bar"><input type="search" id="slowq" placeholder="חיפוש מק"ט או תיאור" aria-label="חיפוש"><div class="seg" id="slowseg"><button data-f="מת" class="on">מת</button><button data-f="איטי">איטי</button><button data-f="זז">זז</button><button data-f="all">הכל</button></div></div>
   <div class="list" id="slowlist"></div>
@@ -181,13 +181,15 @@ tr.clk{cursor:pointer}tr.clk:hover td{background:var(--surface)}
 </section>
 
 <!-- ===== אפיון ===== -->
+<!--OWNER-->
 <section data-s="spec" class="hide">
   <h2>מה יהיה בינשוף גיבור</h2>
   <p>לפי מה שנהוג אצל קמעונאי רהיטים עם מחסן מרכזי ואולמות תצוגה. כל פריט: מה זה · מה עושים איתו · מה יוצא.</p>
   <div class="spec" id="spec"></div>
 </section>
+<!--/OWNER-->
 
-<div class="foot">מקור: פריוריטי חי (יתרות מלאי כל רבע שעה, תעודות מלאי) · ההזמנות מהענן (כל רבע שעה) · "במלאי" = מרלוג + עודפים; תצוגה לא נספרת (שאלה 374, 2.11.2026).</div>
+<div class="foot">מקור: פריוריטי (יתרות מלאי כל רבע שעה, תעודות מלאי) · ההזמנות מהענן (כל רבע שעה) · "במלאי" = מרלוג + עודפים; תצוגה לא נספרת.</div>
 
 <!-- חלון תחתון -->
 <div class="ov" id="ov"></div>
@@ -338,7 +340,7 @@ function render(){
   const whMap = Object.fromEntries(D.warehouses.map(w=>[w.name,w]));
   $('#whtiles').innerHTML = whOrder.filter(n=>whMap[n]).map(n=>{const w=whMap[n]; const k=w.kind==='למכירה'?'למכירה':w.kind==='תצוגה'?'תצוגה':'לא קיים'; return `<div class="tile static${n==='פגומים'?' warn':''}"><div class="k">${esc(n)} <span class="chip ${w.kind==='למכירה'?'ok':w.kind==='תצוגה'?'gray':'warn'}">${k}</span></div><div class="v">${fmt(w.units)}</div><div class="s">יחידות · ${fmt(w.skus)} מק"טים</div></div>`;}).join('');
   const rej = whMap['פגומים'];
-  $('#rejnote').textContent = rej? `מחסן "פגומים וחלפים" (REJ) לא קיים יותר (הבקשה 2.11.2026), אבל בפריוריטי עדיין רשומות בו ${fmt(rej.units)} יחידות ב-${fmt(rej.skus)} מק"טים. לא נספר כמלאי זמין. צריך לנקות בפריוריטי.` : '';
+  $('#rejnote').textContent = rej? `מחסן "פגומים וחלפים" (REJ) כבר לא בשימוש, אבל בפריוריטי עדיין רשומות בו ${fmt(rej.units)} יחידות ב-${fmt(rej.skus)} מק"טים. לא נספר כמלאי למכירה. צריך לנקות בפריוריטי.` : '';
   $('#rejnote').hidden = !rej;
   let stN=50;
   const drawStock = reset=>{
@@ -390,7 +392,7 @@ function render(){
    ['התראות','הזמנה עם מוצר חסר ואספקה תוך 7 ימים; מוצר שירד מתחת לכמות סף.','מקבלים רשימה קצרה בבוקר במקום לחפש.','אין הפתעות.','צריך לבנות','חישוב על הנתונים שכבר יש'],
   ];
   const tag = s => s==='יש היום'?'<span class="chip ok">יש היום</span>':s==='הוחלט'?'<span class="chip ok">הוחלט</span>':s==='חסום ברישיון'?'<span class="chip bad">חסום ברישיון</span>':s==='צריך החלטה'?'<span class="chip warn">צריך החלטה</span>':'<span class="chip gray">צריך לבנות</span>';
-  $('#spec').innerHTML = SPEC.map(s=>`<div class="it"><b>${s[0]}</b>${tag(s[4])}<div class="d"><b>מה זה:</b> ${s[1]}<br><b>מה עושים:</b> ${s[2]}<br><b>מה יוצא:</b> ${s[3]}</div><div class="src">מקור: ${s[5]}</div></div>`).join('');
+  if($('#spec')) $('#spec').innerHTML = SPEC.map(s=>`<div class="it"><b>${s[0]}</b>${tag(s[4])}<div class="d"><b>מה זה:</b> ${s[1]}<br><b>מה עושים:</b> ${s[2]}<br><b>מה יוצא:</b> ${s[3]}</div><div class="src">מקור: ${s[5]}</div></div>`).join('');
 }
 $('#syncbtn').onclick = async ()=>{
   const b=$('#syncbtn'), m=$('#syncmsg'); b.disabled=true; m.textContent='מושך מפריוריטי…';

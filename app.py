@@ -238,6 +238,19 @@ def _can_see_likey(request: Request) -> bool:
     return _is_admin(request) or _is_dov(request)
 
 
+def _can_ops(request: Request) -> bool:
+    """ינשוף גיבור (אגף התפעול): הבעלים דורון, ודב מנהל התפעול (הבקשה, 2.11.2026 ערב) —
+    כדי שדב ישחק ויגיד מה חסר, מה טוב ומה מיותר. הסברים ושאלות פתוחות נשארים לבעלים."""
+    if _is_dov(request):
+        return True
+    return _is_doron(request) and request.cookies.get(PREVIEW_COOKIE, "") in ("", "dov")
+
+
+def _ops_owner(request: Request) -> bool:
+    """הסברים, האפיון והשאלות הפתוחות במסך: רק דורון, ולא כשהוא רואה כמו דב."""
+    return _is_doron(request) and not request.cookies.get(PREVIEW_COOKIE, "")
+
+
 def _can_search_orders(request: Request) -> bool:
     """חיפוש הזמנה: בעלים, ורום (דורון, שאלה 119, 29.10.2026). רום מקליד את הזמנות האתר
     בפריוריטי ורואה שם את פרטי הלקוח ממילא."""
@@ -3462,6 +3475,7 @@ def agent_report(request: Request):
 # הגושים מסומנים בקובץ עצמו, כדי שאפשר יהיה להוסיף עוד הסבר לבעלים
 # בלי לגעת בשרת שוב.
 _DORON_BLOCK = re.compile(r"<!--DORON-->.*?<!--/DORON-->", re.S)
+_OPS_BLOCK = re.compile(r"<!--OPS-->.*?<!--/OPS-->", re.S)
 _ORDERS_BLOCK = re.compile(r"<!--ORDERS-->.*?<!--/ORDERS-->", re.S)   # כפתור "חיפוש הזמנה": בעלים ורום
 _OWNER_BLOCK = re.compile(r"<!--OWNER-->.*?<!--/OWNER-->"
                           r"|/\*OWNER\*/.*?/\*ENDOWNER\*/", re.S)
@@ -3648,6 +3662,8 @@ def index(request: Request):
         html = _DORON_BLOCK.sub("", html)      # כפתור "קרן" — לדורון בלבד
     if not _can_search_orders(request):
         html = _ORDERS_BLOCK.sub("", html)     # "חיפוש הזמנה" — בעלים ורום
+    if not _can_ops(request):
+        html = _OPS_BLOCK.sub("", html)        # "ינשוף גיבור" — בעלים ודב
     if np:
         html = _NOPROFIT_BLOCK.sub("", html)
     if _is_keren(request):
@@ -3696,6 +3712,7 @@ def api_meta(request: Request):
                          "yoatz": _is_yoatz(request),
                          "orders": _can_search_orders(request),
                          "likey": _can_see_likey(request),
+                         "ops": _can_ops(request),
                          "keren": _is_keren(request)})
 
 
@@ -5741,10 +5758,10 @@ def _ops_all():
 
 @app.get("/ops")
 def ops_page(request: Request):
-    """ינשוף גיבור — לדורון בלבד (2.11.2026)."""
+    """ינשוף גיבור — הבעלים ודב (2.11.2026)."""
     if not _logged_in(request):
         return RedirectResponse("/login", status_code=303)
-    if not _is_doron(request):
+    if not _can_ops(request):
         return RedirectResponse("/", status_code=303)
     try:
         with open(os.path.join(HERE, "ops.html"), encoding="utf-8") as f:
@@ -5752,12 +5769,16 @@ def ops_page(request: Request):
     except Exception:
         return HTMLResponse("<div dir='rtl' style='font-family:sans-serif;padding:40px'>המסך לא נמצא.</div>",
                             status_code=404)
+    if not _ops_owner(request):
+        html = _OWNER_BLOCK.sub("", html)      # הסברים, אפיון ושאלות — לבעלים בלבד
+    if _dov_preview(request):
+        html = html.replace("</head>", _keren_bar(request) + "\n</head>", 1)
     return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
 
 @app.get("/api/ops/all")
 def api_ops_all(request: Request, fresh: int = 0):
-    if not _logged_in(request) or not _is_doron(request):
+    if not _logged_in(request) or not _can_ops(request):
         return JSONResponse({"error": "forbidden"}, status_code=403)
     try:
         if fresh:
@@ -5771,7 +5792,7 @@ def api_ops_all(request: Request, fresh: int = 0):
 @app.get("/api/ops/order")
 def api_ops_order(request: Request, ord: str = ""):
     """דריל להזמנה אחת: כותרת + כל השורות עם מצב המלאי של כל שורה."""
-    if not _logged_in(request) or not _is_doron(request):
+    if not _logged_in(request) or not _can_ops(request):
         return JSONResponse({"error": "forbidden"}, status_code=403)
     try:
         _ops_all()
@@ -5784,7 +5805,7 @@ def api_ops_order(request: Request, ord: str = ""):
 @app.get("/api/ops/sku")
 def api_ops_sku(request: Request, sku: str = ""):
     """דריל למוצר אחד: מלאי לפי מחסן + ההזמנות הפתוחות שצריכות אותו."""
-    if not _logged_in(request) or not _is_doron(request):
+    if not _logged_in(request) or not _can_ops(request):
         return JSONResponse({"error": "forbidden"}, status_code=403)
     try:
         _ops_all()
@@ -5801,7 +5822,7 @@ def api_ops_sku(request: Request, sku: str = ""):
 @app.post("/api/ops/sync")
 def api_ops_sync(request: Request):
     """משיכת מלאי מפריוריטי עכשיו (לא מחכים לרבע השעה)."""
-    if not _logged_in(request) or not _is_doron(request):
+    if not _logged_in(request) or not _can_ops(request):
         return JSONResponse({"error": "forbidden"}, status_code=403)
     try:
         n = sync_stock()
