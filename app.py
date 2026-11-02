@@ -5671,6 +5671,10 @@ def _ops_build():
     status_count = {}
     for o in orders.values():
         status_count[o["status"]] = status_count.get(o["status"], 0) + 1
+    # כל ההזמנות הפתוחות בצורה קצרה — לדריל מהסטטוסים ומהאריחים (הבקשה, 2.11.2026)
+    orders_all = sorted([{"ord": o["ord"], "status": o["status"], "branch": o["branch"], "due": o["due"],
+                          "due_iso": o["due_iso"], "cust": o["cust"], "miss": len(o["missing"]), "part": len(o["partial"])}
+                         for o in orders.values()], key=lambda o: o["due_iso"] or "9999")
     # מלאי לפי מחסן
     wh_tot = {}
     stock_rows = []
@@ -5764,7 +5768,7 @@ def _ops_build():
             "skus": sorted(skus, key=lambda s: -(s["ordered"] - s["stock"])),
             "order_status": dict(sorted(status_count.items(), key=lambda kv: -kv[1])),
             "orders_total": len(orders), "orders_blocked": len(blocked), "orders_partial": len(partial),
-            "blocked": blocked, "partial_orders": partial, "stock": stock_rows, "stock_skus": len(stock_rows),
+            "blocked": blocked, "partial_orders": partial, "orders_all": orders_all, "stock": stock_rows, "stock_skus": len(stock_rows),
             "slow": slow, "alerts": alerts}
 
 

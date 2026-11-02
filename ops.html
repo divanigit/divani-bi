@@ -292,8 +292,10 @@ function slowRow(s){
   return `<button type="button" class="row" data-sku="${esc(s.sku)}"><div class="a">${esc(s.sku)}<span class="nm">${esc(s.des)}</span></div><div class="b">${s.last?`מכירה אחרונה ${esc(s.last)} (לפני ${fmt(s.days)} ימים)`:'בלי מכירה בשנתיים'} · נמכרו ${fmt(s.q365)} בשנה${s.cover!=null?` · ${fmt(s.cover)} חודשי מלאי`:''}</div><div class="c"><b>${fmt(s.sell)}</b><span style="font-size:11px;color:var(--tx3)">למכירה${s.value?` · כ-${fmt(s.value)} ₪`:''}</span><span class="chip ${cls}">${esc(s.cls)}</span></div></button>`;
 }
 document.body.addEventListener('click', e=>{
-  const r = e.target.closest('[data-ord],[data-sku]'); if(!r) return;
-  if(r.dataset.ord) openOrder(r.dataset.ord); else if(r.dataset.sku) openSku(r.dataset.sku);
+  const r = e.target.closest('[data-ord],[data-sku],[data-status]'); if(!r) return;
+  if(r.dataset.ord) openOrder(r.dataset.ord);
+  else if(r.dataset.sku) openSku(r.dataset.sku);
+  else if(r.dataset.status){ const st=r.dataset.status, list=(D.orders_all||[]).filter(o=>o.status===st); openList(`${fmt(list.length)} הזמנות — ${st}`, list.map(ordRow).join('')); }
 });
 
 /* ---- דריל: הזמנה ---- */
@@ -370,10 +372,14 @@ function render(){
   /* הזמנות */
   const partialOnly = D.orders_partial;
   const otiles = [['','הזמנות פתוחות',D.orders_total,'לא סופקו, לא בוטלו'],['bad','חסר בהן מוצר',D.orders_blocked,'לפחות שורה אחת בלי מלאי'],['warn','חלקי בלבד',partialOnly,'יש, אבל פחות מהביקוש הכולל'],['ok','מכוסות במלאי',D.orders_total-D.orders_blocked-partialOnly,'או ייצור לפי הזמנה']];
-  $('#ordtiles').innerHTML = otiles.map(t=>`<div class="tile static ${t[0]}"><div class="k">${t[1]}</div><div class="v">${fmt(t[2])}</div><div class="s">${t[3]}</div></div>`).join(''); stagger($('#ordtiles'));
+  const ALL = D.orders_all || [];
+  const covered = ALL.filter(o=>!o.miss && !o.part);
+  const olists = [ALL, D.blocked, D.partial_orders||[], covered];
+  $('#ordtiles').innerHTML = otiles.map((t,i)=>`<button type="button" class="tile ${t[0]}" data-otile="${i}"><div class="k">${t[1]}</div><div class="v">${fmt(t[2])}</div><div class="s">${t[3]}</div><div class="go">לרשימה ›</div></button>`).join(''); stagger($('#ordtiles')); countUp($('#ordtiles'));
+  $('#ordtiles').onclick = e=>{const b=e.target.closest('[data-otile]'); if(!b) return; const i=+b.dataset.otile; openList(`${fmt(olists[i].length)} — ${otiles[i][1]}`, olists[i].map(ordRow).join(''));};
   let ordF='blocked';
   const drawOrders = ()=>{
-    if(ordF==='all'){ $('#ordlist').innerHTML = Object.entries(D.order_status).map(([k,v])=>`<div class="row" style="cursor:default"><div class="a">${esc(k)}</div><div class="c"><b>${fmt(v)}</b><span style="font-size:11px;color:var(--tx3)">הזמנות</span></div></div>`).join(''); return; }
+    if(ordF==='all'){ $('#ordlist').innerHTML = Object.entries(D.order_status).map(([k,v])=>`<button type="button" class="row" data-status="${esc(k)}"><div class="a">${esc(k)}</div><div class="b">לחיצה = רשימת ההזמנות בסטטוס הזה</div><div class="c"><b>${fmt(v)}</b><span style="font-size:11px;color:var(--tx3)">הזמנות</span></div></button>`).join(''); stagger($('#ordlist')); return; }
     const list = ordF==='partial' ? (D.partial_orders||[]) : D.blocked;
     $('#ordlist').innerHTML = list.map(ordRow).join('') || '<div class="row" style="cursor:default">אין הזמנות.</div>'; stagger($('#ordlist'));
   };
