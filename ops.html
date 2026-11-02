@@ -89,6 +89,7 @@ input:focus-visible{outline:2px solid var(--bd);outline-offset:1px}
     <button data-t="orders">הזמנות מול מלאי</button>
     <button data-t="stock">מלאי לפי מחסן</button>
     <button data-t="moves">תנועות מחסן</button>
+    <button data-t="slow">מלאי איטי ומת</button>
     <button data-t="spec">מה יהיה במערכת</button>
   </nav>
 </header>
@@ -136,6 +137,17 @@ input:focus-visible{outline:2px solid var(--bd);outline-offset:1px}
   <div class="tw"><table id="mvtab"><thead><tr><th>תאריך</th><th>תעודה</th><th>ממחסן</th><th>למחסן</th><th class="n">יחידות</th><th>מצב</th></tr></thead><tbody></tbody></table></div>
 </section>
 
+<!-- ===== מלאי איטי ומת ===== -->
+<section data-s="slow" class="hide">
+  <h2>מלאי איטי ומת</h2>
+  <p>מוצרים עם יחידות במלאי שלא נמכרים. המכירות מהענן (הזמנות, לא אספקות), שנתיים אחורה. העלות מפריוריטי — אומדן, באפור.</p>
+  <div class="note">ספים זמניים עד הכרעה (שאלה 376): <b>מת</b> = בלי מכירה 180 יום · <b>איטי</b> = בלי מכירה 90 יום, או מלאי ליותר מ-12 חודשי מכירה · <b>זז</b> = כל השאר. מוצרים שמיוצרים לפי הזמנה, הובלה ושדרוגים לא נכללים.</div>
+  <div class="tiles" id="slowtiles"></div>
+  <div class="bar"><input type="search" id="slowq" placeholder="חיפוש מק"ט או תיאור" aria-label="חיפוש"><div class="seg" id="slowseg"><button data-f="מת" class="on">מת</button><button data-f="איטי">איטי</button><button data-f="זז">זז</button><button data-f="all">הכל</button></div></div>
+  <div class="tw"><table id="slowtab"><thead><tr><th>מק"ט</th><th>תיאור</th><th>משפחה</th><th class="n">למכירה</th><th class="n">בתצוגה</th><th class="n">עלות ליח' (אומדן)</th><th class="n">שווי במלאי (אומדן)</th><th>מכירה אחרונה</th><th class="n">ימים</th><th class="n">נמכרו 90</th><th class="n">נמכרו 365</th><th class="n">חודשי מלאי</th><th>מצב</th></tr></thead><tbody></tbody></table></div>
+  <button class="more" id="slowmore">עוד 50 שורות</button>
+</section>
+
 <!-- ===== אפיון ===== -->
 <section data-s="spec" class="hide">
   <h2>מה יהיה בינשוף התפעול</h2>
@@ -162,7 +174,7 @@ function render(){
 $('#asof').textContent = D.as_of;
 
 /* tabs */
-const TOK = ['home','orders','stock','moves','spec'];
+const TOK = ['home','orders','stock','moves','slow','spec'];
 function show(t){
   if(!TOK.includes(t)) t='home';
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
@@ -245,6 +257,25 @@ drawStock(true);
 if(D.docs_err){ const n=document.createElement('div'); n.className='note bad'; n.textContent='תנועות המחסן לא נטענו מפריוריטי: '+D.docs_err; document.querySelector('section[data-s="moves"] h2').after(n); }
 $('#mvtab tbody').innerHTML = (D.docs||[]).slice().sort((a,b)=>b.date.localeCompare(a.date)).map(d=>{const [y,m,dd]=d.date.split('-'); return `<tr><td>${dd}.${m}.${y}</td><td>${esc(d.doc)}</td><td>${esc(d.from)}</td><td>${esc(d.to)}</td><td class="n">${fmt(d.qty)}</td><td><span class="chip ${d.status==='סופית'?'ok':'gray'}">${esc(d.status)}</span></td></tr>`;}).join('');
 
+/* ---- slow ---- */
+const SL = D.slow || [];
+const slSum = c => { const r = SL.filter(x=>x.cls===c); return [r.length, r.reduce((a,x)=>a+x.sell,0), r.reduce((a,x)=>a+(x.value||0),0)]; };
+$('#slowtiles').innerHTML = [['מת','bad'],['איטי','warn'],['זז','ok']].map(([c,k])=>{const [n,u,v]=slSum(c); return `<div class="tile ${k}"><div class="k">${c}</div><div class="v">${fmt(n)}</div><div class="s">מוצרים · ${fmt(u)} יח' למכירה · <span style="color:var(--tx3)">כ-${fmt(v)} ₪ בעלות</span></div></div>`;}).join('');
+let slF='מת', slN=50;
+const slChip = c => c==='מת'?'<span class="chip bad">מת</span>':c==='איטי'?'<span class="chip warn">איטי</span>':'<span class="chip ok">זז</span>';
+function drawSlow(reset){
+  if(reset) slN=50;
+  const q=($('#slowq').value||'').trim().toLowerCase();
+  let rows = slF==='all'? SL : SL.filter(x=>x.cls===slF);
+  if(q) rows = rows.filter(s=>(s.sku+' '+s.des).toLowerCase().includes(q));
+  $('#slowtab tbody').innerHTML = rows.slice(0,slN).map(s=>`<tr><td>${esc(s.sku)}</td><td class="wrap">${esc(s.des)}</td><td>${esc(s.fam)}</td><td class="n"><b>${fmt(s.sell)}</b></td><td class="n" style="color:var(--tx3)">${s.disp?fmt(s.disp):'·'}</td><td class="n" style="color:var(--tx3)">${s.cost?fmt(s.cost):'·'}</td><td class="n" style="color:var(--tx3)">${s.value?fmt(s.value):'·'}</td><td>${s.last||'<span style="color:var(--tx3)">אין בשנתיים</span>'}</td><td class="n">${s.days==null?'·':fmt(s.days)}</td><td class="n">${fmt(s.q90)}</td><td class="n">${fmt(s.q365)}</td><td class="n">${s.cover==null?'·':fmt(s.cover)}</td><td>${slChip(s.cls)}</td></tr>`).join('') || '<tr><td colspan="13">אין תוצאות</td></tr>';
+  $('#slowmore').hidden = rows.length<=slN;
+}
+$('#slowq').oninput=()=>drawSlow(true);
+$('#slowseg').onclick=e=>{const b=e.target.closest('button'); if(!b) return; slF=b.dataset.f; document.querySelectorAll('#slowseg button').forEach(x=>x.classList.toggle('on',x===b)); drawSlow(true);};
+$('#slowmore').onclick=()=>{slN+=50;drawSlow(false);};
+drawSlow(true);
+
 /* ---- spec ---- */
 const SPEC = [
  ['מלאי לפי מחסן','יתרות של כל מק"ט בכל מחסן, עם חיפוש.','מחפשים מוצר ורואים איפה הוא ואיזו כמות.','תשובה מיידית לנציג ולמחסן במקום טלפון לרום.','יש היום','פריוריטי, יתרות מלאי, כל רבע שעה'],
@@ -252,7 +283,7 @@ const SPEC = [
  ['מלאי פנוי להבטחה','מלאי פחות מה שכבר הוקצה להזמנות פתוחות.','הנציג רואה לפני שהוא מבטיח תאריך.','פחות הבטחות שלא עומדים בהן.','יש היום','חישוב: יתרה פחות ביקוש פתוח'],
  ['תנועות מחסן','משלוחים ללקוח, קליטות, העברות בין מחסנים, החזרות.','בודקים מה יצא ומה נכנס היום ואתמול.','תמונה יומית של המחסן בלי דוח ידני.','יש היום','פריוריטי, תעודות מלאי + תעודות משלוח'],
  ['סחורה בדרך','הזמנות רכש ומכולות עם תאריך הגעה צפוי.','רואים מתי מגיע מה שחסר להזמנות.','תאריך אמיתי ללקוח במקום "בקרוב".','חסום ברישיון','פריוריטי, הזמנות רכש — נבדק 1.8.2026, שגיאה 400. לבקש מרז'],
- ['מלאי איטי ומת','מוצרים בלי מכירה 90 ו-180 יום, לפי כמות ועלות.','מחליטים מה להוריד למבצע או לעודפים.','פחות כסף תקוע במחסן.','צריך לבנות','הזמנות מהענן + יתרות; העלות מהאתר, לא מפריוריטי'],
+ ['מלאי איטי ומת','מוצרים בלי מכירה 90 ו-180 יום, לפי כמות ועלות.','מחליטים מה להוריד למבצע או לעודפים.','פחות כסף תקוע במחסן.','יש היום','הזמנות מהענן + יתרות; העלות מפריוריטי כאומדן (באתר מדויק יותר, רק למוצרי האתר)'],
  ['ספירה מול פריוריטי','הפרש בין ספירה פיזית ליתרה במערכת.','רום מעלה ספירה, המסך מראה פערים.','יתרות שאפשר לסמוך עליהן.','יש היום','קובץ ספירה + יתרות'],
  ['תצוגה מול סחורה למכירה','יחידות באולמות התצוגה בנפרד מהמחסן.','מחליטים אם יחידת תצוגה נמכרת ללקוח.','לא מבטיחים ללקוח ספה שעומדת בתצוגה.','צריך החלטה','שאלה 374 בצ\'אט'],
  ['עמידה בזמני אספקה','בזמן, מוקדם, מאוחר מול ההבטחה ללקוח.','כבר קיים במסך הלקוחות בינשוף המכירות.','יישאר שם, עם קישור מכאן.','יש היום','מסך הלקוחות'],

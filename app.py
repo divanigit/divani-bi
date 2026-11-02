@@ -5479,9 +5479,11 @@ def _ops_select_all(path: str, page: int = 1000):
 
 def _ops_stock():
     stock, newest = {}, ""
-    for r in _ops_select_all("bi_stock?select=partname,warhs,balance,pdes,synced_at&order=partname.asc"):
+    for r in _ops_select_all("bi_stock?select=partname,warhs,balance,pdes,cost,synced_at&order=partname.asc"):
         p = r["partname"]
-        s = stock.setdefault(p, {"des": r.get("pdes") or "", "whd": {}, "sell": 0.0, "disp": 0.0, "kit": ""})
+        s = stock.setdefault(p, {"des": r.get("pdes") or "", "whd": {}, "sell": 0.0, "disp": 0.0, "kit": "", "cost": None})
+        if r.get("cost") is not None:
+            s["cost"] = max(float(r["cost"]), s["cost"] or 0.0)
         b = float(r.get("balance") or 0)
         s["whd"][r["warhs"]] = s["whd"].get(r["warhs"], 0.0) + b
         if r["warhs"] in OPS_SELL:
@@ -5534,6 +5536,7 @@ def _ops_build():
         whd = {w: min((stock[c]["whd"].get(w, 0.0) if c in stock else 0.0) for c in kids) for w in OPS_WH_NAME}
         detail = " | ".join(f"{c}: {int(stock[c]['sell']) if c in stock else 0}" for c in kids)
         stock[parent] = {"des": next((stock[c]["des"] for c in kids if c in stock), ""), "whd": whd,
+                         "cost": sum((stock[c].get("cost") or 0.0) for c in kids if c in stock) or None,
                          "sell": min(stock[c]["sell"] if c in stock else 0.0 for c in kids),
                          "disp": min(stock[c]["disp"] if c in stock else 0.0 for c in kids), "kit": detail}
         kit[parent] = detail
@@ -5632,6 +5635,40 @@ def _ops_build():
     warehouses = [{"code": w, "name": OPS_WH_NAME.get(w, w), "skus": t["skus"], "units": int(t["units"]),
                    "kind": "למכירה" if w in OPS_SELL else ("תצוגה" if w in OPS_DISP else "אחר")}
                   for w, t in wh_tot.items() if w in OPS_WH_NAME]
+    # מלאי איטי ומת: ברמת מוצר (אב), מכירות מהענן (הזמנות, לא אספקות), עלות מפריוריטי כאומדן אפור.
+    # ספים (ברירת מחדל עד שדורון מכריע, שאלה 376): מת = בלי מכירה 180 יום; איטי = בלי מכירה 90 יום
+    # או מלאי ליותר מ-12 חודשי מכירה.
+    fam_of = {r["partname"]: (r.get("family") or "") for r in _ops_select_all("bi_parts?select=partname,family&order=partname.asc")}
+    sales = {s["parent"]: s for s in (sb_rpc("bi_ops_sales_by_part_j", {}) or [])}
+    today = dt.datetime.now(IL).date()
+    slow = []
+    for p, s in stock.items():
+        m = re.match(r"^(.*?)-(\d+)$", p)
+        if m and m.group(1) in stock:
+            continue                      # חלק של מוצר — נספר דרך האב
+        f = _ops_family(p, fam_of.get(p, ""))
+        if "מחולל" in f or f in OPS_NONSTOCK or p.startswith(("SERV", "SHID")):
+            continue
+        units = s["sell"] + s["disp"]
+        if units <= 0:
+            continue
+        sl = sales.get(p) or {}
+        last = (sl.get("last_sale") or "")[:10]
+        days = (today - dt.date.fromisoformat(last)).days if last else None
+        q365 = float(sl.get("q365") or 0)
+        cover = round(s["sell"] / (q365 / 12.0), 1) if q365 > 0 and s["sell"] > 0 else None
+        if days is None or days > 180:
+            cls = "מת"
+        elif days > 90 or (cover is not None and cover > 12):
+            cls = "איטי"
+        else:
+            cls = "זז"
+        cost = s.get("cost")
+        slow.append({"sku": p, "des": s["des"], "fam": f, "sell": int(s["sell"]), "disp": int(s["disp"]),
+                     "cost": round(cost) if cost else None, "value": round(s["sell"] * cost) if cost else None,
+                     "last": _ops_ddmm(last), "days": days, "q90": int(float(sl.get("q90") or 0)),
+                     "q180": int(float(sl.get("q180") or 0)), "q365": int(q365), "cover": cover, "cls": cls})
+    slow.sort(key=lambda r: -(r["value"] or 0))
     as_of = _ops_cache.get("stock_at")
     if not as_of and newest:
         try:
@@ -5642,7 +5679,8 @@ def _ops_build():
             "skus": sorted(skus, key=lambda s: -(s["ordered"] - s["stock"])),
             "order_status": dict(sorted(status_count.items(), key=lambda kv: -kv[1])),
             "orders_total": len(orders), "orders_blocked": len(blocked), "orders_partial": len(partial),
-            "blocked": blocked, "partial_orders": partial, "stock": stock_rows, "stock_skus": len(stock_rows)}
+            "blocked": blocked, "partial_orders": partial, "stock": stock_rows, "stock_skus": len(stock_rows),
+            "slow": slow}
 
 
 def _ops_docs(days: int = 7):
