@@ -165,8 +165,8 @@ tr.clk{cursor:pointer}tr.clk:hover td{background:var(--surface)}
 <!-- ===== הזמנות מול מלאי ===== -->
 <section data-s="orders" class="hide">
   <h2>הזמנות פתוחות מול מלאי</h2>
-  <p>הזמנות מ-1.1.2026 שעוד לא סופקו ולא בוטלו, בלי שירות ובלי הזמנות דמה. מוצר שמיוצר לפי הזמנה לא נבדק מול מלאי. לחיצה על הזמנה פותחת את כל השורות שלה.</p>
-  <div class="bar"><div class="seg" id="ordview"><button data-v="orders" class="on">לפי הזמנה</button><button data-v="skus">לפי מוצר</button></div></div>
+<!--OWNER-->  <p>הזמנות מ-1.1.2026 שלא סופקו ולא בוטלו, בלי שירות ובלי הזמנות דמה. מוצר מהמחולל לא נבדק מול מלאי.</p>
+<!--/OWNER-->  <div class="bar"><div class="seg" id="ordview"><button data-v="orders" class="on">לפי הזמנה</button><button data-v="skus">לפי מוצר</button></div></div>
   <div id="ov-orders">
     <div class="tiles" id="ordtiles"></div>
     <div class="bar"><div class="seg" id="ordseg"><button data-f="blocked" class="on">חסר מוצר</button><button data-f="partial">חלקי</button><button data-f="all">לפי סטטוס</button></div></div>
@@ -192,15 +192,15 @@ tr.clk{cursor:pointer}tr.clk:hover td{background:var(--surface)}
 <!-- ===== תנועות מחסן ===== -->
 <section data-s="moves" class="hide">
   <h2>תנועות מחסן — השבוע האחרון</h2>
-  <p>העברות בין מחסנים מפריוריטי (תעודות מלאי). משלוחים ללקוח וקליטות מספקים יתווספו באותו מסך.</p>
-  <div class="tw"><table id="mvtab"><thead><tr><th>תאריך</th><th>תעודה</th><th>ממחסן</th><th>למחסן</th><th class="n">יחידות</th><th>מצב</th></tr></thead><tbody></tbody></table></div>
+<!--OWNER-->  <p>העברות בין מחסנים מפריוריטי. משלוחים ללקוח וקליטות מספקים — עוד לא.</p>
+<!--/OWNER-->  <div class="tw"><table id="mvtab"><thead><tr><th>תאריך</th><th>תעודה</th><th>ממחסן</th><th>למחסן</th><th class="n">יחידות</th><th>מצב</th></tr></thead><tbody></tbody></table></div>
 </section>
 
 <!-- ===== מלאי איטי ומת ===== -->
 <section data-s="slow" class="hide">
   <h2>מלאי איטי ומת</h2>
-  <p>מוצרים עם יחידות במלאי שלא נמכרים. המכירות מהענן (הזמנות, לא אספקות), שנתיים אחורה. העלות מפריוריטי — אומדן, באפור.</p>
-  <div class="note"><b>מת</b> = בלי מכירה 180 יום · <b>איטי</b> = בלי מכירה 90 יום, או מלאי ליותר מ-12 חודשי מכירה · <b>זז</b> = כל השאר.<!--OWNER--> ספים זמניים עד הכרעה (שאלה 376).<!--/OWNER--></div>
+<!--OWNER-->  <p>מכירות = הזמנות, לא אספקות, שנתיים אחורה. עלות מפריוריטי = אומדן.</p>
+<!--/OWNER-->  <div class="note"><b>מת</b> = בלי מכירה 180 יום · <b>איטי</b> = בלי מכירה 90 יום, או מלאי ליותר מ-12 חודשי מכירה · <b>זז</b> = כל השאר.<!--OWNER--> ספים זמניים עד הכרעה (שאלה 376).<!--/OWNER--></div>
   <div class="tiles" id="slowtiles"></div>
   <div class="bar"><input type="search" id="slowq" placeholder="חיפוש מוצר" aria-label="חיפוש"><div class="seg" id="slowseg"><button data-f="מת" class="on">מת</button><button data-f="איטי">איטי</button><button data-f="זז">זז</button><button data-f="all">הכל</button></div></div>
   <div class="list" id="slowlist"></div>
@@ -209,14 +209,13 @@ tr.clk{cursor:pointer}tr.clk:hover td{background:var(--surface)}
 
 <!-- ===== התראות ===== -->
 <section data-s="alerts" class="hide">
-  <h2>התראות — רשימת הבוקר</h2>
-  <p>אותה רשימה נשלחת כל בוקר ב-07:30 לפס ההתראות של הינשוף ולטלפון. כאן היא חיה כל היום.</p>
+  <h2>התראות</h2>
   <div class="tiles" id="altiles"></div>
   <h3>הזמנות עם מוצר חסר ואספקה מובטחת תוך 7 ימים (כולל מה שכבר באיחור)</h3>
   <div class="list" id="alsoon"></div>
   <h3>מוצרים שנגמרים — המלאי למכירה מספיק לפחות מ-30 יום בקצב המכירה של 90 הימים האחרונים</h3>
   <div class="list" id="alrun"></div>
-<!--OWNER-->  <div class="note">הספים (7 ימים, 30 יום, לפחות 3 מכירות ב-90 יום) זמניים עד הכרעה — שאלה 379. כפתור "שלח את רשימת הבוקר עכשיו" שולח את ההתראה של היום מיד.</div>
+<!--OWNER-->  <div class="note">נשלח גם כל בוקר ב-07:30 לפס ההתראות ולטלפון. הספים (7 ימים, 30 יום, לפחות 3 מכירות ב-90 יום) זמניים עד הכרעה — שאלה 379. כפתור "שלח את רשימת הבוקר עכשיו" שולח את ההתראה של היום מיד.</div>
   <button type="button" class="more" id="morningbtn">שלח את רשימת הבוקר עכשיו</button><span id="morningmsg" style="display:block;text-align:center;font-size:12.5px;color:var(--tx2);margin-top:6px"></span>
 <!--/OWNER-->
 </section>
