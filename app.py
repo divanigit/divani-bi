@@ -734,7 +734,7 @@ def site_health(request: Request):
         role += ('<script>window.OWL_KEREN=1;</script>'
                  '<style>.owlham,.card:has(#msgList),#alertbar,.card:has(#alertsList),'
                  '.vbox[data-drill="alerts"]{display:none!important}</style>')
-    html = html.replace("</head>", role + _owner_keren(request) + chr(10) + "</head>", 1)
+    html = html.replace("</head>", role + _owner_keren(request) + _ops_switch(request) + chr(10) + "</head>", 1)
     return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
 
@@ -1281,6 +1281,22 @@ def _owner_keren(request: Request) -> str:
             'document.body.appendChild(a);}});</script>')
 
 
+def _ops_switch(request: Request) -> str:
+    """הכפתור החכם מכירות/תפעול בכל מסך של ינשוף המכירות, למי שיש לו את ינשוף גיבור
+    (הבקשה, 2.11.2026 ערב: "המעבר צריך להיות מהתפריט ובנוסף מכל מסך בכל מקום"). במסך הראשי
+    הוא יושב בכותרת (index.html, גוש OPS); בשאר המסכים הסקריפט מצמיד אותו למטה."""
+    if not _can_ops(request):
+        return ""
+    return ('<script>document.addEventListener("DOMContentLoaded",function(){'
+            'if(document.getElementById("opsswitch"))return;'
+            'var d=document.createElement("div");d.id="opsswitch";d.setAttribute("dir","rtl");'
+            'd.style.cssText="position:fixed;bottom:calc(12px + env(safe-area-inset-bottom,0px));right:max(12px,env(safe-area-inset-right,0px));z-index:200;'
+            'display:inline-flex;border:1px solid #c9d3e0;border-radius:999px;overflow:hidden;background:#fff;box-shadow:0 4px 18px rgba(16,28,46,.18);font:600 12.5px system-ui,sans-serif";'
+            'd.innerHTML=\'<span style="padding:8px 13px;min-height:36px;display:inline-flex;align-items:center;background:rgba(13,150,104,.12);color:#0b6e4f">מכירות</span>'
+            '<a href="/ops" style="padding:8px 13px;min-height:36px;display:inline-flex;align-items:center;color:#2457a6;text-decoration:none">תפעול</a>\';'
+            'document.body.appendChild(d);});</script>')
+
+
 def _keren_nav(request: Request, here: str) -> str:
     """שורת ניווט קטנה בין שלושת המסכים של קרן (אצלה תפריט הינשוף מוסתר)."""
     if not _is_keren(request):
@@ -1582,7 +1598,7 @@ def clarity_page(request: Request):
         "true" if _is_admin(request) else "false",
         "true" if _is_keren(request) else "false")
     role += _keren_bar(request) + _keren_nav(request, "/clarity")
-    html = html.replace("</head>", role + _owner_keren(request) + chr(10) + "</head>", 1)
+    html = html.replace("</head>", role + _owner_keren(request) + _ops_switch(request) + chr(10) + "</head>", 1)
     return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
 
@@ -1654,7 +1670,7 @@ def abandoned_page(request: Request):
         # קרן: צפייה בלבד — בלי תפריט הינשוף, בלי יומן ההודעות הפנימי ובלי רישום שיחות
         role += (_keren_bar(request) + _keren_nav(request, "/abandoned")
                  + '<style>.owlham,.card:has(#msgList),#actChips,#actMsg{display:none!important}</style>')
-    html = html.replace("</head>", role + _owner_keren(request) + chr(10) + "</head>", 1)
+    html = html.replace("</head>", role + _owner_keren(request) + _ops_switch(request) + chr(10) + "</head>", 1)
     return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
 
@@ -3504,7 +3520,7 @@ def conversion(request: Request):
     role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s};</script>' % (
         "true" if _is_noprofit(request) else "false",
         "true" if _is_admin(request) else "false")
-    html = html.replace("</head>", role + _owner_keren(request) + chr(10) + "</head>", 1)
+    html = html.replace("</head>", role + _owner_keren(request) + _ops_switch(request) + chr(10) + "</head>", 1)
     return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
 
@@ -3541,7 +3557,7 @@ def traffic(request: Request):
         role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s};</script>' % (
             "true" if _is_noprofit(request) else "false",
             "true" if _is_admin(request) else "false")
-        html = html.replace("</head>", role + _owner_keren(request) + "\n</head>", 1)
+        html = html.replace("</head>", role + _owner_keren(request) + _ops_switch(request) + "\n</head>", 1)
         # בלי הכותרת הזו הדפדפן מחזיק את העמוד וממשיך להציג גרסה ישנה.
         # דורון דיווח על באנר שכבר נמחק מהקוד — זו היתה הסיבה.
         return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
@@ -4353,7 +4369,7 @@ def customers_page(request: Request):
     role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s};</script>' % (
         "true" if _is_noprofit(request) else "false",
         "true" if _is_admin(request) else "false")
-    html = html.replace("</head>", role + _owner_keren(request) + chr(10) + "</head>", 1)
+    html = html.replace("</head>", role + _owner_keren(request) + _ops_switch(request) + chr(10) + "</head>", 1)
     return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
 
