@@ -140,6 +140,13 @@ def _rom_token() -> str:
     return hmac.new(DASH_PASS_ROM.encode("utf-8"), b"divani-bi-rom-v1", hashlib.sha256).hexdigest()
 
 
+def _dov_token() -> str:
+    # דב (מנהל תפעול) מקבל עוגייה משלו ולא את המשותפת, כדי שהשרת יוכל לפתוח לו
+    # את "מי עובד בלייקי" בלי לפתוח אותו לכל מי שמחזיק בסיסמה המשותפת (הבקשה, 2.11.2026).
+    # מחיקת DASH_PASS_DOV ב-Render מנתקת אותו מיד.
+    return hmac.new(DASH_PASS_DOV.encode("utf-8"), b"divani-bi-dov-v1", hashlib.sha256).hexdigest()
+
+
 def _keren_token() -> str:
     # keyed on her own password: clearing DASH_PASS_KEREN ends her sessions
     return hmac.new(DASH_PASS_KEREN.encode("utf-8"), b"divani-bi-keren-v1", hashlib.sha256).hexdigest()
@@ -171,6 +178,11 @@ def _yoatz_preview(request: Request) -> bool:
     return request.cookies.get(PREVIEW_COOKIE, "") == "yoatz" and _is_doron(request)
 
 
+def _dov_preview(request: Request) -> bool:
+    # דורון רואה את הינשוף בדיוק כמו דב (הבקשה, 2.11.2026): אותה עוגיית תצוגה, ערך "dov"
+    return request.cookies.get(PREVIEW_COOKIE, "") == "dov" and _is_doron(request)
+
+
 def _preview_label(request: Request) -> str:
     """שם התצוגה שהבעלים נמצא בה עכשיו, או ריק."""
     if _keren_preview(request):
@@ -179,6 +191,8 @@ def _preview_label(request: Request) -> str:
         return "רום"
     if _yoatz_preview(request):
         return "סבינה"
+    if _dov_preview(request):
+        return "דב"
     return ""
 
 
@@ -207,6 +221,21 @@ def _is_rom(request: Request) -> bool:
         return False
     tok = request.cookies.get(COOKIE_NAME, "")
     return hmac.compare_digest(tok, _rom_token())
+
+
+def _is_dov(request: Request) -> bool:
+    if _dov_preview(request):
+        return True
+    if not DASH_PASS_DOV:
+        return False
+    tok = request.cookies.get(COOKIE_NAME, "")
+    return hmac.compare_digest(tok, _dov_token())
+
+
+def _can_see_likey(request: Request) -> bool:
+    """מי עובד בלייקי: הבעלים, ודב (הבקשה, 2.11.2026). ניהול החשבונות והסיסמאות
+    של לייקי נשאר לבעלים בלבד."""
+    return _is_admin(request) or _is_dov(request)
 
 
 def _can_search_orders(request: Request) -> bool:
@@ -242,7 +271,7 @@ def _is_admin(request: Request, raw: bool = False) -> bool:
     # produce a real digest of the empty key, and anyone able to compute it
     # would be an owner.
     # raw=True: מי הוא באמת, גם כשהוא כרגע רואה את הינשוף כמו קרן
-    if not raw and request.cookies.get(PREVIEW_COOKIE, "") in ("keren", "rom", "yoatz"):
+    if not raw and request.cookies.get(PREVIEW_COOKIE, "") in ("keren", "rom", "yoatz", "dov"):
         return False
     tok = request.cookies.get(COOKIE_NAME, "")
     if DASH_PASS_ADMIN and hmac.compare_digest(tok, _admin_token()):
@@ -260,7 +289,7 @@ def _logged_in(request: Request) -> bool:
     tok = request.cookies.get(COOKIE_NAME, "")
     return (hmac.compare_digest(tok, _session_token()) or _is_admin(request)
             or _is_ask2(request) or _is_noprofit(request) or _is_yoatz(request)
-            or _is_keren(request) or _is_rom(request))
+            or _is_keren(request) or _is_rom(request) or _is_dov(request))
 
 
 def _health_ok(request: Request) -> bool:
@@ -325,7 +354,7 @@ def _identity(p: str):
     if _match(p, DASH_PASS_YOATZ):
         return "יועצים", _yoatz_token()
     if _match(p, DASH_PASS_DOV):
-        return "דב", _session_token()
+        return "דב", _dov_token()
     if _match(p, DASH_PASS_SHARON):
         return "שרון", _session_token()
     if _match(p, DASH_PASS):
@@ -1298,6 +1327,16 @@ def view_as_yoatz(request: Request):
         return RedirectResponse("/", status_code=303)
     resp = RedirectResponse("/", status_code=303)
     resp.set_cookie(PREVIEW_COOKIE, "yoatz", max_age=8 * 3600, httponly=True,
+                    secure=True, samesite="lax")
+    return resp
+
+
+@app.get("/view-as/dov")
+def view_as_dov(request: Request):
+    if not _is_doron(request):
+        return RedirectResponse("/", status_code=303)
+    resp = RedirectResponse("/", status_code=303)
+    resp.set_cookie(PREVIEW_COOKIE, "dov", max_age=8 * 3600, httponly=True,
                     secure=True, samesite="lax")
     return resp
 
@@ -3609,7 +3648,7 @@ def index(request: Request):
         html = _NOPROFIT_BLOCK.sub("", html)
     if _is_keren(request):
         html = html.replace("</head>", _keren_bar(request) + _keren_nav(request, "/") + "\n</head>", 1)
-    elif _rom_preview(request) or _yoatz_preview(request):
+    elif _rom_preview(request) or _yoatz_preview(request) or _dov_preview(request):
         html = html.replace("</head>", _keren_bar(request) + "\n</head>", 1)
     return HTMLResponse(html, headers=hdr)
 
@@ -3652,6 +3691,7 @@ def api_meta(request: Request):
                          "noprofit": _is_noprofit(request),
                          "yoatz": _is_yoatz(request),
                          "orders": _can_search_orders(request),
+                         "likey": _can_see_likey(request),
                          "keren": _is_keren(request)})
 
 
@@ -4666,7 +4706,8 @@ def api_likeyactivity(request: Request, d_from: str = "", d_to: str = "", bucket
     # דורון (19.8.2026): "אין להציג 'בפיתוח' ואין להציג את המסך הזה לאף אחד
     # חוץ ממני". גם 401 וגם "בפיתוח" מסגירים שהנתיב קיים, ולכן לכל מי שאינו
     # דורון הוא פשוט לא קיים — בדיוק כמו כתובת שמעולם לא נבנתה.
-    if not _is_admin(request):
+    # מ-2.11.2026 גם דב רואה את המסך (הבקשה). ניהול החשבונות נשאר לבעלים.
+    if not _can_see_likey(request):
         raise HTTPException(status_code=404)
     f, t = _parse_date(d_from), _parse_date(d_to)
     if not f or not t:
