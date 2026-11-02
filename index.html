@@ -202,9 +202,13 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   tr.d0 td{background:var(--bg)}tr.dn td{background:var(--surface)}tr.row{cursor:pointer}
   tbody tr+tr td{border-top:1px solid var(--line)}
   tfoot td{border-top:2px solid var(--line2);background:var(--surface);font-weight:500}
-  .nmc{display:flex;align-items:center;gap:7px}.nlab{min-width:0}
-  .nlab .t{font-size:12.5px;white-space:normal;word-break:break-word;max-width:230px;text-align:right}
-  .nlab .c{font-size:10.5px;color:var(--tx3);white-space:normal;word-break:break-word;max-width:230px;text-align:right}
+  .nmc{display:flex;align-items:center;gap:7px}
+  /* 2.11.2026: בטלפון שמות המוצרים נשברו לאות או שתיים בשורה — עמודת השם נדחקה לכמה עשרות פיקסלים
+     בשורות המוצר (ההזחה של שלוש רמות אכלה את הרוחב) והשבירה הייתה מותרת בכל מקום. עכשיו לשם יש רוחב
+     מינימלי ושוברים רק בין מילים. הטבלה מתרחבת וגוללת לרוחב, והשם נשאר מוצמד לימין. */
+  .nlab{min-width:128px}
+  .nlab .t{font-size:12.5px;white-space:normal;word-break:normal;overflow-wrap:break-word;max-width:230px;text-align:right}
+  .nlab .c{font-size:10.5px;color:var(--tx3);white-space:normal;word-break:normal;overflow-wrap:break-word;max-width:230px;text-align:right}
   th[data-hsort]{cursor:pointer;user-select:none}
   th[data-hsort].on{color:var(--bd)}
   .crumbs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
