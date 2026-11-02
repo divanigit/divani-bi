@@ -106,7 +106,28 @@ tr.clk{cursor:pointer}tr.clk:hover td{background:var(--surface)}
 .whs{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 10px}
 .whs .chip{font-weight:500}
 .whs .chip b{font-weight:700}
-@media (prefers-reduced-motion:reduce){.sheet{transition:none}}
+
+/* ---- מיקרו-אנימציות (הבקשה 2.11.2026): משוב מיידי ללחיצה, מספרים שנספרים, שורות שנכנסות, חלון שעולה.
+   150–250ms, ease-out (Material 3 motion); משוב על כל פעולה (Apple HIG); מכובה ב-prefers-reduced-motion. ---- */
+.tile,.row,.tabs button,.seg button,.x,.more,.back,.lnk,.mode a{transition:background .18s ease-out,transform .12s ease-out,box-shadow .18s ease-out,border-color .18s ease-out}
+.tile:active,.row:active,.tabs button:active,.seg button:active,.x:active,.more:active,.back:active{transform:scale(.97)}
+@media (hover:hover){.tile:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(16,28,46,.08)}.tile.static:hover{transform:none;box-shadow:none}}
+.tabs button.on{animation:pop .2s ease-out}
+.seg button.on{animation:pop .18s ease-out}
+@keyframes pop{0%{transform:scale(.96)}60%{transform:scale(1.03)}100%{transform:scale(1)}}
+.list .row,.tiles .tile,.spec .it{animation:rise .24s ease-out both;animation-delay:calc(var(--i,0) * 28ms)}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.ov{opacity:0;transition:opacity .2s ease-out}
+.ov.on{opacity:1}
+.sheet{transition:transform .28s cubic-bezier(.32,.72,0,1)}
+.v.count{will-change:contents}
+.ok-pop{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--okfg);color:#fff;font-size:12px;font-weight:700;margin-inline-start:6px;animation:popin .32s cubic-bezier(.32,1.4,.5,1) both}
+@keyframes popin{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+.busy{animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+.asof .dot{animation:blink 2.4s ease-in-out infinite}
+@keyframes blink{0%,100%{box-shadow:0 0 0 0 rgba(11,110,79,.35)}50%{box-shadow:0 0 0 5px rgba(11,110,79,0)}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.tile:hover{transform:none}}
 </style>
 </head>
 <body>
@@ -205,6 +226,18 @@ tr.clk{cursor:pointer}tr.clk:hover td{background:var(--surface)}
 const $ = s => document.querySelector(s);
 const fmt = n => (n==null?'':Number(n).toLocaleString('he-IL'));
 const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* מספרים נספרים מ-0 לערך (450ms), ושורות מקבלות אינדקס להשהיה מדורגת */
+function stagger(root){ if(!root) return; let i=0; root.querySelectorAll(':scope > .row, :scope > .tile, :scope > .it').forEach(el=>{ el.style.setProperty('--i', Math.min(i++, 14)); }); }
+function countUp(root){
+  if(!root || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  root.querySelectorAll('.v').forEach(el=>{
+    const txt = el.textContent.trim(); const n = Number(txt.replace(/[^\d.-]/g,'')); if(!isFinite(n) || n===0 || txt.includes('₪')) return;
+    const t0 = performance.now(), dur = 450;
+    const step = now=>{ const p = Math.min(1,(now-t0)/dur); const e = 1-Math.pow(1-p,3); el.textContent = fmt(Math.round(n*e)); if(p<1) requestAnimationFrame(step); else el.textContent = txt; };
+    el.textContent = '0'; requestAnimationFrame(step);
+  });
+}
 const TODAY = new Date(); TODAY.setHours(0,0,0,0);
 function dueDays(d){ if(!d) return null; const [dd,mm,yy]=d.split('.'); return Math.round((new Date(+yy,+mm-1,+dd)-TODAY)/864e5); }
 const dueChip = d => { const n=dueDays(d); if(n==null) return '<span class="chip gray">בלי תאריך</span>'; if(n<0) return `<span class="chip bad">באיחור ${fmt(-n)} ימים</span>`; if(n===0) return '<span class="chip warn">היום</span>'; if(n<=7) return `<span class="chip warn">עוד ${n} ימים</span>`; return `<span class="chip gray">עוד ${n} ימים</span>`; };
@@ -215,7 +248,7 @@ let D = null;
 const stack = [];
 function shOpen(title, html, push=true){
   if(push && $('#sheet').classList.contains('on')) stack.push({t:$('#shtitle').textContent, h:$('#shbody').innerHTML});
-  $('#shtitle').textContent = title; $('#shbody').innerHTML = html;
+  $('#shtitle').textContent = title; $('#shbody').innerHTML = html; $('#shbody').querySelectorAll('.list').forEach(stagger);
   $('#shback').hidden = stack.length===0;
   $('#ov').classList.add('on'); $('#sheet').classList.add('on'); $('#sheet').scrollTop = 0;
 }
@@ -273,7 +306,7 @@ async function openSku(sku){
   const ords = (d && d.orders) || [];
   html += `<h3>הזמנות פתוחות שצריכות את המוצר (${fmt(ords.length)})</h3>`;
   html += ords.length ? `<div class="list">${ords.map(o=>`<button type="button" class="row" data-ord="${esc(o.ord)}"><div class="a">${esc(o.ord)}<span class="chip">${esc(o.status)}</span><span class="chip gray">${esc(o.branch||'')}</span></div><div class="b">אספקה ${esc(o.due||'—')} ${dueChip(o.due)}${o.cust?`<span class="nm">· ${esc(o.cust)}</span>`:''}</div><div class="c"><b>${fmt(o.qty)}</b><span style="font-size:11px;color:var(--tx3)">יח'</span></div></button>`).join('')}</div>` : '<div class="note">אין הזמנות פתוחות למוצר הזה.</div>';
-  $('#shbody').innerHTML = html;
+  $('#shbody').innerHTML = html; $('#shbody').querySelectorAll('.list').forEach(stagger);
 }
 /* ---- דריל: רשימות מהאריחים ---- */
 function openList(title, rowsHtml){ shOpen(title, rowsHtml ? `<div class="list">${rowsHtml}</div>` : '<div class="note">אין פריטים.</div>'); }
@@ -289,6 +322,7 @@ function show(t){
   if(!TOK.includes(t)) t='home';
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
   document.querySelectorAll('section[data-s]').forEach(s=>s.classList.toggle('hide',s.dataset.s!==t));
+  const sec = document.querySelector(`section[data-s="${t}"]`); if(sec){ sec.querySelectorAll('.list,.tiles,.spec').forEach(l=>{ l.querySelectorAll(':scope > *').forEach(el=>{ el.style.animation='none'; void el.offsetWidth; el.style.animation=''; }); stagger(l); }); }
   try{ if(location.hash!=='#'+t) history.replaceState(null,'','#'+t);}catch(e){}
   window.scrollTo({top:0});
 }
@@ -310,20 +344,21 @@ function render(){
   ];
   $('#hometiles').innerHTML = tiles.map((t,i)=>`<button type="button" class="tile ${t[0]}" data-tile="${i}"><div class="k">${t[1]}</div><div class="v">${fmt(t[2])}</div><div class="s">${t[3]}</div><div class="go">לרשימה ›</div></button>`).join('');
   $('#hometiles').onclick = e=>{const b=e.target.closest('[data-tile]'); if(b) tiles[+b.dataset.tile][4]();};
-  $('#homeblocked').innerHTML = D.blocked.slice(0,8).map(ordRow).join('');
+  stagger($('#hometiles')); countUp($('#hometiles'));
+  $('#homeblocked').innerHTML = D.blocked.slice(0,8).map(ordRow).join(''); stagger($('#homeblocked'));
   $('#homeall').textContent = `כל ${fmt(D.orders_blocked)} ההזמנות`; $('#homeall').onclick = tiles[0][4];
-  $('#homeshort').innerHTML = shortSkus.slice(0,10).map(skuRow).join('');
+  $('#homeshort').innerHTML = shortSkus.slice(0,10).map(skuRow).join(''); stagger($('#homeshort'));
   $('#homeshortall').textContent = `כל ${fmt(shortSkus.length)} המוצרים`; $('#homeshortall').onclick = tiles[2][4];
 
   /* הזמנות */
   const partialOnly = D.orders_partial;
   const otiles = [['','הזמנות פתוחות',D.orders_total,'לא סופקו, לא בוטלו'],['bad','חסר בהן מוצר',D.orders_blocked,'לפחות שורה אחת בלי מלאי'],['warn','חלקי בלבד',partialOnly,'יש, אבל פחות מהביקוש הכולל'],['ok','מכוסות במלאי',D.orders_total-D.orders_blocked-partialOnly,'או ייצור לפי הזמנה']];
-  $('#ordtiles').innerHTML = otiles.map(t=>`<div class="tile static ${t[0]}"><div class="k">${t[1]}</div><div class="v">${fmt(t[2])}</div><div class="s">${t[3]}</div></div>`).join('');
+  $('#ordtiles').innerHTML = otiles.map(t=>`<div class="tile static ${t[0]}"><div class="k">${t[1]}</div><div class="v">${fmt(t[2])}</div><div class="s">${t[3]}</div></div>`).join(''); stagger($('#ordtiles'));
   let ordF='blocked';
   const drawOrders = ()=>{
     if(ordF==='all'){ $('#ordlist').innerHTML = Object.entries(D.order_status).map(([k,v])=>`<div class="row" style="cursor:default"><div class="a">${esc(k)}</div><div class="c"><b>${fmt(v)}</b><span style="font-size:11px;color:var(--tx3)">הזמנות</span></div></div>`).join(''); return; }
     const list = ordF==='partial' ? (D.partial_orders||[]) : D.blocked;
-    $('#ordlist').innerHTML = list.map(ordRow).join('') || '<div class="row" style="cursor:default">אין הזמנות.</div>';
+    $('#ordlist').innerHTML = list.map(ordRow).join('') || '<div class="row" style="cursor:default">אין הזמנות.</div>'; stagger($('#ordlist'));
   };
   $('#ordseg').onclick = e=>{const b=e.target.closest('button'); if(!b) return; ordF=b.dataset.f; document.querySelectorAll('#ordseg button').forEach(x=>x.classList.toggle('on',x===b)); drawOrders();};
   drawOrders();
@@ -332,7 +367,7 @@ function render(){
     const q=($('#skuq').value||'').trim().toLowerCase();
     let rows = skuF==='short'? shortSkus : D.skus.slice().sort((a,b)=>b.ordered-a.ordered);
     if(q) rows = rows.filter(s=>(s.sku+' '+s.des).toLowerCase().includes(q));
-    $('#skulist').innerHTML = rows.slice(0,150).map(skuRow).join('') || '<div class="row" style="cursor:default">אין תוצאות</div>';
+    $('#skulist').innerHTML = rows.slice(0,150).map(skuRow).join('') || '<div class="row" style="cursor:default">אין תוצאות</div>'; stagger($('#skulist'));
   };
   $('#skuq').oninput = drawSku;
   $('#skuseg').onclick = e=>{const b=e.target.closest('button'); if(!b) return; skuF=b.dataset.f; document.querySelectorAll('#skuseg button').forEach(x=>x.classList.toggle('on',x===b)); drawSku();};
@@ -350,7 +385,7 @@ function render(){
     if(reset) stN=50;
     const q=($('#stq').value||'').trim().toLowerCase();
     let rows = D.stock; if(q) rows = rows.filter(s=>(s.sku+' '+s.des).toLowerCase().includes(q));
-    $('#stlist').innerHTML = rows.slice(0,stN).map(stockRow).join('') || '<div class="row" style="cursor:default">אין תוצאות</div>';
+    $('#stlist').innerHTML = rows.slice(0,stN).map(stockRow).join('') || '<div class="row" style="cursor:default">אין תוצאות</div>'; if(reset) stagger($('#stlist'));
     $('#stmore').hidden = rows.length<=stN;
   };
   $('#stq').oninput = ()=>drawStock(true);
@@ -372,7 +407,7 @@ function render(){
     const q=($('#slowq').value||'').trim().toLowerCase();
     let rows = slF==='all'? SL : SL.filter(x=>x.cls===slF);
     if(q) rows = rows.filter(s=>(s.sku+' '+s.des).toLowerCase().includes(q));
-    $('#slowlist').innerHTML = rows.slice(0,slN).map(slowRow).join('') || '<div class="row" style="cursor:default">אין תוצאות</div>';
+    $('#slowlist').innerHTML = rows.slice(0,slN).map(slowRow).join('') || '<div class="row" style="cursor:default">אין תוצאות</div>'; if(reset) stagger($('#slowlist'));
     $('#slowmore').hidden = rows.length<=slN;
   };
   $('#slowtiles').onclick = e=>{const b=e.target.closest('[data-slow]'); if(!b) return; slF=b.dataset.slow; document.querySelectorAll('#slowseg button').forEach(x=>x.classList.toggle('on',x.dataset.f===slF)); drawSlow(true); $('#slowlist').scrollIntoView({behavior:'smooth',block:'start'});};
@@ -398,9 +433,9 @@ function render(){
   if($('#spec')) $('#spec').innerHTML = SPEC.map(s=>`<div class="it"><b>${s[0]}</b>${tag(s[4])}<div class="d"><b>מה זה:</b> ${s[1]}<br><b>מה עושים:</b> ${s[2]}<br><b>מה יוצא:</b> ${s[3]}</div><div class="src">מקור: ${s[5]}</div></div>`).join('');
 }
 $('#syncbtn').onclick = async ()=>{
-  const b=$('#syncbtn'), m=$('#syncmsg'); b.disabled=true; m.textContent='מושך מפריוריטי…';
-  try{ const r=await fetch('/api/ops/sync',{method:'POST'}); const j=await r.json(); if(j.error) throw new Error(j.error); m.textContent='נמשכו '+fmt(j.rows)+' שורות מלאי'; const r2=await fetch('/api/ops/all?fresh=1',{cache:'no-store'}); D=await r2.json(); render(); }
-  catch(e){ m.textContent='נכשל: '+e.message; }
+  const b=$('#syncbtn'), m=$('#syncmsg'); b.disabled=true; m.textContent='מושך מפריוריטי…'; m.className='busy';
+  try{ const r=await fetch('/api/ops/sync',{method:'POST'}); const j=await r.json(); if(j.error) throw new Error(j.error); m.className=''; m.innerHTML='<span class="ok-pop">✓</span>נמשכו '+fmt(j.rows)+' שורות מלאי'; const r2=await fetch('/api/ops/all?fresh=1',{cache:'no-store'}); D=await r2.json(); render(); }
+  catch(e){ m.className=''; m.textContent='נכשל: '+e.message; }
   b.disabled=false;
 };
 boot();
