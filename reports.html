@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>דוחות — ויטוריו דיוואני</title>
+<style>
+:root{
+  --font: system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Hebrew",Arial,sans-serif;
+  --bg:#ffffff; --surface:#f4f8f6; --line:#e2e9e5; --line2:#cdd8d2;
+  --tx:#18241f; --tx2:#53635c; --tx3:#8a978f;
+  --brand:#0d9668; --sys:#4a3aa7; --sysSoft:rgba(74,58,167,.07); --dfg:#a3271f;
+  --shadow:0 1px 2px rgba(16,24,32,.05),0 6px 18px rgba(16,24,32,.05);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0f1512; --surface:#19211d; --line:#26302b; --line2:#35423b;
+    --tx:#e9efeb; --tx2:#a2b0a9; --tx3:#6f7d76;
+    --brand:#2fbf8f; --sys:#9085e9; --sysSoft:rgba(144,133,233,.10); --dfg:#f08a80;
+    --shadow:0 1px 2px rgba(0,0,0,.5),0 6px 18px rgba(0,0,0,.35);
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--font)}
+.wrap{max-width:820px;margin:0 auto;padding:12px 16px 40px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 12px}
+.btn{display:inline-flex;align-items:center;font-family:inherit;font-size:13px;border:1px solid var(--line2);background:var(--bg);color:var(--tx2);padding:7px 12px;min-height:38px;border-radius:999px;cursor:pointer;text-decoration:none}
+h1{font-size:22px;margin:4px 0 4px}
+.sub{color:var(--tx3);font-size:13px;margin:0 0 14px;line-height:1.5}
+.card{border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:14px 16px;margin:0 0 12px}
+.nm{font-size:17px;font-weight:700;margin:0 0 4px}
+.desc{font-size:13.5px;color:var(--tx2);line-height:1.5;margin:0 0 12px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+select,input[type=date]{font:inherit;font-size:15px;padding:9px 12px;border:1px solid var(--line2);border-radius:12px;background:var(--surface);color:var(--tx);min-height:42px}
+button.go{font:inherit;font-size:15px;font-weight:600;border:0;border-radius:12px;background:var(--brand);color:#fff;padding:0 18px;min-height:42px;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+button.go:disabled{opacity:.6;cursor:wait}
+.lnk{font-size:13px;color:var(--sys);cursor:pointer;text-decoration:underline;background:none;border:0;font-family:inherit;padding:0}
+.custom{display:none;margin-top:8px}
+.custom.on{display:flex}
+.status{font-size:13.5px;color:var(--tx2);margin:10px 0 0;min-height:1.2em}
+.status.err{color:var(--dfg)}
+.status.ok{color:var(--brand)}
+.hint{font-size:12.5px;color:var(--tx3);margin-top:10px;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="btn" href="/">→ חזרה לינשוף</a>
+    <a class="btn" href="/logout" style="border:0;color:var(--tx3)">יציאה</a>
+  </div>
+  <h1>דוחות</h1>
+  <p class="sub">בוחרים חודש, לוחצים "הורד אקסל", והקובץ יורד למכשיר. הנתונים נמשכים ישר מפריוריטי ברגע ההורדה, ולכן זה יכול לקחת עד דקה.</p>
+  <div id="list"></div>
+</div>
+<script>
+var CFG = window.OWL_REPORTS || { reports: [], f: '', t: '' };
+var MON = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function pad(n){ return (n < 10 ? '0' : '') + n; }
+function lastDay(y, m){ return new Date(y, m, 0).getDate(); }   // m: 1..12
+// רשימת 24 החודשים האחרונים. ברירת המחדל — החודש שעבר (CFG.f), כי דוח על חודש שלם הוא הבקשה הרגילה.
+function monthOptions(){
+  var def = (CFG.f || '').slice(0, 7), now = new Date(), h = '';
+  for (var i = 0; i < 24; i++) {
+    var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    var v = d.getFullYear() + '-' + pad(d.getMonth() + 1);
+    h += '<option value="' + v + '"' + (v === def ? ' selected' : '') + '>' + MON[d.getMonth()] + ' ' + d.getFullYear() + '</option>';
+  }
+  return h;
+}
+function card(r){
+  return '<div class="card" data-id="' + esc(r.id) + '">'
+    + '<div class="nm">' + esc(r.name) + '</div>'
+    + '<p class="desc">' + esc(r.desc) + '</p>'
+    + '<div class="row"><select class="mon" aria-label="חודש">' + monthOptions() + '</select>'
+    + '<button type="button" class="go">הורד אקסל</button>'
+    + '<button type="button" class="lnk cust">תקופה אחרת</button></div>'
+    + '<div class="row custom"><label>מ־ <input type="date" class="f" value="' + esc(CFG.f) + '"></label>'
+    + '<label>עד <input type="date" class="t" value="' + esc(CFG.t) + '"></label></div>'
+    + '<div class="status"></div></div>';
+}
+function period(c){
+  var cu = c.querySelector('.custom');
+  if (cu.classList.contains('on')) return { f: c.querySelector('.f').value, t: c.querySelector('.t').value };
+  var ym = c.querySelector('.mon').value.split('-'), y = +ym[0], m = +ym[1];
+  return { f: y + '-' + pad(m) + '-01', t: y + '-' + pad(m) + '-' + pad(lastDay(y, m)) };
+}
+function download(c){
+  var p = period(c), st = c.querySelector('.status'), b = c.querySelector('.go');
+  if (!p.f || !p.t) { st.className = 'status err'; st.textContent = 'צריך לבחור תאריך התחלה ותאריך סיום.'; return; }
+  b.disabled = true; st.className = 'status'; st.textContent = 'מושך מפריוריטי ובונה את הקובץ… זה יכול לקחת עד דקה.';
+  var url = '/api/report/' + encodeURIComponent(c.getAttribute('data-id')) + '.xlsx?f=' + encodeURIComponent(p.f) + '&t=' + encodeURIComponent(p.t);
+  fetch(url, { cache: 'no-store' }).then(function(r){
+    var ct = r.headers.get('content-type') || '';
+    if (!r.ok || ct.indexOf('json') >= 0) return r.json().then(function(j){ throw new Error(j.error || j.dev && 'הדוח לא זמין למשתמש הזה' || ('שגיאה ' + r.status)); });
+    var cd = r.headers.get('content-disposition') || '', m = /filename\*=UTF-8''([^;]+)/.exec(cd);
+    return r.blob().then(function(bl){ return { bl: bl, name: m ? decodeURIComponent(m[1]) : 'report.xlsx' }; });
+  }).then(function(x){
+    var a = document.createElement('a'), u = URL.createObjectURL(x.bl);
+    a.href = u; a.download = x.name; document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(u); a.remove(); }, 4000);
+    st.className = 'status ok'; st.textContent = 'הקובץ ירד: ' + x.name;
+  }).catch(function(e){ st.className = 'status err'; st.textContent = 'לא הצלחתי: ' + (e && e.message || e); })
+    .then(function(){ b.disabled = false; });
+}
+document.getElementById('list').innerHTML = CFG.reports.length ? CFG.reports.map(card).join('') : '<p class="sub">אין דוחות עדיין.</p>';
+document.addEventListener('click', function(e){
+  var c = e.target.closest && e.target.closest('.card'); if (!c) return;
+  if (e.target.closest('.go')) download(c);
+  else if (e.target.closest('.cust')) {
+    var cu = c.querySelector('.custom'), on = cu.classList.toggle('on');
+    e.target.textContent = on ? 'חזרה לבחירת חודש' : 'תקופה אחרת';
+    c.querySelector('.mon').style.display = on ? 'none' : '';
+  }
+});
+</script>
+</body>
+</html>
