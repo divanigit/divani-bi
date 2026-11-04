@@ -3510,7 +3510,7 @@ def agent_report(request: Request):
 _DORON_BLOCK = re.compile(r"<!--DORON-->.*?<!--/DORON-->", re.S)
 _OPS_BLOCK = re.compile(r"<!--OPS-->.*?<!--/OPS-->", re.S)
 _ORDERS_BLOCK = re.compile(r"<!--ORDERS-->.*?<!--/ORDERS-->", re.S)   # כפתור "חיפוש הזמנה": בעלים ורום
-_REPORTS_BLOCK = re.compile(r"<!--REPORTS-->.*?<!--/REPORTS-->", re.S)   # כפתור "דוחות": בעלים בלבד (4.11.2026)
+_REPORTS_BLOCK = re.compile(r"<!--REPORTS-->.*?<!--/REPORTS-->", re.S)   # "דוחות להורדה" בתפריט ההמבורגר: בעלים בלבד (4.11.2026)
 _OWNER_BLOCK = re.compile(r"<!--OWNER-->.*?<!--/OWNER-->"
                           r"|/\*OWNER\*/.*?/\*ENDOWNER\*/", re.S)
 
