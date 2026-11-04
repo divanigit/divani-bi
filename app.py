@@ -41,6 +41,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
                                RedirectResponse, Response)
 
+import regions
 import xlsx
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -439,6 +440,8 @@ def _np_dimtree(d):
     agg.pop("total_p", None)
     for g in agg.get("rows") or []:
         g.pop("p", None)
+        for c in g.get("cities") or []:      # אזורים: הערים שבתוך כל אזור
+            c.pop("p", None)
     rest = agg.get("rest")
     if isinstance(rest, dict):
         rest.pop("p", None)
@@ -560,7 +563,7 @@ _KR_SITE_API = {"/api/site", "/api/site/now", "/api/site/drill", "/api/clarity",
 _KR_SALES_API = {"/api/meta", "/api/range", "/api/dim", "/api/tree", "/api/products",
                  "/api/segdrill", "/api/branchsrc", "/api/sitesales", "/api/series", "/api/xlsx"}
 _KR_API_ALLOW = _KR_SITE_API | _KR_SALES_API
-_KR_DIMS = {"fam", "grp", "part", "city", "sector", "source", "branch", "branchp"}
+_KR_DIMS = {"fam", "grp", "part", "city", "region", "sector", "source", "branch", "branchp"}
 
 # במסכי המכירות אסור לקרן לראות שם לקוח או כל פרט מזהה שלו (דורון, 25.10.2026;
 # נטישות וקלריטי — "זה בסדר", נשארים פתוחים). כל תשובת מכירות עוברת כאן: שמות לקוחות,
@@ -3771,7 +3774,7 @@ def api_range(request: Request, d_from: str = "", d_to: str = "", by: str = "a")
     return JSONResponse({"mode": "agents", "agg": agg or {}})
 
 
-_DIMS = {"fam", "part", "city", "sector", "source"}
+_DIMS = {"fam", "part", "city", "region", "sector", "source"}
 
 # insights panels: name -> (rpc, needs_dates, allowed dims or None)
 _PANELS = {
@@ -3954,6 +3957,13 @@ def api_dim(request: Request, d_from: str = "", d_to: str = "", dim: str = "fam"
         f, t = t, f
     if dim not in _DIMS or rank not in ("s", "q") or not (1 <= lim <= 500):
         return JSONResponse({"error": "bad dim"}, status_code=400)
+    if dim == "region":
+        # אזורים (דורון, 4.11.2026: "כמה הזמנות לצפון מצומת גולני וצפונה"): אין מימד כזה
+        # במסד — מושכים את כל הערים ומחברים אותן לאזורים ב-regions.py.
+        agg = sb_rpc("bi_range_dim", {"p_from": f.isoformat(), "p_to": t.isoformat(),
+                                      "p_dim": "city", "p_rank": rank, "p_limit": 500})
+        return JSONResponse({"mode": "dim", "dim": dim, "rank": rank,
+                             "agg": regions.group_cities(agg or {}, rank)})
     agg = sb_rpc("bi_range_dim", {"p_from": f.isoformat(), "p_to": t.isoformat(),
                                   "p_dim": dim, "p_rank": rank, "p_limit": lim})
     return JSONResponse({"mode": "dim", "dim": dim, "rank": rank, "agg": agg or {}})
