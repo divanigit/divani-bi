@@ -776,6 +776,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     <button type="button" class="chip on" data-d="fam" aria-pressed="true">קטגוריות</button>
     <button type="button" class="chip" data-d="part" aria-pressed="false">מוצרים</button>
     <button type="button" class="chip" data-d="city" aria-pressed="false">ערים</button>
+    <button type="button" class="chip" data-d="region" aria-pressed="false">אזורים</button>
     <button type="button" class="chip" data-d="sector" aria-pressed="false">מגזר</button>
     <button type="button" class="chip" data-d="source" aria-pressed="false">מקור הגעה</button>
   </div>
@@ -1006,7 +1007,8 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   var hrOne='';      // הסניף שנבחר בתוך תצוגה של סניף בודד
   var hrDow=4;       // יום השבוע בתצוגה 12
   var hrHour=12;     // השעה בתצוגה 13
-  var DIMH={fam:'קטגוריות',part:'מוצרים',city:'ערים',sector:'מגזר',source:'מקור הגעה'};
+  var DIMH={fam:'קטגוריות',part:'מוצרים',city:'ערים',region:'אזורים',sector:'מגזר',source:'מקור הגעה'};
+  var dimReg=null;   // אזורים: האזור שנפתח לצפייה בערים שלו (צלילה בצד הלקוח, בלי שליפה נוספת)
   var SECN={'חילו.':'חילוני','חר.':'חרדי','ד.לא.':'דתי לאומי','רוס':'דובר רוסית','ע.ר':'המגזר הערבי','אחר':'אחר','לקוח מרחוק':'לקוח מרחוק','הזמנת שרות':'הזמנת שירות'};
   function dimName(k){if(dimKind==='sector')return SECN[k]||k;return k;}
   function secName(k){return SECN[k]||k;}
@@ -1327,7 +1329,8 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       var s=g.s||0,p=g.p||0;
       return {n:(dimKind==='part'?(g.lbl||g.k||'ללא תיאור'):dimName(g.k||'ללא נתון')),
               code:(dimKind==='part'?(g.k||''):null),rawk:(g.k||''),
-              s:s,profit:p,pm:s>0?100*p/s:null,q:g.q||0,c:g.c||0,no:g.n||0,k:null};
+              s:s,profit:p,pm:s>0?100*p/s:null,q:g.q||0,c:g.c||0,no:g.n||0,k:null,
+              lbl:g.lbl||null,cities:g.cities||null,restCnt:g.rest_cnt||0};
     });
     return {s:agg.total_s||0,q:agg.total_q||0,p:agg.total_p||0,
             orders:agg.orders||0,c:agg.customers||0,qcov:agg.qcov==null?null:agg.qcov,
@@ -1599,7 +1602,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var a=cache.agg||{};
     var segH={city:'עיר',sector:'מגזר',source:'מקור הגעה'};
     var nm=dimKind==='sector'?secName(dimSeg.key):dimSeg.key;
-    var h='<div class="crumbs"><button type="button" class="chip" data-segback="1">→ חזרה ל'+(DIMH[dimKind]||'רשימה')+'</button><button type="button" class="chip here">'+esc(nm)+'</button></div>';
+    var h='<div class="crumbs"><button type="button" class="chip" data-segback="1">→ חזרה ל'+(dimKind==='region'&&dimReg?'ערי האזור':(DIMH[dimKind]||'רשימה'))+'</button><button type="button" class="chip here">'+esc(nm)+'</button></div>';
     var brs=a.branches||[];
     if(brs.length){
       var totB=0;brs.forEach(function(b){totB+=Math.max(b.s,0);});
@@ -1629,8 +1632,49 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     stage.innerHTML=h;
   }
 
+  /* אזורים: ערים מקובצות לאזורי ארץ (regions.py בשרת). דורון, 4.11.2026:
+     "כמה הזמנות היו לנו השנה לצפון הארץ מצומת גולני וצפונה". שורה לאזור, ולחיצה
+     פותחת את הערים שבתוכו מאותה תשובה. עמודת "הזמנות" מוצגת כאן כי זו השאלה. */
+  function renderRegionTable(R){
+    var NP=noProfit();
+    if(NP&&dimSort&&dimSort.col==='p')dimSort=null;
+    var reg=dimReg?R.k.filter(function(c){return c.rawk===dimReg;})[0]:null;
+    if(dimReg&&!reg){dimReg=null;}
+    var rows=reg?(reg.cities||[]).map(function(g){var s=g.s||0,p=g.p||0;return {n:g.k||'ללא נתון',rawk:g.k||'',s:s,profit:p,pm:s>0?100*p/s:null,q:g.q||0,c:g.c||0,no:g.n||0};}):R.k.slice();
+    var tot=reg?{s:reg.s,q:reg.q,p:reg.profit,c:reg.c,no:reg.no}:{s:R.s,q:R.q,p:R.p,c:R.c,no:R.orders};
+    if(dimSort){
+      var col=dimSort.col,dir=dimSort.dir;
+      rows.sort(function(x,y){
+        function v(o){return col==='s'?o.s:col==='q'?o.q:col==='p'?o.profit:col==='c'?o.c:col==='o'?o.no:o.s;}
+        return dir*(v(y)-v(x));
+      });
+    }
+    var hasOrders=rows.some(function(c){return c.no>0;});
+    function hs(col,label){var on=dimSort&&dimSort.col===col;return '<th data-hsort="'+col+'"'+(on?' class="on"':'')+'>'+label+(on?(dimSort.dir===1?' ↑':' ↓'):'')+'</th>';}
+    var h='<div class="crumbs"><button type="button" class="chip'+(reg?'':' here')+'"'+(reg?' data-regback="1"':'')+'>אזורים</button>'
+      +(reg?'<button type="button" class="chip here">'+esc(reg.lbl||reg.n)+'</button>':'')+'</div>';
+    if(!rows.length){stage.innerHTML=h+emptyHtml();return;}
+    if(!reg)h+='<p class="hint" style="display:block;margin:0 0 8px">לחיצה על אזור פותחת את הערים שבתוכו. "לא מזוהה" = ערים שעוד לא שויכו לאזור — תגיד לאן הן שייכות.</p>';
+    h+='<div class="tw">'+(dimSort?'<button type="button" class="sortreset" id="dimreset">חזרה לסדר המקורי</button>':'')
+      +'<table><thead><tr><th class="nm">'+(reg?'עיר':'אזור')+'</th>'+(hasOrders?hs('o','הזמנות'):'')+hs('s','מכירות')+hs('q','כמות')+'<th>אחוז מסה"כ</th>'+(NP?'':hs('p','רווח')+'<th>אחוז רווח</th>')+hs('c','לקוחות')+'</tr></thead><tbody>';
+    var byQ=dimSort&&dimSort.col==='q';
+    rows.forEach(function(c){
+      var base=byQ?tot.q:tot.s,val=byQ?c.q:c.s;
+      var pct=(base>0&&val>0)?Math.round(100*val/base)+'%':'—';
+      var canDrill=reg?true:((c.cities||[]).length>0);
+      var attr=canDrill?(reg?' data-segk="'+esc(c.rawk)+'"':' data-regk="'+esc(c.rawk)+'"')+' role="button" tabindex="0"':'';
+      var sub=(!reg&&c.restCnt)?'<div class="c">ועוד '+c.restCnt+' ערים בלי פירוט</div>':(!reg&&c.cities?'<div class="c">'+c.cities.length+' ערים</div>':'');
+      h+='<tr class="d0'+(canDrill?' row':'')+'"'+attr+'><td class="nm"><div class="nmc">'+(canDrill?chevSvg(false):'<span style="width:15px;flex:none"></span>')+'<div class="nlab"><div class="t" style="font-weight:500">'+esc(reg?c.n:(c.lbl||c.n))+'</div>'+sub+'</div></div></td>'
+        +(hasOrders?'<td>'+c.no+'</td>':'')+'<td>'+ils(c.s)+'</td><td>'+qf(c.q)+'</td><td class="mut">'+pct+'</td>'
+        +(NP?'':'<td>'+ils(c.profit)+'</td><td>'+pill(c)+'</td>')+'<td>'+c.c+'</td></tr>';
+    });
+    h+='</tbody><tfoot><tr><td class="nm">סך הכל</td>'+(hasOrders?'<td>'+(tot.no||'—')+'</td>':'')+'<td>'+ils(tot.s)+'</td><td>'+qf(tot.q)+'</td><td>100%</td>'+(NP?'':'<td>'+ils(tot.p)+'</td><td>'+pill({s:tot.s,profit:tot.p,pm:tot.s>0?100*tot.p/tot.s:null})+'</td>')+'<td>'+tot.c+'</td></tr></tfoot></table></div>';
+    stage.innerHTML=h;
+  }
+
   function renderDimTable(R){
     if(cache.mode==='segdrill'&&dimSeg){renderSegDrill(R);return;}
+    if(dimKind==='region'&&cache.mode==='dim'){renderRegionTable(R);return;}
     var NP=noProfit();
     if(NP&&dimSort&&dimSort.col==='p')dimSort=null;
     var isTree=cache.mode==='tree';
@@ -2267,7 +2311,8 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(view==='collect'){var _R=ROOT();msgs.push('על ההזמנות שנכתבו בתקופה שבחרת: כמה הנחות ניתנו עליהן, וכמה כסף התקבל עליהן באותה תקופה. התקבולים כוללים מע"מ, ולכן היחס מחושב מול המחזור בהמרה לכולל מע"מ ולא מול המחזור המוצג. הנחות = שורות קיזוז, קופונים ושוברים.');if(_R&&_R.linkPct!=null&&_R.linkPct<80){msgs.push('שים לב: בתקופה הזו רק '+Math.round(_R.linkPct)+' אחוז מהקבלות נושאות מספר הזמנה בפריוריטי, ולכן חלק מהתקבולים לא משויכים להזמנה.');}}
     if(view==='dim'){
       if(dimKind==='sector'&&state.from<'2025-01-01')msgs.push('תיוג מגזר קיים בפריוריטי באופן מלא רק מלקוחות שנוצרו משנת 2025 — הזמנות מוקדמות יותר מופיעות תחת "ללא נתון".');
-      if(dimKind==='city'&&state.from<'2022-01-01')msgs.push('רישום עיר הלקוח מלא בפריוריטי רק משנת 2022 — הזמנות מוקדמות יותר מופיעות תחת "ללא נתון".');
+      if((dimKind==='city'||dimKind==='region')&&state.from<'2022-01-01')msgs.push('רישום עיר הלקוח מלא בפריוריטי רק משנת 2022 — הזמנות מוקדמות יותר מופיעות תחת "ללא נתון".');
+      if(dimKind==='region')msgs.push('האזורים נבנים מעיר הלקוח בפריוריטי. "צפון" = מצומת גולני וצפונה, כולל בית שאן, צומת צמח ובקעת הירדן. חיפה והקריות בקבוצה נפרדת.');
       if(dimKind==='source'&&state.from<'2020-01-01')msgs.push('רישום מקור ההגעה מלא בפריוריטי רק משנת 2020 — הזמנות מוקדמות יותר מופיעות תחת "ללא נתון".');
       var Rq=cache.mode==='dim'?(cache.agg||{}):{};
       if(Rq.qcov!=null&&Rq.qcov<100)msgs.push('נתוני כמות קיימים כרגע עבור '+Rq.qcov+' אחוז מהשורות בתקופה — המילוי ההיסטורי בעיצומו.');
@@ -4650,8 +4695,12 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         else if(lv===2){dimPath.model=null;}
         else return;
         dimSort=null;if(META&&state.from)apply();return;}
+      var rg=e.target.closest('[data-regk]');
+      if(rg){dimReg=rg.getAttribute('data-regk');dimSort=null;renderAll();return;}
+      var rb=e.target.closest('[data-regback]');
+      if(rb){dimReg=null;dimSort=null;renderAll();return;}
       var sk=e.target.closest('[data-segk]');
-      if(sk){dimSeg={seg:dimKind,key:sk.getAttribute('data-segk')};if(META&&state.from)apply();return;}
+      if(sk){dimSeg={seg:dimKind==='region'?'city':dimKind,key:sk.getAttribute('data-segk')};if(META&&state.from)apply();return;}
       var sb=e.target.closest('[data-segback]');
       if(sb){dimSeg=null;if(META&&state.from)apply();return;}
       if(e.target.closest('#dimreset')){dimSort=null;apply();return;}
@@ -4691,7 +4740,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(d){
       if(dimKind===d.getAttribute('data-d'))return;
       dimKind=d.getAttribute('data-d');
-      dimPath={grp:null,fam:null,model:null};dimSeg=null;dimSort=null;
+      dimPath={grp:null,fam:null,model:null};dimSeg=null;dimReg=null;dimSort=null;
       var cs=document.querySelectorAll('#dimbar [data-d]');
       for(var i=0;i<cs.length;i++){var on=cs[i].getAttribute('data-d')===dimKind;cs[i].classList.toggle('on',on);cs[i].setAttribute('aria-pressed',on?'true':'false');}
       if(META&&state.from)apply();
