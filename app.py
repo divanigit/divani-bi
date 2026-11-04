@@ -258,6 +258,12 @@ def _can_search_orders(request: Request) -> bool:
     return _is_admin(request) or _is_rom(request)
 
 
+def _can_reports(request: Request) -> bool:
+    """ממשק הדוחות: בעלים, ורום (דורון, 4.11.2026 ערב: "תפתח את זה גם לרום"). רום רואה
+    ממילא את פרטי הלקוח בחיפוש ההזמנות, ודוח הקבלות הוא אותם לקוחות."""
+    return _is_admin(request) or _is_rom(request)
+
+
 def _is_noprofit(request: Request) -> bool:
     # קרן רואה מחזורים בלי רווח, בדיוק כמו עידו (דורון, 25.10.2026)
     if _is_keren(request):
@@ -3510,7 +3516,7 @@ def agent_report(request: Request):
 _DORON_BLOCK = re.compile(r"<!--DORON-->.*?<!--/DORON-->", re.S)
 _OPS_BLOCK = re.compile(r"<!--OPS-->.*?<!--/OPS-->", re.S)
 _ORDERS_BLOCK = re.compile(r"<!--ORDERS-->.*?<!--/ORDERS-->", re.S)   # כפתור "חיפוש הזמנה": בעלים ורום
-_REPORTS_BLOCK = re.compile(r"<!--REPORTS-->.*?<!--/REPORTS-->", re.S)   # "דוחות להורדה" בתפריט ההמבורגר: בעלים בלבד (4.11.2026)
+_REPORTS_BLOCK = re.compile(r"<!--REPORTS-->.*?<!--/REPORTS-->", re.S)   # "דוחות להורדה" בתפריט ההמבורגר: בעלים ורום (4.11.2026)
 _OWNER_BLOCK = re.compile(r"<!--OWNER-->.*?<!--/OWNER-->"
                           r"|/\*OWNER\*/.*?/\*ENDOWNER\*/", re.S)
 
@@ -3698,8 +3704,8 @@ def index(request: Request):
         html = _DORON_BLOCK.sub("", html)      # כפתור "קרן" — לדורון בלבד
     if not _can_search_orders(request):
         html = _ORDERS_BLOCK.sub("", html)     # "חיפוש הזמנה" — בעלים ורום
-    if not admin:
-        html = _REPORTS_BLOCK.sub("", html)    # "דוחות" — בעלים בלבד
+    if not _can_reports(request):
+        html = _REPORTS_BLOCK.sub("", html)    # "דוחות להורדה" — בעלים ורום
     if not _can_ops(request):
         html = _OPS_BLOCK.sub("", html)        # "ינשוף גיבור" — בעלים ודב
     if np:
@@ -4336,8 +4342,8 @@ async def api_xlsx(request: Request):
 # הממשק: המסך /reports מצייר אותה, ו-/api/report/<id>.xlsx מריץ אותה. דוח חדש =
 # פונקציה אחת ושורה אחת ברשימה, בלי לגעת במסך.
 #
-# לבעלים בלבד (_is_admin): דוח קבלות מכיל שמות לקוחות. קרן נחסמת ב-_kr_gate, היועצים
-# ב-_yz_gate, עידו ב-_np_gate, ורום ודב כאן.
+# לבעלים ולרום (_can_reports; דורון 4.11 ערב: "תפתח את זה גם לרום"). דוח קבלות מכיל שמות
+# לקוחות. קרן נחסמת ב-_kr_gate, היועצים ב-_yz_gate, עידו ב-_np_gate, ודב כאן.
 #
 # הקבלות נמשכות ישר מפריוריטי בזמן ההורדה, ולא מ-bi_receipt_pays: הטבלה אצלנו שומרת
 # רק את מה שמסך המזומן צריך (סכום, אמצעי, תאריך), ודורון ביקש את כל השדות. כמו
@@ -4522,7 +4528,7 @@ def _rp_default_period(today: dt.date):
 
 @app.get("/api/report/{rid}.xlsx")
 def api_report(request: Request, rid: str, f: str = "", t: str = ""):
-    if not _is_admin(request):
+    if not _can_reports(request):
         return JSONResponse({"error": "auth"}, status_code=403)
     rp = _REPORT_BY_ID.get(rid)
     if not rp:
@@ -4563,10 +4569,10 @@ def api_report(request: Request, rid: str, f: str = "", t: str = ""):
 
 @app.get("/reports")
 def reports_page(request: Request):
-    """ממשק הדוחות — לבעלים בלבד."""
+    """ממשק הדוחות — לבעלים ולרום."""
     if not _logged_in(request):
         return RedirectResponse("/login", status_code=303)
-    if not _is_admin(request):
+    if not _can_reports(request):
         return RedirectResponse("/", status_code=303)
     try:
         with open(os.path.join(HERE, "reports.html"), encoding="utf-8") as f:
