@@ -546,7 +546,7 @@ _YZ_API_ALLOW = {"/api/meta", "/api/range", "/api/cash", "/api/collect",
                  "/api/pending", "/api/custcount",   # מספר לקוחות לתקופה — גם ליועצים (הבקשה, 1.11.2026)
                  "/api/messages", "/api/refresh"}
 _YZ_PAGE_BLOCK = {"/agent-report", "/conversion", "/traffic", "/customers", "/abandoned",
-                  "/site", "/status", "/logins", "/nav-preview"}
+                  "/site", "/status", "/logins", "/nav-preview", "/reports"}
 
 
 # קרן, ספקית האתר (דורון, 20.10.2026): רק בריאות האתר וקלריטי. אין לה גישה לשמות
@@ -3510,6 +3510,7 @@ def agent_report(request: Request):
 _DORON_BLOCK = re.compile(r"<!--DORON-->.*?<!--/DORON-->", re.S)
 _OPS_BLOCK = re.compile(r"<!--OPS-->.*?<!--/OPS-->", re.S)
 _ORDERS_BLOCK = re.compile(r"<!--ORDERS-->.*?<!--/ORDERS-->", re.S)   # כפתור "חיפוש הזמנה": בעלים ורום
+_REPORTS_BLOCK = re.compile(r"<!--REPORTS-->.*?<!--/REPORTS-->", re.S)   # כפתור "דוחות": בעלים בלבד (4.11.2026)
 _OWNER_BLOCK = re.compile(r"<!--OWNER-->.*?<!--/OWNER-->"
                           r"|/\*OWNER\*/.*?/\*ENDOWNER\*/", re.S)
 
@@ -3697,6 +3698,8 @@ def index(request: Request):
         html = _DORON_BLOCK.sub("", html)      # כפתור "קרן" — לדורון בלבד
     if not _can_search_orders(request):
         html = _ORDERS_BLOCK.sub("", html)     # "חיפוש הזמנה" — בעלים ורום
+    if not admin:
+        html = _REPORTS_BLOCK.sub("", html)    # "דוחות" — בעלים בלבד
     if not _can_ops(request):
         html = _OPS_BLOCK.sub("", html)        # "ינשוף גיבור" — בעלים ודב
     if np:
@@ -4323,6 +4326,260 @@ async def api_xlsx(request: Request):
                  "attachment; filename=owl.xlsx; filename*=UTF-8''"
                  + urllib.parse.quote(name + ".xlsx"),
                  "Cache-Control": "no-store"})
+
+
+# ---------- דוחות (דורון, 4.11.2026) ----------
+# "אני רוצה ממשק דוחות בינשוף. דו"ח ראשון — תוציא לי את כל קבלות חודש אוקטובר באקסל
+# עם כל הנתונים שמופיעים בקבלה מאורגנים בטורים."
+#
+# דוח = פונקציה שמקבלת תקופה ומחזירה גיליונות ל-xlsx.build. הרשימה _REPORTS היא כל
+# הממשק: המסך /reports מצייר אותה, ו-/api/report/<id>.xlsx מריץ אותה. דוח חדש =
+# פונקציה אחת ושורה אחת ברשימה, בלי לגעת במסך.
+#
+# לבעלים בלבד (_is_admin): דוח קבלות מכיל שמות לקוחות. קרן נחסמת ב-_kr_gate, היועצים
+# ב-_yz_gate, עידו ב-_np_gate, ורום ודב כאן.
+#
+# הקבלות נמשכות ישר מפריוריטי בזמן ההורדה, ולא מ-bi_receipt_pays: הטבלה אצלנו שומרת
+# רק את מה שמסך המזומן צריך (סכום, אמצעי, תאריך), ודורון ביקש את כל השדות. כמו
+# בחיפוש ההזמנות — שום דבר מהמשיכה לא נשמר במסד.
+
+# כותרות בעברית לשדות פריוריטי שאנחנו מכירים. שדה שלא כאן יוצא עם השם המקורי שלו
+# (למשל SPEC7) ולא נעלם: "כל הנתונים" פירושו גם מה שלא ידענו לתרגם.
+_RP_LABELS = {
+    "IVNUM": "מספר קבלה", "IVDATE": "תאריך", "STATDES": "סטטוס", "BRANCHNAME": "סניף",
+    "BRANCHDES": "שם סניף", "AGENTNAME": "סוכן", "AGENTCODE": "קוד סוכן", "CUSTNAME": "מס' לקוח",
+    "CDES": "שם לקוח", "CUSTDES": "שם לקוח", "ORDNAME": "הזמנה", "TOTPRICE": "סה\"כ",
+    "QPRICE": "סכום", "CASHPAYMENT": "מזומן", "CODE": "מטבע", "DETAILS": "פרטים",
+    "BOOKNUM": "אסמכתא", "DOCNO": "מס' מסמך", "FNCNUM": "מס' תנועה", "FNCPATNAME": "תבנית חשבונאית",
+    "FNCPATDES": "תיאור תבנית", "IVTYPE": "סוג מסמך", "TYPEDES": "סוג", "DEBIT": "חובה/זכות",
+    "PAYDATE": "תאריך פירעון", "PAYMENTNAME": "אמצעי תשלום", "PAYMENTCODE": "קוד אמצעי תשלום",
+    "PAYMENTDES": "תיאור אמצעי תשלום", "BANKNAME": "בנק", "BANKDES": "שם בנק", "BRANCH": "סניף בנק",
+    "PAYACCOUNT": "חשבון", "CHECKNUM": "מס' שיק", "CCUID": "מס' כרטיס", "CARDNUM": "מס' כרטיס",
+    "VALIDMONTH": "תוקף", "PAYMENTS": "מס' תשלומים", "CONFNUM": "מס' אישור", "FIRSTPAY": "תשלום ראשון",
+    "FINAL": "סופי", "PRINTED": "הודפס", "CREATEDDATE": "נוצר", "UDATE": "עודכן", "USERLOGIN": "משתמש",
+    "OWNERLOGIN": "בעלים", "PHONE": "טלפון", "ADDRESS": "כתובת", "STATE": "עיר", "ZIP": "מיקוד",
+    "VATNUM": "מס' עוסק", "WTAXNUM": "ת.ז./ח.פ.", "EMAIL": "מייל", "FNCIREF1": "חשבונית",
+    "FNCIREF2": "אסמכתא 2", "CREDIT": "זכות", "FNCDATE": "תאריך תנועה", "CURDATE": "תאריך",
+    "EXCHANGE": "שער", "ROTL_RECEIPTDES": "הערות", "PAYDES": "אופן תשלום", "CUSTVATNUM": "מס' עוסק לקוח",
+}
+# הסדר במסך: קודם מי ומתי, אחר כך הכסף. השדות האלה פותחים את הגיליון; השאר אחריהם,
+# לפי הסדר שבו פריוריטי מחזיר אותם.
+_RP_FIRST = ["IVNUM", "IVDATE", "STATDES", "BRANCHNAME", "AGENTNAME", "CUSTNAME", "CDES",
+             "ORDNAME", "TOTPRICE", "CASHPAYMENT", "DETAILS", "BOOKNUM"]
+_RP_MONEY = re.compile(r"PRICE|PAYMENT$|SUM|TOTAL|DEBIT|CREDIT|AMOUNT|BALANCE|VAT$", re.I)
+_RP_SKIP = re.compile(r"_SUBFORM$|^IV$|^@|^KEY$|^TYPE$|^_")   # מצביעים פנימיים ושדות עזר שלנו — לא "נתון בקבלה"
+_RP_KINDS = {"cash": "מזומן", "check": "שיקים", "card": "אשראי", "transfer": "העברה",
+             "bit": "ביט", "other": "אחר"}
+# סוג התא לפי השדה והערך. תאריך (מחרוזת ISO) -> תאריך אמיתי; מספר בשדה של כסף -> ₪
+# עם אגורות; מספר אחר -> מספר; כל השאר טקסט.
+_RP_ISO = re.compile(r"^\d{4}-\d{2}-\d{2}")
+
+
+def _rp_cell(key, v):
+    if isinstance(v, bool):
+        return ("כן" if v else "לא", "s")
+    if isinstance(v, (int, float)):
+        return (v, "c" if _RP_MONEY.search(key) else "n")
+    if isinstance(v, str) and _RP_ISO.match(v):
+        return (v[:10], "d")
+    if isinstance(v, (dict, list)):
+        return (json.dumps(v, ensure_ascii=False)[:200], "s")
+    return (v, "s")
+
+
+def _rp_empty(v):
+    return v is None or v == "" or v == 0 or v is False
+
+
+def _rp_table(recs, first, fixed=()):
+    """טבלה מרשימת רשומות של פריוריטי: עמודה לכל שדה שיש בו ערך לפחות ברשומה אחת.
+    first: שדות שפותחים את הגיליון, בסדר הזה. fixed: (כותרת, סוג, פונקציה) — עמודות
+    מחושבות שבאות אחרי first ולפני השאר. מחזיר (כותרות, שורות, רוחבים)."""
+    seen, nonempty = [], set()
+    for r in recs:
+        for k, v in r.items():
+            if _RP_SKIP.search(k):
+                continue
+            if k not in nonempty and not _rp_empty(v):
+                nonempty.add(k)
+            if k not in seen:
+                seen.append(k)
+    head_keys = [k for k in first if k in nonempty] + [k for k in seen if k in nonempty and k not in first]
+    keys_a = [k for k in head_keys if k in first]
+    keys_b = [k for k in head_keys if k not in first]
+    head = ([_RP_LABELS.get(k, k) for k in keys_a] + [f[0] for f in fixed]
+            + [_RP_LABELS.get(k, k) for k in keys_b])
+    rows = []
+    for r in recs:
+        row = [_rp_cell(k, r.get(k)) for k in keys_a]
+        row += [(fn(r), kind) for _t, kind, fn in fixed]
+        row += [_rp_cell(k, r.get(k)) for k in keys_b]
+        rows.append(row)
+    widths = [max(10.0, min(40.0, 1.15 * len(str(h)) + 6)) for h in head]
+    return head, rows, widths
+
+
+def _rp_sheet(name, title, sub, head, rows, widths):
+    out = [[(title, "t")], [(sub, "s")], [], [(h, "h") for h in head]] + rows
+    if not rows:
+        out.append([("אין שורות בתקופה הזאת", "s")])
+    return (name, out, widths)
+
+
+def _rp_pull_receipts(d_from: dt.date, d_to: dt.date):
+    """כל הקבלות (TINVOICES) בתקופה, עם כל השדות וכל תת-הטבלאות. $select אסור יחד עם
+    $expand בקבלות (פריוריטי מחזיר שורות ריקות), ולכן מושכים כותרת מלאה — וזה בדיוק
+    מה שהדוח רוצה. TFNCITEMS_SUBFORM (החשבוניות שהקבלה סוגרת) לא קיים בכל התקנה,
+    ולכן מנסים איתו, ואם פריוריטי מחזיר 400 — בלעדיו. מחזיר (רשומות, רשימת תת-טבלאות)."""
+    auth = "Basic " + base64.b64encode(f"{PRI_USER}:{PRI_PASS}".encode("utf-8")).decode("ascii")
+    lo = (d_from - dt.timedelta(days=1)).isoformat() + "T00:00:00%2B02:00"
+    hi = (d_to + dt.timedelta(days=2)).isoformat() + "T00:00:00%2B02:00"
+    base = f"{PRI_BASE}/TINVOICES?$filter=IVDATE%20ge%20{lo}%20and%20IVDATE%20lt%20{hi}&$expand="
+    subs_try = (["TPAYMENT_SUBFORM", "TPAYMENT2_SUBFORM", "TFNCITEMS_SUBFORM"],
+                ["TPAYMENT_SUBFORM", "TPAYMENT2_SUBFORM"])
+    recs, subs = None, subs_try[-1]
+    for i, sl in enumerate(subs_try):
+        try:
+            recs, subs = list(_pri_pages(base + ",".join(sl), auth, guard_max=200)), sl
+            break
+        except urllib.error.HTTPError as e:
+            if e.code != 400 or i == len(subs_try) - 1:
+                raise
+    lo_s, hi_s = d_from.isoformat(), d_to.isoformat()
+    recs = [r for r in recs if lo_s <= (r.get("IVDATE") or "")[:10] <= hi_s]
+    recs.sort(key=lambda r: ((r.get("IVDATE") or ""), str(r.get("IVNUM") or "")))
+    return recs, subs
+
+
+def _rp_receipts(d_from: dt.date, d_to: dt.date):
+    """דוח קבלות: גיליון לקבלות (שורה לקבלה, כל השדות + סיכום לפי אמצעי תשלום), גיליון
+    לשיקים, גיליון לאשראי ושאר האמצעים, וגיליון לחשבוניות שנסגרו אם פריוריטי מחזיר אותן."""
+    if not (PRI_BASE and PRI_USER):
+        raise RuntimeError("אין חיבור לפריוריטי (PRI_BASE/PRI_USER לא מוגדרים).")
+    recs, subs = _rp_pull_receipts(d_from, d_to)
+    per = "%s–%s" % (d_from.strftime("%d.%m.%Y"), d_to.strftime("%d.%m.%Y"))
+    stamp = dt.datetime.now(IL).strftime("%d.%m.%Y %H:%M")
+    sub = "%s · %d קבלות · הופק %s ישר מפריוריטי" % (per, len(recs), stamp)
+
+    # סיכום אמצעי התשלום של כל קבלה, באותם מונחים של מסך המזומן (_pay_kind).
+    def _sums(r):
+        out = {k: 0.0 for k in _RP_KINDS}
+        out["cash"] = float(r.get("CASHPAYMENT") or 0)
+        for ln in (r.get("TPAYMENT_SUBFORM") or []):
+            out["check"] += float(ln.get("QPRICE") or 0)
+        for ln in (r.get("TPAYMENT2_SUBFORM") or []):
+            out[_pay_kind(ln.get("PAYMENTNAME") or "")] += float(ln.get("QPRICE") or 0)
+        out["n"] = (1 if out["cash"] else 0) + len(r.get("TPAYMENT_SUBFORM") or []) \
+            + len(r.get("TPAYMENT2_SUBFORM") or [])
+        out["tot"] = sum(out[k] for k in _RP_KINDS)
+        return out
+    for r in recs:
+        r["_s"] = _sums(r)
+    fixed = [("סה\"כ אמצעי תשלום", "c", lambda r: round(r["_s"]["tot"], 2)),
+             ("מס' אמצעי תשלום", "n", lambda r: r["_s"]["n"])]
+    fixed += [(lbl, "c", (lambda k: lambda r: round(r["_s"][k], 2))(k))
+              for k, lbl in _RP_KINDS.items() if k != "cash"]
+    head, rows, widths = _rp_table(recs, _RP_FIRST, fixed)
+    sheets = [_rp_sheet("קבלות", "דוח קבלות", sub, head, rows, widths)]
+
+    # תת-טבלאות: שורה לכל רכיב, ולפניה מי הקבלה. שם הגיליון לפי מה שיש בה.
+    sub_names = {"TPAYMENT_SUBFORM": "שיקים", "TPAYMENT2_SUBFORM": "אשראי ואמצעים אחרים",
+                 "TFNCITEMS_SUBFORM": "חשבוניות שנסגרו"}
+    ids = ["IVNUM", "IVDATE", "CDES", "CUSTNAME"]
+    for sf in subs:
+        lines = []
+        for r in recs:
+            v = r.get(sf)
+            if isinstance(v, dict):
+                v = [v]
+            for ln in v or []:
+                row = {k: r.get(k) for k in ids}
+                row.update({k: x for k, x in ln.items() if k not in ids})
+                lines.append(row)
+        h2, rows2, w2 = _rp_table(lines, ids + ["PAYDATE", "QPRICE", "PAYMENTNAME"])
+        sheets.append(_rp_sheet(sub_names.get(sf, sf), sub_names.get(sf, sf) + " — פירוט",
+                                "%s · %d שורות" % (per, len(lines)), h2, rows2, w2))
+    return sheets
+
+
+# הרשימה שהמסך מצייר. id = חלק מהכתובת; name ו-desc = מה שדורון רואה.
+_REPORTS = [
+    {"id": "receipts", "name": "קבלות",
+     "desc": "כל הקבלות של התקופה, שורה לקבלה, עם כל השדות שמופיעים בקבלה בפריוריטי. "
+             "גיליונות נוספים: שיקים, אשראי ואמצעים אחרים, וחשבוניות שנסגרו.",
+     "build": _rp_receipts},
+]
+_REPORT_BY_ID = {r["id"]: r for r in _REPORTS}
+_RP_MAX_DAYS = 366
+
+
+def _rp_default_period(today: dt.date):
+    """החודש שעבר: ב-4.11 זה אוקטובר. דוח על חודש שלם הוא הבקשה הראשונה."""
+    first_this = today.replace(day=1)
+    last_prev = first_this - dt.timedelta(days=1)
+    return last_prev.replace(day=1), last_prev
+
+
+@app.get("/api/report/{rid}.xlsx")
+def api_report(request: Request, rid: str, f: str = "", t: str = ""):
+    if not _is_admin(request):
+        return JSONResponse({"error": "auth"}, status_code=403)
+    rp = _REPORT_BY_ID.get(rid)
+    if not rp:
+        return JSONResponse({"error": "אין דוח כזה."}, status_code=404)
+    today = dt.datetime.now(IL).date()
+    d_from, d_to = _parse_date(f), _parse_date(t)
+    if not d_from or not d_to:
+        d_from, d_to = _rp_default_period(today)
+    if d_from > d_to:
+        d_from, d_to = d_to, d_from
+    if (d_to - d_from).days > _RP_MAX_DAYS:
+        return JSONResponse({"error": "תקופה ארוכה מדי — עד שנה בדוח אחד."}, status_code=400)
+    t0 = time.time()
+    try:
+        sheets = rp["build"](d_from, d_to)
+    except urllib.error.HTTPError as e:
+        print("report failed:", rid, e.code, flush=True)
+        return JSONResponse({"error": "פריוריטי החזיר שגיאה %d. נסה שוב בעוד דקה." % e.code},
+                            status_code=502)
+    except Exception as e:
+        print("report failed:", rid, repr(e)[:300], flush=True)
+        return JSONResponse({"error": "הדוח נכשל: " + type(e).__name__}, status_code=502)
+    blob = xlsx.build(sheets)
+    print("report %s %s..%s %d bytes %dms" % (rid, d_from, d_to, len(blob),
+                                             int((time.time() - t0) * 1000)), flush=True)
+    if (d_from.day == 1 and d_from.year == d_to.year and d_from.month == d_to.month
+            and (d_to + dt.timedelta(days=1)).day == 1):
+        per = d_from.strftime("%m.%Y")
+    else:
+        per = d_from.strftime("%d.%m.%Y") + "-" + d_to.strftime("%d.%m.%Y")
+    name = re.sub(r'[\\/:*?"<>|]', " ", "דוח %s %s" % (rp["name"], per)).strip() + ".xlsx"
+    return Response(
+        blob, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=report.xlsx; filename*=UTF-8''"
+                 + urllib.parse.quote(name),
+                 "Cache-Control": "no-store"})
+
+
+@app.get("/reports")
+def reports_page(request: Request):
+    """ממשק הדוחות — לבעלים בלבד."""
+    if not _logged_in(request):
+        return RedirectResponse("/login", status_code=303)
+    if not _is_admin(request):
+        return RedirectResponse("/", status_code=303)
+    try:
+        with open(os.path.join(HERE, "reports.html"), encoding="utf-8") as f:
+            html = f.read()
+    except Exception:
+        return HTMLResponse("<div dir='rtl' style='font-family:sans-serif;padding:40px'>המסך לא נמצא.</div>",
+                            status_code=404)
+    d_from, d_to = _rp_default_period(dt.datetime.now(IL).date())
+    cfg = {"reports": [{"id": r["id"], "name": r["name"], "desc": r["desc"]} for r in _REPORTS],
+           "f": d_from.isoformat(), "t": d_to.isoformat()}
+    html = html.replace("</head>", "<script>window.OWL_REPORTS=%s;</script>\n</head>"
+                        % json.dumps(cfg, ensure_ascii=False), 1)
+    return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
 
 @app.get("/api/cancelorders")

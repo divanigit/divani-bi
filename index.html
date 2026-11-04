@@ -834,6 +834,12 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       חיפוש הזמנה
     </a>
 <!--/ORDERS-->
+<!--REPORTS-->
+    <a class="rfr" id="rptbtn" href="/reports" title="דוחות להורדה באקסל — קבלות ועוד" style="display:none;text-decoration:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h8"/></svg>
+      דוחות
+    </a>
+<!--/REPORTS-->
     <button type="button" class="rfr" id="rfr" title="רענון נתונים מפריוריטי עכשיו">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
       רענן עכשיו
@@ -5220,6 +5226,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     // מכוונת לתצוגה של מישהו אחר (29.10.2026: העין נשארה דלוקה והכפתור 'נעלם'). נסתר רק בווידאו.
     var ob=document.getElementById('ordsbtn');
     if(ob)ob.style.display=((owner||!!(META&&META.orders))&&!prevVideo())?'':'none';
+    // דוחות (4.11.2026): בעלים בלבד. הגוש REPORTS נמחק בשרת לכל אחד אחר, וגם /reports חוסם.
+    var rb=document.getElementById('rptbtn');
+    if(rb)rb.style.display=(owner&&!prevVideo())?'':'none';
     // words, not colour: the owner must never have to guess whose view he is looking at
     // בלי כיתוב. הוא בחר מהרשימה, והעין הדלוקה היא כל הסימון שצריך;
     // אם ירצה לדעת איזו תצוגה — הוא פותח את הרשימה ורואה מה מסומן.

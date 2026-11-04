@@ -12,11 +12,11 @@ xlsx הוא ZIP של קובצי XML, ו-zipfile היא ספריית תקן — �
 חדשה שצריך לפרוס. המחרוזות נשלחות inline ולא בטבלת מחרוזות משותפת: פחות
 קוד, ואותה תוצאה בקובץ שנפתח פעם אחת ולא נערך.
 """
-import io, re, zipfile
+import datetime, io, re, zipfile
 
 # פורמטים. הקודים 164 ומעלה שמורים לפורמטים מותאמים; מתחתם הם מובנים
 # באקסל ומשתנים לפי שפת ההתקנה.
-FMT_MONEY, FMT_PCT, FMT_NUM = 164, 165, 166
+FMT_MONEY, FMT_PCT, FMT_NUM, FMT_DATE, FMT_CENTS = 164, 165, 166, 167, 168
 
 _ESC = {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}
 _BAD = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
@@ -53,14 +53,38 @@ def sheet_name(s, used):
     return s
 
 
+_ISO_DATE = re.compile(r"^(\d{4})-(\d{2})-(\d{2})")
+_EXCEL_EPOCH = datetime.date(1899, 12, 30)
+
+
+def _serial(val):
+    """תאריך ISO ("2026-10-05" או "2026-10-05T00:00:00+02:00") -> מספר סידורי של
+    אקסל (ימים מ-30.12.1899). None כשזה לא תאריך, ואז התא יוצא טקסט."""
+    m = _ISO_DATE.match(str(val or ""))
+    if not m:
+        return None
+    try:
+        d = datetime.date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+    except ValueError:
+        return None
+    return (d - _EXCEL_EPOCH).days
+
+
 def _cell(ref, val, kind):
-    """תא אחד. kind: n מספר · m כסף · p אחוז · s טקסט · h כותרת · t כותרת ראשית."""
-    if kind in ("n", "m", "p"):
+    """תא אחד. kind: n מספר · m כסף · c כסף עם אגורות · p אחוז · d תאריך (מחרוזת ISO) ·
+    s טקסט · h כותרת · t כותרת ראשית."""
+    if kind == "d":
+        # תאריך אמיתי ולא טקסט: כך אפשר למיין ולסנן לפי חודש בלי להמיר ביד.
+        v = _serial(val)
+        if v is None:
+            return '<c r="%s" t="inlineStr"><is><t>%s</t></is></c>' % (ref, esc(val))
+        return '<c r="%s" s="6"><v>%d</v></c>' % (ref, v)
+    if kind in ("n", "m", "p", "c"):
         try:
             v = float(val)
         except (TypeError, ValueError):
             return '<c r="%s" t="inlineStr"><is><t>%s</t></is></c>' % (ref, esc(val))
-        st = {"m": 2, "p": 3, "n": 4}[kind]
+        st = {"m": 2, "p": 3, "n": 4, "c": 7}[kind]
         # אינסוף ו-NaN אינם מספרים חוקיים ב-XML של אקסל, והם פותחים קובץ פגום.
         if v != v or v in (float("inf"), float("-inf")):
             return '<c r="%s" t="inlineStr"><is><t>—</t></is></c>' % ref
@@ -99,10 +123,12 @@ def _sheet(rows, widths):
 
 STYLES = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-<numFmts count="3">
+<numFmts count="5">
 <numFmt numFmtId="%d" formatCode="#,##0&quot; ₪&quot;"/>
 <numFmt numFmtId="%d" formatCode="0.0%%"/>
 <numFmt numFmtId="%d" formatCode="#,##0"/>
+<numFmt numFmtId="%d" formatCode="dd.mm.yyyy"/>
+<numFmt numFmtId="%d" formatCode="#,##0.00&quot; ₪&quot;"/>
 </numFmts>
 <fonts count="3">
 <font><sz val="11"/><name val="Arial"/></font>
@@ -116,16 +142,19 @@ STYLES = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 </fills>
 <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
 <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-<cellXfs count="6">
+<cellXfs count="8">
 <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
 <xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>
 <xf numFmtId="%d" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
 <xf numFmtId="%d" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
 <xf numFmtId="%d" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
 <xf numFmtId="0" fontId="2" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>
+<xf numFmtId="%d" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
+<xf numFmtId="%d" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
 </cellXfs>
 <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
-</styleSheet>""" % (FMT_MONEY, FMT_PCT, FMT_NUM, FMT_MONEY, FMT_PCT, FMT_NUM)
+</styleSheet>""" % (FMT_MONEY, FMT_PCT, FMT_NUM, FMT_DATE, FMT_CENTS,
+                    FMT_MONEY, FMT_PCT, FMT_NUM, FMT_DATE, FMT_CENTS)
 
 
 def build(sheets):
