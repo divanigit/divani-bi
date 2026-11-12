@@ -59,6 +59,8 @@ DASH_PASS_IDO = os.environ.get("DASH_PASS_IDO", "")  # עידו אהרון: regu
 DASH_PASS_YOATZ = os.environ.get("DASH_PASS_YOATZ", "")  # חברת היועצים המלווה (MVP): own credential, regular view access, no owner/ask rights (דורון, 12.10.2026)
 DASH_PASS_ROM = os.environ.get("DASH_PASS_ROM", "")  # רום (הזמנות האתר): תצוגה רגילה + חיפוש הזמנה (דורון, שאלה 119, 29.10.2026)
 DASH_PASS_KEREN = os.environ.get("DASH_PASS_KEREN", "")  # קרן (ספקית האתר): רק בריאות האתר + קלריטי, בלי שמות לקוחות (דורון, 20.10.2026)
+DASH_PASS_KFIR = os.environ.get("DASH_PASS_KFIR", "")  # כפיר (דיגיטאץ'): בריאות האתר בלבד, סיסמה אישית (הבקשה, 12.11.2026)
+DASH_PASS_EYAL = os.environ.get("DASH_PASS_EYAL", "")  # אייל (דיגיטאץ'): בריאות האתר בלבד, סיסמה אישית (הבקשה, 12.11.2026)
 CLARITY_TOKEN = os.environ.get("CLARITY_TOKEN", "")  # Microsoft Clarity → Settings → Data export → API token
 OWL_CART_SECRET = os.environ.get("OWL_CART_SECRET", "")  # לכידת עגלות מהאתר: חתימת HMAC משותפת עם התוסף
 HEALTH_SHARE_TOKEN = os.environ.get("HEALTH_SHARE_TOKEN", "")  # קישור בריאות האתר לדיגיטאץ' — טוקן נפרד, מסך אחד בלבד, בלי שום גישה לינשוף
@@ -148,6 +150,16 @@ def _dov_token() -> str:
     return hmac.new(DASH_PASS_DOV.encode("utf-8"), b"divani-bi-dov-v1", hashlib.sha256).hexdigest()
 
 
+def _kfir_token() -> str:
+    # מחיקת DASH_PASS_KFIR ב-Render מנתקת את כפיר מיד
+    return hmac.new(DASH_PASS_KFIR.encode("utf-8"), b"divani-bi-kfir-v1", hashlib.sha256).hexdigest()
+
+
+def _eyal_token() -> str:
+    # מחיקת DASH_PASS_EYAL ב-Render מנתקת את אייל מיד
+    return hmac.new(DASH_PASS_EYAL.encode("utf-8"), b"divani-bi-eyal-v1", hashlib.sha256).hexdigest()
+
+
 def _keren_token() -> str:
     # keyed on her own password: clearing DASH_PASS_KEREN ends her sessions
     return hmac.new(DASH_PASS_KEREN.encode("utf-8"), b"divani-bi-keren-v1", hashlib.sha256).hexdigest()
@@ -184,6 +196,27 @@ def _dov_preview(request: Request) -> bool:
     return request.cookies.get(PREVIEW_COOKIE, "") == "dov" and _is_doron(request)
 
 
+def _digi_preview(request: Request) -> bool:
+    # הבעלים רואה את הינשוף בדיוק כמו כפיר ואייל (הבקשה, 12.11.2026): אותה עוגיית תצוגה, ערך "digi"
+    return request.cookies.get(PREVIEW_COOKIE, "") == "digi" and _is_doron(request)
+
+
+def _digi_who(request: Request) -> str:
+    """כפיר או אייל מדיגיטאץ' (או ריק). לכל אחד סיסמה ועוגייה משלו, כדי שיומן הכניסות
+    יידע מי נכנס, ואפשר יהיה לנתק אחד בלי השני."""
+    tok = request.cookies.get(COOKIE_NAME, "")
+    if DASH_PASS_KFIR and hmac.compare_digest(tok, _kfir_token()):
+        return "כפיר"
+    if DASH_PASS_EYAL and hmac.compare_digest(tok, _eyal_token()):
+        return "אייל"
+    return ""
+
+
+def _is_digi(request: Request) -> bool:
+    """דיגיטאץ' (כפיר, אייל): מסך בריאות האתר בלבד, צפייה בלבד. השער _dg_gate חוסם כל דבר אחר."""
+    return _digi_preview(request) or bool(_digi_who(request))
+
+
 def _preview_label(request: Request) -> str:
     """שם התצוגה שהבעלים נמצא בה עכשיו, או ריק."""
     if _keren_preview(request):
@@ -194,6 +227,8 @@ def _preview_label(request: Request) -> str:
         return "סבינה"
     if _dov_preview(request):
         return "דב"
+    if _digi_preview(request):
+        return "כפיר ואייל"
     return ""
 
 
@@ -291,7 +326,7 @@ def _is_admin(request: Request, raw: bool = False) -> bool:
     # produce a real digest of the empty key, and anyone able to compute it
     # would be an owner.
     # raw=True: מי הוא באמת, גם כשהוא כרגע רואה את הינשוף כמו קרן
-    if not raw and request.cookies.get(PREVIEW_COOKIE, "") in ("keren", "rom", "yoatz", "dov"):
+    if not raw and request.cookies.get(PREVIEW_COOKIE, "") in ("keren", "rom", "yoatz", "dov", "digi"):
         return False
     tok = request.cookies.get(COOKIE_NAME, "")
     if DASH_PASS_ADMIN and hmac.compare_digest(tok, _admin_token()):
@@ -309,7 +344,8 @@ def _logged_in(request: Request) -> bool:
     tok = request.cookies.get(COOKIE_NAME, "")
     return (hmac.compare_digest(tok, _session_token()) or _is_admin(request)
             or _is_ask2(request) or _is_noprofit(request) or _is_yoatz(request)
-            or _is_keren(request) or _is_rom(request) or _is_dov(request))
+            or _is_keren(request) or _is_rom(request) or _is_dov(request)
+            or _is_digi(request))
 
 
 def _health_ok(request: Request) -> bool:
@@ -331,7 +367,8 @@ def _pass_ok(p: str) -> bool:
             or _match(p, DASH_PASS_SHARON) or _match(p, DASH_PASS_ITAMAR)
             or _match(p, DASH_PASS_IDO) or _match(p, DASH_PASS_RACHEL)
             or _match(p, DASH_PASS_YOATZ) or _match(p, DASH_PASS_KEREN)
-            or _match(p, DASH_PASS_ROM))
+            or _match(p, DASH_PASS_ROM)
+            or _match(p, DASH_PASS_KFIR) or _match(p, DASH_PASS_EYAL))
 
 
 _ALL_PASS = (("DASH_PASS", "המשותפת"), ("DASH_PASS_ADMIN", "דורון"),
@@ -339,7 +376,8 @@ _ALL_PASS = (("DASH_PASS", "המשותפת"), ("DASH_PASS_ADMIN", "דורון"),
              ("DASH_PASS_SHARON", "שרון"), ("DASH_PASS_ITAMAR", "איתמר"),
              ("DASH_PASS_IDO", "עידו"), ("DASH_PASS_RACHEL", "רחל"),
              ("DASH_PASS_YOATZ", "יועצים"), ("DASH_PASS_KEREN", "קרן"),
-             ("DASH_PASS_ROM", "רום"))
+             ("DASH_PASS_ROM", "רום"),
+             ("DASH_PASS_KFIR", "כפיר"), ("DASH_PASS_EYAL", "אייל"))
 
 
 def _pass_collisions():
@@ -367,6 +405,10 @@ def _identity(p: str):
     in the same place as the cookie, so /logins can no longer name one person while the
     browser is holding someone else's session.
     """
+    if _match(p, DASH_PASS_KFIR):
+        return "כפיר", _kfir_token()
+    if _match(p, DASH_PASS_EYAL):
+        return "אייל", _eyal_token()
     if _match(p, DASH_PASS_KEREN):
         return "קרן", _keren_token()
     if _match(p, DASH_PASS_IDO):
@@ -416,6 +458,8 @@ def _who_cookie(request: Request) -> str:
         return "קרן"
     if DASH_PASS_ROM and hmac.compare_digest(tok, _rom_token()):
         return "רום"
+    if _digi_who(request):
+        return _digi_who(request)
     return "צוות"
 
 
@@ -656,6 +700,32 @@ async def _kr_gate(request: Request, call_next):
     return RedirectResponse("/site", status_code=303)
 
 
+# דיגיטאץ' — כפיר ואייל (הבקשה, 12.11.2026): מסך בריאות האתר בלבד, צפייה בלבד.
+# רשימה מותרת בלבד: כל כתובת אחרת, גם שתתווסף בעתיד, חסומה. אין כאן שום נתון על לקוחות:
+# בלי מכירות, בלי נטישות, בלי קלריטי, בלי יומן ההודעות הפנימי, ובלי אפשרות למחוק התראה.
+_DG_PAGE_ALLOW = {"/site", "/logout", "/login", "/view-as/off"}
+_DG_API_ALLOW = {"/api/site", "/api/site/now", "/api/site/drill"}
+_DG_ALERT_KINDS = {"down", "slow", "silent", "cert"}      # התראות האתר בלבד; לא רשימת המלאי (ops) ולא שום סוג אחר
+
+
+def _dg_alerts(rows):
+    return [r for r in rows if isinstance(r, dict) and (r.get("kind") or "") in _DG_ALERT_KINDS] if isinstance(rows, list) else rows
+
+
+@app.middleware("http")
+async def _dg_gate(request: Request, call_next):
+    if not _is_digi(request):
+        return await call_next(request)
+    path = request.url.path
+    if path.startswith("/api/"):
+        if path not in _DG_API_ALLOW or request.method != "GET":
+            return JSONResponse({"error": "auth"}, status_code=403)
+        return await call_next(request)
+    if path in _DG_PAGE_ALLOW:
+        return await call_next(request)
+    return RedirectResponse("/site", status_code=303)
+
+
 @app.middleware("http")
 async def _yz_gate(request: Request, call_next):
     path = request.url.path
@@ -735,9 +805,16 @@ def site_health(request: Request):
         return HTMLResponse("<div dir='rtl' style='font-family:sans-serif;padding:40px'>"
                             "המסך לא נמצא.</div>", status_code=404)
     role = '<script>window.OWL_ROLE={"noprofit":%s,"owner":%s,"ops":%s};</script>' % (
-        "true" if _is_noprofit(request) else "false",
+        "true" if (_is_noprofit(request) or _is_digi(request)) else "false",
         "true" if _is_admin(request) else "false",
         "true" if _can_ops(request) else "false")
+    if _is_digi(request):
+        # דיגיטאץ': אותו מסך, צפייה בלבד. בלי תפריט הינשוף, בלי קלריטי, בלי כפתור ההסברים,
+        # בלי יומן ההודעות הפנימי ובלי מחיקת התראות (גם השרת חוסם: _dg_gate).
+        role += _keren_bar(request)
+        role += ('<script>window.OWL_DIGI=1;window.OWL_SHARE=1;</script>'
+                 '<style>.owlham,#clarbtn,#explbtn,.card:has(#msgList),'
+                 '.alertbar .ax,.alertbar .acb,.abulk{display:none!important}</style>')
     if _is_keren(request):
         role += _keren_bar(request) + _keren_nav(request, "/site")
         # קרן: בלי תפריט הינשוף, בלי יומן ההודעות הפנימי ובלי "ראיתי"; במקומם קישור לקלריטי
@@ -836,6 +913,11 @@ def api_site_now(request: Request):
         d = sb_rpc("bi_site_now", {}) or {}
         if _is_keren(request) and isinstance(d, dict):
             d["alerts_open"] = 0
+        if _is_digi(request) and isinstance(d, dict):
+            try:
+                d["alerts_open"] = len(_dg_alerts(sb_rpc("bi_alerts_open", {}) or []))
+            except Exception:
+                d["alerts_open"] = 0
         if isinstance(d, dict):
             try:
                 d["rum_src"] = _rum_hosts()
@@ -968,6 +1050,10 @@ def api_site(request: Request, h: int = 24, strategy: str = "mobile", f: str = "
         # בלי התראות בכלל אצל קרן (דורון, 25.10.2026)
         out["alerts_open"] = []
         out["alerts_recent"] = []
+    if _is_digi(request):
+        # דיגיטאץ': רק התראות על האתר עצמו
+        out["alerts_open"] = _dg_alerts(out.get("alerts_open"))
+        out["alerts_recent"] = _dg_alerts(out.get("alerts_recent"))
     try:
         out["cert"] = (sb_select("bi_site_cert?select=host,issuer,not_after,days_left,ok,err,checked_at&host=eq.vdivani.co.il") or [None])[0]
     except Exception as e:
@@ -1000,6 +1086,9 @@ def api_site_drill(request: Request, what: str = "", h: int = 24, f: str = "", t
             rows = sb_rpc("bi_alert_detail", {"p_id": int(id)})
             if _is_keren(request):
                 rows = []
+            if _is_digi(request):
+                # רק התראות האתר, ובלי רשימת ההודעות שנשלחו לטלפונים שלנו
+                rows = [dict(r, sent=[]) for r in _dg_alerts(rows or [])]
         else:
             return JSONResponse({"error": "what?"}, status_code=400)
         return JSONResponse({"rows": rows or []})
@@ -1395,6 +1484,16 @@ def view_as_dov(request: Request):
         return RedirectResponse("/", status_code=303)
     resp = RedirectResponse("/", status_code=303)
     resp.set_cookie(PREVIEW_COOKIE, "dov", max_age=8 * 3600, httponly=True,
+                    secure=True, samesite="lax")
+    return resp
+
+
+@app.get("/view-as/digi")
+def view_as_digi(request: Request):
+    if not _is_doron(request):
+        return RedirectResponse("/", status_code=303)
+    resp = RedirectResponse("/site", status_code=303)
+    resp.set_cookie(PREVIEW_COOKIE, "digi", max_age=8 * 3600, httponly=True,
                     secure=True, samesite="lax")
     return resp
 
@@ -3495,7 +3594,9 @@ async def login_post(request: Request):
     # שנה שלמה (דורון, שאלה 94, 18.9.2026): הכניסה נזכרת לזמן ארוך כדי שהינשוף
     # יבקש סיסמה לעתים רחוקות. העוגייה היא HMAC של הסיסמה — החלפת סיסמה עדיין
     # מבטלת אותה מיד, אורך החיים לא נוגע בזה.
-    resp.set_cookie(COOKIE_NAME, tok, max_age=60 * 60 * 24 * 365,
+    # ספק חיצוני (כפיר, אייל — הבקשה, 12.11.2026): 30 יום בלבד, ואז סיסמה מחדש.
+    days = 30 if who in ("כפיר", "אייל") else 365
+    resp.set_cookie(COOKIE_NAME, tok, max_age=60 * 60 * 24 * days,
                     httponly=True, secure=_is_https(request), samesite="lax")
     return resp
 
