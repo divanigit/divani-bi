@@ -90,6 +90,7 @@ body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--font);-webk
 .abulk .adel{margin-inline-start:auto;min-height:36px;padding:0 14px;border:1px solid var(--dfg);border-radius:8px;background:var(--dfg);color:var(--bg);font:inherit;font-weight:700;cursor:pointer}
 .abulk .adel:disabled{background:transparent;color:var(--dfg);opacity:.55;cursor:default}
 .alertbar.collapsed .abulk{display:none}
+.alertbar .alink{display:inline-flex;align-items:center;min-height:30px;margin-top:4px;font-size:13px;font-weight:700;color:var(--dfg);text-decoration:underline;text-underline-offset:3px}
 
 /* ---------- כותרת ---------- */
 h1{font-size:clamp(23px,5.4vw,31px);font-weight:800;margin:4px 0 2px;letter-spacing:-.01em}
@@ -546,8 +547,10 @@ function render(d){
   var vis = open.filter(function(a){ return !a.acked; });
   if (vis.length) {
     var live = {}; vis.forEach(function(a){ live[a.id] = 1; });
+    // קישור לעמוד שההתראה מדברת עליו (הבקשה, 12.11.2026). הכתובת יושבת בגוף ההתראה; התראה בלי כתובת — בלי קישור.
+    var abLink = function(a){ var m = String(a.body || '').match(/https?:\/\/[^\s"'<>]+/); return m ? '<a class="alink" href="' + esc(m[0]) + '" target="_blank" rel="noopener">לפתוח את העמוד ↗</a>' : ''; };
     Object.keys(AB.sel).forEach(function(k){ if (!live[k]) delete AB.sel[k]; });
-    var rows = vis.map(function(a){ return '<div class="arow" data-id="' + a.id + '"><label class="acb" title="לסמן למחיקה"><input type="checkbox" data-id="' + a.id + '"' + (AB.sel[a.id] ? ' checked' : '') + ' aria-label="לסמן למחיקה: ' + esc(a.title) + '"></label><div><span class="at">' + esc(a.title) + '</span><span class="sub">' + esc(niceBody(a.body || '', a.title)) + ' · מאז ' + esc(a.opened_il) + '</span></div><button type="button" class="ax" data-id="' + a.id + '" title="למחוק את ההתראה הזו מהרשימה (תחזור אם הבעיה תיפתח מחדש)">✕</button></div>'; }).join('');
+    var rows = vis.map(function(a){ return '<div class="arow" data-id="' + a.id + '"><label class="acb" title="לסמן למחיקה"><input type="checkbox" data-id="' + a.id + '"' + (AB.sel[a.id] ? ' checked' : '') + ' aria-label="לסמן למחיקה: ' + esc(a.title) + '"></label><div><span class="at">' + esc(a.title) + '</span><span class="sub">' + esc(niceBody(a.body || '', a.title)) + ' · מאז ' + esc(a.opened_il) + '</span>' + abLink(a) + '</div><button type="button" class="ax" data-id="' + a.id + '" title="למחוק את ההתראה הזו מהרשימה (תחזור אם הבעיה תיפתח מחדש)">✕</button></div>'; }).join('');
     // מקופל כברירת מחדל (שאלה 97, 19.9.2026) — גם התראה אחת. אחרי שנפתח בהקשה הוא נשאר פתוח גם ברענון.
     var abWord = function(n){ return '⚠ ' + n + ' ' + (n === 1 ? 'התראה פעילה' : 'התראות פעילות'); };
     ab.innerHTML = '<div class="ahead"><span class="acount">' + abWord(vis.length) + '</span><span class="chev">▾</span></div>'
@@ -573,6 +576,7 @@ function render(d){
         .catch(function(){ open.forEach(function(a){ if (hit[a.id]) a.acked = false; }); load(); });   // נכשל: מחזירים ומרעננים
     };
     Array.prototype.forEach.call(ab.querySelectorAll('.arow'), function(r){ r.addEventListener('click', function(){ drillAlert(+r.getAttribute('data-id')); }); });
+    Array.prototype.forEach.call(ab.querySelectorAll('.alink'), function(l){ l.addEventListener('click', function(e){ e.stopPropagation(); }); });
     Array.prototype.forEach.call(ab.querySelectorAll('.acb'), function(l){
       l.addEventListener('click', function(e){ e.stopPropagation(); });
       l.querySelector('input').addEventListener('change', function(){ var id = +this.getAttribute('data-id'); if (this.checked) AB.sel[id] = 1; else delete AB.sel[id]; abSync(); });
