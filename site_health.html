@@ -82,6 +82,14 @@ body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--font);-webk
 .alertbar .arow>div{flex:1;min-width:0}
 .alertbar .arow .at{font-size:13.5px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .alertbar .ax{flex:none;width:30px;height:30px;border:1px solid var(--dfg);border-radius:8px;background:transparent;color:var(--dfg);font:inherit;font-weight:700;cursor:pointer;line-height:1}
+/* מחיקה קבוצתית (12.11.2026): תיבת סימון בכל שורה, ושורת פעולה מעל הרשימה שלא נגללת איתה */
+.alertbar .acb{flex:none;display:flex;align-items:center;justify-content:center;width:30px;height:30px;cursor:pointer}
+.alertbar input[type=checkbox]{width:20px;height:20px;margin:0;accent-color:var(--dfg);cursor:pointer}
+.abulk{display:flex;align-items:center;gap:10px;margin-top:10px;padding-bottom:10px;border-bottom:1px solid var(--dfg);font-weight:400;font-size:13.5px}
+.abulk label{display:flex;align-items:center;gap:8px;min-height:36px;padding-inline-start:5px;cursor:pointer}
+.abulk .adel{margin-inline-start:auto;min-height:36px;padding:0 14px;border:1px solid var(--dfg);border-radius:8px;background:var(--dfg);color:var(--bg);font:inherit;font-weight:700;cursor:pointer}
+.abulk .adel:disabled{background:transparent;color:var(--dfg);opacity:.55;cursor:default}
+.alertbar.collapsed .abulk{display:none}
 
 /* ---------- כותרת ---------- */
 h1{font-size:clamp(23px,5.4vw,31px);font-weight:800;margin:4px 0 2px;letter-spacing:-.01em}
@@ -220,7 +228,7 @@ html,body{overflow-x:hidden}
   body{background:#fff!important;color:#111!important}
   .owlbar,.loadbar,.loadpill,.stale,.explain{display:none!important}
   .card:has(.seg){display:none!important}
-  .seg,.dates,.foldchev,.ahead .chev,.alertbar .ax{display:none!important}
+  .seg,.dates,.foldchev,.ahead .chev,.alertbar .ax,.alertbar .acb,.abulk{display:none!important}
   .owlov,.dov{display:none!important}
   .foldcard.collapsed .foldbody{display:block!important}
   .alertbar.collapsed .alist{display:block!important}
@@ -531,16 +539,52 @@ function render(d){
 
   /* פס אדום */
   var ab = $('alertbar');
+  /* מ-12.11.2026 (הבקשה): תיבת סימון בכל התראה + "לסמן הכול" + "מחק מסומנות", וגם ה-✕ הבודד.
+     המחיקה מיידית על המסך: השורה נעלמת בלי לטעון את כל הדף מחדש, והרשימה נשארת פתוחה.
+     קודם כל ✕ טען את כל המסך מחדש וקיפל את הרשימה, ולכן מחיקה של 11 התראות לקחה דקות. */
+  var AB = window.__owlAb || (window.__owlAb = { open: false, sel: {} });
   var vis = open.filter(function(a){ return !a.acked; });
   if (vis.length) {
-    var rows = vis.map(function(a){ return '<div class="arow" data-id="' + a.id + '"><div><span class="at">' + esc(a.title) + '</span><span class="sub">' + esc(niceBody(a.body || '', a.title)) + ' · מאז ' + esc(a.opened_il) + '</span></div><button type="button" class="ax" data-id="' + a.id + '" title="ראיתי — להסתיר עד שישתנה">✕</button></div>'; }).join('');
-    // תמיד מקופל (דורון, שאלה 97, 19.9.2026) — גם התראה אחת. נפתח רק בהקשה.
-    var word = vis.length === 1 ? 'התראה פעילה' : 'התראות פעילות';
-    ab.innerHTML = '<div class="ahead"><span>⚠ ' + vis.length + ' ' + word + '</span><span class="chev">▾</span></div><div class="alist">' + rows + '</div>';
-    ab.classList.add('on'); ab.classList.add('collapsed');
-    ab.querySelector('.ahead').addEventListener('click', function(){ ab.classList.toggle('collapsed'); });
+    var live = {}; vis.forEach(function(a){ live[a.id] = 1; });
+    Object.keys(AB.sel).forEach(function(k){ if (!live[k]) delete AB.sel[k]; });
+    var rows = vis.map(function(a){ return '<div class="arow" data-id="' + a.id + '"><label class="acb" title="לסמן למחיקה"><input type="checkbox" data-id="' + a.id + '"' + (AB.sel[a.id] ? ' checked' : '') + ' aria-label="לסמן למחיקה: ' + esc(a.title) + '"></label><div><span class="at">' + esc(a.title) + '</span><span class="sub">' + esc(niceBody(a.body || '', a.title)) + ' · מאז ' + esc(a.opened_il) + '</span></div><button type="button" class="ax" data-id="' + a.id + '" title="למחוק את ההתראה הזו מהרשימה (תחזור אם הבעיה תיפתח מחדש)">✕</button></div>'; }).join('');
+    // מקופל כברירת מחדל (שאלה 97, 19.9.2026) — גם התראה אחת. אחרי שנפתח בהקשה הוא נשאר פתוח גם ברענון.
+    var abWord = function(n){ return '⚠ ' + n + ' ' + (n === 1 ? 'התראה פעילה' : 'התראות פעילות'); };
+    ab.innerHTML = '<div class="ahead"><span class="acount">' + abWord(vis.length) + '</span><span class="chev">▾</span></div>'
+      + '<div class="abulk"><label><input type="checkbox" id="abAll"> לסמן הכול</label><button type="button" class="adel" id="abDel" disabled>מחק מסומנות</button></div>'
+      + '<div class="alist">' + rows + '</div>';
+    ab.classList.add('on'); ab.classList.toggle('collapsed', !AB.open);
+    ab.querySelector('.ahead').addEventListener('click', function(){ AB.open = !AB.open; ab.classList.toggle('collapsed', !AB.open); });
+    var abSync = function(){
+      var n = Object.keys(AB.sel).length, total = ab.querySelectorAll('.arow').length;
+      var del = $('abDel'), all = $('abAll'); if (!del || !all) return;
+      del.disabled = !n; del.textContent = n ? 'מחק מסומנות (' + n + ')' : 'מחק מסומנות';
+      all.checked = !!n && n === total;
+    };
+    var abAck = function(ids){
+      if (!ids.length) return;
+      var hit = {}; ids.forEach(function(id){ hit[id] = 1; delete AB.sel[id]; var r = ab.querySelector('.arow[data-id="' + id + '"]'); if (r) r.parentNode.removeChild(r); });
+      open.forEach(function(a){ if (hit[a.id]) a.acked = true; });   // גם בנתונים שבזיכרון, כדי שציור מחדש לא יחזיר אותן
+      var left = ab.querySelectorAll('.arow').length;
+      if (!left) { ab.classList.remove('on'); ab.innerHTML = ''; }
+      else { ab.querySelector('.acount').textContent = abWord(left); abSync(); }
+      fetch('/api/alerts/ack', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: ids }) })
+        .then(function(r){ if (!r.ok) throw new Error('ack ' + r.status); })
+        .catch(function(){ open.forEach(function(a){ if (hit[a.id]) a.acked = false; }); load(); });   // נכשל: מחזירים ומרעננים
+    };
     Array.prototype.forEach.call(ab.querySelectorAll('.arow'), function(r){ r.addEventListener('click', function(){ drillAlert(+r.getAttribute('data-id')); }); });
-    Array.prototype.forEach.call(ab.querySelectorAll('.ax'), function(b){ b.addEventListener('click', function(e){ e.stopPropagation(); fetch('/api/alerts/ack', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: +b.getAttribute('data-id') }) }).then(load).catch(function(){}); }); });
+    Array.prototype.forEach.call(ab.querySelectorAll('.acb'), function(l){
+      l.addEventListener('click', function(e){ e.stopPropagation(); });
+      l.querySelector('input').addEventListener('change', function(){ var id = +this.getAttribute('data-id'); if (this.checked) AB.sel[id] = 1; else delete AB.sel[id]; abSync(); });
+    });
+    $('abAll').addEventListener('change', function(){
+      var on = this.checked; AB.sel = {};
+      Array.prototype.forEach.call(ab.querySelectorAll('.acb input'), function(c){ c.checked = on; if (on) AB.sel[+c.getAttribute('data-id')] = 1; });
+      abSync();
+    });
+    $('abDel').addEventListener('click', function(){ abAck(Object.keys(AB.sel).map(Number)); });
+    Array.prototype.forEach.call(ab.querySelectorAll('.ax'), function(b){ b.addEventListener('click', function(e){ e.stopPropagation(); abAck([+b.getAttribute('data-id')]); }); });
+    abSync();
   } else { ab.classList.remove('on'); ab.innerHTML = ''; }
 
   /* כותרת */

@@ -897,16 +897,32 @@ async def api_alerts_ack(request: Request):
     """'ראיתי' — מסתיר התראה פתוחה מהפס האדום (לכולם) עד שתיסגר ותיפתח מחדש. לא סוגר אותה."""
     if not _logged_in(request):
         return JSONResponse({"error": "auth"}, status_code=401)
+    # מ-12.11.2026 (הבקשה): אפשר לשלוח גם רשימה {"ids":[...]} — מחיקה של כמה התראות בלחיצה אחת.
+    # {"id": N} הישן ממשיך לעבוד.
+    ids = []
     try:
         body = await request.json()
-        aid = int(body.get("id") or 0)
+        raw = body.get("ids") if isinstance(body.get("ids"), list) else [body.get("id")]
+        for x in raw[:200]:
+            try:
+                n = int(x)
+            except (TypeError, ValueError):
+                continue
+            if n > 0 and n not in ids:
+                ids.append(n)
     except Exception:
-        aid = 0
-    if not aid:
+        ids = []
+    if not ids:
         return JSONResponse({"error": "bad request"}, status_code=400)
+    who = _who_cookie(request)
     try:
-        sb_rpc("bi_alert_ack", {"p_id": aid, "p_who": _who_cookie(request)})
-        return JSONResponse({"ok": True})
+        if len(ids) == 1:
+            sb_rpc("bi_alert_ack", {"p_id": ids[0], "p_who": who})
+        else:
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=6) as ex:
+                list(ex.map(lambda i: sb_rpc("bi_alert_ack", {"p_id": i, "p_who": who}), ids))
+        return JSONResponse({"ok": True, "n": len(ids)})
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=502)
 
