@@ -447,6 +447,8 @@ class H(BaseHTTPRequestHandler):
             d = api_drill(q, role)
             return self._send(200, d) if d is not None else self._send(400, {"error": "what?"})
         if path == "/api/messages":
+            if q.get("k"):                     # the share token counts only on /status and the three data calls
+                return self._send(401, {"error": "auth"})
             if role != "owner":
                 return self._send(403, {"error": "auth"})
             return self._send(200, api_messages(q))
@@ -457,6 +459,8 @@ class H(BaseHTTPRequestHandler):
         q = {k: v[0] for k, v in urllib.parse.parse_qs(u.query).items()}
         if u.path != "/api/alerts/ack":
             return self._send(404, {"error": "not found"})
+        if q.get("k"):
+            return self._send(401, {"error": "auth"})
         if self._role(q) != "owner":
             return self._send(403, {"error": "auth"})
         try:

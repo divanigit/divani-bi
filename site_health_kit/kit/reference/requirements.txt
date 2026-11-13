@@ -1,0 +1,8 @@
+# The server. Tested with Python 3.13.
+fastapi==0.162.5
+uvicorn==0.54.0
+# Needed only with DATABASE_URL. With SUPABASE_URL + SUPABASE_SECRET_KEY, db.py uses the standard library.
+psycopg[binary]==3.3.9
+
+# Time zones come from the operating system. Where it has none (Windows, Alpine images), add: tzdata
+# For tests/test_server.py: pytest==9.2.0 httpx==0.28.1

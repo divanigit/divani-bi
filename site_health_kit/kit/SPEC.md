@@ -173,9 +173,9 @@ variables (`reference/README.md` lists them).
 
 ## 5. API contract (binding)
 
-The screen calls five endpoints. Field names, types and the literal Hebrew values below are what
-`site_health.html` reads; `mock_server.py` returns exactly these shapes. Your server must return
-the same.
+The screen calls five data endpoints (§5.2–§5.6). Field names, types and the literal Hebrew
+values below are what `site_health.html` reads; `mock_server.py` returns exactly these shapes.
+Your server must return the same.
 
 Conventions:
 
@@ -199,9 +199,12 @@ Query parameters: either `h=<hours>` (integer; the screen sends 24, 168, 720 or 
 `f=<YYYY-MM-DD>&t=<YYYY-MM-DD>` (local dates, `t` inclusive: the window ends at the end of day `t`).
 Rules (`_range_args` in the production server):
 
-- With `f`: window = `[f 00:00 local, (t + 1 day) 00:00 local)`. Without `t`: until now. If the end
-  is not after the start: end = start + 1 day. Invalid dates: fall back to `h`.
-- Without `f`: `h` is clamped to `1 … 9600` (400 days), default 24; window = `[now − h hours, now + 1 minute)`.
+- With `f`: window = `[f 00:00 local, (t + 1 day) 00:00 local)`, by calendar days in the site's
+  time zone (a day with a clock change is 23 or 25 hours long). Without `t`: until now. If the end
+  is not after the start: end = start + 1 day. Invalid dates: fall back to `h`. `t` without `f` is ignored.
+- Without `f`: `h` is clamped to `1 … 9600` (400 days); missing or not a number → 24; zero or
+  negative → 1. Window = `[now − h hours, now + 1 minute)` in real elapsed hours.
+- `hours` in the answer is the real length of the window in whole hours.
 
 ### 5.2 `GET /api/site?strategy=mobile|desktop&(h | f,t)` → everything the screen needs
 
@@ -274,7 +277,7 @@ Rules (`_range_args` in the production server):
       "note": null }                    // shown in the drill-down when the screen has no built-in text for flow_name
   ],
 
-  "product_issues": [                   // from the latest catalogue snapshot only; sort: by issue, then name
+  "product_issues": [                   // from the latest catalogue snapshot only; sort: "לא במלאי" last, then by issue, then name
     { "issue": "לא במלאי",              // "לא במלאי" (literal, shown yellow); any other text is shown red
       "name": "ספה תלת מושבית", "url": "https://example.co.il/product/…/", "snap_date": "2026-11-13" }
   ],
@@ -284,9 +287,10 @@ Rules (`_range_args` in the production server):
 }
 ```
 
-**Each part fails alone.** The eight list parts are computed independently and in parallel; if one
-fails, its key holds `{"error": "<text>"}` instead of a list, and the rest of the answer is still
-returned with status 200. The screen treats a non-list as empty.
+**Each part fails alone.** The eight lists and `cert` are nine parts, computed independently and
+in parallel; if one fails, its key holds `{"error": "<text>"}` instead of its value, and the rest
+of the answer is still returned with status 200. The screen treats a non-list as empty. Error
+texts must not contain host names, user names or keys.
 
 Issue labels used in production: `בלי מחיר`, `בלי תמונה`, `לא במלאי`, `אי אפשר להוסיף לסל`.
 
@@ -313,6 +317,8 @@ Issue labels used in production: `בלי מחיר`, `בלי תמונה`, `לא �
 ```
 
 On failure: status 502 with `{"error": "<text>"}`; the screen writes "לא הצלחתי לטעון את "עכשיו"".
+For a vendor or a share link `alerts_open` is recounted from the filtered list of open alerts
+(§8.2); if that second read fails the answer is 502, never a false 0.
 
 ### 5.4 `GET /api/site/drill?what=…&(h | f,t)` → drill-downs; always `{"rows": [...]}`
 
@@ -323,7 +329,9 @@ On failure: status 502 with `{"error": "<text>"}`; the screen writes "לא הצ�
 | `runs` | `url` (required), `strategy`, `bucket` (optional) | `{ "ok": true, "err": null, "at_il": "13.11 10:45", "lcp_ms": 2400, "score": 64, "ttfb_ms": 410, "bytes": 3400000, "cls": 0.03, "crux_category": "FAST", "crux_lcp_ms": 2100, "opps": [ { "id": "render-blocking-resources", "title": "…", "ms": 600 } ] }` — the individual lab runs of one page, **newest first**; failed runs have `ok: false` and `err`. `opps` = what slows the page, with the estimated saving in ms. |
 | `alert` | `id` (required) | one row: the `alerts_recent` fields plus `"fails": [ { "at": "13.11 11:02", "page": "סל", "status": 502, "err": null } ]` (the failed checks behind a `down` alert) and `"sent": [ { "event": "open", "status": 200, "at": "13.11 11:02" } ]` (pushes sent; `event` is `open` or `close`; `status` 200 = delivered to the push service). |
 
-Unknown `what`: status 400 `{"error": "what?"}`. Backend failure: status 502 `{"error": "<text>"}`.
+Unknown `what`: status 400 `{"error": "what?"}`. A missing or malformed required parameter (`id`
+not a number, `url` empty, `bucket` not in one of the two bucket formats): `{"rows": []}`.
+Backend failure: status 502 `{"error": "<text>"}`.
 
 ### 5.5 `GET /api/messages?(h | f,t)` → the push log; `{"rows": [...]}`, newest first
 
@@ -333,8 +341,10 @@ adds "לא נשלחה".
 
 ### 5.6 `POST /api/alerts/ack` → "ראיתי"
 
-Body `{"ids": [41, 40]}` (up to 200) or `{"id": 41}`. Marks each open alert as seen by the current
-user. Answer `{"ok": true, "n": 2}`; bad body → 400 `{"error": "bad request"}`.
+Body `{"ids": [41, 40]}` or `{"id": 41}`. Ids may arrive as numbers or as digit strings; only the
+first 200 are processed. Marks each open, not yet seen alert as seen by the current user (the
+user's label is stored). Answer `{"ok": true, "n": <alerts actually marked>}`; a body without a
+usable id → 400 `{"error": "bad request"}`.
 The screen removes the rows at once and only reloads if the call fails.
 
 ### 5.7 Errors and caching
@@ -490,8 +500,10 @@ stack. Whatever you choose:
   **only** through these functions. That keeps one definition of every number, makes the logic
   testable with plain SQL, and lets the same code talk to Supabase over HTTPS (`/rest/v1/rpc/<fn>`
   with the secret key) or to any Postgres over a normal connection.
-- **Server:** one small process: login, roles, the six routes of §5 and the page itself. No
-  business logic; it calls `sh_*` functions and filters by role.
+- **Server:** one small process: login, roles, the data routes of §5, the real-user ingest and
+  the page itself. No business logic; it calls `sh_*` functions and filters by role. Run it as a
+  **single process** (one worker): the login and ingest limits live in memory and the collectors
+  must run once.
 - **Collectors:** small scheduled jobs that fetch something and hand rows to an `sh_*` function.
   In the reference they are threads of a worker loop that starts with the server
   (`COLLECTORS=0` turns it off; `python collectors.py` runs it as a separate process). They can
@@ -520,8 +532,10 @@ All tables are private: on Supabase enable row level security on each (no polici
 | `sh_jobs` | "this daily job is done for this day" | `job`, `day` |
 | `sh_login_log` | a login attempt | `at`, `ip`, `ok`, `who`, `ua` |
 
-Retention (a nightly cleanup): full-round probes 400 days, light-round probes 7 days, speed runs
-400 days, real-user rows 30 days, messages and alerts forever, login log 400 days.
+Retention (a nightly cleanup): full-round probes 120 days (setting `keep_days`; four pages cost
+about 0.7 MB a day, and a free Supabase project holds 500 MB), light-round probes 7 days, speed
+runs 400 days, real-user rows 30 days, messages and alerts forever, login log 400 days. Windows
+longer than the retention simply show what is left.
 
 ### 7.3 Functions the server calls (read side)
 
@@ -543,9 +557,10 @@ Retention (a nightly cleanup): full-round probes 400 days, light-round probes 7 
 | `sh_drill_alert(p_id)` | §5.4 | `/api/site/drill` |
 | `sh_messages(p_from, p_to)` | §5.5 | `/api/messages` |
 | `sh_alert_ack(p_ids, p_who)` | `{"n": <rows marked>}` | `/api/alerts/ack` |
-| `sh_login_log_add(p_ip, p_ok, p_who, p_ua)` | — | login |
+| `sh_login_log_add(p_ip, p_ok, p_who, p_ua)` | `{"n": 1}` | login |
 | `sh_rum_add(p_rows)` | `{"n": <rows stored>}` | real-user ingest |
-| `sh_ping()` | `"ok"` | `/health` |
+| `sh_ping()` | the JSON string `"ok"` | `/health` |
+| `sh_config()` | the configuration (below) | page injection, time window, ingest |
 
 Exact rules (these are the definitions the screen's texts promise):
 
@@ -579,7 +594,7 @@ Exact rules (these are the definitions the screen's texts promise):
 
 | Function | What it does |
 |---|---|
-| `sh_config()` | returns settings + the page lists, so collectors need no second copy of the configuration |
+| `sh_config()` | returns the configuration as one object: every setting loaded by `sh_setup` (`site`, `host`, `label`, `time_zone`, `platform`, `down_after`, `morning`, `keep_days`, `rum_hosts`, `private_paths`, …), `pages` (`[{name, url, probe, core, home, expect}]` in display order) and `screen` (the object the server injects as `SH_CONFIG`, §4.1). Before `sh_setup` ran there is no `time_zone`; the server then answers 502 "the site is not configured" instead of guessing |
 | `sh_setup(p_config)` | loads `site_health.config.json` into `sh_settings` / `sh_pages` / `sh_flows` (idempotent) |
 | `sh_probe_add(p_round_at, p_kind, p_rows)` | stores one probe round (duplicates ignored) and beats `בודק זמינות האתר` on a full round |
 | `sh_speed_add(p_rows)` | stores lab runs; beats the core or rotation flow when at least one run succeeded |
@@ -677,49 +692,99 @@ Google PageSpeed Insights API v5, one call per page per strategy:
 
 ### 7.7 Collectors: sitemap, catalogue, certificate, real users
 
-**Sitemap (`טעינת מפת האתר`)**, nightly. Find the sitemap from `robots.txt` (`Sitemap:` lines), else
-try `/sitemap.xml`, `/sitemap_index.xml`, `/wp-sitemap.xml`. Follow sitemap index files, accept
-gzip. Keep URLs of the site's own host, drop query strings and fragments, and drop cart, checkout,
-account, search, feed and tag pages. Hand the list to `sh_sitemap_set`. An empty or failed read
-changes nothing.
+Two rules are shared by the sitemap and the catalogue reads: **read everything, prove it is
+complete, and only then replace what is stored**; and a firewall page is not data (require a real
+sitemap root tag / a JSON content type, otherwise the run failed).
+
+**Sitemap (`טעינת מפת האתר`)**, nightly.
+
+1. Find it: every `Sitemap:` line of `/robots.txt`; if there is none try `/sitemap_index.xml`,
+   `/wp-sitemap.xml`, `/sitemap.xml`, and take the first that parses as `<sitemapindex>` or `<urlset>`.
+2. Follow index files (at most 500 files, 50 MB each after decompression). Decide gzip by the
+   first two bytes (`1f 8b`), not by the file name. Refuse documents that contain `<!ENTITY`.
+3. From each `<url>` take only its **direct child** `<loc>` (SEO plugins nest `<image:loc>` inside;
+   those are pictures, not pages). Child sitemap addresses are followed exactly as written,
+   including their query strings.
+4. Keep page URLs on the site's own host (with or without `www`); drop any page URL that has a
+   query string or a fragment; drop non-HTML files; drop cart, checkout, account, search, feed,
+   tag, author and paginated pages by their **first path segment** after decoding (shop slugs are
+   often translated: take the real slugs from the site, not only the English words). Always
+   include the home page.
+5. If any file fails to load or parse, abort the whole load and keep yesterday's list. Refuse an
+   empty list, and refuse a list smaller than half of the current one (that is almost always a
+   fetch problem). Then hand the full list to `sh_sitemap_set` in one call.
+
+The rotation measures 2 pages every 5 minutes = 576 pages a day. When the site has more pages,
+raise it up to 6 per round (1,728 a day); beyond that tell the owner and reword the sentence
+"כל האתר בערך פעם ביום" on the screen. The coverage line shows the truth either way.
 
 **Broken products (`בדיקת מוצרים שבורים`)**, daily at 04:00, shops only.
 
-- WooCommerce: page through `GET <site>/wp-json/wc/store/v1/products?per_page=100&page=N` (public,
-  no key). The total is in the `X-WP-Total` header. Rules per product: `prices.price` empty or 0
-  → `בלי מחיר`; `images` empty → `בלי תמונה`; `is_in_stock` false → `לא במלאי`; `is_purchasable`
-  false (and in stock, and priced) → `אי אפשר להוסיף לסל`. A product can have more than one issue.
-- Shopify: `GET <site>/products.json?limit=250&page=N` until an empty page. No variant with
-  `available` → `לא במלאי`; no `images` → `בלי תמונה`; every variant priced 0 or empty → `בלי מחיר`.
+- WooCommerce: page through
+  `GET <site>/wp-json/wc/store/v1/products?per_page=100&page=N&orderby=id&order=asc` (public, no
+  key; 100 is the maximum; the fixed order keeps pages stable while the shop changes). The total
+  is in the `X-WP-Total` header. Per product:
+
+  | Label | Condition |
+  |---|---|
+  | `בלי מחיר` | `prices.price` is empty or `"0"` **and** `is_purchasable` is false (a product without a price comes back as `"0"`, not empty; a free product stays purchasable) |
+  | `בלי תמונה` | `images` is an empty list |
+  | `לא במלאי` | `is_in_stock` is false |
+  | `אי אפשר להוסיף לסל` | `is_purchasable` is false while the product is in stock and has a price; never for `type` `external` or `grouped` (they are never purchasable, by design) |
+
+  A product can have more than one label. Names arrive with HTML entities: unescape them before
+  storing. If the shop hides out-of-stock products from its catalogue, they are not in the answer
+  and `לא במלאי` never appears; that is the shop's setting, not a fault of the check.
+- Shopify: `GET <site>/products.json?limit=250&page=N` until an empty page (an unofficial but
+  public endpoint: no total, so cross-check the count against the product sitemap). No variant
+  with `available` → `לא במלאי`; no `images` → `בלי תמונה`; every variant priced 0 or empty → `בלי מחיר`.
 - Other platforms: disable the flow and hide the card (`SH_CONFIG.hide = ['issuesCard']`).
-- **Never store a partial snapshot.** If the number of products read differs from the declared
-  total, or ids repeat, abort and keep yesterday's data. A partial read looks exactly like
-  products that vanished.
-- "Out of stock" is not always a fault, but a visitor who sees it leaves; that is why it is listed
-  in yellow.
+- **Never store a partial snapshot.** Abort and keep yesterday's data when the number of products
+  read differs from the declared total, when the total header is missing, or when ids repeat. A
+  partial read looks exactly like products that vanished.
+- Rows are returned with the real faults first and `לא במלאי` last, because the screen shows only
+  the first 60. "Out of stock" is not always a fault, but a visitor who sees it leaves; that is
+  why it is listed, in yellow.
 
 **Certificate (`בדיקת תעודת האבטחה`)**, daily. Open a TLS connection to `<host>:443` with normal
 verification, read `notBefore` / `notAfter` / issuer, store `days_left`. A failed check stores
 `ok = false` with the error and does not beat the flow.
 
-**Real users (`מהירות אצל לקוחות`)**. A small script on the site (`reference/rum/`) measures LCP
-with the browser's `PerformanceObserver` and sends one beacon per page view when the page is
-hidden or left: `{site, path, lcp, test}` as `text/plain` with `navigator.sendBeacon` (no CORS
-preflight). `site` is the literal `live` on the production site and the host name anywhere else,
-so staging traffic is visible as such on the screen. The ingest endpoint `POST /rum`:
+**Real users (`מהירות אצל לקוחות`)**. A small script on the site (`reference/rum/site-health-rum.js`)
+measures LCP with the browser's `PerformanceObserver` and sends one beacon per page view when
+the page is hidden or left: a JSON **string** through `navigator.sendBeacon`, which goes out as
+`text/plain` and therefore needs no CORS preflight and no CORS headers (never send it as
+`application/json`: Chrome refuses, other browsers preflight). Fields: `site`, `path`, `lcp`
+(ms), `test`, plus `ttfb` and `nav`, which the reference does not store. `site` is the literal
+`live` on the production host and the host name anywhere else, so traffic from a staging copy is
+visible as such on the screen.
 
-- accepts only bodies up to 1 KB whose `Origin` (or `Referer`) host is the site's;
-- stores `path` without query string (at most 300 characters), `lcp` only when between 1 and
-  60,000 ms, `site` only when it matches `^[a-z0-9.-]{1,100}$` (anyone can post to this endpoint;
-  treat every field as hostile);
-- drops paths of account, checkout, order and admin pages;
-- stores no IP address, no cookie, no user agent; limits each IP to 60 beacons a minute in memory;
-- always answers 204, also when it drops the row.
+The ingest endpoint is **`POST /m`** (a neutral name: content blockers drop paths called "rum" or
+"beacon"). It is public, so every field is hostile:
 
-Browsers that do not report LCP (older Safari) simply send nothing; the tile's count shows how
-many page views were measured. On WordPress the script is delivered by a tiny plugin
-(`reference/rum/site-health-rum.php`); on Shopify paste the script into the theme; elsewhere add
-one script tag. Do not load it for logged-in administrators.
+- read the raw body (it is `text/plain`; a JSON body parser will not see it), at most 1 KB;
+- if an `Origin` or `Referer` header is present, its host must be the site's host (with or
+  without `www`) or one of the extra hosts in the configuration (`rum_hosts`, for a staging copy);
+  when both are absent, or `Origin` is the string `null` (sites with a strict referrer policy),
+  accept the beacon. This is a noise filter, not security: anyone can forge a header;
+- keep the row only when `lcp` is between 1 and 60,000 ms, `site` matches `^[a-z0-9.-]{1,100}$`,
+  and `path` (query string removed, at most 300 characters) has no segment that names an account,
+  checkout, order or admin page; otherwise drop the whole beacon;
+- store no IP address, no cookie, no user agent, and ignore any cookie that arrives; limit each
+  address to 60 beacons a minute, in memory only;
+- always answer 204, also when the beacon is dropped; store after answering, in small batches.
+
+What the tile's count means: page views that were *measured*. Nothing arrives from browsers
+without LCP support (Safari and every iPhone browser before iOS 26.2, December 2025), from tabs
+opened in the background, or from visitors with content blockers. It is not a traffic counter.
+A p75 over a handful of views is noise; the screen shows it anyway, with the count next to it.
+
+Delivery: on WordPress, the one-file plugin `reference/rum/site-health-rum.php` (it prints the
+script inline in the footer; copy it to `wp-content/mu-plugins/` or install it as a plugin, set
+the two constants, then purge the page cache and exclude the script from "delay JavaScript"
+optimizations, or only visitors who interact get measured). On Shopify, paste the script into
+the theme layout. Elsewhere, one configuration line and one script tag at the end of the page body. The
+script is never loaded for signed-in staff, nor on cart, checkout and account pages.
 
 ### 7.8 Alert rules (`sh_alerts_check`, every minute, right after the full probe round)
 
@@ -746,16 +811,30 @@ one script tag. Do not load it for logged-in administrators.
 Alerts go to phones through [ntfy](https://ntfy.sh): each person installs the ntfy app and
 subscribes to one topic; the system publishes to that topic.
 
-- Publish with a JSON body to the server root, which avoids every header-encoding problem with Hebrew:
-  `POST https://ntfy.sh/` with `{"topic": "<topic>", "title": "<title>", "message": "<body>", "priority": 4, "tags": ["rotating_light"], "click": "<dashboard>/site"}`.
+- Publish with a **JSON body to the server root** (not to `/<topic>`), which avoids every
+  header-encoding problem with Hebrew:
+  `POST https://ntfy.sh/` with `Content-Type: application/json` and
+  `{"topic": "<topic>", "title": "<title>", "message": "<body>", "priority": 4, "tags": ["rotating_light"], "click": "<dashboard>/site"}`.
+  `priority` is an integer 1–5 and `tags` a list of strings. Keep the title under 200 characters
+  and the message under 1,500 (the limits are in bytes and Hebrew letters take two).
 - Priorities: `down` and `silent` open → 4; `slow` and `cert` open → 3; "חזר לתקין" and the
-  morning message → 2.
-- The topic name is the only secret of a free ntfy topic: anyone who knows it can read and write.
-  Generate a long random name (`sh-` + 24 random characters), keep it in the environment
-  (`NTFY_TOPIC`), never in the repository or on the screen.
-- Record the HTTP status of every publish with `sh_message_sent`. A publish that fails is retried
-  on the next minute, up to 5 times; after that it stays in the log as "לא נשלחה".
+  morning message → 2 (no sound on the phone; that is intended).
+- Environment: `NTFY_TOPIC`, `NTFY_URL` (default `https://ntfy.sh`), optional `NTFY_TOKEN` (sent as
+  `Authorization: Bearer …`, for a reserved topic on a paid plan or a self-hosted server).
+- The topic name is the only secret of a free ntfy topic: anyone who knows it can read the last
+  12 hours of alerts and publish fake ones. Generate a long random name (`sh-` + 24 random letters
+  and digits), keep it in the environment only; never in the repository, on the screen or in logs.
+- HTTP 200 means ntfy accepted the message, not that a phone showed it; there is no delivery
+  receipt. Record the status of every publish with `sh_message_sent`. A failed publish is retried
+  on the next minute, up to 5 attempts; after that it stays in the log as "לא נשלחה".
+- **Send at most 30 pushes per rolling hour.** The free server allows 250 a day per sending
+  address, and a flapping page with `down_after = 1` can produce two messages a minute. Messages
+  that wait longer than an hour are marked as not sent instead of arriving late in a burst.
 - Without `NTFY_TOPIC` messages are logged with status 0 and nothing is sent.
+- Tell the owner two things at hand-over: ntfy keeps messages for 12 hours, so a phone that was
+  off longer never gets them (the screen's message log is the permanent record); and iPhones
+  deliver ntfy pushes less reliably than Android. If alerts matter and the owner uses an iPhone,
+  offer a Telegram bot as the channel instead; the message log and rules stay the same.
 
 ### 7.10 Who watches the watcher
 
@@ -770,9 +849,11 @@ the platform supports:
 2. **An external heartbeat service** (for example healthchecks.io): the worker requests the
    service's ping URL after every full round; the service alerts when pings stop.
 
-Also expose `GET /health` on the server: always status 200 with `{"ok": <bool>, "db": "<state>",
-"last_probe_age_sec": <n>}`. Keep it 200 even when the database is down; hosts restart a service
-whose health check fails, and a restart loop helps nobody.
+Also expose `GET /health` on the server, without login: always status 200 with
+`{"ok": <the database answered>, "db": "ok" | "<error text without host or key>",
+"last_probe_age_sec": <seconds since the last full probe round, or null if there never was one>}`.
+Keep it 200 even when the database is down; hosts restart a service whose health check fails,
+and a restart loop helps nobody.
 
 ### 7.11 Running the collectors inside the database platform instead
 
@@ -799,25 +880,43 @@ loop off (`COLLECTORS=0`), and note that §7.10 then needs option 2 or a second 
 - **Deny by default for outsiders.** For vendor and share-link requests use an allow-list: pages
   `/site` (or `/status`), `/login`, `/logout`; data calls `GET /api/site`, `GET /api/site/now`,
   `GET /api/site/drill`. Anything else, including any route added later, answers 403 (data) or
-  redirects to `/site` (pages). `POST` is always refused for them.
+  redirects to `/site` (pages). Every request of theirs that is not a `GET` is refused, except
+  the sign-in form.
+- **Public routes**, answered before any role check: `GET /health`, `POST /m` (real-user ingest),
+  `GET` and `POST /login`, `GET /logout`. `POST /m` ignores cookies entirely.
 - Vendor filtering of data: `alerts_open` / `alerts_recent` keep only kinds `down`, `slow`,
   `silent`, `cert`; `sh_now().alerts_open` is recounted after filtering; the alert drill returns
   the alert only if its kind is allowed, with `sent` emptied; with `noAlerts` all alert lists are
   empty, the count is 0 and the alert drill returns no rows.
 - The share token is compared in constant time, is accepted **only** on `/status` and the three
   data calls, and never counts as "logged in" anywhere else. An empty configured token disables
-  the link. Wrong token: the page answers 403 with a one-line Hebrew message; data calls answer 401.
+  the link. On those four routes, when `k` is present **only the token counts**: a valid one gives
+  the share role even to a signed-in owner, a wrong one is refused even with a valid cookie
+  (`/status`: 403 with the line `הקישור אינו תקין או שפג.`; data calls: 401). On every other
+  route `k` is ignored, so a share link alone gets 401 from `/api/messages` and `/api/alerts/ack`.
 - **Passwords** come from environment variables, one per person (`SH_PASS_OWNER`,
   `SH_PASS_STAFF`, `SH_PASS_VENDOR_<NAME>`). An unset variable never matches. Compare trimmed and
   case-insensitively (phone keyboards capitalize), in constant time.
-- **Session cookie** = HMAC-SHA256 of a fixed label keyed with that person's password. So
-  changing or deleting a password in the host's settings signs that person out at once, with no
-  session table. `HttpOnly`, `Secure` on HTTPS, `SameSite=Lax`. Lifetime 365 days for owner and
-  staff, 30 days for vendors.
-- When two variables hold the same password, resolve to the **least privileged** role, and log a
-  warning at startup. A collision may take rights away, never grant them.
-- **Brute force:** 8 failed attempts from one IP within 10 minutes → 429 for that IP until the
-  window passes. Log every attempt (`sh_login_log`: time, IP, success, who, user agent).
+- **Session cookie** (`sh_session`) = HMAC-SHA256 of one fixed label, keyed with that person's
+  password as it is compared (trimmed, case-folded). So changing or deleting a password in the
+  host's settings signs that person out at once, with no session table. `HttpOnly`, `Secure` on
+  HTTPS (trust `X-Forwarded-Proto` from the host's proxy), `SameSite=Lax`. Lifetime 365 days for
+  owner and staff, 30 days for vendors.
+- When two variables hold the same password they produce the same cookie: resolve it, at sign-in
+  and on every request, to the **least privileged** role (vendor without alerts, vendor, staff,
+  owner), and log a warning at startup. A collision may take rights away, never grant them.
+  Without an owner password nobody can sign in.
+- **Brute force:** 8 failed attempts from one address within 10 minutes → 429 for that address
+  until the window passes. Log every attempt that was examined (`sh_login_log`: time, address,
+  success, who, user agent; `who` is `?` for a wrong password); requests refused with 429 are not
+  logged, so a flood cannot fill the table. A logging failure never blocks sign-in.
+- **The client address** behind the host's proxy: use the entry the host itself adds to
+  `X-Forwarded-For` (check the host's documentation; on a host that appends, the left-most entry
+  is whatever the client sent and lets an attacker dodge the limits).
+- Hebrew texts of the pages around the screen: sign-in button `כניסה`, placeholder `סיסמה`,
+  wrong password `סיסמה שגויה`, too many attempts `יותר מדי ניסיונות. נסו שוב בעוד עשר דקות.`,
+  bad share link `הקישור אינו תקין או שפג.`, database unreachable
+  `אין כרגע חיבור לנתונים. נסו שוב בעוד רגע.`
 - The page is served with the role injected at `<!--SH_INJECT-->`:
   `<script>window.SH_CONFIG={…};window.SH_ROLE={…};</script>`. Build it with a JSON encoder; never
   concatenate user input into it.
