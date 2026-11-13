@@ -85,7 +85,10 @@ language sql stable set search_path = public as $$
            max(name) filter (where is_home) as home
     from sh_pages
   )
-  select s.v || jsonb_build_object(
+  -- The settings that arrived after the first version come first, with their defaults: a
+  -- database that was set up before them answers with these until sh_setup runs again.
+  select jsonb_build_object('keep_days', 100, 'rum_hosts', '[]'::jsonb, 'private_paths', '[]'::jsonb)
+    || s.v || jsonb_build_object(
     'pages', p.v,
     -- a key that is not configured is left out, so the screen keeps its own default
     'screen', jsonb_strip_nulls(jsonb_build_object(
@@ -108,6 +111,9 @@ declare
   v_platform   text := coalesce(p_config ->> 'platform', 'other');
   v_down_after int  := coalesce((p_config ->> 'down_after')::int, 1);
   v_morning    text := coalesce(p_config ->> 'morning', '07:30');
+  v_keep_days  text := coalesce(p_config ->> 'keep_days', '100');
+  v_rum_hosts  jsonb := coalesce(p_config -> 'rum_hosts', '[]');
+  v_private    jsonb := coalesce(p_config -> 'private_paths', '[]');
   v_live       jsonb := coalesce(p_config -> 'live_hosts', '["live"]');
   v_labels     jsonb := coalesce(p_config -> 'path_labels', case v_platform
                           when 'woocommerce' then '[["/product-category/", "קטגוריה: "], ["/product/", "מוצר: "]]'
@@ -133,6 +139,21 @@ begin
   end if;
   if jsonb_typeof(v_live) <> 'array' or jsonb_typeof(v_labels) <> 'array' then
     raise exception 'sh_setup: "live_hosts" and "path_labels" must be lists';
+  end if;
+  -- 30 to 400: no less than the screen's "30 יום", no more than its widest window (spec §5.1)
+  if v_keep_days !~ '^([3-9]\d|[1-3]\d\d|400)$' then
+    raise exception 'sh_setup: "keep_days" must be a whole number of days from 30 to 400, got %', v_keep_days;
+  end if;
+  if jsonb_typeof(v_rum_hosts) <> 'array' or jsonb_typeof(v_private) <> 'array' then
+    raise exception 'sh_setup: "rum_hosts" and "private_paths" must be lists';
+  end if;
+  if exists (select 1 from jsonb_array_elements(v_rum_hosts) h
+             where jsonb_typeof(h) <> 'string' or h #>> '{}' !~ '^[a-z0-9.-]+$') then
+    raise exception 'sh_setup: "rum_hosts" takes host names in lower case, such as staging.example.co.il, got %', v_rum_hosts;
+  end if;
+  if exists (select 1 from jsonb_array_elements(v_private) s
+             where jsonb_typeof(s) <> 'string' or s #>> '{}' !~ '^[^/?#[:space:]]+$') then
+    raise exception 'sh_setup: "private_paths" takes single path segments, such as checkout or its translated slug, got %', v_private;
   end if;
   if jsonb_typeof(p_config -> 'pages') is distinct from 'array' then
     raise exception 'sh_setup: "pages" must be a list of pages';
@@ -171,6 +192,7 @@ begin
     'label', coalesce(p_config ->> 'label', regexp_replace(v_host, '^www\.', '')),
     'brand', coalesce(p_config ->> 'brand', ''),
     'time_zone', v_zone, 'platform', v_platform, 'down_after', v_down_after, 'morning', v_morning,
+    'keep_days', v_keep_days::int, 'rum_hosts', v_rum_hosts, 'private_paths', v_private,
     'live_hosts', v_live, 'path_labels', v_labels,
     'bucket_note', coalesce(p_config ->> 'bucket_note', '')))
   on conflict (key) do update set value = excluded.value;
@@ -182,15 +204,18 @@ begin
          coalesce((page ->> 'home')::boolean, false), sort, nullif(page ->> 'expect', '')
   from jsonb_array_elements(p_config -> 'pages') with ordinality as p(page, sort);
 
-  -- The measurement flows of the screen's last card. last_at and note are never touched here.
-  insert into sh_flows (flow_name, sort, cadence, warn_minutes, late_minutes, enabled) values
-    ('בודק זמינות האתר',           1, 'כל דקה',          5,    15,   true),
-    ('מדידת מהירות — עמודי ליבה',   2, 'כל רבע שעה',      45,   90,   true),
-    ('מדידת מהירות — סבב כל האתר',  3, 'כל 5 דקות',       20,   60,   true),
-    ('טעינת מפת האתר',             4, 'פעם ביום',        1560, 2880, true),
-    ('בדיקת תעודת האבטחה',         5, 'פעם ביום',        1560, 2880, true),
-    ('בדיקת מוצרים שבורים',        6, 'פעם ביום',        1560, 2880, v_platform <> 'other'),
-    ('מהירות אצל לקוחות',          7, 'כל צפייה בעמוד',  120,  360,  true)
+  -- The measurement flows of the screen's last card. last_at and note are never touched here,
+  -- and alerts only when the flow is new: whoever turns a flow's alert on or off by hand keeps
+  -- that choice. The real-user flow starts without one: a small site has no visitors for hours
+  -- every night, and that is not a fault.
+  insert into sh_flows (flow_name, sort, cadence, warn_minutes, late_minutes, enabled, alerts) values
+    ('בודק זמינות האתר',           1, 'כל דקה',          5,    15,   true,                  true),
+    ('מדידת מהירות — עמודי ליבה',   2, 'כל רבע שעה',      45,   90,   true,                  true),
+    ('מדידת מהירות — סבב כל האתר',  3, 'כל 5 דקות',       20,   60,   true,                  true),
+    ('טעינת מפת האתר',             4, 'פעם ביום',        1560, 2880, true,                  true),
+    ('בדיקת תעודת האבטחה',         5, 'פעם ביום',        1560, 2880, true,                  true),
+    ('בדיקת מוצרים שבורים',        6, 'פעם ביום',        1560, 2880, v_platform <> 'other', true),
+    ('מהירות אצל לקוחות',          7, 'כל צפייה בעמוד',  360,  1440, true,                  false)
   on conflict (flow_name) do update
     set sort = excluded.sort, cadence = excluded.cadence, warn_minutes = excluded.warn_minutes,
         late_minutes = excluded.late_minutes, enabled = excluded.enabled;
@@ -291,15 +316,24 @@ language sql stable set search_path = public as $$
     from sh_pages p join runs r on r.url = p.url
     where p.is_core and r.source = 'core'
     group by p.name, p.url, p.sort, r.strategy
+  ), rotation as (
+    -- The whole-site rotation is about every page of the site except the core pages, which are
+    -- measured every 15 minutes already. A core page is told by its address, character for character.
+    select url, strategy, at, lcp_ms, score
+    from runs
+    where source = 'rotation' and url not in (select url from sh_pages where is_core)
   ), heavy as (
     select url, percentile_cont(0.5) within group (order by lcp_ms) as lcp,
            percentile_cont(0.5) within group (order by score) as score,
            count(*) as checks, max(at) as last_at
-    from runs
-    where source = 'rotation' and strategy = 'mobile' and lcp_ms is not null
+    from rotation
+    where strategy = 'mobile' and lcp_ms is not null
     group by url
     order by lcp desc, url
     limit 10
+  ), site_pages as (
+    select url from sh_site_pages
+    where active and url not in (select url from sh_pages where is_core)
   )
   select
     -- the bottom line: the home page on a phone; the row exists even before the first run
@@ -327,12 +361,11 @@ language sql stable set search_path = public as $$
                order by lcp desc, url)
       from heavy), '[]')
     -- coverage, in the column names the screen reads: checks = pages of today's sitemap that the
-    -- rotation measured in the window, slow_runs = pages in today's sitemap
+    -- rotation measured in the window, slow_runs = pages of today's sitemap that it takes turns on
     || jsonb_build_object(
          'section', 'כיסוי',
-         'checks', (select count(distinct r.url) from runs r join sh_site_pages s on s.url = r.url
-                    where r.source = 'rotation' and s.active),
-         'slow_runs', (select count(*) from sh_site_pages where active))
+         'checks', (select count(distinct r.url) from rotation r join site_pages s on s.url = r.url),
+         'slow_runs', (select count(*) from site_pages))
 $$;
 
 -- Median LCP per core page per bucket, for one strategy.
@@ -393,11 +426,13 @@ $$;
 
 -- The broken products of the latest snapshot. sh_issues_set records the day of every snapshot,
 -- so a snapshot without broken products empties the list.
+-- The order: the real faults first and "לא במלאי" last, because the screen shows the first 60;
+-- then by issue and by name. collate "C" is plain character order, the same on every database.
 create or replace function sh_product_issues() returns jsonb
 language sql stable set search_path = public as $$
   select coalesce(jsonb_agg(jsonb_build_object(
            'issue', issue, 'name', name, 'url', url, 'snap_date', snap_date)
-           order by issue, name, product_id), '[]')
+           order by issue = 'לא במלאי', issue collate "C", name collate "C", product_id collate "C"), '[]')
   from sh_product_issues
   where snap_date = (select max(day) from sh_jobs where job = 'issues_snapshot')
 $$;
@@ -524,7 +559,9 @@ begin
     ) b left join sh_pages p on p.name = b.page);
 end $$;
 
--- The lab runs of one page, newest first. A failed run carries only its error.
+-- The lab runs of one page, newest first. A failed run carries only its error. The reasons
+-- ("opps") go out with the newest 100 successful runs only: they are nine tenths of a run, and
+-- "what slows the page" on the sheet should describe the page as it is now.
 create or replace function sh_drill_runs(
   p_from timestamptz, p_to timestamptz, p_url text, p_strategy text default 'mobile',
   p_bucket text default null) returns jsonb
@@ -538,12 +575,17 @@ begin
              case when ok then jsonb_build_object(
                     'ok', true, 'err', null, 'at_il', sh_il(at), 'lcp_ms', lcp_ms, 'score', score,
                     'ttfb_ms', ttfb_ms, 'bytes', bytes, 'cls', cls, 'crux_category', crux_category,
-                    'crux_lcp_ms', crux_lcp_ms, 'opps', coalesce(opps, '[]'))
+                    'crux_lcp_ms', crux_lcp_ms,
+                    'opps', case when nth <= 100 then coalesce(opps, '[]') else '[]' end)
                   else jsonb_build_object('ok', false, 'err', err, 'at_il', sh_il(at)) end
              order by at desc), '[]')
-    from sh_speed
-    where url = p_url and strategy = p_strategy and at >= p_from and at < p_to
-      and (coalesce(p_bucket, '') = '' or to_char(at at time zone v_tz, v_fmt) = p_bucket));
+    from (
+      -- nth: a successful run's place among the successful runs of the answer, newest first
+      select *, count(*) filter (where ok) over (order by at desc) as nth
+      from sh_speed
+      where url = p_url and strategy = p_strategy and at >= p_from and at < p_to
+        and (coalesce(p_bucket, '') = '' or to_char(at at time zone v_tz, v_fmt) = p_bucket)
+    ) r);
 end $$;
 
 -- One alert: its row, the failed checks behind a "down" alert, and the pushes that were sent.
@@ -574,7 +616,7 @@ language sql stable set search_path = public as $$
         order by x.round_at
         limit 500
       ) f), '[]'),
-    -- a push appears once its fate is known: delivered, or given up after the last retry
+    -- a push appears once its fate is known: accepted, not configured, or given up after the last retry
     'sent', coalesce((
       select jsonb_agg(jsonb_build_object('event', m.event, 'status', m.status, 'at', sh_il(m.at))
                order by m.at, m.id)
@@ -618,15 +660,17 @@ language sql set search_path = public as $$
   select jsonb_build_object('n', count(*)) from added
 $$;
 
--- Real-user page views: [{site, path, lcp_ms, is_test}]. The last line of defence for two
--- promises of the ingest: no query strings are stored, and no impossible timings.
+-- Real-user page views: [{site, path, lcp_ms, is_test}]. The last line of defence for the
+-- limits of the ingest (spec §7.7): no query string is stored, and a row with an impossible
+-- timing, a site that is not "live" or a host name, or a path longer than 300 characters is dropped.
 create or replace function sh_rum_add(p_rows jsonb) returns jsonb
 language sql set search_path = public as $$
   with added as (
     insert into sh_rum (site, path, lcp_ms, is_test)
-    select r.site, regexp_replace(r.path, '[?#].*$', ''), r.lcp_ms, coalesce(r.is_test, false)
-    from jsonb_to_recordset(p_rows) as r(site text, path text, lcp_ms numeric, is_test boolean)
-    where r.site is not null and r.path is not null and r.lcp_ms between 1 and 60000
+    select r.site, r.path, r.lcp_ms, coalesce(r.is_test, false)
+    from (select site, regexp_replace(path, '[?#].*$', '') as path, lcp_ms, is_test
+          from jsonb_to_recordset(p_rows) as x(site text, path text, lcp_ms numeric, is_test boolean)) r
+    where r.site ~ '^[a-z0-9.-]{1,100}$' and length(r.path) <= 300 and r.lcp_ms between 1 and 60000
     returning 1
   ), beat as (
     update sh_flows set last_at = now()
@@ -666,18 +710,18 @@ begin
 end $$;
 
 -- Lab runs: [{at, url, page, strategy, source, ok, err, score, lcp_ms, cls, ttfb_ms, bytes,
--- crux_category, crux_lcp_ms, opps}]. A run that is sent twice is stored once.
+-- crux_category, crux_lcp_ms, opps, lh_version}]. A run that is sent twice is stored once.
 create or replace function sh_speed_add(p_rows jsonb) returns jsonb
 language sql set search_path = public as $$
   with added as (
     insert into sh_speed (at, url, page, strategy, source, ok, err, score, lcp_ms, cls, ttfb_ms,
-                          bytes, crux_category, crux_lcp_ms, opps)
+                          bytes, crux_category, crux_lcp_ms, opps, lh_version)
     select coalesce(r.at, now()), r.url, r.page, r.strategy, r.source, r.ok, r.err, r.score, r.lcp_ms,
-           r.cls, r.ttfb_ms, r.bytes, r.crux_category, r.crux_lcp_ms, r.opps
+           r.cls, r.ttfb_ms, r.bytes, r.crux_category, r.crux_lcp_ms, r.opps, r.lh_version
     from jsonb_to_recordset(p_rows)
          as r(at timestamptz, url text, page text, strategy text, source text, ok boolean, err text,
               score numeric, lcp_ms numeric, cls numeric, ttfb_ms numeric, bytes numeric,
-              crux_category text, crux_lcp_ms numeric, opps jsonb)
+              crux_category text, crux_lcp_ms numeric, opps jsonb, lh_version text)
     on conflict do nothing
     returning at, source, ok
   ), beat as (
@@ -691,7 +735,8 @@ language sql set search_path = public as $$
 $$;
 
 -- Claims the p_n site pages that were measured longest ago (never measured first) and returns
--- their addresses. A page is claimed whether or not its measurement then succeeds.
+-- their addresses. A page is claimed whether or not its measurement then succeeds. A core page
+-- takes no turn: it is measured every 15 minutes already.
 create or replace function sh_rotation_next(p_n int) returns jsonb
 language sql set search_path = public as $$
   with stamp as materialized (
@@ -699,7 +744,7 @@ language sql set search_path = public as $$
     select clock_timestamp() as at
   ), pick as (
     select url from sh_site_pages
-    where active
+    where active and url not in (select url from sh_pages where is_core)
     order by last_measured_at nulls first, url
     limit p_n
     for update skip locked
@@ -792,16 +837,18 @@ $$;
 
 -- ---------------------------------------------------------------- alerts and pushes
 
--- Evaluates the four alert rules, opens and closes alerts, queues their pushes, and returns
--- every push that is still owed, oldest first. Call it every minute, after the full probe round.
+-- Evaluates the four alert rules, opens and closes alerts, queues their pushes, and claims and
+-- returns the pushes that are owed, oldest first. Call it every minute, after the full probe round.
 create or replace function sh_alerts_check() returns jsonb
 language plpgsql set search_path = public as $$
 declare
   v_down_after int := coalesce((select (value #>> '{}')::int from sh_settings where key = 'down_after'), 1);
+  v_owed       jsonb;
 begin
-  -- One evaluation at a time: a second caller waits here and then, under read committed (the
-  -- default), sees what the first one did. Under any stricter level the unique index on open
-  -- alerts still forbids a duplicate, and the second caller gets an error instead.
+  -- One caller at a time: a second one waits here and then, under read committed (the default),
+  -- sees what the first one did: its alerts, its pushes and its claims. Under any stricter level
+  -- the unique index on open alerts still forbids a duplicate, and the second caller gets an
+  -- error instead.
   perform pg_advisory_xact_lock(hashtext('sh_alerts_check'));
 
   with state as materialized (
@@ -848,15 +895,15 @@ begin
     union all
     -- silent: a flow that has run before is older than its late_minutes. It clears when the flow
     -- "ran again": a run that is not older than the alert. (Not "is young enough again": the
-    -- independent check of SPEC 7.10 opens this alert earlier than late_minutes, and must not
-    -- see it closed a minute later.)
+    -- independent check of spec §7.10 opens this alert earlier than late_minutes, and must not
+    -- see it closed a minute later.) A flow whose alerts flag is off is not judged at all.
     select 'silent:' || f.flow_name, 'silent', 'המדידה נעצרה: ' || f.flow_name,
            'אין מדידה כבר ' || floor(f.age) || ' דקות',
            f.age > f.late_minutes,
            coalesce(f.last_at >= (select a.opened_at from sh_alerts a
                                   where a.key = 'silent:' || f.flow_name and a.closed_at is null), false)
     from (select *, extract(epoch from now() - last_at) / 60 as age from sh_flows) f
-    where f.enabled and f.last_at is not null
+    where f.enabled and f.alerts and f.last_at is not null
 
     union all
     -- cert: the last successful check found fewer than 14 days
@@ -873,7 +920,7 @@ begin
     returning id, kind, title, body
   ), closed as (
     -- also closes an alert whose subject is gone (a page that left the configuration, a flow
-    -- that was disabled): nothing could ever clear it
+    -- that was disabled or lost its alerts flag): nothing could ever clear it
     update sh_alerts a set closed_at = now()
     where a.closed_at is null and a.kind in ('down', 'slow', 'silent', 'cert')
       and coalesce((select s.good from state s where s.key = a.key), true)
@@ -887,23 +934,36 @@ begin
          'נמשך ' || floor(extract(epoch from now() - opened_at) / 60) || ' דקות', 2
   from closed;
 
-  return (
-    select coalesce(jsonb_agg(jsonb_build_object(
-             'id', id, 'title', title, 'msg', msg, 'priority', priority, 'click', click,
-             'kind', kind, 'event', event)
-             order by at, id), '[]')
-    from sh_messages
-    where status is null and attempts < 5);
+  -- The claim: a push without a final result goes to this caller, and to nobody else for the
+  -- next two minutes. Two workers that overlap during a deploy therefore never send one push
+  -- twice, and a push whose sender died, or whose attempt failed, is offered again afterwards.
+  with claimed as (
+    update sh_messages set claimed_at = now()
+    where status is null and (claimed_at is null or claimed_at <= now() - interval '2 minutes')
+    returning id, at, title, msg, priority, click, kind, event
+  )
+  select coalesce(jsonb_agg(jsonb_build_object(
+           'id', id, 'title', title, 'msg', msg, 'priority', priority, 'click', click,
+           'kind', kind, 'event', event)
+           order by at, id), '[]')
+    into v_owed
+  from claimed;
+  return v_owed;
 end $$;
 
--- Records one attempt to push a message. A 2xx status settles it as sent; a fifth failed
--- attempt settles it as not sent; until then it stays owed and sh_alerts_check returns it again.
+-- Records the result of one attempt to push a message (spec §7.9). A 2xx status settles it as
+-- sent, and 0 ("pushing is not configured") settles it at once as not sent. Any other status is
+-- a failed attempt: the push stays owed and sh_alerts_check offers it again when its claim has
+-- lapsed, until the fifth failure settles it with that last status.
 create or replace function sh_message_sent(p_id bigint, p_status int) returns jsonb
 language sql set search_path = public as $$
   with tried as (
     update sh_messages
     set attempts = attempts + 1,
-        status = case when p_status between 200 and 299 or attempts >= 4 then p_status end
+        -- a result is never null (null is "still owed"): an attempt reported without a status
+        -- counts as 599, a network error
+        status = case when p_status between 200 and 299 or p_status = 0 or attempts >= 4
+                      then coalesce(p_status, 599) end
     where id = p_id and status is null
     returning 1
   )
@@ -954,24 +1014,37 @@ begin
   return jsonb_build_object('n', 1);
 end $$;
 
--- The retention rules. Alerts, messages and catalogue snapshots are kept.
+-- The retention rules (spec §7.2); alerts and messages are kept for good. Returns how many
+-- rows went, per table: sh_probe as "probe" (full rounds) and "probe_light".
 create or replace function sh_cleanup() returns jsonb
 language plpgsql set search_path = public as $$
 declare
-  v_probe int; v_light int; v_speed int; v_rum int; v_logins int;
+  -- what the longest views of the screen read: full-round probes and the runs of the core pages
+  v_keep   interval := make_interval(days => (sh_config() ->> 'keep_days')::int);
+  v_today  date := (now() at time zone sh_tz())::date;
+  v_latest date := (select max(day) from sh_jobs where job = 'issues_snapshot');
+  v_probe int; v_light int; v_speed int; v_rum int; v_issues int; v_jobs int; v_logins int;
 begin
-  delete from sh_probe where round_at < now() - interval '400 days';
+  delete from sh_probe where kind = 'full' and round_at < now() - v_keep;
   get diagnostics v_probe = row_count;
   delete from sh_probe where kind = 'light' and round_at < now() - interval '7 days';
   get diagnostics v_light = row_count;
-  delete from sh_speed where at < now() - interval '400 days';
+  delete from sh_speed
+  where (source = 'core' and at < now() - v_keep) or (source = 'rotation' and at < now() - interval '45 days');
   get diagnostics v_speed = row_count;
   delete from sh_rum where created_at < now() - interval '30 days';
   get diagnostics v_rum = row_count;
+  -- the latest snapshot is the one the screen shows, however old it is
+  delete from sh_product_issues where snap_date < v_today - 30 and snap_date is distinct from v_latest;
+  get diagnostics v_issues = row_count;
+  -- the newest marker of a job stays: for the catalogue it is what names the latest snapshot
+  delete from sh_jobs j
+  where j.day < v_today - 400 and j.day < (select max(n.day) from sh_jobs n where n.job = j.job);
+  get diagnostics v_jobs = row_count;
   delete from sh_login_log where at < now() - interval '400 days';
   get diagnostics v_logins = row_count;
-  return jsonb_build_object('probe', v_probe, 'probe_light', v_light, 'speed', v_speed,
-                            'rum', v_rum, 'login_log', v_logins);
+  return jsonb_build_object('probe', v_probe, 'probe_light', v_light, 'speed', v_speed, 'rum', v_rum,
+                            'product_issues', v_issues, 'jobs', v_jobs, 'login_log', v_logins);
 end $$;
 
 -- ---------------------------------------------------------------- privileges
@@ -995,3 +1068,7 @@ begin
     end if;
   end loop;
 end $$;
+
+-- PostgREST (Supabase's REST interface) keeps a list of the functions it may call, and must be
+-- told to read it again after this file; on a plain Postgres nobody listens, and that is fine.
+notify pgrst, 'reload schema';

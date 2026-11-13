@@ -15,5 +15,8 @@
   ],
   "path_labels": [["/product-category/", "קטגוריה: "], ["/product/", "מוצר: "]],
   "bucket_note": "",
-  "live_hosts": ["live"]
+  "live_hosts": ["live"],
+  "keep_days": 100,
+  "rum_hosts": [],
+  "private_paths": []
 }

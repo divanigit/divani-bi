@@ -239,7 +239,8 @@ def api_site(q, role):
                             for a in filter_role(al, role) if (a["closed"] or now()) >= d0]
     # --- health of the measurement itself
     n = now()
-    stat = {"מדידת מהירות — סבב כל האתר": ("מתעכב", 22, "מאחר ב-12 דקות"), "מהירות אצל לקוחות": ("שקט", 400, "שקט כבר 6 שעות")} if sc == "incident" else {}
+    stat = {"מדידת מהירות — סבב כל האתר": ("מתעכב", 22, "מאחר ב-2 דקות"), "טעינת מפת האתר": ("שקט", 4320, "שקט כבר 3 ימים"),
+            "מהירות אצל לקוחות": ("מתעכב", 400, "מאחר ב-40 דקות")} if sc == "incident" else {}
     out["health"] = [dict(flow_name=f, status=stat.get(f, ("תקין",))[0], cadence=c,
                           silent_txt=stat[f][2] if f in stat else None,
                           last_at=(n - dt.timedelta(minutes=stat[f][1] if f in stat else int(1 + w * 0.3))).isoformat(),
@@ -266,7 +267,7 @@ FLOWS = [  # flow_name, cadence, warn_minutes, late_minutes
     ("טעינת מפת האתר", "פעם ביום", 1560, 2880),
     ("בדיקת תעודת האבטחה", "פעם ביום", 1560, 2880),
     ("בדיקת מוצרים שבורים", "פעם ביום", 1560, 2880),
-    ("מהירות אצל לקוחות", "כל צפייה בעמוד", 120, 360),
+    ("מהירות אצל לקוחות", "כל צפייה בעמוד", 360, 1440),
 ]
 
 

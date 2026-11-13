@@ -1,6 +1,10 @@
 -- Site Health: tables, indexes, privileges.
 -- Plain PostgreSQL 15+, no extensions. Safe to run again: nothing here drops or rewrites data.
 -- Apply this file first, then functions.sql. Nothing but the sh_* functions touches these tables.
+--
+-- The file also upgrades a database that an earlier version of it made. "create table if not
+-- exists" leaves an existing table as it is, so a column that came after the first version is
+-- not in its table's "create table": it is added right below it, with "add column if not exists".
 
 create table if not exists sh_settings (
   key   text primary key,
@@ -19,9 +23,9 @@ create table if not exists sh_pages (
   expect   text
 );
 
--- One availability check. About 1,440 full rounds a day per probe page: 2.3 million rows
--- (some 340 MB, index included) for 4 pages over the 400 days that are kept. The primary key
--- serves every time-window read (rows arrive in time order), so there is no second full-size index.
+-- One availability check. About 1,440 full rounds a day per probe page: 576,000 rows
+-- (about 100 MB, index included) for 4 pages over the 100 days that are kept by default. The primary
+-- key serves every time-window read (rows arrive in time order), so there is no second full-size index.
 create table if not exists sh_probe (
   round_at timestamptz not null,
   kind     text not null check (kind in ('full', 'light')),
@@ -38,12 +42,13 @@ create table if not exists sh_probe (
 );
 -- Two small partial indexes. Failed checks are rare, and the drill-downs read only them.
 -- Light rounds live for a week, and the nightly cleanup must find the old ones without reading
--- 400 days of full rounds.
+-- months of full rounds.
 create index if not exists sh_probe_failed on sh_probe (round_at) where not ok;
 create index if not exists sh_probe_light on sh_probe (round_at) where kind = 'light';
 
--- One lab speed run. About 1,200 a day: half a million rows over 400 days, and up to 700 MB,
--- nearly all of it the opps lists (about 1 KB when a run carries eight of them).
+-- One lab speed run: 1.3 KB with its index, most of it the opps list. About 600 runs of core
+-- pages a day are kept as long as the probes, and about 580 rotation runs a day for 45 days:
+-- some 86,000 rows, about 110 MB.
 -- The primary key makes a repeated insert harmless and serves "the runs of one page".
 create table if not exists sh_speed (
   at            timestamptz not null default now(),
@@ -63,6 +68,8 @@ create table if not exists sh_speed (
   opps          jsonb,
   primary key (url, strategy, at)
 );
+-- the Lighthouse version that measured, for explaining a sudden change in the numbers
+alter table sh_speed add column if not exists lh_version text;
 create index if not exists sh_speed_at on sh_speed (at);
 
 create table if not exists sh_site_pages (
@@ -120,7 +127,8 @@ create table if not exists sh_alerts (
 -- sh_alerts_check looks for an open row and inserts when there is none.
 create unique index if not exists sh_alerts_open_key on sh_alerts (key) where closed_at is null;
 
--- status: the HTTP status of the push once it is final; null while the push is still owed.
+-- status: the HTTP status of the push once it is final (0: pushing is not configured); null
+-- while the push is still owed. attempts: how many sends were tried.
 create table if not exists sh_messages (
   id       bigint generated always as identity primary key,
   at       timestamptz not null default now(),
@@ -134,6 +142,8 @@ create table if not exists sh_messages (
   status   int,
   attempts int not null default 0
 );
+-- when sh_alerts_check last handed the push to a sender; for two minutes no other sender gets it
+alter table sh_messages add column if not exists claimed_at timestamptz;
 create index if not exists sh_messages_at on sh_messages (at);
 
 create table if not exists sh_flows (
@@ -146,6 +156,23 @@ create table if not exists sh_flows (
   enabled      boolean not null default true,
   last_at      timestamptz
 );
+-- alerts: whether the flow's silence opens an alert. sh_setup seeds it and never changes it again.
+do $$
+declare
+  v_new boolean := not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'sh_flows' and column_name = 'alerts');
+begin
+  alter table sh_flows add column if not exists alerts boolean not null default true;
+  -- The flag came with a new rule for the real-user flow: its silence opens no alert, and it
+  -- counts as late after 6 hours and as silent after 24. sh_setup seeds a new flow that way and
+  -- leaves the flag of an existing one alone, so the flow of a database from before the flag is
+  -- brought in line here, once.
+  if v_new then
+    update sh_flows set alerts = false, warn_minutes = 360, late_minutes = 1440
+    where flow_name = 'מהירות אצל לקוחות';
+  end if;
+end $$;
 
 create table if not exists sh_jobs (
   job text not null,
@@ -161,6 +188,7 @@ create table if not exists sh_login_log (
   ua  text
 );
 
+-- ---------------------------------------------------------------- privileges
 -- Private tables: row level security without policies shuts out every role but the owner of
 -- the tables and roles that bypass it (on Supabase: the service role), and on Supabase the two
 -- public API roles lose their default grants as well.

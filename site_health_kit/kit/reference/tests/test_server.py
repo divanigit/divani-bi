@@ -1,4 +1,5 @@
-"""Tests of server.py: access rules (SPEC.md §8), the data contract (§5), the page, /rum and /health.
+"""Tests of server.py: access rules (spec §8), the data contract (spec §5), the page, the real-user
+ingest (POST /m, spec §7.7) and /health.
 
 No database is needed: db.rpc is replaced by a fake that records every call and answers with the
 payloads of the kit's mock_server.py. The last section tests db.py itself: its HTTPS transport
@@ -51,9 +52,10 @@ CONFIG = {"host": "example.co.il", "site": "https://example.co.il", "brand": "",
           "pages": [{"url": "https://example.co.il/", "core": True, "home": True, "name": "בית", "probe": True,
                      "expect": None}],
           "screen": SCREEN_CONFIG, "morning": "07:30", "platform": "woocommerce", "time_zone": "Asia/Jerusalem",
-          "down_after": 1, "live_hosts": ["live"], "bucket_note": "",
-          "path_labels": [["/product-category/", "קטגוריה: "], ["/product/", "מוצר: "]]}
-NOT_SET_UP = {"pages": [], "screen": {"hide": [], "coreCount": 0, "probeCount": 0}}       # sh_config() before sh_setup
+          "down_after": 1, "live_hosts": ["live"], "bucket_note": "", "keep_days": 100, "rum_hosts": [],
+          "private_paths": [], "path_labels": [["/product-category/", "קטגוריה: "], ["/product/", "מוצר: "]]}
+NOT_SET_UP = {"keep_days": 100, "rum_hosts": [], "private_paths": [], "pages": [],       # sh_config() before sh_setup
+              "screen": {"hide": [], "coreCount": 0, "probeCount": 0}}
 NOW = datetime(2026, 11, 13, 8, 15, 30, tzinfo=timezone.utc)                # 10:15:30 in Jerusalem (UTC+2)
 SITE_PARTS = {"availability": "sh_availability", "availability_series": "sh_availability_series",
               "speed": "sh_speed", "speed_series": "sh_speed_series", "alerts_open": "sh_alerts_open",
@@ -192,14 +194,14 @@ def injected(page):
     return json.loads(config), json.loads(role)
 
 
-# ================================================================ routes and access (§8.2)
+# ================================================================ routes and access (spec §8.2)
 
 def test_the_app_exposes_exactly_the_specified_routes():
     routes = {(method, route.path) for route in server.app.routes for method in route.methods}
     assert routes == {("GET", "/"), ("GET", "/site"), ("GET", "/status"), ("GET", "/login"), ("POST", "/login"),
                       ("GET", "/logout"), ("GET", "/health"), ("GET", "/api/site"), ("GET", "/api/site/now"),
                       ("GET", "/api/site/drill"), ("GET", "/api/messages"), ("POST", "/api/alerts/ack"),
-                      ("POST", "/rum")}
+                      ("POST", "/m")}
 
 
 TO_LOGIN, TO_SITE = (303, "/login"), (303, "/site")
@@ -211,7 +213,9 @@ ACCESS = [
     ("GET", "/login", None,                   (303, "/"),   (303, "/"), 200,       200),
     ("GET", "/logout", None,                  TO_LOGIN,     TO_LOGIN,  TO_LOGIN,   TO_LOGIN),
     ("GET", "/health", None,                  200,          200,       200,        200),
-    ("POST", "/rum", None,                    204,          204,       204,        204),
+    ("POST", "/m", None,                      204,          204,       204,        204),
+    ("GET", "/m", None,                       405,          405,       405,        405),
+    ("POST", "/rum", None,                    404,          TO_SITE,   TO_LOGIN,   TO_LOGIN),   # the old name: no alias
     ("GET", "/api/site", None,                200,          200,       200,        401),
     ("GET", "/api/site/now", None,            200,          200,       200,        401),
     ("GET", "/api/site/drill?what=fails", None, 200,        200,       200,        401),
@@ -278,6 +282,29 @@ def test_a_refusal_has_the_shape_the_screen_expects(visit):
     assert (vendor.status_code, vendor.json()) == (403, {"error": "auth"})
     link = visit(None).get("/status", params={"k": "wrong"})
     assert link.status_code == 403 and server.TEXT_BAD_LINK in link.text and "\n" not in server.TEXT_BAD_LINK
+
+
+def test_the_hebrew_texts_are_those_of_the_spec(visit):
+    assert (server.TEXT_WRONG, server.TEXT_BLOCKED, server.TEXT_BAD_LINK, server.TEXT_NO_DATA) == (
+        "סיסמה שגויה", "יותר מדי ניסיונות. נסו שוב בעוד עשר דקות.", "הקישור אינו תקין או שפג.",
+        "אין כרגע חיבור לנתונים. נסו שוב בעוד רגע.")
+    form = visit(None).get("/login").text
+    assert '<button type="submit">כניסה</button>' in form and 'placeholder="סיסמה"' in form
+    assert server.COOKIE == "sh_session"
+
+
+@pytest.mark.parametrize("method, path, status", [("GET", "/health", 200), ("POST", "/m", 204), ("GET", "/login", 200),
+                                                  ("POST", "/login", 401), ("GET", "/logout", 303)])
+def test_the_public_routes_answer_before_any_role_check(method, path, status, monkeypatch, visit):
+    def no_roles(request):
+        raise AssertionError("a public route asked who the viewer is")
+
+    monkeypatch.setattr(server, "_viewer", no_roles)
+    client = visit(None)
+    response = client.request(method, path, headers={"Cookie": server.COOKIE + "=forged"})
+    assert response.status_code == status
+    with pytest.raises(AssertionError, match="asked who the viewer is"):
+        client.get("/site")                                    # every other route does ask
 
 
 # ---------------------------------------------------------------- what an outsider gets back
@@ -543,7 +570,8 @@ def test_a_shared_password_is_reported_at_startup(monkeypatch, caplog):
 
 def test_every_attempt_is_logged(fake, visit):
     client = visit(None)
-    headers = {"X-Forwarded-For": "203.0.113.9, 10.0.0.1", "User-Agent": "Phone/1.0 " + "x" * 300}
+    # the right-most entry is the one the host's proxy added; what stands left of it came from the client
+    headers = {"X-Forwarded-For": "10.0.0.1, 203.0.113.9", "User-Agent": "Phone/1.0 " + "x" * 300}
     sign_in(client, "a guess", **headers)
     assert fake.params("sh_login_log_add") == {"p_ip": "203.0.113.9", "p_ok": False, "p_who": "?",
                                                "p_ua": ("Phone/1.0 " + "x" * 300)[:200]}
@@ -555,6 +583,34 @@ def test_every_attempt_is_logged(fake, visit):
     sign_in(visit(None), PASSWORDS["owner"])
     assert fake.params("sh_login_log_add") == {"p_ip": "testclient", "p_ok": True, "p_who": "owner",
                                                "p_ua": "testclient"}
+
+
+@pytest.mark.parametrize("hops, forwarded, address", [
+    (None, "198.51.100.7", "198.51.100.7"),
+    (None, "6.6.6.6, 198.51.100.7", "198.51.100.7"),           # one proxy (the default): the last entry is its own
+    (None, " 6.6.6.6 ,, 198.51.100.7 , ", "198.51.100.7"),
+    ("1", "6.6.6.6, 7.7.7.7, 198.51.100.7", "198.51.100.7"),
+    ("2", "6.6.6.6, 198.51.100.7, 172.70.1.1", "198.51.100.7"),          # two proxies: the last but one
+    ("2", "198.51.100.7", "198.51.100.7"),                     # fewer entries than proxies: the oldest there is
+    ("0", "6.6.6.6, 198.51.100.7", "testclient"),              # no proxy: the header is the client's word, not used
+    ("", "6.6.6.6, 198.51.100.7", "198.51.100.7"), ("many", "6.6.6.6, 198.51.100.7", "198.51.100.7"),
+    ("-1", "6.6.6.6, 198.51.100.7", "198.51.100.7"),           # not a count: the default
+    (None, "", "testclient"), (None, None, "testclient"),
+])
+def test_the_client_address_is_the_entry_the_host_added(hops, forwarded, address, monkeypatch, fake, visit):
+    if hops is not None:
+        monkeypatch.setenv("SH_PROXY_HOPS", hops)
+    sign_in(visit(None), "a guess", **({} if forwarded is None else {"X-Forwarded-For": forwarded}))
+    assert fake.params("sh_login_log_add")["p_ip"] == address
+
+
+def test_a_forged_forwarded_address_does_not_dodge_the_limit(fake, visit):
+    client = visit(None)
+    for attempt in range(8):                                   # a new made-up address on every guess
+        forged = {"X-Forwarded-For": "6.6.6.%d, 198.51.100.7" % attempt}
+        assert sign_in(client, "guess %d" % attempt, **forged).status_code == 401
+    assert sign_in(client, PASSWORDS["owner"], **{"X-Forwarded-For": "9.9.9.9, 198.51.100.7"}).status_code == 429
+    assert sign_in(visit(None), PASSWORDS["owner"], **{"X-Forwarded-For": "198.51.100.7, 198.51.100.8"}).status_code == 303
 
 
 def test_signing_in_works_while_the_database_is_down(fake, visit):
@@ -629,7 +685,7 @@ def test_logout_removes_the_cookie(visit):
     assert client.get("/site").headers["location"] == "/login"
 
 
-# ================================================================ the time window (§5.1)
+# ================================================================ the time window (spec §5.1)
 
 def window_of(fake):
     params = fake.params("sh_availability")
@@ -715,7 +771,7 @@ def test_every_call_gets_the_same_window(fake, visit):
     assert fake.params("sh_messages") == span
 
 
-# ================================================================ the data calls (§5.2 – §5.7)
+# ================================================================ the data calls (spec §5.2 – §5.7)
 
 def test_api_site_puts_the_parts_together(fake, visit):
     response = visit("owner").get("/api/site", params={"h": 168, "strategy": "desktop"})
@@ -826,11 +882,47 @@ def test_drill_passes_the_parameters_through(fake, visit):
     assert fake.params("sh_drill_alert") == {"p_id": 41}
 
 
-@pytest.mark.parametrize("query", [{"what": "alert"}, {"what": "alert", "id": ""}, {"what": "alert", "id": "abc"},
-                                   {"what": "alert", "id": "-41"}, {"what": "alert", "id": "41;drop"}])
-def test_drill_of_an_alert_without_a_usable_id_has_no_rows(query, fake, visit):
+@pytest.mark.parametrize("query", [
+    {"what": "alert"}, {"what": "alert", "id": ""}, {"what": "alert", "id": "abc"}, {"what": "alert", "id": "-41"},
+    {"what": "alert", "id": "41;drop"}, {"what": "alert", "id": "4.1"}, {"what": "alert", "id": " 41"},
+    {"what": "alert", "id": "٤١"}, {"what": "alert", "id": "9" * 19},                 # digits, but no id is that long
+    {"what": "runs"}, {"what": "runs", "url": ""}, {"what": "runs", "strategy": "desktop", "bucket": "2026-11-13"},
+    {"what": "runs", "url": "https://example.co.il/", "bucket": "13.11.2026"},
+    {"what": "bucket"}, {"what": "bucket", "bucket": ""}, {"what": "bucket", "bucket": "yesterday"},
+    {"what": "bucket", "bucket": "2026-11-13 09:30"}, {"what": "bucket", "bucket": "2026-11-13 9:00"},
+    {"what": "bucket", "bucket": "2026-11-13T09:00"}, {"what": "bucket", "bucket": "2026-11-13 09:00:00"},
+    {"what": "bucket", "bucket": "2026-11-13 24:00"}, {"what": "bucket", "bucket": "2026-13-01"},
+    {"what": "bucket", "bucket": "2026-02-30"}, {"what": "bucket", "bucket": "2026-1-5"},
+    {"what": "bucket", "bucket": " 2026-11-13"}, {"what": "bucket", "bucket": "2026-11-13\n"},
+    {"what": "bucket", "bucket": "٢٠٢٦-١١-١٣"}, {"what": "bucket", "bucket": "0000-01-01"},
+    {"what": "bucket", "bucket": "2026-11-13'; drop table sh_probe; --"},
+    {"what": "fails", "bucket": "last hour"}, {"what": "fails", "page": "סל", "bucket": "2026-11-13 09"},
+])
+def test_drill_with_a_missing_or_malformed_parameter_has_no_rows_and_asks_nothing(query, fake, visit):
+    fake.failing.update(["sh_config", "sh_drill_fails", "sh_drill_bucket", "sh_drill_runs", "sh_drill_alert"])
     response = visit("owner").get("/api/site/drill", params=query)
     assert (response.status_code, response.json()) == (200, {"rows": []}) and fake.calls == []
+    assert response.headers["cache-control"] == "no-store"
+
+
+@pytest.mark.parametrize("query, fn, p_bucket", [
+    ({"what": "bucket", "bucket": "2026-11-13"}, "sh_drill_bucket", "2026-11-13"),
+    ({"what": "bucket", "bucket": "2026-11-13 00:00"}, "sh_drill_bucket", "2026-11-13 00:00"),
+    ({"what": "bucket", "bucket": "2024-02-29 23:00"}, "sh_drill_bucket", "2024-02-29 23:00"),
+    ({"what": "fails", "bucket": "2026-11-13 09:00"}, "sh_drill_fails", "2026-11-13 09:00"),
+    ({"what": "fails", "bucket": ""}, "sh_drill_fails", None),              # as the screen sends "no bucket"
+    ({"what": "fails"}, "sh_drill_fails", None),
+    ({"what": "runs", "url": "https://example.co.il/", "bucket": ""}, "sh_drill_runs", None),
+    ({"what": "runs", "url": "https://example.co.il/", "bucket": "2026-11-13"}, "sh_drill_runs", "2026-11-13"),
+])
+def test_drill_passes_a_well_formed_bucket_on(query, fn, p_bucket, fake, visit):
+    visit("owner").get("/api/site/drill", params=query)
+    assert fake.params(fn)["p_bucket"] == p_bucket
+
+
+def test_the_alert_drill_ignores_a_bucket(fake, visit):
+    visit("owner").get("/api/site/drill", params={"what": "alert", "id": "41", "bucket": "nonsense"})
+    assert fake.params("sh_drill_alert") == {"p_id": 41}
 
 
 @pytest.mark.parametrize("query", [{}, {"what": ""}, {"what": "everything"}, {"what": "FAILS"}])
@@ -844,11 +936,11 @@ def test_drill_of_an_unknown_kind_is_a_400(query, fake, visit):
 @pytest.mark.parametrize("what, fn", [("fails", "sh_drill_fails"), ("bucket", "sh_drill_bucket"),
                                       ("runs", "sh_drill_runs"), ("alert", "sh_drill_alert")])
 def test_drill_failure_and_empty_result(what, fn, fake, visit):
-    client = visit("owner")
+    client, query = visit("owner"), {"what": what, "id": 41, "url": "https://example.co.il/", "bucket": "2026-11-13"}
     fake.answers[fn] = None
-    assert client.get("/api/site/drill", params={"what": what, "id": 41}).json() == {"rows": []}
+    assert client.get("/api/site/drill", params=query).json() == {"rows": []}
     fake.failing.add(fn)
-    response = client.get("/api/site/drill", params={"what": what, "id": 41})
+    response = client.get("/api/site/drill", params=query)
     assert (response.status_code, response.json()) == (502, {"error": "boom: " + fn})
 
 
@@ -983,11 +1075,11 @@ def test_another_screen_file(monkeypatch, tmp_path, visit):
         visit("owner").get("/site")                            # never a page that silently lost its role
 
 
-# ================================================================ real-user beacons (§7.7)
+# ================================================================ real-user beacons (spec §7.7)
 
 def beacon(client, body=BEACON, **headers):
     content = body if isinstance(body, (bytes, str)) else json.dumps(body)
-    response = client.post("/rum", content=content, headers={"Content-Type": "text/plain;charset=UTF-8", **headers})
+    response = client.post("/m", content=content, headers={"Content-Type": "text/plain;charset=UTF-8", **headers})
     assert (response.status_code, response.content) == (204, b"")           # always, stored or not
     assert response.headers["x-robots-tag"] == "noindex"
 
@@ -998,7 +1090,8 @@ def stored(fake):
 
 def test_a_beacon_is_stored_without_anything_about_the_visitor(fake, visit):
     client = visit("vendor")                                   # even with a session cookie on the request
-    body = dict(BEACON, path="/product/sofa/?utm_source=mail&email=dana@example.com#reviews", ua="x", ip="y")
+    body = dict(BEACON, path="/product/sofa/?utm_source=mail&email=dana@example.com#reviews", ua="x", ip="y",
+                v=1, ttfb=180, nav="navigate")                 # what the script sends besides, and what it does not
     beacon(client, body, **ORIGIN, **{"X-Forwarded-For": "203.0.113.77", "User-Agent": "Mozilla/5.0 (secret-agent)",
                                       "Cookie": "customer_session=abc123",
                                       "Referer": "https://example.co.il/product/sofa/?token=t0k"})
@@ -1015,17 +1108,33 @@ def test_a_beacon_is_stored_without_anything_about_the_visitor(fake, visit):
     ({"Origin": "https://WWW.Example.co.il:8443"}, True),
     ({"Referer": "https://www.example.co.il/product/sofa/?a=1"}, True),       # no Origin: the Referer decides
     ({"Origin": "https://example.co.il", "Referer": "https://elsewhere.com/"}, True),
-    ({}, False),
-    ({"Origin": "null"}, False),
-    ({"Origin": "https://staging.example.co.il"}, False),
+    ({}, True),                                                # a browser that names no source at all
+    ({"Origin": "null"}, True),                                # a site with a strict referrer policy
+    ({"Origin": "null", "Referer": "https://elsewhere.com/"}, True),
+    ({"Origin": "https://staging.example.co.il"}, False),      # not one of this site's rum_hosts
     ({"Origin": "https://example.co.il.evil.com"}, False),
     ({"Origin": "https://evilexample.co.il"}, False),
     ({"Origin": "https://elsewhere.com", "Referer": "https://example.co.il/"}, False),
     ({"Referer": "https://elsewhere.com/?https://example.co.il/"}, False),
+    ({"Origin": "example.co.il"}, False), ({"Origin": "https://[example.co.il"}, False),      # present, and no host in it
+    ({"Referer": "null"}, False),                              # only an Origin says "null"
 ])
-def test_only_the_site_itself_may_send_beacons(headers, kept, fake, visit):
+def test_a_beacon_that_names_its_source_must_name_the_site(headers, kept, fake, visit):
     beacon(visit(None), **headers)
     assert len(stored(fake)) == kept
+
+
+def test_the_extra_hosts_of_the_configuration_may_send_beacons(fake, visit):
+    fake.answers["sh_config"] = dict(CONFIG, rum_hosts=["staging.example.co.il", "www.dev.example.co.il"])
+    client = visit(None)
+    for source in ("https://staging.example.co.il", "https://www.staging.example.co.il:8443",
+                   "https://dev.example.co.il", "https://example.co.il"):
+        beacon(client, dict(BEACON, site="staging.example.co.il"), Origin=source)
+        beacon(client, dict(BEACON, site="staging.example.co.il"), Referer=source + "/product/sofa/")
+    assert len(stored(fake)) == 8
+    beacon(client, Origin="https://test.example.co.il")
+    beacon(client, Referer="https://staging.example.co.il.evil.com/")
+    assert len(stored(fake)) == 8
 
 
 def test_the_configured_host_may_be_written_with_www(fake, visit):
@@ -1044,6 +1153,12 @@ def test_the_configured_host_may_be_written_with_www(fake, visit):
     ({"lcp": 1}, {"lcp_ms": 1}), ({"lcp": 60000}, {"lcp_ms": 60000}), ({"lcp": 1234.6}, {"lcp_ms": 1235}),
     ({"test": True}, {"is_test": True}), ({"test": "yes"}, {"is_test": False}),
     ({"site": "staging.example.co.il"}, {"site": "staging.example.co.il"}),
+    ({"site": "a" * 100}, {"site": "a" * 100}),
+    ({"path": "/" + "x" * 299}, {"path": "/" + "x" * 299}),                              # 300 characters
+    ({"path": "/" + "ס" * 100 + "x" * 199}, {"path": "/" + "ס" * 100 + "x" * 199}),      # characters, not bytes
+    ({"path": "/" + "x" * 299 + "?utm_source=" + "y" * 200}, {"path": "/" + "x" * 299}), # the query string does not count
+    ({"path": "/%D7%A7%D7%95%D7%A4%D7%94/"}, {"path": "/%D7%A7%D7%95%D7%A4%D7%94/"}),    # private only where configured
+    ({"v": 1, "ttfb": 180, "nav": "navigate", "anything": {"else": [1]}}, {}),            # unknown fields are ignored
 ])
 def test_what_is_stored(change, row, fake, visit):
     beacon(visit(None), dict(BEACON, **change), **ORIGIN)
@@ -1056,18 +1171,33 @@ def test_what_is_stored(change, row, fake, visit):
     {"path": "/checkouts/c/abc"},
     {"path": "/checkout/order-pay/77/"}, {"path": "/my-account/view-order/77/"}, {"path": "/12345/orders/abcdef"},
     {"path": "/wp-admin/index.php"}, {"path": "/admin"}, {"path": "/wp-login.php"},
-    {"path": "/my-account/lost-password/"},
+    {"path": "/my-account/lost-password/"}, {"path": "/%63heckout/"}, {"path": "/shop/CHECKOUT%2Fpay"},
+    {"path": "/" + "x" * 300}, {"path": "/" + "ס" * 100 + "x" * 200},                    # 301 characters
     {"path": "product/sofa/"}, {"path": "https://example.co.il/x"}, {"path": ""}, {"path": None}, {"path": 7},
     {"lcp": 0}, {"lcp": 0.4}, {"lcp": 60001}, {"lcp": -5}, {"lcp": "2345"}, {"lcp": None}, {"lcp": True}, {"lcp": [1]},
-    {"site": ""}, {"site": None}, {"site": "Live Site"}, {"site": "a" * 300},
+    {"site": ""}, {"site": None}, {"site": "Live Site"}, {"site": "a" * 101}, {"site": "live\n"}, {"site": ["live"]},
 ])
 def test_what_is_dropped(change, fake, visit):
     beacon(visit(None), dict(BEACON, **change), **ORIGIN)
     assert stored(fake) == []
 
 
+@pytest.mark.parametrize("path, kept", [
+    ("/%D7%A7%D7%95%D7%A4%D7%94/", False),                     # /קופה/ as a browser sends it
+    ("/קופה/", False), ("/he/%d7%a7%d7%95%d7%a4%d7%94/step-2", False),
+    ("/My-Cart", False), ("/shop/my-cart/", False),
+    ("/checkout/", False),                                     # the built-in names still count
+    ("/קופה-חדשה/", True), ("/my-cart-guide/", True), ("/product/sofa/", True),
+])
+def test_the_private_paths_of_the_configuration_are_never_stored(path, kept, fake, visit):
+    fake.answers["sh_config"] = dict(CONFIG, private_paths=["קופה", "My-Cart"])
+    beacon(visit(None), dict(BEACON, path=path), **ORIGIN)
+    assert [row["path"] for row in stored(fake)] == [path] * kept
+
+
 @pytest.mark.parametrize("body", [b"", b"not json", b"[1]", b"null", b'"x"', b'{"site":"live","path":"/","lcp":NaN}',
-                                  b'{"site":"live","path":"/","lcp":1e999}', b"\xff\xfe"])
+                                  b'{"site":"live","path":"/","lcp":1e999}', b"\xff\xfe", b"[" * 1024,
+                                  b'{"a":' * 200 + b"1" + b"}" * 200])
 def test_a_garbage_beacon_is_dropped(body, fake, visit):
     beacon(visit(None), body, **ORIGIN)
     assert stored(fake) == []
@@ -1128,7 +1258,7 @@ def test_waiting_rows_go_out_in_small_batches(fake, visit):
     assert len(stored(fake)) == 1080 and all(row["path"] != "/newcomer/" for row in stored(fake))
 
 
-# ================================================================ /health (§7.10) and start-up
+# ================================================================ /health (spec §7.10) and start-up
 
 def test_health(fake):
     client = TestClient(server.app)                            # no session

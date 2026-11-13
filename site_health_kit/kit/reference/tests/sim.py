@@ -20,7 +20,9 @@ def simulate(rpc, start, days, *, fail_hour=None, dead=None, slow=None, light=Tr
 
     Every minute a full probe round (and, with `light`, a light round at the half minute); every
     15 minutes a phone run of each core page, every hour a desktop run; every 5 minutes two pages
-    of the whole-site rotation. The scenario knobs:
+    of the whole-site rotation. The sitemap lists `site_pages` product pages and, as a real one
+    does, the configured pages too; the core pages among them take no turn in the rotation.
+    The scenario knobs:
 
       fail_hour = (page, hour_start, n)   n full-round checks of that page, spread over the hour
                                           that begins at hour_start, fail with HTTP 502
@@ -34,7 +36,8 @@ def simulate(rpc, start, days, *, fail_hour=None, dead=None, slow=None, light=Tr
     config = rpc("sh_config")
     probe = [p for p in config["pages"] if p["probe"]]
     core = [p for p in config["pages"] if p["core"]]
-    rpc("sh_sitemap_set", p_urls=["%s/product/item-%d/" % (config["site"], i + 1) for i in range(site_pages)])
+    rpc("sh_sitemap_set", p_urls=[p["url"] for p in config["pages"]]
+        + ["%s/product/item-%d/" % (config["site"], i + 1) for i in range(site_pages)])
     failing = set()
     if fail_hour:
         page, hour_start, n = fail_hour
@@ -111,5 +114,5 @@ def _run(url, page, strategy, source, lcp, salt):
         run.update(lcp_ms=lcp, score=max(18, min(99, 118 - lcp // 45)), cls=round(0.02 + (salt % 5) * 0.02, 3),
                    ttfb_ms=300 + (salt * 29) % 300, bytes=3000000 + (salt % 8) * 250000,
                    crux_category="FAST" if lcp <= 3125 else "AVERAGE" if lcp <= 5000 else "SLOW",
-                   crux_lcp_ms=int(lcp * 0.8), opps=OPPS)
+                   crux_lcp_ms=int(lcp * 0.8), opps=OPPS, lh_version="13.0.1")
     return run

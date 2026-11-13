@@ -330,8 +330,9 @@ For a vendor or a share link `alerts_open` is recounted from the filtered list o
 | `runs` | `url` (required), `strategy`, `bucket` (optional) | `{ "ok": true, "err": null, "at_il": "13.11 10:45", "lcp_ms": 2400, "score": 64, "ttfb_ms": 410, "bytes": 3400000, "cls": 0.03, "crux_category": "FAST", "crux_lcp_ms": 2100, "opps": [ { "id": "render-blocking-resources", "title": "…", "ms": 600 } ] }` — the individual lab runs of one page (every run of that URL and strategy in the window), **newest first**; a failed run is `{ok: false, err, at_il}`. `opps` = what slows the page, with the estimated saving in ms; it is filled only on the newest 100 successful runs and is `[]` on older ones (it is nine tenths of a run's size, and the sheet's "what slows the page" should describe the page as it is now). |
 | `alert` | `id` (required) | one row: the `alerts_recent` fields plus `"fails": [ { "at": "13.11 11:02", "page": "סל", "status": 502, "err": null } ]` (the failed checks behind a `down` alert, oldest first, at most 500; `status` is present only when the failure was an HTTP status, because the sheet prints "קוד <status>" whenever it is there; otherwise `err` carries the reason) and `"sent": [ { "event": "open", "status": 200, "at": "13.11 11:02" } ]` (pushes with a final result; `event` is `open` or `close`; `status` 200 = accepted by the push service). |
 
-Unknown `what`: status 400 `{"error": "what?"}`. A missing or malformed required parameter (`id`
-not a number, `url` empty, `bucket` not in one of the two bucket formats): `{"rows": []}`.
+Unknown `what`: status 400 `{"error": "what?"}`. A missing or malformed parameter (`id` not a
+number, `url` empty, a required `bucket` missing, any `bucket` not in one of the two bucket
+formats): `{"rows": []}`, without touching the database.
 Backend failure: status 502 `{"error": "<text>"}`.
 
 ### 5.5 `GET /api/messages?(h | f,t)` → the push log; `{"rows": [...]}`, newest first
@@ -537,7 +538,7 @@ executable by everybody by default: the revokes are not optional.
 
 Retention (a nightly cleanup), sized so that the whole database settles around 200 MB (a free
 Supabase project holds 500 MB): full-round probes and core speed runs `keep_days` days (default
-**100**, which covers the screen's longest preset of 90 days; four pages cost about 0.8 MB of
+**100**, which covers the screen's longest preset of 90 days; four pages cost about 1 MB of
 probes a day), rotation speed runs 45 days, light-round probes 7 days, real-user rows 30 days,
 product snapshots 30 days, login log and job markers 400 days, alerts and messages forever.
 A speed run is about 1 KB, nearly all of it `opps`. Windows longer than the retention simply
@@ -598,8 +599,9 @@ Exact rules (these are the definitions the screen's texts promise):
   `warn_minutes` → `תקין`, up to `late_minutes` → `מתעכב`, beyond → `שקט`. `last_at` is written
   **last and only when a run succeeded**, so a failing collector leaves no proof of life and
   surfaces as `מתעכב`/`שקט`. Disabled flows (for example the catalogue check on a site that sells
-  nothing) are not returned. `silent_txt`: `מאחר ב-<span>` while late, `שקט כבר <span>` when silent,
-  where span is `N דקות` under two hours, `N שעות` under two days, else `N ימים`.
+  nothing) are not returned. `silent_txt`: `מאחר ב-<span>` while late (the time beyond
+  `warn_minutes`), `שקט כבר <span>` when silent (the whole age), where span is `N דקות` under two
+  hours, `N שעות` under two days, else `N ימים`.
   Thresholds (warn / late minutes): probe 5 / 15; core speed 45 / 90; rotation 20 / 60; sitemap,
   certificate, catalogue 1,560 / 2,880; real users 360 / 1,440.
 - **`sh_now`:** `pages` = the newest full round if it is at most 15 minutes old; `latest` = the
@@ -613,7 +615,7 @@ Exact rules (these are the definitions the screen's texts promise):
 
 | Function | What it does | Returns |
 |---|---|---|
-| `sh_config()` | the configuration as one object: every setting loaded by `sh_setup` (`site`, `host`, `label`, `time_zone`, `platform`, `down_after`, `morning`, `keep_days`, `rum_hosts`, `private_paths`, …), `pages` (`[{name, url, probe, core, home, expect}]` in display order) and `screen` (the object the server injects as `SH_CONFIG`, §4.1) | the object. Before `sh_setup` ran it has no `time_zone`; the server then answers 502 "the site is not configured" |
+| `sh_config()` | the configuration as one object: every setting loaded by `sh_setup` (`site`, `host`, `label`, `time_zone`, `platform`, `down_after`, `morning`, `keep_days`, `rum_hosts`, `private_paths`, …), `pages` (`[{name, url, probe, core, home, expect}]` in display order) and `screen` (the object the server injects as `SH_CONFIG`, §4.1) | the object. Before `sh_setup` ran it has no `time_zone` (the other settings already carry their defaults); the server then answers 502 "the site is not configured" |
 | `sh_setup(p_config)` | loads `site_health.config.json` (idempotent). Validates: exactly one home page and it is a probe page, at least one probe page, absolute http(s) URLs, unique names, a known time zone, a known platform. Replaces the page list (history stays) and seeds the seven flows | `sh_config()` |
 | `sh_probe_add(p_round_at, p_kind, p_rows)` | stores one probe round; rows `{page, url, ok, status, ms, fail, err}`; a round that was already stored is ignored; beats `בודק זמינות האתר` on a full round | `{"n": rows stored}` |
 | `sh_speed_add(p_rows)` | stores lab runs; rows `{at, url, page, strategy, source, ok, err, score, lcp_ms, cls, ttfb_ms, bytes, crux_category, crux_lcp_ms, opps, lh_version}`; the same (`url`, `strategy`, `at`) twice is stored once; beats the core or rotation flow when at least one run succeeded | `{"n"}` |
@@ -626,7 +628,7 @@ Exact rules (these are the definitions the screen's texts promise):
 | `sh_alerts_check()` | evaluates the alert rules (§7.8), opens and closes alerts, queues messages, and **claims** the messages that are owed | `[{id, title, msg, priority, kind, event}]`, oldest first |
 | `sh_message_sent(p_id, p_status)` | records the result of one push attempt (§7.9) | `{"n": 0 or 1}` |
 | `sh_morning(p_day)` | queues the morning message for that day, once. It does not look at the clock: the caller calls it when the configured `morning` time has passed | `{"n": 1 or 0}` |
-| `sh_cleanup()` | applies the retention rules | rows deleted per table |
+| `sh_cleanup()` | applies the retention rules; the newest marker of each job and the latest product snapshot are never deleted | `{probe, probe_light, speed, rum, product_issues, jobs, login_log}`: rows deleted |
 
 `sh_alerts_check` must be safe when two workers overlap for a minute during a deploy: no alert
 and no message is created twice, and a message returned to one caller is not returned to another
@@ -684,7 +686,7 @@ Google PageSpeed Insights API v5, one call per page per strategy:
 | `crux_category` | `loadingExperience.metrics.LARGEST_CONTENTFUL_PAINT_MS.category` (`FAST` / `AVERAGE` / `SLOW`) |
 | `crux_lcp_ms` | `loadingExperience.metrics.LARGEST_CONTENTFUL_PAINT_MS.percentile` (75th percentile, ms) |
 | `lh_version` | `lighthouseResult.lighthouseVersion` (for diagnosing a sudden change in the numbers) |
-| `opps` | up to 8 reasons with an estimated time saving, largest first: `[{id, title, ms}]` (rule below) |
+| `opps` | up to 6 reasons with an estimated time saving, largest first: `[{id, title, ms}]` (rule below; the screen shows six) |
 
 - **Real-user data is optional.** A page with little traffic has no `loadingExperience.metrics`.
   When `loadingExperience.origin_fallback` is true the numbers describe the whole site, not this
@@ -787,13 +789,16 @@ The ingest endpoint is **`POST /m`** (a neutral name: content blockers drop path
 "beacon"). It is public, so every field is hostile:
 
 - read the raw body (it is `text/plain`; a JSON body parser will not see it), at most 1 KB;
-- if an `Origin` or `Referer` header is present, its host must be the site's host (with or
-  without `www`) or one of the extra hosts in the configuration (`rum_hosts`, for a staging copy);
-  when both are absent, or `Origin` is the string `null` (sites with a strict referrer policy),
-  accept the beacon. This is a noise filter, not security: anyone can forge a header;
+- if an `Origin` header is present it decides, otherwise the `Referer`: its host must be the
+  site's host (with or without `www`) or one of the extra hosts in the configuration (`rum_hosts`,
+  for a staging copy); when both are absent, or `Origin` is the string `null` (sites with a
+  strict referrer policy), accept the beacon. This is a noise filter, not security: anyone can
+  forge a header;
 - keep the row only when `lcp` is between 1 and 60,000 ms, `site` matches `^[a-z0-9.-]{1,100}$`,
-  and `path` (query string removed, at most 300 characters) has no segment that names an account,
-  checkout, order or admin page; otherwise drop the whole beacon;
+  and `path` (query string removed) is at most 300 characters and has no segment, decoded and
+  lower-cased, that names an account, checkout, order or admin page (the built-in English names
+  plus the site's own slugs from `private_paths`); otherwise drop the whole beacon. The database
+  function repeats the numeric and length limits; the private-page rule lives in the server;
 - store no IP address, no cookie, no user agent, and ignore any cookie that arrives; limit each
   address to 60 beacons a minute, in memory only;
 - always answer 204, also when the beacon is dropped; store after answering, in small batches.
@@ -859,8 +864,8 @@ subscribes to one topic; the system publishes to that topic.
   receipt. Record the result of every attempt with `sh_message_sent(id, status)`: a 2xx status
   settles the message as sent; **0 means "pushing is not configured"** and settles it at once as
   not sent; any other status (use 599 for a network error or a timeout) is a failed attempt, and
-  the message is offered again on a later minute until 5 attempts have failed. Then it stays in
-  the log as "לא נשלחה". The click link (`<dashboard>/site`) is added by the sender; the database
+  the message is offered again once its two-minute claim has lapsed, until 5 attempts have failed
+  (about ten minutes in all). Then it stays in the log as "לא נשלחה". The click link (`<dashboard>/site`) is added by the sender; the database
   does not know the dashboard's address.
 - **Send at most 30 pushes per rolling hour.** The free server allows 250 a day per sending
   address, and a flapping page with `down_after = 1` can produce two messages a minute. Messages
@@ -946,8 +951,12 @@ loop off (`COLLECTORS=0`), and note that §7.10 then needs option 2 or a second 
   success, who, user agent; `who` is `?` for a wrong password); requests refused with 429 are not
   logged, so a flood cannot fill the table. A logging failure never blocks sign-in.
 - **The client address** behind the host's proxy: use the entry the host itself adds to
-  `X-Forwarded-For` (check the host's documentation; on a host that appends, the left-most entry
-  is whatever the client sent and lets an attacker dodge the limits).
+  `X-Forwarded-For`, counted from the right (the left-most entry is whatever the client sent and
+  lets an attacker dodge the limits). The reference takes the number of proxies in front of the
+  server from `SH_PROXY_HOPS` (default 1); check the host's documentation and verify on the live
+  address that the login log shows real, different addresses.
+- **Keep secrets out of the access log.** The share token travels in the query string
+  (`/status?k=…`): turn the server's access log off or strip query strings from it.
 - Hebrew texts of the pages around the screen: sign-in button `כניסה`, placeholder `סיסמה`,
   wrong password `סיסמה שגויה`, too many attempts `יותר מדי ניסיונות. נסו שוב בעוד עשר דקות.`,
   bad share link `הקישור אינו תקין או שפג.`, database unreachable

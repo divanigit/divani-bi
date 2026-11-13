@@ -1,4 +1,4 @@
-"""Tests of schema.sql and functions.sql: the rules of SPEC §7.3, §7.4 and §7.8, with exact values.
+"""Tests of schema.sql and functions.sql: the rules of spec §7.2, §7.3, §7.4 and §7.8, with exact values.
 
     cd reference && python3 -m pytest -q tests/test_sql.py
 
@@ -20,7 +20,7 @@ import pytest
 from psycopg.types.json import Jsonb
 
 import sim
-from conftest import TIMINGS, apply_sql, example_config
+from conftest import REFERENCE, TIMINGS, apply_sql, example_config
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))
 import mock_server as mock  # noqa: E402  (the kit's fake backend: the contract by example)
@@ -33,7 +33,10 @@ URL = {"בית": SITE + "/", "קטגוריה": SITE + "/product-category/sofas/"
        "סל": SITE + "/cart/", "קופה": SITE + "/checkout/"}
 PROBE = ["בית", "קטגוריה", "מוצר", "סל"]
 DEAD = dict.fromkeys(PROBE, "timeout")
-PROBE_FLOW, CORE_FLOW, ROTATION_FLOW, SITEMAP_FLOW, CERT_FLOW, CATALOGUE_FLOW, RUM_FLOW = (f[0] for f in mock.FLOWS)
+# The seven flows: name and cadence as the mock shows them, warn and late minutes as spec §7.3 lists them.
+LATE = [(5, 15), (45, 90), (20, 60), (1560, 2880), (1560, 2880), (1560, 2880), (360, 1440)]
+FLOWS = [(name, cadence, warn, late) for (name, cadence, *_), (warn, late) in zip(mock.FLOWS, LATE, strict=True)]
+PROBE_FLOW, CORE_FLOW, ROTATION_FLOW, SITEMAP_FLOW, CERT_FLOW, CATALOGUE_FLOW, RUM_FLOW = (f[0] for f in FLOWS)
 
 
 def mins(n):
@@ -77,7 +80,7 @@ def half_up(x):
     return None if x is None else int(decimal.Decimal("%.15g" % x).quantize(decimal.Decimal(1), decimal.ROUND_HALF_UP))
 
 
-# ================================================================ configuration (§7.4)
+# ================================================================ configuration (spec §7.4)
 
 def test_setup_loads_the_example_configuration(db):
     config = db.setup()
@@ -86,7 +89,7 @@ def test_setup_loads_the_example_configuration(db):
         "site": SITE, "host": "example.co.il", "label": "example.co.il", "brand": "",
         "time_zone": "Asia/Jerusalem", "platform": "woocommerce", "down_after": 1, "morning": "07:30",
         "path_labels": [["/product-category/", "קטגוריה: "], ["/product/", "מוצר: "]],
-        "bucket_note": "", "live_hosts": ["live"]}
+        "bucket_note": "", "live_hosts": ["live"], "keep_days": 100, "rum_hosts": [], "private_paths": []}
     assert config["pages"] == [
         {"name": "בית", "url": URL["בית"], "probe": True, "core": True, "home": True, "expect": None},
         {"name": "קטגוריה", "url": URL["קטגוריה"], "probe": True, "core": True, "home": False, "expect": None},
@@ -109,19 +112,33 @@ def test_setup_fills_in_defaults_and_follows_the_platform(db):
     assert {k: v for k, v in config.items() if k not in ("pages", "screen")} == {
         "site": "https://www.Shop.example", "host": "www.shop.example", "label": "shop.example", "brand": "",
         "time_zone": "UTC", "platform": "other", "down_after": 1, "morning": "07:30",
-        "path_labels": [], "bucket_note": "", "live_hosts": ["live"]}
+        "path_labels": [], "bucket_note": "", "live_hosts": ["live"], "keep_days": 100, "rum_hosts": [],
+        "private_paths": []}
     # no catalogue: the screen hides the products card and the catalogue flow is not listed
     assert config["screen"] == {"siteLabel": "shop.example", "brand": "", "homePage": "ראשי", "probeCount": 1,
                                 "coreCount": 0, "liveHosts": ["live"], "pathLabels": [], "bucketNote": "",
                                 "hide": ["issuesCard"]}
-    assert [r["flow_name"] for r in db.rpc("sh_health")] == [f[0] for f in mock.FLOWS if f[0] != CATALOGUE_FLOW]
+    assert [r["flow_name"] for r in db.rpc("sh_health")] == [f[0] for f in FLOWS if f[0] != CATALOGUE_FLOW]
 
     config = db.rpc("sh_setup", p_config=dict(minimal, platform="shopify", bucket_note="הערה", brand="DEMO",
                                               live_hosts=["live", "shop.example"]))
     assert config["screen"]["pathLabels"] == [["/collections/", "קטגוריה: "], ["/products/", "מוצר: "]]
     assert config["screen"]["hide"] == [] and config["screen"]["bucketNote"] == "הערה"
     assert config["screen"]["brand"] == "DEMO" and config["screen"]["liveHosts"] == ["live", "shop.example"]
-    assert [r["flow_name"] for r in db.rpc("sh_health")] == [f[0] for f in mock.FLOWS]
+    assert [r["flow_name"] for r in db.rpc("sh_health")] == [f[0] for f in FLOWS]
+
+
+def test_setup_takes_the_retention_and_the_real_user_settings(db):
+    config = db.setup(keep_days=45, rum_hosts=["staging.example.co.il", "dev.example.co.il"],
+                      private_paths=["קופה", "עגלת-קניות", "my-cart"])
+    assert (config["keep_days"], config["rum_hosts"], config["private_paths"]) == (
+        45, ["staging.example.co.il", "dev.example.co.il"], ["קופה", "עגלת-קניות", "my-cart"])
+    assert db.rpc("sh_config") == config
+    assert "keep_days" not in config["screen"]                 # none of the three is the screen's business
+    for days in (30, 400, "90"):                               # the bounds; and a number that arrives as text
+        assert db.setup(keep_days=days)["keep_days"] == int(days)
+    config = db.setup()                                        # a setting that left the file is back at its default
+    assert (config["keep_days"], config["rum_hosts"], config["private_paths"]) == (100, [], [])
 
 
 def test_setup_again_changes_nothing_and_a_removed_page_keeps_its_history(db):
@@ -153,6 +170,25 @@ def _page(name="בית", url=SITE + "/", **flags):
     ({"down_after": 0}, '"down_after" must be 1 or more, got 0'),
     ({"morning": "7:30"}, '"morning" must be a time such as 07:30, got 7:30'),
     ({"live_hosts": "live"}, '"live_hosts" and "path_labels" must be lists'),
+    ({"keep_days": 29}, '"keep_days" must be a whole number of days from 30 to 400, got 29'),
+    ({"keep_days": 401}, '"keep_days" must be a whole number of days from 30 to 400, got 401'),
+    ({"keep_days": 99.5}, '"keep_days" must be a whole number of days from 30 to 400, got 99.5'),
+    ({"keep_days": -100}, '"keep_days" must be a whole number of days from 30 to 400, got -100'),
+    ({"keep_days": "forever"}, '"keep_days" must be a whole number of days from 30 to 400, got forever'),
+    ({"keep_days": True}, '"keep_days" must be a whole number of days from 30 to 400, got true'),
+    ({"rum_hosts": "staging.example.co.il"}, '"rum_hosts" and "private_paths" must be lists'),
+    ({"private_paths": {"cart": "קופה"}}, '"rum_hosts" and "private_paths" must be lists'),
+    ({"rum_hosts": ["https://staging.example.co.il"]}, '"rum_hosts" takes host names in lower case, .* got \\["https://'),
+    ({"rum_hosts": ["staging.example.co.il/shop"]}, '"rum_hosts" takes host names in lower case'),
+    ({"rum_hosts": ["Staging.Example.co.il"]}, '"rum_hosts" takes host names in lower case'),
+    ({"rum_hosts": ["staging.example.co.il", 7]}, '"rum_hosts" takes host names in lower case'),
+    ({"rum_hosts": [""]}, '"rum_hosts" takes host names in lower case'),
+    ({"private_paths": ["/קופה/"]}, '"private_paths" takes single path segments, .* got \\["/קופה/"\\]'),
+    ({"private_paths": ["shop/cart"]}, '"private_paths" takes single path segments'),
+    ({"private_paths": ["cart?x=1"]}, '"private_paths" takes single path segments'),
+    ({"private_paths": ["my cart"]}, '"private_paths" takes single path segments'),
+    ({"private_paths": ["cart", None]}, '"private_paths" takes single path segments'),
+    ({"private_paths": [""]}, '"private_paths" takes single path segments'),
     ({"pages": None}, '"pages" must be a list of pages'),
     ({"pages": []}, 'exactly one page must have "home": true, found 0'),
     ({"pages": [_page(probe=True)]}, 'exactly one page must have "home": true, found 0'),
@@ -172,7 +208,7 @@ def test_setup_refuses_a_bad_configuration_and_keeps_the_old_one(db, change, mes
     assert db.rpc("sh_config") == before
 
 
-# ================================================================ availability (§7.3)
+# ================================================================ availability (spec §7.3)
 
 def _ten_rounds(db):
     """Ten full rounds, one a minute from T0. סל fails twice; a light round fails everywhere."""
@@ -256,7 +292,7 @@ def test_an_outage_that_is_still_going_on_ends_now(db):
 
 
 def test_an_outage_counts_dead_rounds_not_the_minutes_without_rounds(db):
-    """SPEC §7.3 reads the rounds in order: two dead rounds, a pause of the prober, one more dead
+    """Spec §7.3 reads the rounds in order: two dead rounds, a pause of the prober, one more dead
     round are three consecutive dead rounds. The pause adds nothing to outage_minutes."""
     db.setup()
     for i, fail in [(0, DEAD), (1, DEAD), (30, DEAD), (31, None)]:
@@ -327,7 +363,7 @@ def test_the_hour_that_happens_twice_is_one_bucket_everywhere(db):
     assert db.rpc("sh_drill_fails", p_bucket="2024-10-27 00:00", **window) == []
 
 
-# ================================================================ speed (§7.3)
+# ================================================================ speed (spec §7.3)
 
 def _speed_runs(db):
     for k, (lcp, score, cls, ttfb) in enumerate([(2000, 70, 0.01, 300), (2200, 66, 0.02, 310), (2400, 62, 0.03, 320),
@@ -381,7 +417,9 @@ def test_verdict_thresholds(db, lcp, verdict):
 def test_speed_heaviest_pages_and_coverage(db):
     db.setup()
     pages = [SITE + "/product/item-%02d/" % i for i in range(1, 13)]
-    db.rpc("sh_sitemap_set", p_urls=pages + [SITE + "/about/", SITE + "/contact/", SITE + "/blog/"])
+    core = [URL["בית"], URL["קטגוריה"]]                       # in the sitemap too, and not the rotation's business
+    db.rpc("sh_sitemap_set", p_urls=pages + core + [SITE + "/about/", SITE + "/contact/", SITE + "/blog/"])
+    db.run(T0 + mins(40), URL["קטגוריה"], 50000, source="rotation")              # from before it became a core page
     for i, url in enumerate(pages, start=1):
         db.run(T0 + mins(i), url, 1000 * i, source="rotation", score=100 - 5 * i)
     db.run(T0 + mins(30), pages[11], 13000, source="rotation", score=20)        # a second run of the heaviest
@@ -396,9 +434,16 @@ def test_speed_heaviest_pages_and_coverage(db):
         (pages[i - 1], 1000 * i, 100 - 5 * i, 1, il(T0 + mins(i))) for i in range(11, 2, -1)]      # ten rows in all
     assert section(rows, "כיסוי") == [{"section": "כיסוי", "checks": 12, "slow_runs": 15}]
     # a page that left the sitemap is neither "a page of the site" nor "measured"
-    db.rpc("sh_sitemap_set", p_urls=pages[1:] + [SITE + "/about/"])
+    db.rpc("sh_sitemap_set", p_urls=pages[1:] + core + [SITE + "/about/"])
     assert section(db.rpc("sh_speed", p_from=T0, p_to=T0 + mins(90)), "כיסוי") == [
         {"section": "כיסוי", "checks": 11, "slow_runs": 12}]
+    # and a page that is no longer a core page is the rotation's again, with the run it has
+    fewer = example_config()
+    fewer["pages"] = [dict(p, core=p["name"] != "קטגוריה") for p in fewer["pages"]]
+    db.rpc("sh_setup", p_config=fewer)
+    rows = db.rpc("sh_speed", p_from=T0, p_to=T0 + mins(90))
+    assert section(rows, "כיסוי") == [{"section": "כיסוי", "checks": 12, "slow_runs": 13}]
+    assert section(rows, "האיטיים באתר")[0]["url"] == URL["קטגוריה"]
 
 
 def test_speed_series(db):
@@ -420,13 +465,15 @@ def test_speed_series(db):
         dict(home, bucket="2024-11-12", lcp_p50=2400), dict(category, bucket="2024-11-12", lcp_p50=3300)]
 
 
-# ================================================================ health of the measuring (§7.3)
+# ================================================================ health of the measuring (spec §7.3)
 
 def test_health_lists_the_flows_of_the_spec_before_any_ran(db):
     db.setup()
     assert db.rpc("sh_health") == [
         {"flow_name": name, "status": "אין נתון", "cadence": cadence, "silent_txt": None, "last_at": None,
-         "warn_minutes": warn, "late_minutes": late, "note": None} for name, cadence, warn, late in mock.FLOWS]
+         "warn_minutes": warn, "late_minutes": late, "note": None} for name, cadence, warn, late in FLOWS]
+    assert [(r["flow_name"], r["warn_minutes"], r["late_minutes"]) for r in db.rpc("sh_health")][6] == (
+        "מהירות אצל לקוחות", 360, 1440)
 
 
 @pytest.mark.parametrize("name, ago, status, text", [
@@ -434,7 +481,10 @@ def test_health_lists_the_flows_of_the_spec_before_any_ran(db):
     (PROBE_FLOW, dict(minutes=5, seconds=1), "מתעכב", "מאחר ב-1 דקות"),
     (PROBE_FLOW, dict(minutes=15), "מתעכב", "מאחר ב-10 דקות"),
     (PROBE_FLOW, dict(minutes=15, seconds=1), "שקט", "שקט כבר 15 דקות"),
-    (RUM_FLOW, dict(minutes=400), "שקט", "שקט כבר 6 שעות"),                        # warn 120, late 360
+    (RUM_FLOW, dict(minutes=360), "תקין", None),                                   # warn 360, late 1440
+    (RUM_FLOW, dict(minutes=400), "מתעכב", "מאחר ב-40 דקות"),
+    (RUM_FLOW, dict(minutes=1440), "מתעכב", "מאחר ב-18 שעות"),
+    (RUM_FLOW, dict(minutes=1441), "שקט", "שקט כבר 24 שעות"),
     (CERT_FLOW, dict(minutes=1560 + 180), "מתעכב", "מאחר ב-3 שעות"),               # warn 1560, late 2880
     (CERT_FLOW, dict(days=3, hours=5), "שקט", "שקט כבר 3 ימים"),
 ])
@@ -446,7 +496,7 @@ def test_health_status_by_the_age_of_the_last_run(db, name, ago, status, text):
     assert dt.datetime.fromisoformat(row["last_at"]) == db.now() - dt.timedelta(**ago)
 
 
-# ================================================================ sh_now (§5.3)
+# ================================================================ sh_now (spec §5.3)
 
 def test_now_on_a_fresh_install(db, monkeypatch):
     db.setup()
@@ -538,7 +588,7 @@ def test_now_lab_speed_and_open_alerts(db):
     assert db.rpc("sh_now")["alerts_open"] == 2
 
 
-# ================================================================ drill-downs (§5.4)
+# ================================================================ drill-downs (spec §5.4)
 
 def test_drill_fails(db):
     db.setup()
@@ -617,19 +667,47 @@ def test_drill_runs(db):
     assert db.rpc("sh_drill_runs", p_from=T0, p_to=T0 + mins(120), p_url=SITE + "/nothing/") == []
 
 
+def test_drill_runs_carry_the_reasons_of_the_newest_100_successful_runs_only(db):
+    db.setup()
+    reasons = [{"id": "image-delivery-insight", "title": "שיפור הצגת התמונות", "ms": 900}]
+    yesterday = T0 - mins(1440)
+    db.rpc("sh_speed_add", p_rows=(
+        # yesterday 130 runs, every tenth failed (117 good ones); today 25 good ones
+        [{"at": (yesterday + mins(k)).isoformat(), "url": URL["בית"], "page": "בית", "strategy": "mobile", "source": "core",
+          "ok": k % 10 != 0, "err": "timeout" if k % 10 == 0 else None, "lcp_ms": 2000 + k, "opps": reasons}
+         for k in range(130)]
+        + [{"at": (T0 + mins(k)).isoformat(), "url": URL["בית"], "page": "בית", "strategy": "mobile", "source": "core",
+            "ok": True, "lcp_ms": 3000 + k, "opps": reasons} for k in range(25)]))
+
+    rows = db.rpc("sh_drill_runs", p_from=yesterday, p_to=T0 + mins(60), p_url=URL["בית"])
+    assert len(rows) == 155 and [r["ok"] for r in rows].count(True) == 142               # every run, newest first
+    assert rows[0]["lcp_ms"] == 3024 and rows[-1] == {"ok": False, "err": "timeout", "at_il": il(yesterday)}
+    good = [r for r in rows if r["ok"]]
+    assert [r["opps"] for r in good] == [reasons] * 100 + [[]] * 42
+    assert (good[99]["lcp_ms"], good[100]["lcp_ms"]) == (2047, 2046)                      # 25 of today, 75 of yesterday
+    assert all(set(r) == {"ok", "err", "at_il"} for r in rows if not r["ok"])
+    # the 100 are counted inside the answer: yesterday alone is 117 good runs
+    day = db.rpc("sh_drill_runs", p_from=yesterday, p_to=T0 + mins(60), p_url=URL["בית"], p_bucket="2024-11-11")
+    assert len(day) == 130 and [r["opps"] for r in day if r["ok"]] == [reasons] * 100 + [[]] * 17
+    hour = db.rpc("sh_drill_runs", p_from=yesterday, p_to=T0 + mins(60), p_url=URL["בית"], p_bucket="2024-11-11 09:00")
+    assert len(hour) == 60 and all(r["opps"] == reasons for r in hour if r["ok"])
+
+
 def test_drill_alert(db):
     db.setup()
     now = db.now()
     db.probe(now - mins(10), fail={"סל": 500})                         # an earlier blip, answered since
     db.probe(now - mins(5))
     db.probe(now - mins(4), fail={"סל": 502, "מוצר": 502})
-    db.rpc("sh_alerts_check")
+    pushes = db.rpc("sh_alerts_check")
     # as if the check had run right after that round, not at the frozen "now" of this test
     db.sql("update sh_alerts set opened_at = now() - interval '3 minutes 50 seconds'")
     db.probe(now - mins(4) + secs(30), "light", fail={"סל": "timeout", "מוצר": 502}, ms=None)
     db.probe(now - mins(3), fail={"סל": 502, "מוצר": 502})
     db.probe(now - mins(2), fail={"מוצר": 502})
-    for message in db.rpc("sh_alerts_check"):
+    pushes += db.rpc("sh_alerts_check")
+    assert [m["event"] for m in pushes] == ["open", "open", "close"]
+    for message in pushes:
         db.rpc("sh_message_sent", p_id=message["id"], p_status=200)
     cart, product = sorted(db.rpc("sh_alerts_range", p_from=now - mins(60), p_to=now + mins(1)), key=lambda a: a["open"])
     assert (cart["title"], cart["open"], product["title"], product["open"]) == (
@@ -655,15 +733,21 @@ def test_drill_alert(db):
     assert (detail["fails"], detail["sent"]) == ([], [])                # its push is still owed
 
 
-# ================================================================ alert rules (§7.8)
+# ================================================================ alert rules (spec §7.8)
 
 def _open(db):
     return [(a["kind"], a["title"]) for a in db.rpc("sh_alerts_open")]
 
 
 def _pushes(db):
-    """The owed pushes, without their ids."""
+    """What one call of sh_alerts_check hands out, without the ids: the pushes that are owed and
+    that no earlier call claimed in the last two minutes."""
     return [{k: v for k, v in m.items() if k != "id"} for m in db.rpc("sh_alerts_check")]
+
+
+def _two_minutes_pass(db):
+    """The claims of the calls so far lapse. (The clock of a test stands still, so the claims move.)"""
+    db.sql("update sh_messages set claimed_at = claimed_at - interval '2 minutes'")
 
 
 def test_down_alert_opens_on_the_first_failed_check_and_closes_on_the_next_answer(db):
@@ -681,14 +765,14 @@ def test_down_alert_opens_on_the_first_failed_check_and_closes_on_the_next_answe
                       "body": "קוד 502\n" + URL["סל"], "opened_il": il(now), "acked": False}]
 
     db.probe(now - secs(20), fail={"סל": "timeout"})                             # still down: nothing new
-    assert _pushes(db) == [opening]
+    assert _pushes(db) == []
     assert db.rpc("sh_alerts_open") == alert
     assert db.sql("select count(*) from sh_alerts") == [(1,)] and db.sql("select count(*) from sh_messages") == [(1,)]
 
     db.sql("update sh_alerts set opened_at = now() - interval '7 minutes 30 seconds'")
     db.probe(now - secs(10), "light", ms=None)                                   # it answered
-    assert _pushes(db) == [opening, {"title": "האתר לא עונה: סל", "msg": "נמשך 7 דקות", "priority": 2,
-                                     "click": None, "kind": "חזר לתקין", "event": "close"}]
+    assert _pushes(db) == [{"title": "האתר לא עונה: סל", "msg": "נמשך 7 דקות", "priority": 2,
+                            "click": None, "kind": "חזר לתקין", "event": "close"}]
     assert db.rpc("sh_alerts_open") == []
     assert db.sql("select count(*) from sh_alerts where closed_at = now()") == [(1,)]
 
@@ -712,7 +796,7 @@ def test_a_problem_that_comes_back_is_a_new_alert_that_nobody_has_seen(db):
     second = db.rpc("sh_alerts_open")
     assert len(second) == 1 and second[0]["id"] != first["id"]
     assert (second[0]["acked"], second[0]["body"]) == (False, "תוכן לא צפוי\n" + URL["סל"])
-    assert [m["event"] for m in db.rpc("sh_alerts_check")] == ["open", "close", "open"]
+    assert db.sql("select event from sh_messages order by id") == [("open",), ("close",), ("open",)]
 
 
 def test_down_after_2_waits_for_two_failed_rounds_in_a_row(db):
@@ -727,9 +811,9 @@ def test_down_after_2_waits_for_two_failed_rounds_in_a_row(db):
     assert _pushes(db) == [{"title": "האתר לא עונה: סל", "msg": "לא ענה בזמן\n" + URL["סל"], "priority": 4,
                             "click": None, "kind": "התראה", "event": "open"}]
     db.probe(now - secs(20), fail={"סל": 502})
-    assert _open(db) == [("down", "האתר לא עונה: סל")] and len(db.rpc("sh_alerts_check")) == 1
+    assert db.rpc("sh_alerts_check") == [] and _open(db) == [("down", "האתר לא עונה: סל")]
     db.probe(now - secs(10), "light", ms=None)                   # one answer closes it
-    assert [m["event"] for m in db.rpc("sh_alerts_check")] == ["open", "close"] and _open(db) == []
+    assert [m["event"] for m in db.rpc("sh_alerts_check")] == ["close"] and _open(db) == []
 
 
 def test_down_alert_needs_a_recent_round_and_a_configured_page(db):
@@ -778,7 +862,7 @@ def test_slow_alert(db):
     db.run(now - mins(5), "קופה", 5100)                          # now twice in a row
     db.run(now - mins(5), "קטגוריה", 4000)                       # and this one recovered
     assert sorted((m["event"], m["title"], m["priority"]) for m in db.rpc("sh_alerts_check")) == [
-        ("close", "עמוד איטי: קטגוריה", 2), ("open", "עמוד איטי: קופה", 3), ("open", "עמוד איטי: קטגוריה", 3)]
+        ("close", "עמוד איטי: קטגוריה", 2), ("open", "עמוד איטי: קופה", 3)]
     assert db.rpc("sh_alerts_open")[0]["body"] == "5.1 שניות עד התוכן, פעמיים ברצף\n" + URL["קופה"]
 
 
@@ -794,7 +878,25 @@ def test_silent_alert(db):
     assert flow(db, CORE_FLOW)["status"] == "שקט"                 # the screen and the alert agree
 
     db.run(db.now(), "בית", 2400)                                # it ran again
-    assert [m["event"] for m in db.rpc("sh_alerts_check")] == ["open", "close"] and _open(db) == []
+    assert [m["event"] for m in db.rpc("sh_alerts_check")] == ["close"] and _open(db) == []
+
+
+def test_the_real_user_flow_shows_its_silence_and_opens_no_alert(db):
+    db.setup()
+    assert db.sql("select flow_name, alerts from sh_flows order by sort") == [(f[0], f[0] != RUM_FLOW) for f in FLOWS]
+    db.ran(RUM_FLOW, days=3)                                     # a small site: no visitors since the weekend
+    assert db.rpc("sh_alerts_check") == [] and db.rpc("sh_alerts_open") == []
+    assert (flow(db, RUM_FLOW)["status"], flow(db, RUM_FLOW)["silent_txt"]) == ("שקט", "שקט כבר 3 ימים")
+
+    # the flag is the rule, and whoever sets it by hand keeps it: sh_setup seeds it and never resets it
+    db.sql("update sh_flows set alerts = (flow_name = %s)", [RUM_FLOW])
+    db.ran(SITEMAP_FLOW, days=3)
+    db.setup()
+    assert db.sql("select flow_name, alerts from sh_flows order by sort") == [(f[0], f[0] == RUM_FLOW) for f in FLOWS]
+    assert [m["title"] for m in db.rpc("sh_alerts_check")] == ["המדידה נעצרה: " + RUM_FLOW]
+    db.sql("update sh_flows set alerts = false")                 # the flag goes off: nothing could clear the alert
+    assert [(m["event"], m["title"]) for m in db.rpc("sh_alerts_check")] == [("close", "המדידה נעצרה: " + RUM_FLOW)]
+    assert db.rpc("sh_alerts_open") == []
 
 
 def test_silent_alert_ignores_a_disabled_flow_and_closes_when_its_flow_is_disabled(db):
@@ -803,13 +905,13 @@ def test_silent_alert_ignores_a_disabled_flow_and_closes_when_its_flow_is_disabl
     db.rpc("sh_alerts_check")
     assert _open(db) == [("silent", "המדידה נעצרה: " + CATALOGUE_FLOW)]
     db.setup(platform="other")                                    # no catalogue any more
-    assert [m["event"] for m in db.rpc("sh_alerts_check")] == ["open", "close"] and _open(db) == []
+    assert [m["event"] for m in db.rpc("sh_alerts_check")] == ["close"] and _open(db) == []
     db.rpc("sh_alerts_check")
     assert db.sql("select count(*) from sh_alerts") == [(1,)]
 
 
 def test_silent_alert_opened_early_by_the_independent_check_stays_until_the_flow_runs_again(db):
-    """SPEC §7.10: sh_deadman opens this alert when the newest round is 10 minutes old, before
+    """Spec §7.10: sh_deadman opens this alert when the newest round is 10 minutes old, before
     the flow's own 15 minutes."""
     db.setup()
     now = db.now()
@@ -844,7 +946,7 @@ def test_cert_alert(db):
     db.rpc("sh_alerts_check")
     assert len(_open(db)) == 1
     _cert(db, 89)
-    assert [m["event"] for m in db.rpc("sh_alerts_check")] == ["open", "close"] and _open(db) == []
+    assert [m["event"] for m in db.rpc("sh_alerts_check")] == ["close"] and _open(db) == []
 
 
 def test_ack_marks_only_open_alerts_that_nobody_marked(db):
@@ -891,25 +993,71 @@ def test_alerts_range_lists_what_was_open_inside_the_window(db):
     assert db.rpc("sh_alerts_range", p_from=T0 + mins(100), p_to=T0 + mins(101))[0]["minutes"] == 1
 
 
-def test_a_push_is_retried_five_times_and_then_given_up(db):
+def test_an_owed_push_is_handed_out_once_in_two_minutes(db):
+    db.setup()
+    db.probe(db.now() - secs(30), fail={"סל": 502})
+    (push,) = db.rpc("sh_alerts_check")
+    assert db.sql("select claimed_at = now(), status, attempts from sh_messages") == [(True, None, 0)]
+    assert db.rpc("sh_alerts_check") == []                                        # claimed by the first call
+    db.sql("update sh_messages set claimed_at = now() - interval '1 minute 59 seconds'")
+    assert db.rpc("sh_alerts_check") == []
+    db.sql("update sh_messages set claimed_at = now() - interval '2 minutes'")
+    assert db.rpc("sh_alerts_check") == [push]                                    # the sender never reported: again
+    assert db.sql("select claimed_at = now() from sh_messages") == [(True,)]      # and claimed again
+    assert db.rpc("sh_alerts_check") == []
+
+    assert db.rpc("sh_message_sent", p_id=push["id"], p_status=200) == {"n": 1}
+    _two_minutes_pass(db)
+    assert db.rpc("sh_alerts_check") == []                                        # settled: never again
+
+
+def test_a_push_result_settles_the_push_or_counts_as_a_failed_attempt(db):
     db.setup()
     now = db.now()
-    db.probe(now - secs(30), fail={"סל": 502, "מוצר": 502})
+    db.probe(now - secs(30), fail={"בית": 502, "סל": 502, "מוצר": 502})
     owed = {m["title"]: m["id"] for m in db.rpc("sh_alerts_check")}
-    cart, product = owed["האתר לא עונה: סל"], owed["האתר לא עונה: מוצר"]
+    home, cart, product = owed["האתר לא עונה: בית"], owed["האתר לא עונה: סל"], owed["האתר לא עונה: מוצר"]
+    alert = dict(db.sql("select m.id, m.alert_id from sh_messages m"))
 
-    assert db.rpc("sh_message_sent", p_id=cart, p_status=204) == {"n": 1}         # any 2xx is "sent"
+    def state(message):
+        return db.sql("select status, attempts from sh_messages where id = %s", [message])[0]
+
+    def pushes_of(message):
+        return db.rpc("sh_drill_alert", p_id=alert[message])[0]["sent"]
+
+    assert db.rpc("sh_message_sent", p_id=cart, p_status=204) == {"n": 1}         # any 2xx: sent
     assert db.rpc("sh_message_sent", p_id=cart, p_status=500) == {"n": 0}         # settled: nothing more to record
-    for attempt in range(1, 5):
-        assert db.rpc("sh_message_sent", p_id=product, p_status=0 if attempt == 1 else 503) == {"n": 1}
-        assert [m["id"] for m in db.rpc("sh_alerts_check")] == [product]          # still owed
-        assert db.sql("select status, attempts from sh_messages where id = %s", [product]) == [(None, attempt)]
+    assert state(cart) == (204, 1)
+    assert db.rpc("sh_message_sent", p_id=home, p_status=0) == {"n": 1}           # pushing is not configured:
+    assert state(home) == (0, 1)                                                  # settled at once, not sent
+    assert db.rpc("sh_message_sent", p_id=home, p_status=200) == {"n": 0}
+
+    for attempt, status in enumerate([503, 599, None, 500], start=1):             # four failed attempts
+        assert db.rpc("sh_message_sent", p_id=product, p_status=status) == {"n": 1}
+        assert state(product) == (None, attempt) and pushes_of(product) == []     # still owed: not in the alert's list
+        assert db.rpc("sh_alerts_check") == []                                    # and its claim still stands
+        _two_minutes_pass(db)
+        assert [m["id"] for m in db.rpc("sh_alerts_check")] == [product]          # offered again, only this one
     assert db.rpc("sh_message_sent", p_id=product, p_status=429) == {"n": 1}      # the fifth failure is the last
+    assert state(product) == (429, 5)
+    _two_minutes_pass(db)
     assert db.rpc("sh_alerts_check") == []
-    assert db.sql("select id, status, attempts from sh_messages order by id") == sorted([(cart, 204, 1), (product, 429, 5)])
+    assert db.rpc("sh_message_sent", p_id=product, p_status=200) == {"n": 0}
+
     assert {m["title"]: m["sent"] for m in db.rpc("sh_messages", p_from=now, p_to=now + mins(1))} == {
-        "האתר לא עונה: סל": True, "האתר לא עונה: מוצר": False}
-    assert db.rpc("sh_message_sent", p_id=cart + product, p_status=200) == {"n": 0}       # no such message
+        "האתר לא עונה: בית": False, "האתר לא עונה: סל": True, "האתר לא עונה: מוצר": False}
+    assert [pushes_of(m) for m in (cart, home, product)] == [
+        [{"event": "open", "status": status, "at": il(now)}] for status in (204, 0, 429)]
+    assert db.rpc("sh_message_sent", p_id=home + cart + product, p_status=200) == {"n": 0}      # no such message
+
+
+def test_a_fifth_attempt_without_a_status_settles_as_a_network_error(db):
+    db.setup()
+    db.probe(db.now() - secs(30), fail={"סל": 502})
+    (push,) = db.rpc("sh_alerts_check")
+    for _ in range(5):
+        assert db.rpc("sh_message_sent", p_id=push["id"], p_status=None) == {"n": 1}
+    assert db.sql("select status, attempts from sh_messages") == [(599, 5)]
 
 
 def test_messages_log_is_newest_first_and_inside_the_window(db):
@@ -969,32 +1117,59 @@ def test_morning_message_without_any_measurement(db):
         ("בוקר טוב: האתר תקין", "אין בדיקות זמינות ב-24 שעות", 2, "בוקר")]
 
 
-def test_alerts_check_from_many_sessions_at_once_opens_each_alert_once(committed):
-    db = committed()
-    db.setup()
-    db.probe(db.now() - secs(5), fail=DEAD)
-    sessions = [committed() for _ in range(8)]
-    start = threading.Barrier(len(sessions))
-    answers = []
+def _all_at_once(sessions, fn):
+    """Call fn(session) from every session at the same moment; the answers, in no particular order."""
+    start, answers = threading.Barrier(len(sessions)), []
 
-    def check(session):
+    def call(session):
         start.wait()
-        answers.append(session.rpc("sh_alerts_check"))
+        answers.append(fn(session))
 
-    threads = [threading.Thread(target=check, args=(s,)) for s in sessions]
+    threads = [threading.Thread(target=call, args=(s,)) for s in sessions]
     for t in threads:
         t.start()
     for t in threads:
         t.join()
-    assert len(answers) == 8 and all(len(a) == 4 for a in answers)       # everyone is told about the same four pushes
+    assert len(answers) == len(sessions)
+    return answers
+
+
+def test_alerts_check_from_many_sessions_at_once_opens_each_alert_once_and_hands_each_push_to_one(committed):
+    db = committed()
+    db.setup()
+    db.probe(db.now() - secs(5), fail=DEAD)
+    answers = _all_at_once([committed() for _ in range(8)], lambda session: session.rpc("sh_alerts_check"))
     assert db.sql("select key, count(*) from sh_alerts group by key order by key") == sorted(
         ("down:" + page, 1) for page in PROBE)
     assert db.sql("select count(*), count(distinct alert_id) from sh_messages") == [(4, 4)]
+    handed_out = sorted(m["id"] for answer in answers for m in answer)
+    assert handed_out == [i for (i,) in db.sql("select id from sh_messages order by id")]      # each push once
     with pytest.raises(psycopg.errors.UniqueViolation):                  # and the index itself forbids a second open alert
         db.sql("insert into sh_alerts (key, kind, title) values ('down:סל', 'down', 'x')")
 
 
-# ================================================================ write functions (§7.4)
+def test_owed_pushes_are_claimed_by_exactly_one_of_many_sessions(committed):
+    """Sixty pushes are owed and eight workers ask at once, three times over: each time every
+    push goes to exactly one of them, whoever it is."""
+    db = committed()
+    db.setup()
+    db.sql("insert into sh_messages (event, kind, title, msg) select 'open', 'התראה', 'הודעה ' || n, 'גוף'"
+           " from generate_series(1, 60) n")
+    ids = [i for (i,) in db.sql("select id from sh_messages order by id")]
+    sessions = [committed() for _ in range(8)]
+    for round_ in range(3):
+        answers = _all_at_once(sessions, lambda session: session.rpc("sh_alerts_check"))
+        assert sorted(m["id"] for answer in answers for m in answer) == ids
+        assert _all_at_once(sessions, lambda session: session.rpc("sh_alerts_check")) == [[]] * 8     # within two minutes
+        db.sql("update sh_messages set claimed_at = claimed_at - interval '2 minutes'")
+    # a sender that reports while others ask: a settled push is never handed out again
+    for i in ids[:30]:
+        db.rpc("sh_message_sent", p_id=i, p_status=200)
+    answers = _all_at_once(sessions, lambda session: session.rpc("sh_alerts_check"))
+    assert sorted(m["id"] for answer in answers for m in answer) == ids[30:]
+
+
+# ================================================================ write functions (spec §7.4)
 
 def test_probe_add_ignores_a_repeated_round_and_beats_on_full_rounds_only(db):
     db.setup()
@@ -1025,9 +1200,11 @@ def test_speed_add_ignores_a_repeated_run_and_beats_the_flow_of_a_successful_run
     assert db.run(T0, "בית", None, err="timeout") == {"n": 1}
     assert db.run(T0, SITE + "/a/", None, source="rotation", err="timeout") == {"n": 1}
     assert (flow(db, CORE_FLOW)["status"], flow(db, ROTATION_FLOW)["status"]) == ("אין נתון", "אין נתון")
-    assert db.run(T0 + mins(15), "בית", 2399.6, score=63.4, bytes=3400000.0, cls=0.0349) == {"n": 1}
+    assert db.run(T0 + mins(15), "בית", 2399.6, score=63.4, bytes=3400000.0, cls=0.0349, lh_version="13.0.1") == {"n": 1}
     assert db.run(T0 + mins(15), "בית", 9999) == {"n": 0}
     assert db.sql("select lcp_ms, score, bytes, cls from sh_speed where ok") == [(2400, 63, 3400000, decimal.Decimal("0.035"))]
+    # the Lighthouse version is kept with the run; a run that came without one has none
+    assert db.sql("select ok, lh_version from sh_speed order by ok, url") == [(False, None), (False, None), (True, "13.0.1")]
     assert dt.datetime.fromisoformat(flow(db, CORE_FLOW)["last_at"]) == T0 + mins(15)
     assert flow(db, ROTATION_FLOW)["last_at"] is None
     db.run(T0 + mins(20), SITE + "/a/", 3000, source="rotation")
@@ -1074,6 +1251,20 @@ def test_rotation_takes_turns(db):
     assert db.sql("select last_measured_at from sh_site_pages where not active") == [(None,)]
 
 
+def test_rotation_never_takes_a_core_page(db):
+    db.setup()
+    others = [SITE + "/about/", SITE + "/blog/"]
+    db.rpc("sh_sitemap_set", p_urls=list(URL.values()) + others)          # a sitemap lists the core pages as well
+    assert [db.rpc("sh_rotation_next", p_n=3) for _ in range(2)] == [others, others]
+    assert db.rpc("sh_rotation_next", p_n=100) == others
+    assert db.sql("select count(*) from sh_site_pages where last_measured_at is not null") == [(2,)]
+    fewer = example_config()                                              # סל is no longer a core page: it takes turns
+    fewer["pages"] = [dict(p, core=p["name"] != "סל") for p in fewer["pages"]]
+    db.rpc("sh_setup", p_config=fewer)
+    assert db.rpc("sh_rotation_next", p_n=1) == [URL["סל"]]               # never measured: first
+    assert db.rpc("sh_rotation_next", p_n=100) == sorted(others + [URL["סל"]])
+
+
 def test_rotation_skips_pages_another_worker_is_claiming(committed):
     first, second = committed(), committed()
     first.setup()
@@ -1105,6 +1296,25 @@ def test_issues_set_replaces_the_day_and_the_screen_reads_the_latest_snapshot(db
     assert db.rpc("sh_product_issues") == []                              # nothing is broken any more
 
 
+def test_product_issues_list_the_real_faults_first_and_out_of_stock_last(db):
+    db.setup()
+    rows = [("1", "לא במלאי", "ארון"), ("2", "תמונה שבורה", "כיסא"), ("3", "בלי מחיר", "שולחן"), ("4", "לא במלאי", "Zebra rug"),
+            ("5", "בלי מחיר", "apple chair"), ("6", "אי אפשר להוסיף לסל", "מיטה"), ("7", "בלי מחיר", "Zebra rug"),
+            ("8", "בלי תמונה", "ספה"), ("9", "לא במלאי", "apple chair"), ("10", "בלי מחיר", "ארון")]
+    db.rpc("sh_issues_set", p_snap_date=dt.date(2024, 11, 12),
+           p_rows=[{"product_id": i, "issue": issue, "name": name, "url": SITE + "/p/" + i} for i, issue, name in rows])
+    # A database whose own order of text is a dictionary's (apple before Zebra) must answer the same.
+    if db.sql("select 1 from pg_collation where collname = 'und-x-icu'"):
+        db.sql('alter table sh_product_issues alter column issue type text collate "und-x-icu",'
+               ' alter column name type text collate "und-x-icu"')
+    assert [(r["issue"], r["name"]) for r in db.rpc("sh_product_issues")] == [
+        ("אי אפשר להוסיף לסל", "מיטה"),
+        ("בלי מחיר", "Zebra rug"), ("בלי מחיר", "apple chair"), ("בלי מחיר", "ארון"), ("בלי מחיר", "שולחן"),
+        ("בלי תמונה", "ספה"),
+        ("תמונה שבורה", "כיסא"),                                          # after "לא במלאי" in the alphabet, before it here
+        ("לא במלאי", "Zebra rug"), ("לא במלאי", "apple chair"), ("לא במלאי", "ארון")]
+
+
 def test_job_markers(db):
     monday, tuesday = dt.date(2024, 11, 11), dt.date(2024, 11, 12)
     assert db.rpc("sh_job_due", p_job="catalogue", p_day=monday) is True
@@ -1115,40 +1325,95 @@ def test_job_markers(db):
     assert db.rpc("sh_job_due", p_job="sitemap", p_day="2024-11-11") is True     # a date may arrive as text
 
 
-def test_cleanup_keeps_what_the_retention_rules_keep(db):
-    db.setup()
+def _ages(db, table, column, label="null::text"):
+    """The age of every row of a table in whole days, each with a label, youngest first."""
+    return db.sql("select %s, round(extract(epoch from now() - %s) / 86400)::int from %s order by 2, 1" % (label, column, table))
+
+
+def _aged_rows(db, keep):
+    """Rows on both sides of every retention rule, placed in days before now()."""
     db.sql("insert into sh_probe (round_at, kind, page, url, ok) select now() - d * interval '1 day', kind, 'בית', 'u', true"
-           " from (values (399, 'full'), (401, 'full'), (6, 'light'), (8, 'light'), (402, 'light')) as v(d, kind)")
-    db.sql("insert into sh_speed (at, url, strategy, source, ok)"
-           " select now() - d * interval '1 day', 'u', 'mobile', 'core', true from (values (399), (401)) as v(d)")
+           " from (values (%s, 'full'), (%s, 'full'), (%s, 'full'), (6, 'light'), (7, 'light'), (8, 'light'), (%s, 'light'))"
+           " as v(d, kind)", [keep - 1, keep, keep + 1, keep - 1])
+    db.sql("insert into sh_speed (at, url, strategy, source, ok) select now() - d * interval '1 day', 'u', 'mobile', source, true"
+           " from (values (%s, 'core'), (%s, 'core'), (%s, 'core'), (44, 'rotation'), (45, 'rotation'), (46, 'rotation'),"
+           " (200, 'rotation')) as v(d, source)", [keep - 1, keep, keep + 1])
     db.sql("insert into sh_rum (created_at, site, path, lcp_ms) select now() - d * interval '1 day', 'live', '/', 1000"
-           " from (values (29), (31), (32)) as v(d)")
-    db.sql("insert into sh_login_log (at, ok) select now() - d * interval '1 day', true from (values (399), (401)) as v(d)")
+           " from (values (29), (30), (31), (32)) as v(d)")
+    db.sql("insert into sh_login_log (at, ok) select now() - d * interval '1 day', true from (values (399), (400), (401)) as v(d)")
+
+
+@pytest.mark.parametrize("keep", [100, 30, 400])
+def test_cleanup_keeps_what_the_retention_rules_keep(db, keep):
+    db.setup() if keep == 100 else db.setup(keep_days=keep)               # 100 is the default
+    _aged_rows(db, keep)
+    today = db.now().astimezone(TZ).date()
+    for age in (29, 30, 31, 45):                                          # catalogue snapshots; the newest is the latest
+        db.rpc("sh_issues_set", p_snap_date=today - dt.timedelta(days=age), p_rows=[
+            {"product_id": "1", "issue": "בלי מחיר"}, {"product_id": "2", "issue": "לא במלאי"}])
+    db.sql("insert into sh_jobs (job, day) select job, %s - d from (values ('morning', 399), ('morning', 400),"
+           " ('morning', 401), ('morning', 800), ('sitemap', 900)) as v(job, d)", [today])
     db.sql("insert into sh_alerts (key, kind, title, opened_at, closed_at)"
            " values ('k', 'down', 't', now() - interval '900 days', now() - interval '899 days')")
     db.sql("insert into sh_messages (at, event, kind, title) values (now() - interval '900 days', 'open', 'התראה', 't')")
-    db.rpc("sh_issues_set", p_snap_date=dt.date(2020, 1, 1), p_rows=[{"product_id": "1", "issue": "בלי מחיר"}])
-    assert db.rpc("sh_cleanup") == {"probe": 2, "probe_light": 1, "speed": 1, "rum": 2, "login_log": 1}
-    assert db.sql("select kind, round(extract(epoch from now() - round_at) / 86400)::int from sh_probe order by 2") == [
-        ("light", 6), ("full", 399)]
-    assert [db.sql("select count(*) from " + t)[0][0] for t in
-            ("sh_speed", "sh_rum", "sh_login_log", "sh_alerts", "sh_messages", "sh_product_issues")] == [1, 1, 1, 1, 1, 1]
-    assert db.rpc("sh_cleanup") == {"probe": 0, "probe_light": 0, "speed": 0, "rum": 0, "login_log": 0}
+
+    assert db.rpc("sh_cleanup") == {"probe": 1, "probe_light": 2, "speed": 3, "rum": 2, "product_issues": 4, "jobs": 2,
+                                    "login_log": 1}
+    # full rounds and the runs of core pages: keep_days. Light rounds: 7 days. Rotation runs: 45 days.
+    assert _ages(db, "sh_probe", "round_at", "kind") == [("light", 6), ("light", 7), ("full", keep - 1), ("full", keep)]
+    assert sorted(_ages(db, "sh_speed", "at", "source")) == sorted(
+        [("rotation", 44), ("rotation", 45), ("core", keep - 1), ("core", keep)])
+    assert _ages(db, "sh_rum", "created_at") == [(None, 29), (None, 30)]
+    assert _ages(db, "sh_login_log", "at") == [(None, 399), (None, 400)]
+    assert db.sql("select %s - snap_date, count(*) from sh_product_issues group by 1 order by 1", [today]) == [(29, 2), (30, 2)]
+    # markers: 400 days, and the newest marker of a job whatever its age; the snapshots' own markers are young
+    assert db.sql("select job, %s - day from sh_jobs where job <> 'issues_snapshot' order by 1, 2", [today]) == [
+        ("morning", 399), ("morning", 400), ("sitemap", 900)]
+    assert [db.sql("select count(*) from " + t)[0][0] for t in ("sh_alerts", "sh_messages")] == [1, 1]      # for good
+    assert db.rpc("sh_cleanup") == {"probe": 0, "probe_light": 0, "speed": 0, "rum": 0, "product_issues": 0, "jobs": 0,
+                                    "login_log": 0}
 
 
-def test_rum_add_stores_no_query_string_and_no_impossible_timing(db):
+def test_cleanup_never_deletes_the_latest_catalogue_snapshot(db):
     db.setup()
+    long_ago = [dt.date(2020, 1, 1), dt.date(2020, 1, 2)]
+    for day in long_ago:
+        db.rpc("sh_issues_set", p_snap_date=day, p_rows=[{"product_id": "1", "issue": "בלי מחיר", "name": "מיטה"}])
+    shown = db.rpc("sh_product_issues")
+    assert [r["snap_date"] for r in shown] == ["2020-01-02"]
+    assert db.rpc("sh_cleanup") == {"probe": 0, "probe_light": 0, "speed": 0, "rum": 0, "product_issues": 1, "jobs": 1,
+                                    "login_log": 0}
+    assert db.rpc("sh_product_issues") == shown                           # the screen still shows it, with its date
+    assert db.sql("select job, day from sh_jobs") == [("issues_snapshot", long_ago[1])]
+
+
+def test_cleanup_before_the_site_is_set_up_uses_the_default(db):
+    assert db.rpc("sh_config")["keep_days"] == 100                        # also a database set up before the setting
+    _aged_rows(db, 100)
+    assert db.rpc("sh_cleanup") == {"probe": 1, "probe_light": 2, "speed": 3, "rum": 2, "product_issues": 0, "jobs": 0,
+                                    "login_log": 1}
+
+
+def test_rum_add_drops_what_is_outside_the_limits_of_the_ingest(db):
+    db.setup()
+    long = "/" + "x" * 299                                                # 300 characters: the longest path kept
     assert db.rpc("sh_rum_add", p_rows=[{"site": "live", "path": "/", "lcp_ms": 0},
                                         {"site": "live", "path": "/", "lcp_ms": 60001},
-                                        {"path": "/", "lcp_ms": 1000}, {"site": "live", "lcp_ms": 1000}]) == {"n": 0}
+                                        {"path": "/", "lcp_ms": 1000}, {"site": "live", "lcp_ms": 1000},
+                                        {"site": "Live Site", "path": "/", "lcp_ms": 1000},
+                                        {"site": "", "path": "/", "lcp_ms": 1000},
+                                        {"site": "a" * 101, "path": "/", "lcp_ms": 1000},
+                                        {"site": "live\n", "path": "/", "lcp_ms": 1000},
+                                        {"site": "live", "path": long + "x", "lcp_ms": 1000}]) == {"n": 0}
     assert flow(db, RUM_FLOW)["status"] == "אין נתון"
     assert db.rpc("sh_rum_add", p_rows=[
         {"site": "live", "path": "/product/sofa/?email=a@b.co&utm=x#top", "lcp_ms": 1, "is_test": True},
         {"site": "dev.example.co.il", "path": "/cart/", "lcp_ms": 60000},
-        {"site": "live", "path": "/", "lcp_ms": 2400.4}]) == {"n": 3}
+        {"site": "a" * 100, "path": long + "?" + "q" * 500, "lcp_ms": 300},      # the query string does not count
+        {"site": "live", "path": "/", "lcp_ms": 2400.4}]) == {"n": 4}
     assert db.sql("select site, path, lcp_ms, is_test, created_at = now() from sh_rum order by lcp_ms") == [
-        ("live", "/product/sofa/", 1, True, True), ("live", "/", 2400, False, True),
-        ("dev.example.co.il", "/cart/", 60000, False, True)]
+        ("live", "/product/sofa/", 1, True, True), ("a" * 100, long, 300, False, True),
+        ("live", "/", 2400, False, True), ("dev.example.co.il", "/cart/", 60000, False, True)]
     assert flow(db, RUM_FLOW)["status"] == "תקין"
 
 
@@ -1262,7 +1527,7 @@ def test_a_simulated_day_matches_an_independent_calculation(db):
     assert dt.datetime.fromisoformat(flow(db, ROTATION_FLOW)["last_at"]) == start + mins(1435)
 
 
-# ================================================================ the same shapes as the mock backend (§5)
+# ================================================================ the same shapes as the mock backend (spec §5)
 
 def _shape(row):
     """The keys of a row and the kind of each value that is not null."""
@@ -1270,9 +1535,9 @@ def _shape(row):
     return {k: kinds[type(v)] for k, v in row.items() if v is not None}
 
 
-def _same_shape(mine, theirs, mock_only=()):
+def _same_shape(mine, theirs):
     """Same keys; and where both have a value, the same kind of value."""
-    assert set(mine) == set(theirs) - set(mock_only), (sorted(mine), sorted(theirs))
+    assert set(mine) == set(theirs), (sorted(mine), sorted(theirs))
     a, b = _shape(mine), _shape(theirs)
     assert {k: a[k] for k in a if k in b} == {k: b[k] for k in a if k in b}
 
@@ -1288,10 +1553,10 @@ def busy(db):
                  dead=(minute - mins(600), 7), fail_hour=("סל", minute - mins(180), 3))
     sim.snapshot(db.rpc, now.date())
     db.probe(now - secs(3), fail={"סל": 502})
-    db.rpc("sh_alerts_check")
+    pushes = db.rpc("sh_alerts_check")
     db.sql("update sh_alerts set opened_at = now() - interval '9 minutes'")
     db.probe(now - secs(2))
-    for message in db.rpc("sh_alerts_check"):
+    for message in pushes + db.rpc("sh_alerts_check"):
         db.rpc("sh_message_sent", p_id=message["id"], p_status=200)
     db.probe(now - secs(1), fail={"מוצר": 502})
     db.rpc("sh_alerts_check")
@@ -1321,9 +1586,7 @@ def test_site_parts_have_the_shapes_of_the_mock(busy, monkeypatch):
     health = db.rpc("sh_health")
     assert [r["flow_name"] for r in health] == [r["flow_name"] for r in theirs["health"]]
     for a, b in zip(health, theirs["health"]):
-        # flow_group is a leftover of the system the screen was taken from: SPEC §5.2 does not
-        # list it and site_health.html never reads it
-        _same_shape(a, b, mock_only=["flow_group"])
+        _same_shape(a, b)
     _same_shape(db.rpc("sh_product_issues")[0], theirs["product_issues"][0])
     _same_shape(db.rpc("sh_cert"), theirs["cert"])
 
@@ -1334,7 +1597,7 @@ def test_now_has_the_shape_of_the_mock(busy, monkeypatch):
     theirs, mine = mock.api_now("owner"), db.rpc("sh_now")
     _same_shape(mine, theirs)
     _same_shape(mine["pages"][0], theirs["pages"][0])
-    # the mock hands its "pages" rows out again as "latest"; SPEC §5.3 defines {page, ok} and the
+    # the mock hands its "pages" rows out again as "latest"; spec §5.3 defines {page, ok} and the
     # screen reads nothing else from them
     assert set(mine["latest"][0]) == {"page", "ok"} <= set(theirs["latest"][0])
     for part in ("rum", "speed", "rum_src"):
@@ -1379,7 +1642,7 @@ READ = ["sh_availability", "sh_availability_series", "sh_speed", "sh_speed_serie
 WRITE = ["sh_alert_ack", "sh_login_log_add", "sh_rum_add", "sh_setup", "sh_probe_add", "sh_speed_add", "sh_rotation_next",
          "sh_sitemap_set", "sh_cert_set", "sh_issues_set", "sh_job_mark", "sh_alerts_check", "sh_message_sent",
          "sh_morning", "sh_cleanup"]
-API = READ + WRITE                                                        # the 33 functions of SPEC §7.3 and §7.4
+API = READ + WRITE                                                        # the 33 functions of spec §7.3 and §7.4
 
 
 def test_every_function_of_the_spec_exists_with_the_agreed_form(db):
@@ -1404,6 +1667,66 @@ def test_schema_and_functions_can_be_applied_again(committed):
     apply_sql(db.conn)
     apply_sql(db.conn)
     assert (db.rpc("sh_config"), db.rpc("sh_health"), db.rpc("sh_availability", p_from=T0, p_to=T0 + mins(1))) == before
+
+
+def test_schema_upgrades_a_database_of_the_first_version_and_keeps_its_data(db):
+    """The tables as the first version made them (the columns added since are dropped again),
+    with data in them and a site set up by that version; then both files are applied."""
+    db.setup()
+    now = db.now()
+    db.probe(now - secs(30), fail={"סל": 502})
+    db.run(now - mins(5), "בית", 2400, score=64)
+    db.sql("insert into sh_alerts (key, kind, title, opened_at) values (%s, 'silent', 'המדידה נעצרה', now() - interval '1 hour')",
+           ["silent:" + RUM_FLOW])                                        # the first version alerted on quiet nights
+    db.sql("insert into sh_messages (event, kind, title, msg) values ('open', 'התראה', 'הודעה ישנה', 'גוף')")
+    db.ran(RUM_FLOW, hours=7)
+    db.ran(SITEMAP_FLOW, hours=3)
+    db.sql("alter table sh_speed drop column lh_version")
+    db.sql("alter table sh_messages drop column claimed_at")
+    db.sql("alter table sh_flows drop column alerts")
+    db.sql("update sh_flows set warn_minutes = 120, late_minutes = 360 where flow_name = %s", [RUM_FLOW])
+    db.sql("delete from sh_settings where key in ('keep_days', 'rum_hosts', 'private_paths')")
+    before = (db.sql("select * from sh_probe order by page"), db.sql("select at, url, lcp_ms, score from sh_speed"),
+              db.sql("select id, title from sh_messages"), db.sql("select flow_name, last_at from sh_flows order by sort"),
+              db.rpc("sh_availability", p_from=now - mins(60), p_to=now))
+
+    apply_sql(db.conn)
+
+    assert db.sql("""select table_name::text, column_name::text, data_type::text, is_nullable::text, column_default::text
+                     from information_schema.columns
+                     where table_schema = 'public' and column_name in ('lh_version', 'claimed_at', 'alerts') order by 1""") == [
+        ("sh_flows", "alerts", "boolean", "NO", "true"), ("sh_messages", "claimed_at", "timestamp with time zone", "YES", None),
+        ("sh_speed", "lh_version", "text", "YES", None)]
+    assert before == (db.sql("select * from sh_probe order by page"), db.sql("select at, url, lcp_ms, score from sh_speed"),
+                      db.sql("select id, title from sh_messages"), db.sql("select flow_name, last_at from sh_flows order by sort"),
+                      db.rpc("sh_availability", p_from=now - mins(60), p_to=now))               # nothing was lost
+    assert db.sql("select lh_version from sh_speed") == [(None,)] and db.sql("select claimed_at from sh_messages") == [(None,)]
+    # the real-user flow as the current version seeds it; the other flows untouched
+    assert db.sql("select flow_name, alerts, warn_minutes, late_minutes from sh_flows order by sort") == [
+        (name, name != RUM_FLOW, warn, late) for name, _, warn, late in FLOWS]
+    config = db.rpc("sh_config")                                          # the new settings read as their defaults
+    assert (config["keep_days"], config["rum_hosts"], config["private_paths"], config["time_zone"]) == (
+        100, [], [], "Asia/Jerusalem")
+    # and the functions work on it: the old push is handed out, the real-user alert closes, the page's alert opens
+    assert sorted((m["event"], m["title"]) for m in db.rpc("sh_alerts_check")) == [
+        ("close", "המדידה נעצרה"), ("open", "האתר לא עונה: סל"), ("open", "הודעה ישנה")]
+    assert flow(db, RUM_FLOW)["status"] == "מתעכב" and db.rpc("sh_cleanup")["probe"] == 0
+    db.run(now, "בית", 2500, lh_version="13.0.1")
+    assert db.sql("select lh_version from sh_speed order by at") == [(None,), ("13.0.1",)]
+
+    # the change of the real-user flow is made once: a later choice by hand survives the next upgrade
+    db.sql("update sh_flows set alerts = true, late_minutes = 720 where flow_name = %s", [RUM_FLOW])
+    apply_sql(db.conn)
+    assert db.sql("select alerts, late_minutes from sh_flows where flow_name = %s", [RUM_FLOW]) == [(True, 720)]
+
+
+def test_functions_sql_ends_by_telling_postgrest_to_reload_its_list_of_functions(committed):
+    functions = (REFERENCE / "functions.sql").read_text(encoding="utf-8")
+    assert functions.rstrip().endswith("\nnotify pgrst, 'reload schema';")
+    listener, sender = committed(), committed()
+    listener.sql("listen pgrst")
+    sender.conn.execute(functions)
+    assert [(n.channel, n.payload) for n in listener.conn.notifies(timeout=10, stop_after=1)] == [("pgrst", "reload schema")]
 
 
 def test_tables_and_functions_are_private(db):
@@ -1532,3 +1855,6 @@ def test_reads_over_90_days_take_less_than_2_seconds(db):
     assert [r["checks"] for r in section(answers["sh_speed"], "ליבה")] == [8640] * 5 + [2160] * 5
     assert section(answers["sh_speed"], "כיסוי") == [{"section": "כיסוי", "checks": 400, "slow_runs": 400}]
     assert len(answers["sh_drill_runs"]) == 8640 and len(answers["sh_drill_fails"]) == 500
+    assert [len(r["opps"]) for r in answers["sh_drill_runs"]] == [8] * 100 + [0] * 8540
+    assert answers["sh_cleanup"] == {"probe": 0, "probe_light": 0, "speed": 0, "rum": 0, "product_issues": 0, "jobs": 0,
+                                     "login_log": 0}                     # 90 days: nothing is old enough to go
