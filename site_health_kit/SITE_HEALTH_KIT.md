@@ -3,25 +3,38 @@
 **לדורון, בקצרה**
 
 - **מה זה:** כל מה שקודקס צריך כדי לבנות את מסך "בריאות האתר" לאתר אחר: ההוראות, המסך עצמו, ובדיקות.
-- **מה עושים איתו:** שמים את הקובץ הזה בתיקיית הפרויקט של האתר החדש, ואומרים לקודקס את המשפט שלמטה.
-- **מה יוצא:** קודקס שואל אותך כמה שאלות קצרות על האתר (כתובת, אילו עמודים לבדוק, מי מקבל התראות) ואז בונה.
+- **מה עושים איתו:** שמים את הקובץ הזה בתיקיית הפרויקט של האתר החדש, ושולחים לקודקס את ההודעה שלמטה.
+- **מה יוצא:** קודקס שואל אותך כמה שאלות קצרות (כתובת האתר, אילו עמודים לבדוק, מי מקבל התראות) ואז בונה, שלב אחרי שלב.
 
-המשפט לקודקס (להעתיק כמו שהוא):
+ההודעה לקודקס (להעתיק, ולהשלים את כתובת האתר):
 
-> בתיקייה יש קובץ SITE_HEALTH_KIT.md. תריץ את פקודת הפריסה שכתובה בראשו, תקרא את site_health_kit/SPEC.md מההתחלה עד הסוף, ותבנה לפיו את מסך בריאות האתר לאתר שלי. תכתוב לי בעברית, קצר ופשוט, ושאלה אחת בכל פעם.
+> בתיקייה יש קובץ SITE_HEALTH_KIT.md. אל תקרא את כולו. תריץ את פקודת הפריסה שכתובה בראש הקובץ, תקרא את site-health-kit/START-HERE.md עד השורה האחרונה, ותעבוד לפיו. אני רוצה את מסך בריאות האתר לאתר: ________. תכתוב לי בעברית, קצר ופשוט, ושאלה אחת בכל פעם.
 
 ---
 
 # For the coding agent
 
-This single file is a container. It holds a specification and working files for building the
-**Site Health screen ("בריאות האתר")** for a website.
+This file is a container: 23 files (about 501 KB) are embedded below the line
+`FILES BELOW`. **Do not read or print the part below that line.** Unpack it instead.
 
-**Step 1 — unpack.** Do not read past the line `FILES BELOW` (it is ~476 KB of embedded
-files). From the directory that contains this file, run:
+**Step 1 — unpack.** From the directory that contains this file, run this one command:
 
 ```bash
-python3 - <<'PY'
+python3 -c "import re;exec(re.search(r'(?s)# --- unpack ---\n(.*?)# --- end unpack ---',open('SITE_HEALTH_KIT.md',encoding='utf-8').read()).group(1))"
+```
+
+It writes the folder `site-health-kit/`, verifies the checksum of every file, and prints
+`KIT OK`. If it fails, stop and tell the owner the file arrived damaged. Never recreate a file
+of the kit from memory.
+
+**Step 2 — read `site-health-kit/START-HERE.md`** completely, to its last line
+(`<!-- EOF START-HERE.md -->`), at most 150 lines per command. It tells you what else to read
+and how to work.
+
+The command above runs this script, which is the only part of this file you need to trust:
+
+```python
+# --- unpack ---
 import hashlib, os, re
 s = open('SITE_HEALTH_KIT.md', encoding='utf-8').read()
 n = 0
@@ -32,48 +45,417 @@ for m in re.finditer(r'<!-- FILE: (\S+) sha256=([0-9a-f]{64}) -->\n~~~~~~~~[^\n]
     os.makedirs(os.path.dirname(path) or '.', exist_ok=True)
     open(path, 'w', encoding='utf-8', newline='\n').write(body)
     n += 1
-print('unpacked', n, 'files into site_health_kit/')
-PY
+assert n == 23, 'expected 23 files, found %d (the file is cut; get it again)' % n
+print('KIT OK: unpacked', n, 'files into site-health-kit/')
+# --- end unpack ---
 ```
-
-It writes the folder `site_health_kit/` and verifies every file's checksum. If Python is not
-available, extract each block between `<!-- FILE: path … -->` and `<!-- END FILE -->` by other
-means; do **not** retype file contents from memory.
-
-**Step 2 — read `site_health_kit/SPEC.md` from start to end.** It is the specification; everything
-else in the folder is referenced from it. Read it in full before writing any code (it is about
-1001 lines; read it in chunks if your tools truncate long files).
-
-**Step 3 — follow SPEC.md §1.** In short: see the screen run on fake data
-(`python3 site_health_kit/mock_server.py`), ask the owner the intake questions of §2, then build in
-the phases of §9 and run the checks of each phase.
 
 Contents:
 
-- `site_health_kit/SPEC.md` (1001 lines)
-- `site_health_kit/AGENTS.md` (47 lines)
-- `site_health_kit/site_health.html` (943 lines)
-- `site_health_kit/mock_server.py` (486 lines)
-- `site_health_kit/check_screen.js` (197 lines)
-- `site_health_kit/reference/db.py` (98 lines)
-- `site_health_kit/reference/functions.sql` (997 lines)
-- `site_health_kit/reference/requirements.txt` (8 lines)
-- `site_health_kit/reference/schema.sql` (180 lines)
-- `site_health_kit/reference/server.py` (631 lines)
-- `site_health_kit/reference/site_health.config.example.json` (19 lines)
-- `site_health_kit/reference/rum/site-health-rum.js` (50 lines)
-- `site_health_kit/reference/rum/site-health-rum.php` (83 lines)
-- `site_health_kit/reference/tests/conftest.py` (161 lines)
-- `site_health_kit/reference/tests/sim.py` (115 lines)
-- `site_health_kit/reference/tests/test_rum_snippet.js` (36 lines)
-- `site_health_kit/reference/tests/test_server.py` (1349 lines)
-- `site_health_kit/reference/tests/test_sql.py` (1534 lines)
+- `site-health-kit/START-HERE.md` (125 lines)
+- `site-health-kit/SKILL.md` (15 lines)
+- `site-health-kit/AGENTS-snippet.md` (26 lines)
+- `site-health-kit/MANIFEST.json` (137 lines)
+- `site-health-kit/AGENTS.md` (47 lines)
+- `site-health-kit/SPEC.md` (1036 lines)
+- `site-health-kit/check_screen.js` (197 lines)
+- `site-health-kit/mock_server.py` (486 lines)
+- `site-health-kit/site_health.html` (943 lines)
+- `site-health-kit/reference/db.py` (98 lines)
+- `site-health-kit/reference/functions.sql` (997 lines)
+- `site-health-kit/reference/requirements.txt` (8 lines)
+- `site-health-kit/reference/schema.sql` (180 lines)
+- `site-health-kit/reference/server.py` (631 lines)
+- `site-health-kit/reference/site_health.config.example.json` (19 lines)
+- `site-health-kit/reference/rum/site-health-rum.js` (50 lines)
+- `site-health-kit/reference/rum/site-health-rum.php` (83 lines)
+- `site-health-kit/reference/tests/conftest.py` (161 lines)
+- `site-health-kit/reference/tests/sim.py` (115 lines)
+- `site-health-kit/reference/tests/test_rum_snippet.js` (69 lines)
+- `site-health-kit/reference/tests/test_server.py` (1349 lines)
+- `site-health-kit/reference/tests/test_sql.py` (1534 lines)
+- `site-health-kit/tools/check_template.py` (62 lines)
 
 ---
 
 FILES BELOW
 
-<!-- FILE: site_health_kit/SPEC.md sha256=fb5d7aff5d279408124352e6a50d0a4e4611864ab6c089522fdabe51591568c6 -->
+<!-- FILE: site-health-kit/START-HERE.md sha256=6a57a7e639ad01397cc4b4b2b2ee9810d8411607148468056cdf144a3ecc7e79 -->
+~~~~~~~~markdown
+# Site Health kit — start here
+
+You are going to build the **Site Health screen ("בריאות האתר")** for a website: one phone-first
+page that shows whether the site is up, how fast it is, what is broken and which alerts fired,
+plus the measuring machinery behind it. It is a port of a screen that runs in production; the
+screen and its data contract are fixed, the machinery behind it is a tested reference you adapt.
+
+This file is the entry point and the single source of truth for **how to work**. If files
+disagree: the owner's message wins, then this file, then `spec/`, then comments in code.
+
+## 1. Read before you build
+
+Read these files **completely**, in this order, before writing code. Read at most 150 lines per
+command (`sed -n '1,150p' FILE`, then `'151,300p'`, …); a file counts as read only when you have
+seen its last line, which is always `<!-- EOF <path> -->`. If a tool prints
+`Warning: truncated output`, read that range again in smaller pieces.
+
+| # | File | What it gives you |
+|---|---|---|
+| 1 | `START-HERE.md` | this file: rules, the owner, intake, phases, done |
+| 2 | `spec/03-system.md` | what is measured, cadences, thresholds, definitions, per-site configuration (§3, §4) |
+| 3 | `spec/05-api-contract.md` | the JSON the screen reads, field by field (§5) — binding |
+| 4 | `spec/06-screen.md` | the screen: layout, texts, interactions, what you may change (§6) — binding |
+| 5 | `spec/07-backend.md` | tables, functions, collectors, alert rules, pushes (§7) — reference design |
+| 6 | `spec/08-access.md` | sign-in, roles, vendors, the share link (§8) |
+| 7 | `spec/09-build-and-checks.md` | build phases with their checks, the go-live checklist, lessons already paid for (§9–§11) |
+
+Section numbers (§5.2, §7.8, …) are the same everywhere in the kit, including in code comments.
+
+Working files (do not read them top to bottom; use them):
+
+| File | What it is |
+|---|---|
+| `site_health.html` | **the screen.** One HTML file, no build step, no libraries. Copy it; never retype it |
+| `mock_server.py` | a fake backend with realistic data (standard library only): the contract by example |
+| `check_screen.js` | the acceptance test of the screen (Playwright) |
+| `tools/check_template.py` | proves a deployed screen file is still the kit's screen |
+| `reference/` | a tested reference backend: SQL, server, collectors, real-user script, tests. `reference/README.md` explains it |
+| `AGENTS-snippet.md` | the short block to put at the top of the target repository's `AGENTS.md` |
+| `MANIFEST.json` | every file of the kit with its size, line count and checksum |
+
+## 2. Rules
+
+1. **The screen is `site_health.html`. Copy it with `cp`; change it only with small patches**, and
+   only what `spec/06-screen.md` §6.9 allows (per-site values go into `SH_CONFIG`). Never
+   regenerate it from memory. `python3 tools/check_template.py <your copy>` must pass.
+2. **Hebrew text is product text.** Keep every Hebrew string byte for byte, in UTF-8. Do not
+   translate, transliterate or escape it (`\uXXXX`, HTML entities). Pages stay `dir="rtl"`.
+3. **The JSON contract of §5 is binding**: field names, types, the literal Hebrew values, the
+   order of rows. `mock_server.py` returns exactly those shapes.
+4. **Never invent a number.** Every figure on the screen comes from a stored measurement. A
+   collector that has not run yet shows as the card's empty state. No sample rows in production.
+5. **Secrets live only in environment variables or the host's secret store.** Never in the
+   repository, the HTML, a log or a chat message. Name the variable; never print its value
+   (no `env`, no `cat .env`). If a key is needed, tell the owner where to paste it.
+6. **No customer data.** No names, emails, phones, order numbers or visitor IP addresses are
+   stored. URLs are stored without query strings.
+7. **Be a polite client of the monitored site**: one probe round a minute, hard timeouts, a
+   distinct User-Agent. Never load-test it.
+8. **Outsiders get an allow-list** (vendors, share link): deny by default (§8).
+9. **Work in the phases of §9, in order, and run each phase's checks.** A phase is done when its
+   checks pass on the real thing. Report a failed check as failed.
+10. **Tests never write to the live database.** Use a scratch database.
+11. **Keep `PROGRESS.md`** at the root of the target repository: the phase checklist, decisions
+    you made, the owner's answers, what is blocked. Update it at the end of every phase. After a
+    context compaction, read `START-HERE.md` and `PROGRESS.md` again before continuing.
+12. **Commit at the end of every phase** (the owner asks for this by giving you this kit), with a
+    one-line message naming the phase. Do not push or deploy unless the owner asked.
+13. When something external blocks you (a missing key, a refused API, no network in your
+    sandbox), stop that item, say exactly what is missing and who can provide it, and continue
+    with what does not depend on it. The kit's own tests need no network.
+
+## 3. The owner
+
+The owner is not a developer. Unless they tell you otherwise:
+
+- Write to them in **Hebrew**, short messages, plain words. No technical terms; when one is
+  unavoidable, explain it in half a sentence.
+- **One decision per message.** A question says what happens on yes, what happens on no, and
+  whether it can be changed later.
+- Introducing something new, say three things: what it is, what they do with it, what they get.
+- End every message with one line: what the owner needs to do now, or "אתה לא צריך לעשות כלום".
+- At the end of every phase send two or three lines: what now works, what you checked, what is next.
+
+## 4. Intake: find out before building the backend
+
+Find what you can yourself (open the site, read its sitemap, detect the platform), then confirm
+with the owner, one short message per topic. Record the answers in `site_health.config.json`
+(format: `reference/site_health.config.example.json`; no secrets in it) and in `PROGRESS.md`.
+
+| # | Topic | What you need | How to find it / default |
+|---|---|---|---|
+| 1 | The site | its public address | Ask. Check which of `www` / no-`www` is the real one. |
+| 2 | Platform | WooCommerce, Shopify, other | `/wp-json/wc/store/v1/products?per_page=1` answers → WooCommerce; `/products.json?limit=1` answers → Shopify; else other. |
+| 3 | Probe pages (default 4) | the pages checked every minute, each with a short Hebrew name | A shop: home (`בית`), one category, one product, the cart. Otherwise: home plus the three pages that matter most. Pick pages that exercise different parts of the server. The home page must be one of them. |
+| 4 | Core pages (default 5) | the pages whose speed is measured every 15 minutes | The probe pages plus one more. Only pages that open without signing in or filling a cart. |
+| 5 | Who gets alerts | the people who get a push on their phone | Each installs the ntfy app and subscribes to one topic (§7.9). Ask who. |
+| 6 | Who may view | owner; staff; outside vendors (read-only); a share link | Default: owner only. Offer the vendor role when the owner mentions an agency or a developer. |
+| 7 | Hosting | where the database and the small server run | Default: Supabase + one small always-on web service. If the owner already has a dashboard, the screen joins it. |
+| 8 | "Down" rule | alert on the first failed check, or only after two in a row | Production default: the first (nothing missed, more noise). Offer two when the owner dislikes noise. |
+| 9 | Google key | a PageSpeed Insights API key (free) | The owner creates it (§7.6 has the steps) and pastes it into the host's settings. Without it the speed cards stay empty. |
+
+Do not ask the owner about thresholds, colors, wording or cadences. Those are decided.
+
+**If you cannot ask** (a run with nobody watching): take the defaults above, choose the pages
+from the sitemap and the site's menu, mark every such choice in `PROGRESS.md` under
+"הנחות שצריך לאשר", and list them in your final message. Do not send test pushes or deploy
+without the owner.
+
+## 5. First hour
+
+1. `python3 mock_server.py` → open `http://localhost:8787/site` at phone width. That is the
+   finished screen, on fake data. Open a drill-down, press `הסברים`, try `?role=vendor`.
+2. `node check_screen.js` (needs Playwright; if it is missing, say so and go on).
+3. `cd reference && python3 -m pytest -q` (needs a scratch Postgres; see `reference/README.md`).
+4. Read the spec files, then start the intake.
+
+## 6. Done
+
+The go-live checklist of §10 passes on the live address; `PROGRESS.md` is complete; the owner
+received one test push, saw the screen on their phone, and got a short Hebrew note with the
+address, how to subscribe to alerts, and what each color means. Paste the output of the final
+checks into your last message.
+
+<!-- EOF START-HERE.md -->
+~~~~~~~~
+<!-- END FILE -->
+
+<!-- FILE: site-health-kit/SKILL.md sha256=5eb84c7fed1a09201d9add870a0facdfc4d0cc194efb9bd82be671c9b9a34dc4 -->
+~~~~~~~~markdown
+---
+name: site-health-kit
+description: Build the Site Health screen ("בריאות האתר") for a website (uptime, speed, broken products, certificate, alerts to the phone) from a fixed screen template and a tested reference backend. Use when asked to build, port, deploy or change a site health / בריאות האתר screen.
+---
+
+# Site Health kit
+
+Everything is in this folder. Read `START-HERE.md` completely, to its last line
+(`<!-- EOF START-HERE.md -->`), before doing anything else, and follow it. It lists the other
+files to read and the rules of the work.
+
+Never retype `site_health.html`; copy it. Run the scripts and tests in this folder instead of
+rewriting them.
+
+<!-- EOF SKILL.md -->
+~~~~~~~~
+<!-- END FILE -->
+
+<!-- FILE: site-health-kit/AGENTS-snippet.md sha256=420c1b013b227ba4b569f150ed5416c811d5c1c88f19c260996579745c2b1bc9 -->
+~~~~~~~~markdown
+## Site Health kit ("בריאות האתר")
+
+A build kit for the Site Health screen lives in `site-health-kit/`. For any work on it:
+
+1. Read `site-health-kit/START-HERE.md` completely before editing anything, at most 150 lines per
+   command. A file counts as read only after you saw its last line, `<!-- EOF ... -->`. It is the
+   source of truth for how to work; the owner's message wins over it.
+2. The screen is `site-health-kit/site_health.html`. Copy it with `cp` and change it only with
+   small patches allowed by spec §6.9. Never regenerate it. Check:
+   `python3 site-health-kit/tools/check_template.py <path to the deployed copy>`.
+3. Hebrew strings are product text: keep them byte for byte in UTF-8, never translated or escaped.
+4. The JSON contract (spec §5) is binding. Never invent a number; no sample data in production.
+5. Secrets only in environment variables. Never print their values. No customer data is stored.
+6. Tests never write to the live database.
+7. Keep `PROGRESS.md` up to date; after a context compaction re-read `START-HERE.md` and
+   `PROGRESS.md` first.
+8. Write to the owner in Hebrew: short, plain words, one decision per message, and a last line
+   saying what they need to do now.
+
+Checks:
+
+```bash
+python3 site-health-kit/mock_server.py            # the screen on fake data → http://localhost:8787/site
+node site-health-kit/check_screen.js              # acceptance test of the screen
+cd site-health-kit/reference && python3 -m pytest -q
+```
+~~~~~~~~
+<!-- END FILE -->
+
+<!-- FILE: site-health-kit/MANIFEST.json sha256=03d44bb81506b04e1abb653f3785154e71cef6390af46d8d13b9656a73254a42 -->
+~~~~~~~~json
+{
+ "kit": "site-health-kit",
+ "files": [
+  {
+   "path": "START-HERE.md",
+   "bytes": 8891,
+   "lines": 125,
+   "sha256": "6a57a7e639ad01397cc4b4b2b2ee9810d8411607148468056cdf144a3ecc7e79"
+  },
+  {
+   "path": "SKILL.md",
+   "bytes": 703,
+   "lines": 15,
+   "sha256": "5eb84c7fed1a09201d9add870a0facdfc4d0cc194efb9bd82be671c9b9a34dc4"
+  },
+  {
+   "path": "AGENTS-snippet.md",
+   "bytes": 1489,
+   "lines": 26,
+   "sha256": "420c1b013b227ba4b569f150ed5416c811d5c1c88f19c260996579745c2b1bc9"
+  },
+  {
+   "path": "AGENTS.md",
+   "bytes": 2724,
+   "lines": 47,
+   "sha256": "aa385ee4bcb7c63870d701b68265df2ce9736c58f26139938964d6a0d3641836"
+  },
+  {
+   "path": "SPEC.md",
+   "bytes": 78157,
+   "lines": 1036,
+   "sha256": "fdd9f79709014250cd8877b429bf9563401f0b15b1f2232143ad076321e3bc49"
+  },
+  {
+   "path": "check_screen.js",
+   "bytes": 16279,
+   "lines": 197,
+   "sha256": "80662c26880462f998b18b56a41ef2fd8d14d46a19c4b52e1aaa602e78ee20d7"
+  },
+  {
+   "path": "mock_server.py",
+   "bytes": 26508,
+   "lines": 486,
+   "sha256": "545850f6a7feb0bb86c3b2fbe6ca126be465fe7b5b556a02b7f1c5779317f56c"
+  },
+  {
+   "path": "site_health.html",
+   "bytes": 88930,
+   "lines": 943,
+   "sha256": "35aa2ea6f3c976d6680e04eddbca6a115ed083e3ac6d0b2810f12c9809b093db"
+  },
+  {
+   "path": "reference/db.py",
+   "bytes": 4483,
+   "lines": 98,
+   "sha256": "b5c6d4a1b76c40b373d94a12e3590d02f8209e2a8fedf8d5a3830f9b9e6bf281"
+  },
+  {
+   "path": "reference/functions.sql",
+   "bytes": 50361,
+   "lines": 997,
+   "sha256": "d98a3938c1ce4263f6d9f00c9d54c32b4c2c8e2057434c06be00509c5fb474d7"
+  },
+  {
+   "path": "reference/requirements.txt",
+   "bytes": 360,
+   "lines": 8,
+   "sha256": "2dc54db937dacc2e56b3da4fcf7ad7fdab35c58996123333188157733f3552c1"
+  },
+  {
+   "path": "reference/schema.sql",
+   "bytes": 6463,
+   "lines": 180,
+   "sha256": "fb58b7f32b56e452066b5e093a8909d52cf569a9aae2d0632ce00212dff22ab1"
+  },
+  {
+   "path": "reference/server.py",
+   "bytes": 26641,
+   "lines": 631,
+   "sha256": "1c403fc6a1d72caac4855c9c721ddd3de77543d9ee5d0061417a58dbeb4cae3e"
+  },
+  {
+   "path": "reference/site_health.config.example.json",
+   "bytes": 867,
+   "lines": 19,
+   "sha256": "32391a8b4a5113440d0b5cb209677227c5fed4537da28b1b718667de0dc721a8"
+  },
+  {
+   "path": "reference/rum/site-health-rum.js",
+   "bytes": 3519,
+   "lines": 50,
+   "sha256": "b9d8eced011b36c1d5874a513f3345babb0646c28b1aa4666bd0278ea2cd3eac"
+  },
+  {
+   "path": "reference/rum/site-health-rum.php",
+   "bytes": 4163,
+   "lines": 83,
+   "sha256": "3be175709953cae5428ae51eefea7431f63013a671b04c2b487bdc985d595a23"
+  },
+  {
+   "path": "reference/tests/conftest.py",
+   "bytes": 6568,
+   "lines": 161,
+   "sha256": "0a7b07642e0b35ea1937743219420883cb4e0f0673a0bc4f47edaeb3ebea8f3c"
+  },
+  {
+   "path": "reference/tests/sim.py",
+   "bytes": 7028,
+   "lines": 115,
+   "sha256": "0226390c5945f267230039e2df58c924341619fc281a789b095417f757de5ad4"
+  },
+  {
+   "path": "reference/tests/test_rum_snippet.js",
+   "bytes": 3609,
+   "lines": 69,
+   "sha256": "e4b9c42e39296c9e3d84ebc75a760977651132ad79ff5c3273475dc95bf1000b"
+  },
+  {
+   "path": "reference/tests/test_server.py",
+   "bytes": 71803,
+   "lines": 1349,
+   "sha256": "d9a933aba5d1a38eca13f9c9875800b7648072692f20958d3e3f6af9ccbc4eee"
+  },
+  {
+   "path": "reference/tests/test_sql.py",
+   "bytes": 93048,
+   "lines": 1534,
+   "sha256": "565e1134e7deef4e4e06c3f25a7b1d06e7b14bb9859ff212a53e6bad81826362"
+  },
+  {
+   "path": "tools/check_template.py",
+   "bytes": 3026,
+   "lines": 62,
+   "sha256": "e0aa3f9bad6a81fc12dd917c6b07fbc697bd0607583838eedcee91bece8ec522"
+  }
+ ]
+}
+~~~~~~~~
+<!-- END FILE -->
+
+<!-- FILE: site-health-kit/AGENTS.md sha256=aa385ee4bcb7c63870d701b68265df2ce9736c58f26139938964d6a0d3641836 -->
+~~~~~~~~markdown
+# AGENTS.md — Site Health build
+
+This repository builds the **Site Health screen ("בריאות האתר")** for a website: is the site up, how
+fast is it, what is broken, which alerts fired.
+
+The full specification is **`site_health_kit/SPEC.md`**. This file is only the short list of rules
+that apply to every change. Read SPEC.md from start to end before your first change, and again
+whenever you are unsure; do not work from this summary.
+
+## Rules
+
+1. **The screen is `site_health_kit/site_health.html`. Use it as it is.** Per-site values go into
+   `SH_CONFIG`; the only other edits allowed are listed in SPEC.md §6.9. Never retype or "tidy" it.
+2. **The JSON contract of SPEC.md §5 is binding**: field names, types, the literal Hebrew values,
+   the order of rows. `mock_server.py` is the contract by example.
+3. **Never invent a number.** Every figure on the screen comes from a stored measurement. No
+   placeholder or sample data in production.
+4. **Secrets only in environment variables or the host's secret store.** Not in the repository,
+   not in the HTML, not in chat. If a key is needed, tell the owner where to paste it.
+5. **No customer data.** No names, emails, phones, order numbers or visitor IP addresses are
+   stored. URLs are stored without query strings.
+6. **Be a polite client of the monitored site.** One probe round per minute, hard timeouts, a
+   distinct User-Agent. Never load-test it.
+7. **Outsiders get an allow-list.** Vendor and share-link access is deny-by-default (SPEC.md §8).
+8. **Work in the phases of SPEC.md §9 and run each phase's checks.** A phase is done when its
+   checks pass on the real thing, not when the code looks right. Report failures as failures.
+9. **Tests never write to the live database.** Use a scratch database.
+
+## Talking to the owner
+
+The owner is not a developer. Write to them in **Hebrew**, short and in plain words. One decision
+per message; a question says what happens on yes, on no, and whether it can be undone. End every
+message with one line: what they need to do now (or "אתה לא צריך לעשות כלום").
+
+## Commands
+
+```bash
+python3 site_health_kit/mock_server.py                    # the screen on fake data → http://localhost:8787/site
+node site_health_kit/check_screen.js                      # acceptance test of the screen (against the mock)
+node site_health_kit/check_screen.js <url> --basic --cookie "<name>=<value>"   # against a real server
+cd site_health_kit/reference && python3 -m pytest -q      # backend tests (need a scratch Postgres)
+```
+
+## Definition of done
+
+The go-live checklist of SPEC.md §10 passes on the live address, and the owner has received one
+test push and has seen the screen on their phone.
+~~~~~~~~
+<!-- END FILE -->
+
+<!-- FILE: site-health-kit/SPEC.md sha256=fdd9f79709014250cd8877b429bf9563401f0b15b1f2232143ad076321e3bc49 -->
 ~~~~~~~~markdown
 # Site Health screen — build specification
 
@@ -259,9 +641,9 @@ Conventions:
 - All `*_il` fields and `at` strings are **preformatted in the site's local time zone** by the
   backend, as `DD.MM HH:MM` (24-hour). The screen prints them unchanged.
 - `bucket` is a local-time string: `YYYY-MM-DD HH:00` for hourly buckets, `YYYY-MM-DD` for daily
-  buckets. Rule: windows up to 72 hours use hourly buckets, longer windows use daily buckets. The
-  screen tells them apart by length (`> 10` = hourly) and reads characters 5–7 (month), 8–10
-  (day), 11–16 (time).
+  buckets. Rule: a window of at most 72 whole hours (`to − from < 73 hours`, which covers the extra
+  minute of §5.1) uses hourly buckets, a longer one daily buckets. The screen tells them apart by
+  length (`> 10` = hourly) and reads characters 5–7 (month), 8–10 (day), 11–16 (time).
 - Durations are integers in **milliseconds** unless stated. `null` means "no value" and is always
   tolerated; the screen prints `—`.
 - Rows are displayed in the order the server sends them. Sort on the server as stated per list.
@@ -307,8 +689,8 @@ Rules (`_range_args` in the production server):
   "speed": [
     // exactly one "bottom line" row: the home page on a phone, whatever `strategy` is
     { "section": "שורה תחתונה",          // (literal)
-      "url": "https://example.co.il/", "lcp_p50": 2310, "checks": 96,
-      "verdict": "מהיר" },              // מצוין | מהיר | בינוני | איטי, by the LCP thresholds of §3
+      "page": "בית", "url": "https://example.co.il/", "lcp_p50": 2310, "checks": 96,
+      "verdict": "מהיר" },              // מצוין | מהיר | בינוני | איטי, by the LCP thresholds of §3; null without runs
     // one row per core page AND per strategy (send both strategies; the screen filters)
     { "section": "ליבה",                // (literal)
       "strategy": "mobile", "page": "בית", "url": "https://example.co.il/",
@@ -378,14 +760,15 @@ Issue labels used in production: `בלי מחיר`, `בלי תמונה`, `לא �
   "pages":  [ { "page": "בית", "url": "https://example.co.il/", "ok": true, "status": 200, "ms": 240 } ],
             // the last FULL round, one row per probe page; ms is null when the page did not answer.
             // Empty when there was no full round in the last 15 minutes.
-  "latest": [ { "page": "בית", "ok": true } ],   // the most recent round of any kind (full or light)
+  "latest": [ { "page": "בית", "ok": true } ],   // the most recent round of any kind (full or light); at least page + ok.
+                           // Also empty when that round is older than 15 minutes: stale data must not read "פעיל"
   "light": false,          // true when `latest` is a light round
-  "all_ok": true,          // every page of `latest` answered
+  "all_ok": true,          // every page of `latest` answered (false when `latest` is empty)
   "any_ok": true,          // at least one page of `latest` answered
   "age_sec": 12,           // integer seconds since `latest`; null when older than 15 minutes
   "rum":   { "n": 143, "p75_ms": 3120 },          // real-user LCP, last hour, live site only, test rows excluded; n = 0 → "no data"
   "speed": { "lcp_ms": 2500, "score": 63, "checked_at": "<ISO 8601>" },   // latest successful lab run, home page, phone; {} if none
-  "alerts_open": 3,        // count of open alerts (after role filtering)
+  "alerts_open": 3,        // count of open alerts, seen ones included (after role filtering)
   "rum_src": { "n": 1000,                           // the last 1000 real-user rows: where they came from
                "hosts": [ { "host": "live", "n": 964 }, { "host": "staging.example.co.il", "n": 36 } ],
                "cols": ["created_at", "is_test", "lcp_ms", "path", "site"],   // diagnostic only
@@ -401,10 +784,10 @@ For a vendor or a share link `alerts_open` is recounted from the filtered list o
 
 | `what` | extra parameters | each row |
 |---|---|---|
-| `fails` | `page` (optional), `bucket` (optional) | `{ "at_il": "13.11 09:41", "page": "סל", "kind": "קוד 502", "err": "<technical text or null>", "ms": 812 }` — the failed checks, newest first, **at most 500**. `kind` is a short Hebrew reason: `לא ענה בזמן`, `קוד <status>`, `שגיאת חיבור`, `תוכן לא צפוי`. `ms` = time until the failure, or null. |
+| `fails` | `page` (optional), `bucket` (optional) | `{ "at_il": "13.11 09:41", "page": "סל", "kind": "קוד 502", "err": "<technical text or null>", "ms": 812 }` — the failed checks of full rounds (the same checks the availability numbers count), newest first, **at most 500**. `kind` is a short Hebrew reason: `לא ענה בזמן`, `קוד <status>`, `שגיאת חיבור`, `תוכן לא צפוי`. `ms` = time until the failure, or null. |
 | `bucket` | `bucket` (required) | `{ "page": "בית", "checks": 60, "failed": 0, "ms_p50": 290, "ms_max": 1900, "worst_il": "13.11 09:17" }` — one row per probe page for that hour/day. |
-| `runs` | `url` (required), `strategy`, `bucket` (optional) | `{ "ok": true, "err": null, "at_il": "13.11 10:45", "lcp_ms": 2400, "score": 64, "ttfb_ms": 410, "bytes": 3400000, "cls": 0.03, "crux_category": "FAST", "crux_lcp_ms": 2100, "opps": [ { "id": "render-blocking-resources", "title": "…", "ms": 600 } ] }` — the individual lab runs of one page, **newest first**; failed runs have `ok: false` and `err`. `opps` = what slows the page, with the estimated saving in ms. |
-| `alert` | `id` (required) | one row: the `alerts_recent` fields plus `"fails": [ { "at": "13.11 11:02", "page": "סל", "status": 502, "err": null } ]` (the failed checks behind a `down` alert) and `"sent": [ { "event": "open", "status": 200, "at": "13.11 11:02" } ]` (pushes sent; `event` is `open` or `close`; `status` 200 = delivered to the push service). |
+| `runs` | `url` (required), `strategy`, `bucket` (optional) | `{ "ok": true, "err": null, "at_il": "13.11 10:45", "lcp_ms": 2400, "score": 64, "ttfb_ms": 410, "bytes": 3400000, "cls": 0.03, "crux_category": "FAST", "crux_lcp_ms": 2100, "opps": [ { "id": "render-blocking-resources", "title": "…", "ms": 600 } ] }` — the individual lab runs of one page (every run of that URL and strategy in the window), **newest first**; a failed run is `{ok: false, err, at_il}`. `opps` = what slows the page, with the estimated saving in ms; it is filled only on the newest 100 successful runs and is `[]` on older ones (it is nine tenths of a run's size, and the sheet's "what slows the page" should describe the page as it is now). |
+| `alert` | `id` (required) | one row: the `alerts_recent` fields plus `"fails": [ { "at": "13.11 11:02", "page": "סל", "status": 502, "err": null } ]` (the failed checks behind a `down` alert, oldest first, at most 500; `status` is present only when the failure was an HTTP status, because the sheet prints "קוד <status>" whenever it is there; otherwise `err` carries the reason) and `"sent": [ { "event": "open", "status": 200, "at": "13.11 11:02" } ]` (pushes with a final result; `event` is `open` or `close`; `status` 200 = accepted by the push service). |
 
 Unknown `what`: status 400 `{"error": "what?"}`. A missing or malformed required parameter (`id`
 not a number, `url` empty, `bucket` not in one of the two bucket formats): `{"rows": []}`.
@@ -591,28 +974,33 @@ stack. Whatever you choose:
 ### 7.2 Tables
 
 All tables are private: on Supabase enable row level security on each (no policies) and revoke the
-`anon` and `authenticated` roles from tables and functions; only the secret (service) key reads them.
+`anon` and `authenticated` roles from tables and functions; only the secret (service) key reads
+them. Tables created by SQL do not get row level security on their own, and every new function is
+executable by everybody by default: the revokes are not optional.
 
 | Table | One row is | Key columns |
 |---|---|---|
-| `sh_settings` | one setting | `key`, `value` (json): time zone, site host, `down_after`, morning hour |
-| `sh_pages` | a configured page | `name` (Hebrew), `url`, `is_probe`, `is_core`, `sort`, `expect` (optional text the page must contain) |
-| `sh_probe` | one availability check | `round_at`, `kind` (`full`/`light`), `page`, `url`, `ok`, `status`, `ms`, `fail` (`timeout`/`http`/`connect`/`content`), `err`; unique (`round_at`, `kind`, `page`) |
-| `sh_speed` | one lab speed run | `at`, `url`, `page` (null for rotation pages), `strategy`, `source` (`core`/`rotation`), `ok`, `err`, `score`, `lcp_ms`, `cls`, `ttfb_ms`, `bytes`, `crux_category`, `crux_lcp_ms`, `opps` (json), `lh_version` |
+| `sh_settings` | one setting | `key`, `value` (json): site, host, label, time zone, platform, `down_after`, morning time, `keep_days`, `rum_hosts`, `private_paths`, … |
+| `sh_pages` | a configured page | `name` (Hebrew), `url`, `is_probe`, `is_core`, `is_home`, `sort`, `expect` (optional text the page must contain) |
+| `sh_probe` | one availability check | `round_at`, `kind` (`full`/`light`), `page`, `url`, `ok`, `status`, `ms`, `fail` (`timeout`/`http`/`connect`/`content`; required on a failed row, with a `status` when it is `http`), `err`; primary key (`round_at`, `kind`, `page`) |
+| `sh_speed` | one lab speed run | `at`, `url`, `page` (null for rotation pages), `strategy`, `source` (`core`/`rotation`), `ok`, `err`, `score`, `lcp_ms`, `cls`, `ttfb_ms`, `bytes`, `crux_category`, `crux_lcp_ms`, `opps` (json, at most 6 entries), `lh_version`; primary key (`url`, `strategy`, `at`) |
 | `sh_site_pages` | a page of the site, from the sitemap | `url`, `active`, `first_seen`, `last_seen`, `last_measured_at` |
 | `sh_rum` | one real-user page view | `created_at`, `site`, `path`, `lcp_ms`, `is_test` — nothing that identifies a person |
-| `sh_cert` | the certificate state | `host`, `issuer`, `not_before`, `not_after`, `days_left`, `ok`, `err`, `checked_at` |
+| `sh_cert` | the certificate state | `host`, `issuer`, `not_before`, `not_after`, `days_left`, `ok`, `err`, `checked_at` (a failed check updates only `ok`, `err`, `checked_at`) |
 | `sh_product_issues` | a broken product in a snapshot | `snap_date`, `product_id`, `issue`, `name`, `url` |
 | `sh_alerts` | an alert | `id`, `key`, `kind`, `title`, `body`, `opened_at`, `closed_at`, `acked_at`, `acked_by`; **partial unique index on `key` where `closed_at is null`** (at most one open alert per key) |
-| `sh_messages` | a push that was (or should be) sent | `id`, `at`, `alert_id`, `event` (`open`/`close`/`morning`), `kind` (Hebrew label), `title`, `msg`, `priority`, `click`, `status` (HTTP status of the push; null = pending) |
-| `sh_flows` | a measurement flow | `flow_name`, `sort`, `cadence`, `warn_minutes`, `late_minutes`, `note`, `enabled`, `last_at` |
+| `sh_messages` | a push that was (or should be) sent | `id`, `at`, `alert_id`, `event` (`open`/`close`/`morning`), `kind` (Hebrew label), `title`, `msg`, `priority`, `status` (final HTTP status of the push; null = still owed), `attempts`, `claimed_at` |
+| `sh_flows` | a measurement flow | `flow_name`, `sort`, `cadence`, `warn_minutes`, `late_minutes`, `note`, `enabled`, `alerts` (whether its silence pushes an alert), `last_at` |
 | `sh_jobs` | "this daily job is done for this day" | `job`, `day` |
 | `sh_login_log` | a login attempt | `at`, `ip`, `ok`, `who`, `ua` |
 
-Retention (a nightly cleanup): full-round probes 120 days (setting `keep_days`; four pages cost
-about 0.7 MB a day, and a free Supabase project holds 500 MB), light-round probes 7 days, speed
-runs 400 days, real-user rows 30 days, messages and alerts forever, login log 400 days. Windows
-longer than the retention simply show what is left.
+Retention (a nightly cleanup), sized so that the whole database settles around 200 MB (a free
+Supabase project holds 500 MB): full-round probes and core speed runs `keep_days` days (default
+**100**, which covers the screen's longest preset of 90 days; four pages cost about 0.8 MB of
+probes a day), rotation speed runs 45 days, light-round probes 7 days, real-user rows 30 days,
+product snapshots 30 days, login log and job markers 400 days, alerts and messages forever.
+A speed run is about 1 KB, nearly all of it `opps`. Windows longer than the retention simply
+show what is left.
 
 ### 7.3 Functions the server calls (read side)
 
@@ -648,42 +1036,60 @@ Exact rules (these are the definitions the screen's texts promise):
 - **Outages:** take the full rounds of the window in time order; a round is "dead" when none of
   its pages answered; every run of **3 or more consecutive dead rounds** is one outage.
   `outage_minutes` = number of rounds in the run; start = the first dead round; end = the round
-  after the last dead one (or now). Minutes in which the prober itself did not run are not an
-  outage; that is the `שקט` state of the flow.
+  after the last dead one, or the end of the window (never later than now) when the run reaches
+  it. Minutes in which the prober itself did not run add nothing and are not an outage; that is
+  the `שקט` state of the flow.
+- **Per page rows:** one row per page that has full-round checks in the window, in configuration
+  order; a page that was removed from the configuration keeps its history and is listed last.
 - **Buckets:** `to_char(round_at at time zone <tz>, …)` with the format of §5; hourly when
-  `p_to − p_from ≤ 72 hours`, daily otherwise. Percentiles per bucket over all pages together.
+  `p_to − p_from < 73 hours`, daily otherwise. Percentiles per bucket over all pages together.
+  The hour that happens twice when clocks go back is one bucket, in the chart and in the drill.
 - **Speed, section `ליבה`:** per core page and strategy over successful runs with `source = 'core'`:
   medians of `lcp_ms`, `score`, `cls`, `ttfb_ms`; `lcp_p95`; `slow_runs` = runs with `lcp_ms > 4000`;
   `checks` = run count; `crux_*` from the newest run.
 - **`שורה תחתונה`:** the `ליבה` figures of the home page with `strategy = 'mobile'`, plus `verdict`.
   When there is no successful run in the window the row is still returned with `lcp_p50: null`.
-- **`האיטיים באתר`:** over successful phone runs with `source = 'rotation'`, grouped by URL: top 10 by median LCP.
+- **`האיטיים באתר`:** over successful phone runs with `source = 'rotation'`, grouped by URL: top 10
+  by median LCP. Core pages are not part of the rotation (they are measured every 15 minutes
+  already), so they never appear here. **`כיסוי`:** `checks` = distinct active site pages with a
+  successful rotation run in the window; `slow_runs` = active site pages in the rotation.
 - **Health:** `אין נתון` when the flow never ran; otherwise by the age of `last_at`: up to
   `warn_minutes` → `תקין`, up to `late_minutes` → `מתעכב`, beyond → `שקט`. `last_at` is written
   **last and only when a run succeeded**, so a failing collector leaves no proof of life and
   surfaces as `מתעכב`/`שקט`. Disabled flows (for example the catalogue check on a site that sells
-  nothing) are not returned.
+  nothing) are not returned. `silent_txt`: `מאחר ב-<span>` while late, `שקט כבר <span>` when silent,
+  where span is `N דקות` under two hours, `N שעות` under two days, else `N ימים`.
+  Thresholds (warn / late minutes): probe 5 / 15; core speed 45 / 90; rotation 20 / 60; sitemap,
+  certificate, catalogue 1,560 / 2,880; real users 360 / 1,440.
 - **`sh_now`:** `pages` = the newest full round if it is at most 15 minutes old; `latest` = the
-  newest round of either kind; `rum` over the last 60 minutes where `site` is a live value and
-  `is_test` is false, `p75_ms` = `percentile_cont(0.75)`; `rum_src` over the newest 1000 rows.
+  newest round of either kind, under the same 15-minute rule; `rum` over the last 60 minutes
+  where `site` is a live value and `is_test` is false, `p75_ms` = `percentile_cont(0.75)` rounded
+  (null with `n` = 0 when there are no rows; never 0, which would paint green); `rum_src` over the
+  newest 1000 rows (null when there are none); `speed` = the newest successful phone run of the
+  home page.
 
 ### 7.4 Functions the collectors call (write side)
 
-| Function | What it does |
-|---|---|
-| `sh_config()` | returns the configuration as one object: every setting loaded by `sh_setup` (`site`, `host`, `label`, `time_zone`, `platform`, `down_after`, `morning`, `keep_days`, `rum_hosts`, `private_paths`, …), `pages` (`[{name, url, probe, core, home, expect}]` in display order) and `screen` (the object the server injects as `SH_CONFIG`, §4.1). Before `sh_setup` ran there is no `time_zone`; the server then answers 502 "the site is not configured" instead of guessing |
-| `sh_setup(p_config)` | loads `site_health.config.json` into `sh_settings` / `sh_pages` / `sh_flows` (idempotent) |
-| `sh_probe_add(p_round_at, p_kind, p_rows)` | stores one probe round (duplicates ignored) and beats `בודק זמינות האתר` on a full round |
-| `sh_speed_add(p_rows)` | stores lab runs; beats the core or rotation flow when at least one run succeeded |
-| `sh_rotation_next(p_n)` | claims the `p_n` active site pages measured longest ago and returns their URLs |
-| `sh_sitemap_set(p_urls)` | replaces the list of site pages (new ones added, missing ones deactivated); refuses an empty list; beats the sitemap flow |
-| `sh_cert_set(p_row)` | stores the certificate state; beats the flow only when the check succeeded |
-| `sh_issues_set(p_snap_date, p_rows)` | stores the day's broken products (replacing that day); beats the flow |
-| `sh_job_due(p_job, p_day)` / `sh_job_mark(p_job, p_day)` | daily jobs: "is today's run still owed?" / "done" |
-| `sh_alerts_check()` | evaluates the alert rules (§7.8), opens and closes alerts, queues messages; returns the messages waiting to be pushed |
-| `sh_message_sent(p_id, p_status)` | records the HTTP status of a push |
-| `sh_morning(p_day)` | queues the daily morning message (once per day) |
-| `sh_cleanup()` | applies the retention rules |
+| Function | What it does | Returns |
+|---|---|---|
+| `sh_config()` | the configuration as one object: every setting loaded by `sh_setup` (`site`, `host`, `label`, `time_zone`, `platform`, `down_after`, `morning`, `keep_days`, `rum_hosts`, `private_paths`, …), `pages` (`[{name, url, probe, core, home, expect}]` in display order) and `screen` (the object the server injects as `SH_CONFIG`, §4.1) | the object. Before `sh_setup` ran it has no `time_zone`; the server then answers 502 "the site is not configured" |
+| `sh_setup(p_config)` | loads `site_health.config.json` (idempotent). Validates: exactly one home page and it is a probe page, at least one probe page, absolute http(s) URLs, unique names, a known time zone, a known platform. Replaces the page list (history stays) and seeds the seven flows | `sh_config()` |
+| `sh_probe_add(p_round_at, p_kind, p_rows)` | stores one probe round; rows `{page, url, ok, status, ms, fail, err}`; a round that was already stored is ignored; beats `בודק זמינות האתר` on a full round | `{"n": rows stored}` |
+| `sh_speed_add(p_rows)` | stores lab runs; rows `{at, url, page, strategy, source, ok, err, score, lcp_ms, cls, ttfb_ms, bytes, crux_category, crux_lcp_ms, opps, lh_version}`; the same (`url`, `strategy`, `at`) twice is stored once; beats the core or rotation flow when at least one run succeeded | `{"n"}` |
+| `sh_rotation_next(p_n)` | claims the `p_n` active site pages measured longest ago (never a core page) | `["url", …]` |
+| `sh_sitemap_set(p_urls)` | replaces the list of site pages (new ones added, missing ones deactivated); raises on an empty list; beats the sitemap flow | `{"n"}` |
+| `sh_cert_set(p_row)` | stores `{host, issuer, not_before, not_after, days_left, ok, err, checked_at}`; beats the flow only when `ok` | `{"n": 1}` |
+| `sh_issues_set(p_snap_date, p_rows)` | stores the day's broken products `{product_id, issue, name, url}`, replacing that day (an empty list is a valid, good snapshot); beats the flow | `{"n"}` |
+| `sh_rum_add(p_rows)` | stores real-user rows `{site, path, lcp_ms, is_test}`; drops rows outside the limits of §7.7 again, as the last line of defence | `{"n"}` |
+| `sh_job_due(p_job, p_day)` / `sh_job_mark(p_job, p_day)` | daily jobs: "is this day's run still owed?" / "done" | `true`/`false`; `true` when this call set the marker |
+| `sh_alerts_check()` | evaluates the alert rules (§7.8), opens and closes alerts, queues messages, and **claims** the messages that are owed | `[{id, title, msg, priority, kind, event}]`, oldest first |
+| `sh_message_sent(p_id, p_status)` | records the result of one push attempt (§7.9) | `{"n": 0 or 1}` |
+| `sh_morning(p_day)` | queues the morning message for that day, once. It does not look at the clock: the caller calls it when the configured `morning` time has passed | `{"n": 1 or 0}` |
+| `sh_cleanup()` | applies the retention rules | rows deleted per table |
+
+`sh_alerts_check` must be safe when two workers overlap for a minute during a deploy: no alert
+and no message is created twice, and a message returned to one caller is not returned to another
+for the next two minutes (the claim). It assumes the default `READ COMMITTED` isolation.
 
 ### 7.5 Collector: availability probe (`בודק זמינות האתר`)
 
@@ -867,21 +1273,28 @@ script is never loaded for signed-in staff, nor on cart, checkout and account pa
 
 | Kind | Key | Opens when | Closes when | Title · body |
 |---|---|---|---|---|
-| `down` | `down:<page>` | the newest `down_after` rounds (full or light) of a probe page all failed. `down_after` = 1 unless the owner chose 2 | the newest round of that page answered | `האתר לא עונה: <page>` · `<reason>\n<url>` |
+| `down` | `down:<page>` | the newest `down_after` rounds (full or light, not older than 24 hours) of a probe page all failed. `down_after` = 1 unless the owner chose 2 | the newest round of that page answered | `האתר לא עונה: <page>` · `<reason>\n<url>` |
 | `slow` | `slow:<page>` | the two newest successful phone runs of a core page both have LCP > 4000 ms | the newest successful run is ≤ 4000 ms | `עמוד איטי: <page>` · `<x.x> שניות עד התוכן, פעמיים ברצף\n<url>` |
-| `silent` | `silent:<flow>` | an enabled flow that has run before is older than its `late_minutes` | it ran again | `המדידה נעצרה: <flow>` · `אין מדידה כבר <N> דקות` |
+| `silent` | `silent:<flow>` | an enabled flow whose `alerts` flag is on, that has run before, is older than its `late_minutes` | it ran again: a successful run newer than the alert | `המדידה נעצרה: <flow>` · `אין מדידה כבר <N> דקות` |
 | `cert` | `cert:<host>` | the last successful check shows fewer than 14 days | 14 days or more | `תעודת האבטחה פגה בעוד <N> ימים` · `<host>` |
 
 - Opening inserts an alert row and a message (`kind` `התראה`, `event` `open`). Closing sets
   `closed_at` and inserts a message (`kind` `חזר לתקין`, `event` `close`, text `נמשך <N> דקות`).
+- **The real-user flow never pushes a `silent` alert** (`alerts` off): a small site has no
+  visitors for hours every night, and that is not a fault. Its state still shows on the screen.
+- An open alert whose subject is gone (the page left the configuration, the flow was disabled,
+  the host changed) is closed like any other; otherwise it could never close.
 - **Insert, do not upsert.** The unique index on `key` is partial (open alerts only), and an
   upsert with `on conflict (key)` fails against a partial index on the REST interface. Look for an
   open row; insert when there is none.
 - Other parts of the owner's system may add their own alert kinds to the same table. The vendor
   role sees only the four kinds above (§8).
-- **Morning message**, daily at 07:30: `kind` `בוקר`, one push summarizing the last 24 hours
-  (availability %, outages, home page speed verdict, open alerts). Besides being useful, it is the
-  owner's daily proof that the channel works.
+- **Morning message**, once a day when the configured time (default 07:30 local) has passed:
+  `kind` `בוקר`, priority 2. Title `בוקר טוב: האתר תקין`, or `בוקר טוב: התראה פתוחה אחת` /
+  `בוקר טוב: <N> התראות פתוחות`. Lines: `זמינות <P>% ב-24 שעות` (or `אין בדיקות זמינות ב-24 שעות`),
+  `נפילות: <N> (<M> דקות)` only when there were outages, `מהירות עמוד הבית: <verdict>` only when
+  measured. The figures come from the same functions the screen uses. Besides being useful, it is
+  the owner's daily proof that the channel works.
 
 ### 7.9 Push notifications (ntfy)
 
@@ -902,12 +1315,16 @@ subscribes to one topic; the system publishes to that topic.
   12 hours of alerts and publish fake ones. Generate a long random name (`sh-` + 24 random letters
   and digits), keep it in the environment only; never in the repository, on the screen or in logs.
 - HTTP 200 means ntfy accepted the message, not that a phone showed it; there is no delivery
-  receipt. Record the status of every publish with `sh_message_sent`. A failed publish is retried
-  on the next minute, up to 5 attempts; after that it stays in the log as "לא נשלחה".
+  receipt. Record the result of every attempt with `sh_message_sent(id, status)`: a 2xx status
+  settles the message as sent; **0 means "pushing is not configured"** and settles it at once as
+  not sent; any other status (use 599 for a network error or a timeout) is a failed attempt, and
+  the message is offered again on a later minute until 5 attempts have failed. Then it stays in
+  the log as "לא נשלחה". The click link (`<dashboard>/site`) is added by the sender; the database
+  does not know the dashboard's address.
 - **Send at most 30 pushes per rolling hour.** The free server allows 250 a day per sending
   address, and a flapping page with `down_after = 1` can produce two messages a minute. Messages
   that wait longer than an hour are marked as not sent instead of arriving late in a burst.
-- Without `NTFY_TOPIC` messages are logged with status 0 and nothing is sent.
+- Without `NTFY_TOPIC` nothing is sent and every message is settled with status 0.
 - Tell the owner two things at hand-over: ntfy keeps messages for 12 hours, so a phone that was
   off longer never gets them (the screen's message log is the permanent record); and iPhones
   deliver ntfy pushes less reliably than Android. If alerts matter and the owner uses an iPhone,
@@ -1079,59 +1496,700 @@ Each of these was a real problem in the production original. Do not rediscover t
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site_health_kit/AGENTS.md sha256=aa385ee4bcb7c63870d701b68265df2ce9736c58f26139938964d6a0d3641836 -->
-~~~~~~~~markdown
-# AGENTS.md — Site Health build
+<!-- FILE: site-health-kit/check_screen.js sha256=80662c26880462f998b18b56a41ef2fd8d14d46a19c4b52e1aaa602e78ee20d7 -->
+~~~~~~~~javascript
+#!/usr/bin/env node
+/* Acceptance test of the site-health screen (Playwright, headless Chromium).
 
-This repository builds the **Site Health screen ("בריאות האתר")** for a website: is the site up, how
-fast is it, what is broken, which alerts fired.
+     node check_screen.js                          # against the mock:  http://127.0.0.1:8787
+     node check_screen.js http://127.0.0.1:8000    # against your real server (logged-in session needed, see --cookie)
+     node check_screen.js <url> --cookie "name=value"   # session cookie for a real server
+     node check_screen.js <url> --shots ./shots    # also save screenshots (phone + desktop)
+     node check_screen.js <url> --basic            # only the checks that hold for any data
 
-The full specification is **`site_health_kit/SPEC.md`**. This file is only the short list of rules
-that apply to every change. Read SPEC.md from start to end before your first change, and again
-whenever you are unsure; do not work from this summary.
+   Against the mock it also switches scenarios (incident / ok / empty / error) and roles.
+   Exit code 0 = every check passed. Each line is one check: "ok" or "FAIL". */
+const { chromium } = require('playwright');
 
-## Rules
+const args = process.argv.slice(2);
+const flag = (n) => { const i = args.indexOf(n); return i < 0 ? null : (args[i + 1] && !args[i + 1].startsWith('--') ? args[i + 1] : true); };
+const BASE = (args[0] && !args[0].startsWith('--') ? args[0] : 'http://127.0.0.1:8787').replace(/\/$/, '');
+const SHOTS = flag('--shots'), COOKIE = flag('--cookie'), BASIC = !!flag('--basic');
+const PAGE_PATH = flag('--path') || '/site';
 
-1. **The screen is `site_health_kit/site_health.html`. Use it as it is.** Per-site values go into
-   `SH_CONFIG`; the only other edits allowed are listed in SPEC.md §6.9. Never retype or "tidy" it.
-2. **The JSON contract of SPEC.md §5 is binding**: field names, types, the literal Hebrew values,
-   the order of rows. `mock_server.py` is the contract by example.
-3. **Never invent a number.** Every figure on the screen comes from a stored measurement. No
-   placeholder or sample data in production.
-4. **Secrets only in environment variables or the host's secret store.** Not in the repository,
-   not in the HTML, not in chat. If a key is needed, tell the owner where to paste it.
-5. **No customer data.** No names, emails, phones, order numbers or visitor IP addresses are
-   stored. URLs are stored without query strings.
-6. **Be a polite client of the monitored site.** One probe round per minute, hard timeouts, a
-   distinct User-Agent. Never load-test it.
-7. **Outsiders get an allow-list.** Vendor and share-link access is deny-by-default (SPEC.md §8).
-8. **Work in the phases of SPEC.md §9 and run each phase's checks.** A phase is done when its
-   checks pass on the real thing, not when the code looks right. Report failures as failures.
-9. **Tests never write to the live database.** Use a scratch database.
+let failed = 0, passed = 0;
+function check(name, cond, extra) { if (cond) { passed++; console.log('ok    ' + name); } else { failed++; console.log('FAIL  ' + name + (extra ? '  → ' + extra : '')); } }
 
-## Talking to the owner
+async function open(browser, path, vp, opts = {}) {
+  const ctx = await browser.newContext({ viewport: vp, deviceScaleFactor: 1, locale: 'he-IL', colorScheme: opts.dark ? 'dark' : 'light' });
+  if (COOKIE && typeof COOKIE === 'string') {
+    const [n, ...v] = COOKIE.split('='); const u = new URL(BASE);
+    await ctx.addCookies([{ name: n, value: v.join('='), domain: u.hostname, path: '/' }]);
+  }
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+  page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push('console: ' + m.text()); });
+  const resp = await page.goto(BASE + path, { waitUntil: 'domcontentloaded' });
+  if (resp && resp.status() === 200 && !opts.noWait) {
+    await page.waitForFunction(() => !document.body.classList.contains('loading') && document.querySelectorAll('#verdict .vbox').length === 4, null, { timeout: 20000 }).catch(() => {});
+    await page.waitForFunction(() => document.querySelectorAll('#now .nbox').length >= 1 && !/טוען/.test(document.getElementById('now').textContent), null, { timeout: 20000 }).catch(() => {});
+  }
+  return { ctx, page, errors, status: resp ? resp.status() : 0 };
+}
+const noOverflow = (page) => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
+const txt = (page, sel) => page.evaluate((s) => { const e = document.querySelector(s); return e ? e.textContent : null; }, sel);
+const count = (page, sel) => page.evaluate((s) => document.querySelectorAll(s).length, sel);
+const visible = (page, sel) => page.evaluate((s) => { const e = document.querySelector(s); if (!e) return false; const r = e.getBoundingClientRect(); return getComputedStyle(e).display !== 'none' && r.width > 0 && r.height > 0; }, sel);
+async function scenario(name) { const r = await fetch(BASE + '/__scenario?name=' + name).catch(() => null); return !!(r && r.ok); }
 
-The owner is not a developer. Write to them in **Hebrew**, short and in plain words. One decision
-per message; a question says what happens on yes, on no, and whether it can be undone. End every
-message with one line: what they need to do now (or "אתה לא צריך לעשות כלום").
+(async () => {
+  const browser = await chromium.launch();
+  const isMock = !BASIC && await scenario('incident');
+  const PHONE = { width: 390, height: 844 }, DESK = { width: 1280, height: 900 };
 
-## Commands
+  /* ---------- 1. structure, on a phone ---------- */
+  let s = await open(browser, PAGE_PATH, PHONE);
+  let p = s.page;
+  check('page loads (200)', s.status === 200, 'status ' + s.status);
+  check('no horizontal scroll at 390px', await noOverflow(p));
+  check('html is rtl + hebrew', await p.evaluate(() => document.documentElement.dir === 'rtl' && document.documentElement.lang === 'he'));
+  check('"now" card shows 4 tiles', await count(p, '#now .nbox') === 4, String(await count(p, '#now .nbox')));
+  check('bottom line shows 4 tiles', await count(p, '#verdict .vbox') === 4);
+  const cards = await p.evaluate(() => Array.prototype.map.call(document.querySelectorAll('.wrap > section.card h2'), (h) => h.firstChild.textContent.trim()));
+  const WANT = ['עכשיו', 'שורה תחתונה', 'זמינות', 'מהירות לאורך זמן', 'העמודים העיקריים', 'העמודים הכבדים באתר', 'מוצרים שבורים באתר', 'תעודת האבטחה (המנעול)', 'התראות', 'הודעות שנשלחו לטלפון', 'המדידה עצמה'];
+  check('cards appear in the specified order', JSON.stringify(cards) === JSON.stringify(WANT), JSON.stringify(cards));
+  check('subtitle shows the last check time and the period', /הבדיקה האחרונה .* · 24 השעות האחרונות/.test(await txt(p, '#sub')), await txt(p, '#sub'));
+  check('alerts card and messages card start folded', await p.evaluate(() => document.getElementById('alertsList').parentElement.classList.contains('collapsed') && document.getElementById('msgList').parentElement.classList.contains('collapsed')));
+  check('explanations hidden until asked', !(await visible(p, 'p.explain')));
+  await p.click('#explbtn');
+  check('"הסברים" shows the explanations', await visible(p, 'p.explain') && (await p.getAttribute('#explbtn', 'aria-pressed')) === 'true');
+  await p.click('#explbtn');
+  if (SHOTS) await p.screenshot({ path: SHOTS + '/phone.png', fullPage: true });
 
-```bash
-python3 site_health_kit/mock_server.py                    # the screen on fake data → http://localhost:8787/site
-node site_health_kit/check_screen.js                      # acceptance test of the screen (against the mock)
-node site_health_kit/check_screen.js <url> --basic --cookie "<name>=<value>"   # against a real server
-cd site_health_kit/reference && python3 -m pytest -q      # backend tests (need a scratch Postgres)
-```
+  /* ---------- 2. numbers match the data ---------- */
+  const data = await p.evaluate(() => state.data);
+  const per = (Array.isArray(data.availability) ? data.availability : []).filter((r) => r.section === 'לפי עמוד');
+  const checksN = per.reduce((a, r) => a + (+r.checks || 0), 0), failN = per.reduce((a, r) => a + (+r.failed || 0), 0);
+  if (checksN) {
+    const up = 100 - 100 * failN / checksN, want = up.toFixed(up < 99.95 ? 2 : 1) + '%';
+    check('uptime tile = 100 − failed/checks', (await txt(p, '#verdict .vbox[data-drill="fails"] .v')) === want, want + ' vs ' + await txt(p, '#verdict .vbox[data-drill="fails"] .v'));
+    check('availability table: one row per probed page', await count(p, '#availTbl tbody tr') === per.length);
+  } else check('no availability data → empty state text', /אין בדיקות זמינות בתקופה/.test(await txt(p, '#availTbl')));
+  const core = (Array.isArray(data.speed) ? data.speed : []).filter((r) => r.section === 'ליבה' && r.strategy === 'mobile');
+  check('core pages table: one row per core page (mobile)', core.length ? await count(p, '#coreTbl tbody tr') === core.length : /אין מדידות טלפון בתקופה/.test(await txt(p, '#coreTbl')));
+  check('heavy pages table: at most 10 rows', await count(p, '#slowTbl tbody tr') <= 10);
 
-## Definition of done
+  /* ---------- 3. drill-downs ---------- */
+  await p.click('#verdict .vbox[data-drill="fails"]');
+  await p.waitForFunction(() => document.getElementById('dov').classList.contains('on') && !/טוען…/.test(document.getElementById('dbody').textContent), null, { timeout: 10000 }).catch(() => {});
+  check('click on uptime opens the failures sheet', (await txt(p, '#dttl')) === 'כל הכשלים' && /הבדיקות שנכשלו/.test(await txt(p, '#dbody')), await txt(p, '#dttl'));
+  check('sheet is a bottom sheet on a phone', await p.evaluate(() => { const r = document.getElementById('dsheet').getBoundingClientRect(); return Math.abs(r.bottom - window.innerHeight) < 2 && r.width >= window.innerWidth - 2; }));
+  await p.keyboard.press('Escape');
+  check('Escape closes the sheet', !(await p.evaluate(() => document.getElementById('dov').classList.contains('on'))));
+  if (core.length) {
+    await p.click('#coreTbl tbody tr');
+    await p.waitForFunction(() => /המדידות|אין מדידות תקינות/.test(document.getElementById('dbody').textContent), null, { timeout: 10000 }).catch(() => {});
+    check('click on a core page opens its measurements', /^מהירות: /.test(await txt(p, '#dttl')), await txt(p, '#dttl'));
+    await p.click('#dx');
+  }
+  check('no JavaScript errors (phone)', s.errors.length === 0, s.errors.join(' | '));
+  await s.ctx.close();
 
-The go-live checklist of SPEC.md §10 passes on the live address, and the owner has received one
-test push and has seen the screen on their phone.
+  /* ---------- 4. desktop + dark ---------- */
+  s = await open(browser, PAGE_PATH, DESK); p = s.page;
+  check('no horizontal scroll at 1280px', await noOverflow(p));
+  await p.click('#verdict .vbox[data-drill="outages"]');
+  check('sheet is centered on desktop', await p.evaluate(() => { const r = document.getElementById('dsheet').getBoundingClientRect(); return Math.abs((r.left + r.right) / 2 - window.innerWidth / 2) < 2 && r.width === 720; }));
+  await p.click('#dx');
+  await p.click('#segH button[data-h="168"]');
+  await p.waitForFunction(() => state.data && state.data.hours === 168 && !document.body.classList.contains('loading'), null, { timeout: 20000 }).catch(() => {});
+  check('"7 ימים" reloads with a 168-hour window', await p.evaluate(() => state.data.hours === 168) && /7 הימים האחרונים/.test(await txt(p, '#rangeTxt')));
+  await p.click('#segS button[data-s="desktop"]');
+  await p.waitForFunction(() => state.data && state.data.strategy === 'desktop' && !document.body.classList.contains('loading'), null, { timeout: 20000 }).catch(() => {});
+  check('"מחשב" reloads with strategy=desktop', await p.evaluate(() => state.data.strategy === 'desktop'));
+  if (SHOTS) await p.screenshot({ path: SHOTS + '/desktop.png', fullPage: true });
+  check('no JavaScript errors (desktop)', s.errors.length === 0, s.errors.join(' | '));
+  await s.ctx.close();
+  s = await open(browser, PAGE_PATH, PHONE, { dark: true }); p = s.page;
+  check('dark mode: page background is dark', await p.evaluate(() => { const m = getComputedStyle(document.body).backgroundColor.match(/\d+/g); return m && (+m[0] + +m[1] + +m[2]) < 150; }));
+  if (SHOTS) await p.screenshot({ path: SHOTS + '/phone-dark.png', fullPage: true });
+  await s.ctx.close();
+
+  /* ---------- 5. mock only: alert bar, roles, scenarios ---------- */
+  if (isMock) {
+    await scenario('incident');
+    s = await open(browser, PAGE_PATH, PHONE); p = s.page;
+    const openAlerts = (await p.evaluate(() => state.data.alerts_open)).filter((a) => !a.acked).length;
+    check('alert bar shows the number of open alerts', new RegExp('⚠ ' + openAlerts + ' התראות פעילות').test(await txt(p, '#alertbar .acount')), await txt(p, '#alertbar .acount'));
+    check('alert bar starts collapsed', await p.evaluate(() => document.getElementById('alertbar').classList.contains('collapsed')));
+    await p.click('#alertbar .ahead');
+    check('each alert with a URL in its body has an "open the page" link', await count(p, '#alertbar .alink') >= 1);
+    const posts = [];
+    p.on('request', (r) => { if (r.method() === 'POST') posts.push(r.url() + ' ' + r.postData()); });
+    await p.click('#alertbar .arow .ax');
+    check('✕ removes the alert at once, without reloading the screen', await count(p, '#alertbar .arow') === openAlerts - 1 && !(await p.evaluate(() => document.body.classList.contains('loading'))));
+    check('✕ posts {"ids":[id]} to /api/alerts/ack', posts.length === 1 && /\/api\/alerts\/ack \{"ids":\[\d+\]\}/.test(posts[0]), posts.join(','));
+    check('the bar stays open after a delete', !(await p.evaluate(() => document.getElementById('alertbar').classList.contains('collapsed'))));
+    await p.click('#abAll'); await p.click('#abDel');
+    check('"לסמן הכול" + "מחק מסומנות" clears the bar', !(await visible(p, '#alertbar')));
+    await p.click('#refbtn');
+    await p.waitForFunction(() => !document.body.classList.contains('loading'), null, { timeout: 20000 }).catch(() => {});
+    check('acknowledged alerts stay hidden after refresh', !(await visible(p, '#alertbar')));
+    check('…but still count as open in the bottom line', (await txt(p, '#verdict .vbox[data-drill="alerts"] .v')) === String(openAlerts));
+    await p.click('#msgCard .foldhead');
+    check('message log lists what was sent to the phone', await count(p, '#msgList li') >= 3);
+    check('no JavaScript errors (owner, incident)', s.errors.length === 0, s.errors.join(' | '));
+    await s.ctx.close();
+
+    await scenario('incident');
+    s = await open(browser, PAGE_PATH + '?role=vendor', PHONE); p = s.page;
+    await p.click('#alertbar .ahead').catch(() => {});
+    check('vendor: no delete controls on alerts', !(await visible(p, '#alertbar .ax')) && !(await visible(p, '#alertbar .abulk')));
+    check('vendor: no message log', !(await visible(p, '#msgCard')));
+    check('vendor: sees only site alerts (no internal kinds)', await p.evaluate(() => state.data.alerts_open.every((a) => ['down', 'slow', 'silent', 'cert'].indexOf(a.kind) >= 0)));
+    check('vendor: server refuses a delete', await p.evaluate(() => fetch('/api/alerts/ack', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"ids":[41]}' }).then((r) => r.status)) === 403);
+    check('vendor: server refuses the message log', await p.evaluate(() => fetch('/api/messages?h=24').then((r) => r.status)) === 403);
+    check('no JavaScript errors (vendor)', s.errors.length === 0, s.errors.join(' | '));
+    await s.ctx.close();
+
+    s = await open(browser, PAGE_PATH + '?role=noalerts', PHONE); p = s.page;
+    check('no-alerts role: no bar, no alerts card, no open-alerts tile', !(await visible(p, '#alertbar')) && !(await visible(p, '#alertsCard')) && !(await visible(p, '#verdict .vbox[data-drill="alerts"]')));
+    await s.ctx.close();
+
+    s = await open(browser, '/status?k=demo-share-token', PHONE); p = s.page;
+    check('share link: screen loads with data', s.status === 200 && await count(p, '#verdict .vbox') === 4);
+    check('share link: no logout link, no delete controls, no message log', !(await visible(p, '#outLink')) && !(await visible(p, '#alertbar .ax')) && !(await visible(p, '#msgCard')));
+    check('no JavaScript errors (share link)', s.errors.length === 0, s.errors.join(' | '));
+    await s.ctx.close();
+    s = await open(browser, '/status?k=wrong', PHONE, { noWait: true });
+    check('share link with a wrong token is refused (403)', s.status === 403);
+    await s.ctx.close();
+    const r401 = await fetch(BASE + '/api/site?k=wrong');
+    check('data call with a wrong token is refused (401)', r401.status === 401);
+
+    await scenario('empty');
+    s = await open(browser, PAGE_PATH, PHONE); p = s.page;
+    const body = await txt(p, '.wrap');
+    check('fresh install: every card shows its empty state, nothing breaks',
+      /אין בדיקות זמינות בתקופה/.test(body) && /מדידת המהירות עדיין לא התחילה/.test(body) && /הסבב על כל האתר עדיין לא התחיל/.test(body)
+      && /עדיין לא נבדק/.test(body) && /אין התראות בתקופה/.test(body) && /אין בדיקה ב־15 הדקות האחרונות/.test(body) && s.errors.length === 0, s.errors.join(' | '));
+    if (SHOTS) await p.screenshot({ path: SHOTS + '/phone-empty.png', fullPage: true });
+    await s.ctx.close();
+
+    await scenario('error');
+    s = await open(browser, PAGE_PATH, PHONE); p = s.page;
+    check('data source down: the screen still renders, no JavaScript errors', await count(p, '#verdict .vbox') === 4 && s.errors.length === 0, s.errors.join(' | '));
+    check('data source down: "now" says it could not load', /לא הצלחתי לטעון את "עכשיו"/.test(await txt(p, '#nowtick')), await txt(p, '#nowtick'));
+    await s.ctx.close();
+
+    await scenario('ok');
+    s = await open(browser, PAGE_PATH, PHONE); p = s.page;
+    check('all good: no alert bar, site "פעיל"', !(await visible(p, '#alertbar')) && /פעיל/.test(await txt(p, '#now .nbox .v')));
+    if (SHOTS) await p.screenshot({ path: SHOTS + '/phone-ok.png', fullPage: true });
+    await s.ctx.close();
+    await scenario('incident');
+  }
+
+  await browser.close();
+  console.log('\n' + passed + ' passed, ' + failed + ' failed' + (isMock ? '' : '  (basic checks only — scenario and role checks need the mock)'));
+  process.exit(failed ? 1 : 0);
+})().catch((e) => { console.error('test crashed: ' + e.stack); process.exit(2); });
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site_health_kit/site_health.html sha256=35aa2ea6f3c976d6680e04eddbca6a115ed083e3ac6d0b2810f12c9809b093db -->
+<!-- FILE: site-health-kit/mock_server.py sha256=545850f6a7feb0bb86c3b2fbe6ca126be465fe7b5b556a02b7f1c5779317f56c -->
+~~~~~~~~python
+#!/usr/bin/env python3
+"""Mock backend for the site-health screen. Standard library only.
+
+It serves the screen and answers every data call with realistic, deterministic fake data,
+in exactly the shapes described in SPEC.md ("API contract"). Use it to:
+  * see the screen working before any real backend exists;
+  * compare your real backend's answers with these, field by field;
+  * run check_screen.js (the acceptance test of the screen).
+
+    python3 mock_server.py                      # http://localhost:8787/site
+    python3 mock_server.py --port 9000 --scenario empty
+    python3 mock_server.py --html /path/to/another_site_health.html
+
+Roles (what the real server injects):  /site  owner ·  /site?role=vendor  read-only
+  /site?role=noalerts  read-only without alerts ·  /status?k=demo-share-token  share link
+Scenarios: incident (default) · ok · empty (fresh install, no data) · error (data source down).
+Switch while running:  GET /__scenario?name=empty
+
+This file is a test double. Nothing in it is a design for the real backend.
+"""
+import argparse
+import datetime as dt
+import hashlib
+import json
+import os
+import re
+import urllib.parse
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from zoneinfo import ZoneInfo
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+TZ = ZoneInfo("Asia/Jerusalem")          # the site's local time zone: every *_il string and every bucket uses it
+SITE = "https://example.co.il"
+SHARE_TOKEN = "demo-share-token"
+PROBE = [("בית", "/"), ("קטגוריה", "/product-category/sofas/"), ("מוצר", "/product/sample-sofa/"), ("סל", "/cart/")]
+CORE = PROBE + [("קופה", "/checkout/")]
+SITE_ALERT_KINDS = {"down", "slow", "silent", "cert"}
+STATE = {"scenario": "incident", "acked": set(), "html": os.path.join(HERE, "site_health.html")}
+
+
+def rnd(*key):
+    """Deterministic pseudo-random number in [0, 1) for a key: the same hour always looks the same."""
+    return int(hashlib.md5("|".join(str(k) for k in key).encode()).hexdigest()[:8], 16) / 0x100000000
+
+
+def now():
+    return dt.datetime.now(TZ)
+
+
+def il(d, year=False):
+    return d.astimezone(TZ).strftime("%d.%m.%Y %H:%M" if year else "%d.%m %H:%M")
+
+
+def window(q):
+    """Same rule as the real server: f/t are local dates (t inclusive); otherwise h hours back from now."""
+    n = now()
+    f, t = q.get("f", ""), q.get("t", "")
+    if f:
+        try:
+            d0 = dt.datetime.strptime(f, "%Y-%m-%d").replace(tzinfo=TZ)
+            d1 = (dt.datetime.strptime(t, "%Y-%m-%d").replace(tzinfo=TZ) + dt.timedelta(days=1)) if t else n
+            if d1 <= d0:
+                d1 = d0 + dt.timedelta(days=1)
+            return d0, min(d1, n), max(1, int((d1 - d0).total_seconds() // 3600))
+        except ValueError:
+            pass
+    try:
+        h = max(1, min(int(q.get("h") or 24), 24 * 400))
+    except ValueError:
+        h = 24
+    return n - dt.timedelta(hours=h), n, h
+
+
+def buckets(d0, d1, hours):
+    """Hourly buckets ('YYYY-MM-DD HH:00') up to 72 hours, daily ('YYYY-MM-DD') beyond. Local time."""
+    out = []
+    if hours <= 72:
+        b = d0.replace(minute=0, second=0, microsecond=0)
+        while b < d1:
+            out.append((b.strftime("%Y-%m-%d %H:00"), b, min(b + dt.timedelta(hours=1), d1)))
+            b += dt.timedelta(hours=1)
+    else:
+        b = d0.replace(hour=0, minute=0, second=0, microsecond=0)
+        while b < d1:
+            out.append((b.strftime("%Y-%m-%d"), b, min(b + dt.timedelta(days=1), d1)))
+            b += dt.timedelta(days=1)
+    return out
+
+
+def bad_hour(b):
+    """In the 'incident' scenario a few hours are bad: that is where failures and slow pages cluster."""
+    return STATE["scenario"] == "incident" and rnd("bad", b.strftime("%Y-%m-%d %H")) < 0.06
+
+
+def pct(vals, p):
+    vals = sorted(vals)
+    return vals[min(len(vals) - 1, int(len(vals) * p))] if vals else None
+
+
+def lcp_for(page, when, strategy):
+    base = {"בית": 2300, "קטגוריה": 3300, "מוצר": 2800, "סל": 2100, "קופה": 2500}.get(page, 3000)
+    if strategy == "desktop":
+        base *= 0.45
+    v = base * (0.85 + 0.4 * rnd("lcp", page, strategy, when.strftime("%Y-%m-%d %H")))
+    if bad_hour(when) and page in ("קטגוריה", "מוצר"):
+        v *= 1.7
+    return int(v)
+
+
+def verdict(ms):
+    return "מצוין" if ms <= 2000 else "מהיר" if ms <= 2500 else "בינוני" if ms <= 4000 else "איטי"
+
+
+def crux(ms):
+    return "FAST" if ms <= 2500 else "AVERAGE" if ms <= 4000 else "SLOW"
+
+
+# ---------------------------------------------------------------- alerts
+
+def alerts():
+    if STATE["scenario"] in ("ok", "empty", "error"):
+        return []
+    n = now()
+    rows = [
+        dict(id=41, kind="down", title="האתר לא עונה: סל", body="קוד 502\n%s/cart/" % SITE,
+             opened=n - dt.timedelta(minutes=14), closed=None),
+        dict(id=40, kind="slow", title="עמוד איטי: קטגוריה", body="4.6 שניות עד התוכן, פעמיים ברצף\n%s/product-category/sofas/" % SITE,
+             opened=n - dt.timedelta(hours=2, minutes=5), closed=None),
+        dict(id=39, kind="ops", title="רשימת הבוקר", body="3 הזמנות חסרות", opened=n - dt.timedelta(hours=5), closed=None),
+        dict(id=38, kind="down", title="האתר לא עונה: בית", body="לא ענה בזמן\n%s/" % SITE,
+             opened=n - dt.timedelta(hours=9, minutes=40), closed=n - dt.timedelta(hours=9, minutes=33)),
+        dict(id=37, kind="cert", title="תעודת האבטחה פגה בעוד 13 ימים", body="example.co.il",
+             opened=n - dt.timedelta(days=2, hours=3), closed=n - dt.timedelta(days=1, hours=20)),
+        dict(id=36, kind="silent", title="המדידה נעצרה: מדידת מהירות — עמודי ליבה", body="אין מדידה כבר 95 דקות",
+             opened=n - dt.timedelta(days=3, hours=1), closed=n - dt.timedelta(days=3)),
+    ]
+    for a in rows:
+        end = a["closed"] or n
+        a.update(open=a["closed"] is None, opened_il=il(a["opened"]), closed_il=il(a["closed"]) if a["closed"] else None,
+                 minutes=int((end - a["opened"]).total_seconds() // 60), acked=a["id"] in STATE["acked"])
+    return rows
+
+
+def pub(a, keep=("id", "kind", "title", "body", "open", "opened_il", "closed_il", "minutes", "acked")):
+    return {k: a[k] for k in keep}
+
+
+def filter_role(rows, role):
+    if role == "noalerts":
+        return []
+    if role in ("vendor", "share"):
+        return [r for r in rows if r.get("kind") in SITE_ALERT_KINDS]
+    return rows
+
+
+# ---------------------------------------------------------------- /api/site
+
+def api_site(q, role):
+    d0, d1, hours = window(q)
+    strategy = "desktop" if q.get("strategy") == "desktop" else "mobile"
+    out = {"hours": hours, "from": d0.isoformat(), "to": d1.isoformat(), "strategy": strategy}
+    sc = STATE["scenario"]
+    if sc == "error":
+        err = {"error": "HTTP Error 503: Service Unavailable"}
+        out.update({k: err for k in ("availability", "availability_series", "speed", "speed_series", "alerts_open",
+                                     "alerts_recent", "health", "product_issues")})
+        out["cert"] = err
+        return out
+    if sc == "empty":
+        out.update(availability=[], availability_series=[], speed=[], speed_series=[], alerts_open=[], alerts_recent=[],
+                   product_issues=[], cert=None,
+                   health=[dict(flow_name=f, status="אין נתון", cadence=c, silent_txt=None,
+                                last_at=None, warn_minutes=w, late_minutes=l, note=None) for f, c, w, l in FLOWS])
+        return out
+    bks = buckets(d0, d1, hours)
+    # --- availability
+    series, per = [], {p: dict(checks=0, failed=0, ms=[], last=None) for p, _ in PROBE}
+    for name, b0, b1 in bks:
+        minutes = max(1, int((b1 - b0).total_seconds() // 60))
+        ch = fl = 0
+        ms = []
+        for p, _ in PROBE:
+            f = 0
+            hrs = max(1, minutes // 60)
+            for i in range(hrs):
+                hb = b0 + dt.timedelta(hours=i)
+                if bad_hour(hb):
+                    f += 2 + int(6 * rnd("f", p, hb.isoformat()))
+                    per[p]["last"] = hb + dt.timedelta(minutes=int(50 * rnd("fm", p, hb.isoformat())))
+                elif rnd("noise", p, hb.isoformat()) < 0.01:
+                    f += 1
+                    per[p]["last"] = hb + dt.timedelta(minutes=int(50 * rnd("fm", p, hb.isoformat())))
+            m = int({"בית": 260, "מוצר": 300, "קטגוריה": 620, "סל": 540}[p] * (0.8 + 0.5 * rnd("ms", p, name)) * (2.2 if bad_hour(b0) else 1))
+            ch += minutes
+            fl += f
+            ms += [m] * 3
+            per[p]["checks"] += minutes
+            per[p]["failed"] += f
+            per[p]["ms"].append(m)
+        series.append(dict(bucket=name, checks=ch, failed=fl, ms_p50=pct(ms, .5), ms_p95=int(pct(ms, .95) * 1.6)))
+    av = [dict(section="לפי עמוד", page=p, checks=v["checks"], failed=v["failed"],
+               fail_pct="%.2f" % (100.0 * v["failed"] / v["checks"]) if v["checks"] else "0.00",
+               p50_ms=pct(v["ms"], .5), p95_ms=int(pct(v["ms"], .95) * 1.5) if v["ms"] else None,
+               last_fail_il=il(v["last"]) if v["last"] else None) for p, v in per.items()]
+    if sc == "incident" and hours >= 12:
+        s = now() - dt.timedelta(hours=9, minutes=40)
+        if s > d0:
+            av.append(dict(section="נפילות", outage_minutes=7, outage_start_il=il(s), outage_end_il=il(s + dt.timedelta(minutes=7))))
+    out["availability"] = av
+    out["availability_series"] = series
+    # --- speed
+    sp, ss = [], []
+    for strat in ("mobile", "desktop"):
+        for p, path in CORE:
+            vals = [lcp_for(p, b0, strat) for _, b0, _ in bks]
+            med = pct(vals, .5)
+            sp.append(dict(section="ליבה", strategy=strat, page=p, url=SITE + path, lcp_p50=med, lcp_p95=pct(vals, .95),
+                           score_med=max(18, min(99, int(118 - med / 45))), cls_med=round(0.02 + 0.1 * rnd("cls", p), 2),
+                           ttfb_p50=int(240 + 500 * rnd("ttfb", p)), slow_runs=sum(1 for v in vals if v > 4000) * 4,
+                           checks=len(vals) * 4, crux_category=crux(int(med * 0.8)) if p != "קופה" else None,
+                           crux_lcp=int(med * 0.8) if p != "קופה" else None))
+            if strat == strategy:
+                ss += [dict(page=p, url=SITE + path, bucket=name, lcp_p50=lcp_for(p, b0, strat)) for name, b0, _ in bks]
+    home = [r for r in sp if r["page"] == "בית" and r["strategy"] == "mobile"][0]
+    sp.append(dict(section="שורה תחתונה", page="בית", url=home["url"], lcp_p50=home["lcp_p50"], checks=home["checks"],
+                   verdict=verdict(home["lcp_p50"])))
+    for i in range(10):
+        u = "%s/product/%s-%d/" % (SITE, urllib.parse.quote("ספה-פינתית"), i + 1)
+        m = int(7200 - 380 * i + 300 * rnd("slow", i))
+        sp.append(dict(section="האיטיים באתר", page=u, url=u, lcp_p50=m, score_med=max(9, 48 - 3 * (10 - i)),
+                       checks=1 + i % 3, last_il=il(now() - dt.timedelta(hours=1 + 2 * i))))
+    sp.append(dict(section="כיסוי", checks=min(412, 24 * hours), slow_runs=412))
+    out["speed"] = sp
+    out["speed_series"] = ss
+    # --- alerts
+    al = alerts()
+    out["alerts_open"] = [pub(a, ("id", "kind", "title", "body", "opened_il", "acked")) for a in filter_role(al, role) if a["open"]]
+    out["alerts_recent"] = [pub(a, ("id", "kind", "title", "body", "open", "opened_il", "closed_il", "minutes"))
+                            for a in filter_role(al, role) if (a["closed"] or now()) >= d0]
+    # --- health of the measurement itself
+    n = now()
+    stat = {"מדידת מהירות — סבב כל האתר": ("מתעכב", 22, "מאחר ב-12 דקות"), "מהירות אצל לקוחות": ("שקט", 400, "שקט כבר 6 שעות")} if sc == "incident" else {}
+    out["health"] = [dict(flow_name=f, status=stat.get(f, ("תקין",))[0], cadence=c,
+                          silent_txt=stat[f][2] if f in stat else None,
+                          last_at=(n - dt.timedelta(minutes=stat[f][1] if f in stat else int(1 + w * 0.3))).isoformat(),
+                          warn_minutes=w, late_minutes=l, note=None) for f, c, w, l in FLOWS]
+    # --- broken products
+    snap = n.strftime("%Y-%m-%d")
+    out["product_issues"] = [] if sc == "ok" else [
+        dict(issue="בלי מחיר", name="שולחן אוכל נפתח 160", url=SITE + "/product/table-160/", snap_date=snap),
+        dict(issue="בלי תמונה", name="כורסת טלוויזיה אפורה", url=SITE + "/product/armchair-grey/", snap_date=snap),
+        dict(issue="לא במלאי", name="ספה תלת מושבית בז'", url=SITE + "/product/sofa-3-beige/", snap_date=snap),
+        dict(issue="לא במלאי", name="מיטה זוגית 160 עם ארגז", url=SITE + "/product/bed-160/", snap_date=snap),
+        dict(issue="אי אפשר להוסיף לסל", name="שידת לילה אלון", url=SITE + "/product/nightstand-oak/", snap_date=snap),
+    ]
+    days = 23 if sc == "incident" else 71
+    out["cert"] = dict(host="example.co.il", issuer="Let's Encrypt R11", not_after=(n + dt.timedelta(days=days, hours=5)).isoformat(),
+                       days_left=days, ok=True, err=None, checked_at=n.replace(hour=4, minute=3).isoformat())
+    return out
+
+
+FLOWS = [  # flow_name, cadence, warn_minutes, late_minutes
+    ("בודק זמינות האתר", "כל דקה", 5, 15),
+    ("מדידת מהירות — עמודי ליבה", "כל רבע שעה", 45, 90),
+    ("מדידת מהירות — סבב כל האתר", "כל 5 דקות", 20, 60),
+    ("טעינת מפת האתר", "פעם ביום", 1560, 2880),
+    ("בדיקת תעודת האבטחה", "פעם ביום", 1560, 2880),
+    ("בדיקת מוצרים שבורים", "פעם ביום", 1560, 2880),
+    ("מהירות אצל לקוחות", "כל צפייה בעמוד", 120, 360),
+]
+
+
+# ---------------------------------------------------------------- /api/site/now
+
+def api_now(role):
+    sc = STATE["scenario"]
+    if sc == "error":
+        return {"error": "HTTP Error 503: Service Unavailable"}
+    if sc == "empty":
+        return dict(pages=[], latest=[], light=False, all_ok=False, any_ok=False, age_sec=None, rum={"n": 0, "p75_ms": None},
+                    speed={}, alerts_open=0, rum_src=None)
+    n = now()
+    pages = []
+    for p, path in PROBE:
+        ok = not (sc == "incident" and p == "סל")
+        pages.append(dict(page=p, url=SITE + path, ok=ok, status=200 if ok else 502,
+                          ms=int({"בית": 240, "מוצר": 310, "קטגוריה": 690, "סל": 1700}[p] * (0.9 + 0.3 * rnd("now", p, n.strftime("%H:%M")))) if ok else None))
+    oks = [p["ok"] for p in pages]
+    lcp = lcp_for("בית", n, "mobile")
+    return dict(
+        pages=pages, latest=pages, light=n.second >= 30, all_ok=all(oks), any_ok=any(oks), age_sec=n.second % 30 + 4,
+        rum=dict(n=143, p75_ms=2380 if sc == "ok" else 3120),
+        speed=dict(lcp_ms=lcp, score=max(18, min(99, int(118 - lcp / 45))), checked_at=(n - dt.timedelta(minutes=n.minute % 15)).isoformat()),
+        alerts_open=len([a for a in filter_role(alerts(), role) if a["open"]]),
+        rum_src=dict(n=1000, hosts=[{"host": "live", "n": 1000}] if sc == "ok" else [{"host": "live", "n": 964}, {"host": "staging.example.co.il", "n": 36}],
+                     cols=["created_at", "is_test", "lcp_ms", "path", "site"], test=0 if sc == "ok" else 12))
+
+
+# ---------------------------------------------------------------- /api/site/drill
+
+def api_drill(q, role):
+    what = q.get("what", "")
+    d0, d1, hours = window(q)
+    n = now()
+    if STATE["scenario"] in ("empty", "error") and what != "alert":
+        return {"rows": []}
+    if what == "fails":
+        rows = []
+        for i in range(23):
+            p = PROBE[int(4 * rnd("fp", i))][0]
+            if q.get("page") and p != q["page"]:
+                continue
+            k = ["לא ענה בזמן", "קוד 502", "קוד 500", "שגיאת חיבור"][int(4 * rnd("fk", i))]
+            rows.append(dict(at_il=il(n - dt.timedelta(minutes=14 + 31 * i)), page=p, kind=k,
+                             err="upstream connect error or disconnect/reset before headers" if k == "שגיאת חיבור" else None,
+                             ms=10000 if k == "לא ענה בזמן" else int(300 + 900 * rnd("fms", i))))
+        return {"rows": rows}
+    if what == "bucket":
+        return {"rows": [dict(page=p, checks=60, failed=int(3 * rnd("bf", p, q.get("bucket"))), ms_p50=int(250 + 500 * rnd("bm", p)),
+                              ms_max=int(900 + 2500 * rnd("bx", p)), worst_il=il(n - dt.timedelta(minutes=int(600 * rnd("bw", p)))))
+                         for p, _ in PROBE]}
+    if what == "runs":
+        strat = "desktop" if q.get("strategy") == "desktop" else "mobile"
+        page = next((p for p, path in CORE if SITE + path == q.get("url")), "מוצר")
+        rows = []
+        for i in range(36 if not q.get("bucket") else 4):
+            t = n - dt.timedelta(minutes=15 * i + 3)
+            if i == 5:
+                rows.append(dict(ok=False, err="Lighthouse returned error: NO_FCP", at_il=il(t)))
+                continue
+            lcp = lcp_for(page, t, strat)
+            rows.append(dict(ok=True, err=None, at_il=il(t), lcp_ms=lcp, score=max(18, min(99, int(118 - lcp / 45))),
+                             ttfb_ms=int(260 + 420 * rnd("rt", i)), bytes=int(3.1e6 + 2.4e6 * rnd("rb", i)), cls=round(0.01 + 0.12 * rnd("rc", i), 3),
+                             crux_category=crux(int(lcp * 0.8)), crux_lcp_ms=int(lcp * 0.8),
+                             opps=[dict(id="uses-responsive-images", title="Properly size images", ms=int(900 + 700 * rnd("o1", i))),
+                                   dict(id="modern-image-formats", title="Serve images in next-gen formats", ms=int(500 + 400 * rnd("o2", i))),
+                                   dict(id="render-blocking-resources", title="Eliminate render-blocking resources", ms=int(300 + 300 * rnd("o3", i))),
+                                   dict(id="some-new-audit", title="A reason the screen has no translation for", ms=120)]))
+        return {"rows": rows}
+    if what == "alert":
+        try:
+            aid = int(q.get("id") or 0)
+        except ValueError:
+            aid = 0
+        rows = [a for a in filter_role(alerts(), role) if a["id"] == aid]
+        out = []
+        for a in rows:
+            r = pub(a, ("id", "kind", "title", "body", "open", "opened_il", "closed_il", "minutes"))
+            r["fails"] = [dict(at=il(a["opened"] + dt.timedelta(minutes=i)), page=a["title"].split(": ")[-1], status=502 if i else None,
+                               err=None if i else "timeout") for i in range(3)] if a["kind"] == "down" else []
+            sent = [dict(event="open", status=200, at=il(a["opened"]))]
+            if a["closed"]:
+                sent.append(dict(event="close", status=200, at=il(a["closed"])))
+            r["sent"] = [] if role in ("vendor", "share") else sent
+            out.append(r)
+        return {"rows": out}
+    return None
+
+
+def api_messages(q):
+    if STATE["scenario"] in ("empty", "error", "ok"):
+        return {"rows": []}
+    rows = []
+    for a in alerts():
+        rows.append(dict(kind="התראה", title=a["title"], msg=a["body"], at_il=il(a["opened"]), sent=True, _t=a["opened"]))
+        if a["closed"]:
+            rows.append(dict(kind="חזר לתקין", title=a["title"], msg="נמשך %d דקות" % a["minutes"], at_il=il(a["closed"]), sent=a["id"] != 37, _t=a["closed"]))
+    n = now()
+    rows.append(dict(kind="בוקר", title="בוקר טוב: האתר תקין", msg="זמינות 99.9% ב-24 שעות\nמהירות עמוד הבית: מהיר",
+                     at_il=il(n.replace(hour=7, minute=30)), sent=True, _t=n.replace(hour=7, minute=30)))
+    rows.sort(key=lambda r: r["_t"], reverse=True)
+    return {"rows": [{k: v for k, v in r.items() if k != "_t"} for r in rows]}
+
+
+# ---------------------------------------------------------------- http
+
+class H(BaseHTTPRequestHandler):
+    def log_message(self, *a):
+        pass
+
+    def _send(self, code, body, ctype="application/json; charset=utf-8", extra=None):
+        data = body if isinstance(body, bytes) else (body if isinstance(body, str) else json.dumps(body, ensure_ascii=False)).encode("utf-8")
+        self.send_response(code)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
+        for k, v in (extra or {}).items():
+            self.send_header(k, v)
+        self.end_headers()
+        self.wfile.write(data)
+
+    def _role(self, q):
+        """owner | vendor | noalerts | share. The real server derives it from the session cookie / share token."""
+        if q.get("k"):
+            return "share" if q["k"] == SHARE_TOKEN else None
+        m = re.search(r"mock_role=(\w+)", self.headers.get("Cookie", ""))
+        return m.group(1) if m else "owner"
+
+    def _page(self, role, share_key=""):
+        html = open(STATE["html"], encoding="utf-8").read()
+        cfg = {"siteLabel": "example.co.il", "brand": "DEMO", "shareKey": share_key,
+               "bucketNote": "עמוד הסל וקטגוריה תמיד איטיים יותר: הם לא נשמרים בזיכרון המטמון של האתר ונבנים מחדש בכל כניסה."}
+        if role == "owner":
+            cfg["links"] = [{"href": "#", "label": "מסך נוסף", "title": "דוגמה לכפתור נוסף"}]
+            cfg["nav"] = [["g", "האתר"], ["a", "/site", "בריאות האתר"], ["a", "#", "מסך נוסף"]]
+        r = {"owner": {}, "vendor": {"readonly": True}, "noalerts": {"readonly": True, "noAlerts": True}, "share": {"share": True}}[role]
+        inject = "<script>window.SH_CONFIG=%s;window.SH_ROLE=%s;</script>" % (json.dumps(cfg, ensure_ascii=False), json.dumps(r))
+        if "<!--SH_INJECT-->" in html:
+            html = html.replace("<!--SH_INJECT-->", inject, 1)
+        else:   # a screen without the marker (for example the original it was derived from): old-style flags
+            old = "<script>window.OWL_ROLE={};%s</script>" % ("window.OWL_SHARE=1;" if role != "owner" else "")
+            html = html.replace("</head>", old + "</head>", 1)
+        return html
+
+    def do_GET(self):
+        u = urllib.parse.urlsplit(self.path)
+        q = {k: v[0] for k, v in urllib.parse.parse_qs(u.query, keep_blank_values=True).items()}
+        path = u.path
+        if path in ("/", "/site"):
+            role = q.get("role", "owner")
+            if role not in ("owner", "vendor", "noalerts"):
+                role = "owner"
+            return self._send(200, self._page(role), "text/html; charset=utf-8",
+                              {"Set-Cookie": "mock_role=%s; Path=/; SameSite=Lax" % role, "Cache-Control": "no-cache, must-revalidate"})
+        if path == "/status":
+            if q.get("k") != SHARE_TOKEN:
+                return self._send(403, "<div dir='rtl' style='font-family:system-ui;padding:48px;text-align:center'>הקישור אינו תקין או שפג.</div>", "text/html; charset=utf-8")
+            return self._send(200, self._page("share", SHARE_TOKEN), "text/html; charset=utf-8")
+        if path == "/__scenario":
+            if q.get("name") in ("incident", "ok", "empty", "error"):
+                STATE["scenario"] = q["name"]
+                STATE["acked"] = set()
+            return self._send(200, {"scenario": STATE["scenario"]})
+        if path in ("/login", "/logout"):
+            return self._send(200, "<div dir='rtl' style='font-family:system-ui;padding:48px'>דף הכניסה (דמה). <a href='/site'>חזרה</a></div>", "text/html; charset=utf-8")
+        if not path.startswith("/api/"):
+            return self._send(404, {"error": "not found"})
+        role = self._role(q)
+        if role is None:
+            return self._send(401, {"error": "auth"})
+        if path == "/api/site":
+            return self._send(200, api_site(q, role))
+        if path == "/api/site/now":
+            d = api_now(role)
+            return self._send(502 if "error" in d else 200, d)
+        if path == "/api/site/drill":
+            d = api_drill(q, role)
+            return self._send(200, d) if d is not None else self._send(400, {"error": "what?"})
+        if path == "/api/messages":
+            if q.get("k"):                     # the share token counts only on /status and the three data calls
+                return self._send(401, {"error": "auth"})
+            if role != "owner":
+                return self._send(403, {"error": "auth"})
+            return self._send(200, api_messages(q))
+        return self._send(404, {"error": "not found"})
+
+    def do_POST(self):
+        u = urllib.parse.urlsplit(self.path)
+        q = {k: v[0] for k, v in urllib.parse.parse_qs(u.query).items()}
+        if u.path != "/api/alerts/ack":
+            return self._send(404, {"error": "not found"})
+        if q.get("k"):
+            return self._send(401, {"error": "auth"})
+        if self._role(q) != "owner":
+            return self._send(403, {"error": "auth"})
+        try:
+            body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+            raw = body.get("ids") if isinstance(body.get("ids"), list) else [body.get("id")]
+            ids = sorted({int(x) for x in raw[:200] if str(x).lstrip("-").isdigit() and int(x) > 0})
+        except Exception:
+            ids = []
+        if not ids:
+            return self._send(400, {"error": "bad request"})
+        STATE["acked"].update(ids)
+        return self._send(200, {"ok": True, "n": len(ids)})
+
+
+if __name__ == "__main__":
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--port", type=int, default=8787)
+    ap.add_argument("--scenario", default="incident", choices=["incident", "ok", "empty", "error"])
+    ap.add_argument("--html", default=STATE["html"], help="the screen file to serve (default: site_health.html next to this script)")
+    a = ap.parse_args()
+    STATE["scenario"], STATE["html"] = a.scenario, a.html
+    print("mock site-health backend: http://localhost:%d/site   (scenario: %s)" % (a.port, a.scenario), flush=True)
+    ThreadingHTTPServer(("127.0.0.1", a.port), H).serve_forever()
+~~~~~~~~
+<!-- END FILE -->
+
+<!-- FILE: site-health-kit/site_health.html sha256=35aa2ea6f3c976d6680e04eddbca6a115ed083e3ac6d0b2810f12c9809b093db -->
 ~~~~~~~~html
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
@@ -2079,700 +3137,7 @@ function loadMessages(){
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site_health_kit/mock_server.py sha256=5025156651ee24c49a182c79bc51cb1960ecf2c77c9cc2aadce908dbb46fb79b -->
-~~~~~~~~python
-#!/usr/bin/env python3
-"""Mock backend for the site-health screen. Standard library only.
-
-It serves the screen and answers every data call with realistic, deterministic fake data,
-in exactly the shapes described in SPEC.md ("API contract"). Use it to:
-  * see the screen working before any real backend exists;
-  * compare your real backend's answers with these, field by field;
-  * run check_screen.js (the acceptance test of the screen).
-
-    python3 mock_server.py                      # http://localhost:8787/site
-    python3 mock_server.py --port 9000 --scenario empty
-    python3 mock_server.py --html /path/to/another_site_health.html
-
-Roles (what the real server injects):  /site  owner ·  /site?role=vendor  read-only
-  /site?role=noalerts  read-only without alerts ·  /status?k=demo-share-token  share link
-Scenarios: incident (default) · ok · empty (fresh install, no data) · error (data source down).
-Switch while running:  GET /__scenario?name=empty
-
-This file is a test double. Nothing in it is a design for the real backend.
-"""
-import argparse
-import datetime as dt
-import hashlib
-import json
-import os
-import re
-import urllib.parse
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from zoneinfo import ZoneInfo
-
-HERE = os.path.dirname(os.path.abspath(__file__))
-TZ = ZoneInfo("Asia/Jerusalem")          # the site's local time zone: every *_il string and every bucket uses it
-SITE = "https://example.co.il"
-SHARE_TOKEN = "demo-share-token"
-PROBE = [("בית", "/"), ("קטגוריה", "/product-category/sofas/"), ("מוצר", "/product/sample-sofa/"), ("סל", "/cart/")]
-CORE = PROBE + [("קופה", "/checkout/")]
-SITE_ALERT_KINDS = {"down", "slow", "silent", "cert"}
-STATE = {"scenario": "incident", "acked": set(), "html": os.path.join(HERE, "site_health.html")}
-
-
-def rnd(*key):
-    """Deterministic pseudo-random number in [0, 1) for a key: the same hour always looks the same."""
-    return int(hashlib.md5("|".join(str(k) for k in key).encode()).hexdigest()[:8], 16) / 0x100000000
-
-
-def now():
-    return dt.datetime.now(TZ)
-
-
-def il(d, year=False):
-    return d.astimezone(TZ).strftime("%d.%m.%Y %H:%M" if year else "%d.%m %H:%M")
-
-
-def window(q):
-    """Same rule as the real server: f/t are local dates (t inclusive); otherwise h hours back from now."""
-    n = now()
-    f, t = q.get("f", ""), q.get("t", "")
-    if f:
-        try:
-            d0 = dt.datetime.strptime(f, "%Y-%m-%d").replace(tzinfo=TZ)
-            d1 = (dt.datetime.strptime(t, "%Y-%m-%d").replace(tzinfo=TZ) + dt.timedelta(days=1)) if t else n
-            if d1 <= d0:
-                d1 = d0 + dt.timedelta(days=1)
-            return d0, min(d1, n), max(1, int((d1 - d0).total_seconds() // 3600))
-        except ValueError:
-            pass
-    try:
-        h = max(1, min(int(q.get("h") or 24), 24 * 400))
-    except ValueError:
-        h = 24
-    return n - dt.timedelta(hours=h), n, h
-
-
-def buckets(d0, d1, hours):
-    """Hourly buckets ('YYYY-MM-DD HH:00') up to 72 hours, daily ('YYYY-MM-DD') beyond. Local time."""
-    out = []
-    if hours <= 72:
-        b = d0.replace(minute=0, second=0, microsecond=0)
-        while b < d1:
-            out.append((b.strftime("%Y-%m-%d %H:00"), b, min(b + dt.timedelta(hours=1), d1)))
-            b += dt.timedelta(hours=1)
-    else:
-        b = d0.replace(hour=0, minute=0, second=0, microsecond=0)
-        while b < d1:
-            out.append((b.strftime("%Y-%m-%d"), b, min(b + dt.timedelta(days=1), d1)))
-            b += dt.timedelta(days=1)
-    return out
-
-
-def bad_hour(b):
-    """In the 'incident' scenario a few hours are bad: that is where failures and slow pages cluster."""
-    return STATE["scenario"] == "incident" and rnd("bad", b.strftime("%Y-%m-%d %H")) < 0.06
-
-
-def pct(vals, p):
-    vals = sorted(vals)
-    return vals[min(len(vals) - 1, int(len(vals) * p))] if vals else None
-
-
-def lcp_for(page, when, strategy):
-    base = {"בית": 2300, "קטגוריה": 3300, "מוצר": 2800, "סל": 2100, "קופה": 2500}.get(page, 3000)
-    if strategy == "desktop":
-        base *= 0.45
-    v = base * (0.85 + 0.4 * rnd("lcp", page, strategy, when.strftime("%Y-%m-%d %H")))
-    if bad_hour(when) and page in ("קטגוריה", "מוצר"):
-        v *= 1.7
-    return int(v)
-
-
-def verdict(ms):
-    return "מצוין" if ms <= 2000 else "מהיר" if ms <= 2500 else "בינוני" if ms <= 4000 else "איטי"
-
-
-def crux(ms):
-    return "FAST" if ms <= 2500 else "AVERAGE" if ms <= 4000 else "SLOW"
-
-
-# ---------------------------------------------------------------- alerts
-
-def alerts():
-    if STATE["scenario"] in ("ok", "empty", "error"):
-        return []
-    n = now()
-    rows = [
-        dict(id=41, kind="down", title="האתר לא עונה: סל", body="קוד 502\n%s/cart/" % SITE,
-             opened=n - dt.timedelta(minutes=14), closed=None),
-        dict(id=40, kind="slow", title="עמוד איטי: קטגוריה", body="4.6 שניות עד התוכן, פעמיים ברצף\n%s/product-category/sofas/" % SITE,
-             opened=n - dt.timedelta(hours=2, minutes=5), closed=None),
-        dict(id=39, kind="ops", title="רשימת הבוקר", body="3 הזמנות חסרות", opened=n - dt.timedelta(hours=5), closed=None),
-        dict(id=38, kind="down", title="האתר לא עונה: בית", body="לא ענה בזמן\n%s/" % SITE,
-             opened=n - dt.timedelta(hours=9, minutes=40), closed=n - dt.timedelta(hours=9, minutes=33)),
-        dict(id=37, kind="cert", title="תעודת האבטחה פגה בעוד 13 ימים", body="example.co.il",
-             opened=n - dt.timedelta(days=2, hours=3), closed=n - dt.timedelta(days=1, hours=20)),
-        dict(id=36, kind="silent", title="המדידה נעצרה: מדידת מהירות — עמודי ליבה", body="אין מדידה כבר 95 דקות",
-             opened=n - dt.timedelta(days=3, hours=1), closed=n - dt.timedelta(days=3)),
-    ]
-    for a in rows:
-        end = a["closed"] or n
-        a.update(open=a["closed"] is None, opened_il=il(a["opened"]), closed_il=il(a["closed"]) if a["closed"] else None,
-                 minutes=int((end - a["opened"]).total_seconds() // 60), acked=a["id"] in STATE["acked"])
-    return rows
-
-
-def pub(a, keep=("id", "kind", "title", "body", "open", "opened_il", "closed_il", "minutes", "acked")):
-    return {k: a[k] for k in keep}
-
-
-def filter_role(rows, role):
-    if role == "noalerts":
-        return []
-    if role in ("vendor", "share"):
-        return [r for r in rows if r.get("kind") in SITE_ALERT_KINDS]
-    return rows
-
-
-# ---------------------------------------------------------------- /api/site
-
-def api_site(q, role):
-    d0, d1, hours = window(q)
-    strategy = "desktop" if q.get("strategy") == "desktop" else "mobile"
-    out = {"hours": hours, "from": d0.isoformat(), "to": d1.isoformat(), "strategy": strategy}
-    sc = STATE["scenario"]
-    if sc == "error":
-        err = {"error": "HTTP Error 503: Service Unavailable"}
-        out.update({k: err for k in ("availability", "availability_series", "speed", "speed_series", "alerts_open",
-                                     "alerts_recent", "health", "product_issues")})
-        out["cert"] = err
-        return out
-    if sc == "empty":
-        out.update(availability=[], availability_series=[], speed=[], speed_series=[], alerts_open=[], alerts_recent=[],
-                   product_issues=[], cert=None,
-                   health=[dict(flow_group="אתר האינטרנט", flow_name=f, status="אין נתון", cadence=c, silent_txt=None,
-                                last_at=None, warn_minutes=w, late_minutes=l, note=None) for f, c, w, l in FLOWS])
-        return out
-    bks = buckets(d0, d1, hours)
-    # --- availability
-    series, per = [], {p: dict(checks=0, failed=0, ms=[], last=None) for p, _ in PROBE}
-    for name, b0, b1 in bks:
-        minutes = max(1, int((b1 - b0).total_seconds() // 60))
-        ch = fl = 0
-        ms = []
-        for p, _ in PROBE:
-            f = 0
-            hrs = max(1, minutes // 60)
-            for i in range(hrs):
-                hb = b0 + dt.timedelta(hours=i)
-                if bad_hour(hb):
-                    f += 2 + int(6 * rnd("f", p, hb.isoformat()))
-                    per[p]["last"] = hb + dt.timedelta(minutes=int(50 * rnd("fm", p, hb.isoformat())))
-                elif rnd("noise", p, hb.isoformat()) < 0.01:
-                    f += 1
-                    per[p]["last"] = hb + dt.timedelta(minutes=int(50 * rnd("fm", p, hb.isoformat())))
-            m = int({"בית": 260, "מוצר": 300, "קטגוריה": 620, "סל": 540}[p] * (0.8 + 0.5 * rnd("ms", p, name)) * (2.2 if bad_hour(b0) else 1))
-            ch += minutes
-            fl += f
-            ms += [m] * 3
-            per[p]["checks"] += minutes
-            per[p]["failed"] += f
-            per[p]["ms"].append(m)
-        series.append(dict(bucket=name, checks=ch, failed=fl, ms_p50=pct(ms, .5), ms_p95=int(pct(ms, .95) * 1.6)))
-    av = [dict(section="לפי עמוד", page=p, checks=v["checks"], failed=v["failed"],
-               fail_pct="%.2f" % (100.0 * v["failed"] / v["checks"]) if v["checks"] else "0.00",
-               p50_ms=pct(v["ms"], .5), p95_ms=int(pct(v["ms"], .95) * 1.5) if v["ms"] else None,
-               last_fail_il=il(v["last"]) if v["last"] else None) for p, v in per.items()]
-    if sc == "incident" and hours >= 12:
-        s = now() - dt.timedelta(hours=9, minutes=40)
-        if s > d0:
-            av.append(dict(section="נפילות", outage_minutes=7, outage_start_il=il(s), outage_end_il=il(s + dt.timedelta(minutes=7))))
-    out["availability"] = av
-    out["availability_series"] = series
-    # --- speed
-    sp, ss = [], []
-    for strat in ("mobile", "desktop"):
-        for p, path in CORE:
-            vals = [lcp_for(p, b0, strat) for _, b0, _ in bks]
-            med = pct(vals, .5)
-            sp.append(dict(section="ליבה", strategy=strat, page=p, url=SITE + path, lcp_p50=med, lcp_p95=pct(vals, .95),
-                           score_med=max(18, min(99, int(118 - med / 45))), cls_med=round(0.02 + 0.1 * rnd("cls", p), 2),
-                           ttfb_p50=int(240 + 500 * rnd("ttfb", p)), slow_runs=sum(1 for v in vals if v > 4000) * 4,
-                           checks=len(vals) * 4, crux_category=crux(int(med * 0.8)) if p != "קופה" else None,
-                           crux_lcp=int(med * 0.8) if p != "קופה" else None))
-            if strat == strategy:
-                ss += [dict(page=p, url=SITE + path, bucket=name, lcp_p50=lcp_for(p, b0, strat)) for name, b0, _ in bks]
-    home = [r for r in sp if r["page"] == "בית" and r["strategy"] == "mobile"][0]
-    sp.append(dict(section="שורה תחתונה", page="בית", url=home["url"], lcp_p50=home["lcp_p50"], checks=home["checks"],
-                   verdict=verdict(home["lcp_p50"])))
-    for i in range(10):
-        u = "%s/product/%s-%d/" % (SITE, urllib.parse.quote("ספה-פינתית"), i + 1)
-        m = int(7200 - 380 * i + 300 * rnd("slow", i))
-        sp.append(dict(section="האיטיים באתר", page=u, url=u, lcp_p50=m, score_med=max(9, 48 - 3 * (10 - i)),
-                       checks=1 + i % 3, last_il=il(now() - dt.timedelta(hours=1 + 2 * i))))
-    sp.append(dict(section="כיסוי", checks=min(412, 24 * hours), slow_runs=412))
-    out["speed"] = sp
-    out["speed_series"] = ss
-    # --- alerts
-    al = alerts()
-    out["alerts_open"] = [pub(a, ("id", "kind", "title", "body", "opened_il", "acked")) for a in filter_role(al, role) if a["open"]]
-    out["alerts_recent"] = [pub(a, ("id", "kind", "title", "body", "open", "opened_il", "closed_il", "minutes"))
-                            for a in filter_role(al, role) if (a["closed"] or now()) >= d0]
-    # --- health of the measurement itself
-    n = now()
-    stat = {"מדידת מהירות — סבב כל האתר": ("מתעכב", 22, "מאחר ב-12 דקות"), "מהירות אצל לקוחות": ("שקט", 400, "שקט כבר 6 שעות")} if sc == "incident" else {}
-    out["health"] = [dict(flow_group="אתר האינטרנט", flow_name=f, status=stat.get(f, ("תקין",))[0], cadence=c,
-                          silent_txt=stat[f][2] if f in stat else None,
-                          last_at=(n - dt.timedelta(minutes=stat[f][1] if f in stat else int(1 + w * 0.3))).isoformat(),
-                          warn_minutes=w, late_minutes=l, note=None) for f, c, w, l in FLOWS]
-    # --- broken products
-    snap = n.strftime("%Y-%m-%d")
-    out["product_issues"] = [] if sc == "ok" else [
-        dict(issue="בלי מחיר", name="שולחן אוכל נפתח 160", url=SITE + "/product/table-160/", snap_date=snap),
-        dict(issue="בלי תמונה", name="כורסת טלוויזיה אפורה", url=SITE + "/product/armchair-grey/", snap_date=snap),
-        dict(issue="לא במלאי", name="ספה תלת מושבית בז'", url=SITE + "/product/sofa-3-beige/", snap_date=snap),
-        dict(issue="לא במלאי", name="מיטה זוגית 160 עם ארגז", url=SITE + "/product/bed-160/", snap_date=snap),
-        dict(issue="אי אפשר להוסיף לסל", name="שידת לילה אלון", url=SITE + "/product/nightstand-oak/", snap_date=snap),
-    ]
-    days = 23 if sc == "incident" else 71
-    out["cert"] = dict(host="example.co.il", issuer="Let's Encrypt R11", not_after=(n + dt.timedelta(days=days, hours=5)).isoformat(),
-                       days_left=days, ok=True, err=None, checked_at=n.replace(hour=4, minute=3).isoformat())
-    return out
-
-
-FLOWS = [  # flow_name, cadence, warn_minutes, late_minutes
-    ("בודק זמינות האתר", "כל דקה", 5, 15),
-    ("מדידת מהירות — עמודי ליבה", "כל רבע שעה", 45, 90),
-    ("מדידת מהירות — סבב כל האתר", "כל 5 דקות", 20, 60),
-    ("טעינת מפת האתר", "פעם ביום", 1560, 2880),
-    ("בדיקת תעודת האבטחה", "פעם ביום", 1560, 2880),
-    ("בדיקת מוצרים שבורים", "פעם ביום", 1560, 2880),
-    ("מהירות אצל לקוחות", "כל צפייה בעמוד", 120, 360),
-]
-
-
-# ---------------------------------------------------------------- /api/site/now
-
-def api_now(role):
-    sc = STATE["scenario"]
-    if sc == "error":
-        return {"error": "HTTP Error 503: Service Unavailable"}
-    if sc == "empty":
-        return dict(pages=[], latest=[], light=False, all_ok=False, any_ok=False, age_sec=None, rum={"n": 0, "p75_ms": None},
-                    speed={}, alerts_open=0, rum_src=None)
-    n = now()
-    pages = []
-    for p, path in PROBE:
-        ok = not (sc == "incident" and p == "סל")
-        pages.append(dict(page=p, url=SITE + path, ok=ok, status=200 if ok else 502,
-                          ms=int({"בית": 240, "מוצר": 310, "קטגוריה": 690, "סל": 1700}[p] * (0.9 + 0.3 * rnd("now", p, n.strftime("%H:%M")))) if ok else None))
-    oks = [p["ok"] for p in pages]
-    lcp = lcp_for("בית", n, "mobile")
-    return dict(
-        pages=pages, latest=pages, light=n.second >= 30, all_ok=all(oks), any_ok=any(oks), age_sec=n.second % 30 + 4,
-        rum=dict(n=143, p75_ms=2380 if sc == "ok" else 3120),
-        speed=dict(lcp_ms=lcp, score=max(18, min(99, int(118 - lcp / 45))), checked_at=(n - dt.timedelta(minutes=n.minute % 15)).isoformat()),
-        alerts_open=len([a for a in filter_role(alerts(), role) if a["open"]]),
-        rum_src=dict(n=1000, hosts=[{"host": "live", "n": 1000}] if sc == "ok" else [{"host": "live", "n": 964}, {"host": "staging.example.co.il", "n": 36}],
-                     cols=["created_at", "is_test", "lcp_ms", "path", "site"], test=0 if sc == "ok" else 12))
-
-
-# ---------------------------------------------------------------- /api/site/drill
-
-def api_drill(q, role):
-    what = q.get("what", "")
-    d0, d1, hours = window(q)
-    n = now()
-    if STATE["scenario"] in ("empty", "error") and what != "alert":
-        return {"rows": []}
-    if what == "fails":
-        rows = []
-        for i in range(23):
-            p = PROBE[int(4 * rnd("fp", i))][0]
-            if q.get("page") and p != q["page"]:
-                continue
-            k = ["לא ענה בזמן", "קוד 502", "קוד 500", "שגיאת חיבור"][int(4 * rnd("fk", i))]
-            rows.append(dict(at_il=il(n - dt.timedelta(minutes=14 + 31 * i)), page=p, kind=k,
-                             err="upstream connect error or disconnect/reset before headers" if k == "שגיאת חיבור" else None,
-                             ms=10000 if k == "לא ענה בזמן" else int(300 + 900 * rnd("fms", i))))
-        return {"rows": rows}
-    if what == "bucket":
-        return {"rows": [dict(page=p, checks=60, failed=int(3 * rnd("bf", p, q.get("bucket"))), ms_p50=int(250 + 500 * rnd("bm", p)),
-                              ms_max=int(900 + 2500 * rnd("bx", p)), worst_il=il(n - dt.timedelta(minutes=int(600 * rnd("bw", p)))))
-                         for p, _ in PROBE]}
-    if what == "runs":
-        strat = "desktop" if q.get("strategy") == "desktop" else "mobile"
-        page = next((p for p, path in CORE if SITE + path == q.get("url")), "מוצר")
-        rows = []
-        for i in range(36 if not q.get("bucket") else 4):
-            t = n - dt.timedelta(minutes=15 * i + 3)
-            if i == 5:
-                rows.append(dict(ok=False, err="Lighthouse returned error: NO_FCP", at_il=il(t)))
-                continue
-            lcp = lcp_for(page, t, strat)
-            rows.append(dict(ok=True, err=None, at_il=il(t), lcp_ms=lcp, score=max(18, min(99, int(118 - lcp / 45))),
-                             ttfb_ms=int(260 + 420 * rnd("rt", i)), bytes=int(3.1e6 + 2.4e6 * rnd("rb", i)), cls=round(0.01 + 0.12 * rnd("rc", i), 3),
-                             crux_category=crux(int(lcp * 0.8)), crux_lcp_ms=int(lcp * 0.8),
-                             opps=[dict(id="uses-responsive-images", title="Properly size images", ms=int(900 + 700 * rnd("o1", i))),
-                                   dict(id="modern-image-formats", title="Serve images in next-gen formats", ms=int(500 + 400 * rnd("o2", i))),
-                                   dict(id="render-blocking-resources", title="Eliminate render-blocking resources", ms=int(300 + 300 * rnd("o3", i))),
-                                   dict(id="some-new-audit", title="A reason the screen has no translation for", ms=120)]))
-        return {"rows": rows}
-    if what == "alert":
-        try:
-            aid = int(q.get("id") or 0)
-        except ValueError:
-            aid = 0
-        rows = [a for a in filter_role(alerts(), role) if a["id"] == aid]
-        out = []
-        for a in rows:
-            r = pub(a, ("id", "kind", "title", "body", "open", "opened_il", "closed_il", "minutes"))
-            r["fails"] = [dict(at=il(a["opened"] + dt.timedelta(minutes=i)), page=a["title"].split(": ")[-1], status=502 if i else None,
-                               err=None if i else "timeout") for i in range(3)] if a["kind"] == "down" else []
-            sent = [dict(event="open", status=200, at=il(a["opened"]))]
-            if a["closed"]:
-                sent.append(dict(event="close", status=200, at=il(a["closed"])))
-            r["sent"] = [] if role in ("vendor", "share") else sent
-            out.append(r)
-        return {"rows": out}
-    return None
-
-
-def api_messages(q):
-    if STATE["scenario"] in ("empty", "error", "ok"):
-        return {"rows": []}
-    rows = []
-    for a in alerts():
-        rows.append(dict(kind="התראה", title=a["title"], msg=a["body"], at_il=il(a["opened"]), sent=True, _t=a["opened"]))
-        if a["closed"]:
-            rows.append(dict(kind="חזר לתקין", title=a["title"], msg="נמשך %d דקות" % a["minutes"], at_il=il(a["closed"]), sent=a["id"] != 37, _t=a["closed"]))
-    n = now()
-    rows.append(dict(kind="בוקר", title="בוקר טוב: האתר תקין", msg="זמינות 99.9% ב-24 שעות\nמהירות עמוד הבית: מהיר",
-                     at_il=il(n.replace(hour=7, minute=30)), sent=True, _t=n.replace(hour=7, minute=30)))
-    rows.sort(key=lambda r: r["_t"], reverse=True)
-    return {"rows": [{k: v for k, v in r.items() if k != "_t"} for r in rows]}
-
-
-# ---------------------------------------------------------------- http
-
-class H(BaseHTTPRequestHandler):
-    def log_message(self, *a):
-        pass
-
-    def _send(self, code, body, ctype="application/json; charset=utf-8", extra=None):
-        data = body if isinstance(body, bytes) else (body if isinstance(body, str) else json.dumps(body, ensure_ascii=False)).encode("utf-8")
-        self.send_response(code)
-        self.send_header("Content-Type", ctype)
-        self.send_header("Content-Length", str(len(data)))
-        self.send_header("Cache-Control", "no-store")
-        for k, v in (extra or {}).items():
-            self.send_header(k, v)
-        self.end_headers()
-        self.wfile.write(data)
-
-    def _role(self, q):
-        """owner | vendor | noalerts | share. The real server derives it from the session cookie / share token."""
-        if q.get("k"):
-            return "share" if q["k"] == SHARE_TOKEN else None
-        m = re.search(r"mock_role=(\w+)", self.headers.get("Cookie", ""))
-        return m.group(1) if m else "owner"
-
-    def _page(self, role, share_key=""):
-        html = open(STATE["html"], encoding="utf-8").read()
-        cfg = {"siteLabel": "example.co.il", "brand": "DEMO", "shareKey": share_key,
-               "bucketNote": "עמוד הסל וקטגוריה תמיד איטיים יותר: הם לא נשמרים בזיכרון המטמון של האתר ונבנים מחדש בכל כניסה."}
-        if role == "owner":
-            cfg["links"] = [{"href": "#", "label": "מסך נוסף", "title": "דוגמה לכפתור נוסף"}]
-            cfg["nav"] = [["g", "האתר"], ["a", "/site", "בריאות האתר"], ["a", "#", "מסך נוסף"]]
-        r = {"owner": {}, "vendor": {"readonly": True}, "noalerts": {"readonly": True, "noAlerts": True}, "share": {"share": True}}[role]
-        inject = "<script>window.SH_CONFIG=%s;window.SH_ROLE=%s;</script>" % (json.dumps(cfg, ensure_ascii=False), json.dumps(r))
-        if "<!--SH_INJECT-->" in html:
-            html = html.replace("<!--SH_INJECT-->", inject, 1)
-        else:   # a screen without the marker (for example the original it was derived from): old-style flags
-            old = "<script>window.OWL_ROLE={};%s</script>" % ("window.OWL_SHARE=1;" if role != "owner" else "")
-            html = html.replace("</head>", old + "</head>", 1)
-        return html
-
-    def do_GET(self):
-        u = urllib.parse.urlsplit(self.path)
-        q = {k: v[0] for k, v in urllib.parse.parse_qs(u.query, keep_blank_values=True).items()}
-        path = u.path
-        if path in ("/", "/site"):
-            role = q.get("role", "owner")
-            if role not in ("owner", "vendor", "noalerts"):
-                role = "owner"
-            return self._send(200, self._page(role), "text/html; charset=utf-8",
-                              {"Set-Cookie": "mock_role=%s; Path=/; SameSite=Lax" % role, "Cache-Control": "no-cache, must-revalidate"})
-        if path == "/status":
-            if q.get("k") != SHARE_TOKEN:
-                return self._send(403, "<div dir='rtl' style='font-family:system-ui;padding:48px;text-align:center'>הקישור אינו תקין או שפג.</div>", "text/html; charset=utf-8")
-            return self._send(200, self._page("share", SHARE_TOKEN), "text/html; charset=utf-8")
-        if path == "/__scenario":
-            if q.get("name") in ("incident", "ok", "empty", "error"):
-                STATE["scenario"] = q["name"]
-                STATE["acked"] = set()
-            return self._send(200, {"scenario": STATE["scenario"]})
-        if path in ("/login", "/logout"):
-            return self._send(200, "<div dir='rtl' style='font-family:system-ui;padding:48px'>דף הכניסה (דמה). <a href='/site'>חזרה</a></div>", "text/html; charset=utf-8")
-        if not path.startswith("/api/"):
-            return self._send(404, {"error": "not found"})
-        role = self._role(q)
-        if role is None:
-            return self._send(401, {"error": "auth"})
-        if path == "/api/site":
-            return self._send(200, api_site(q, role))
-        if path == "/api/site/now":
-            d = api_now(role)
-            return self._send(502 if "error" in d else 200, d)
-        if path == "/api/site/drill":
-            d = api_drill(q, role)
-            return self._send(200, d) if d is not None else self._send(400, {"error": "what?"})
-        if path == "/api/messages":
-            if q.get("k"):                     # the share token counts only on /status and the three data calls
-                return self._send(401, {"error": "auth"})
-            if role != "owner":
-                return self._send(403, {"error": "auth"})
-            return self._send(200, api_messages(q))
-        return self._send(404, {"error": "not found"})
-
-    def do_POST(self):
-        u = urllib.parse.urlsplit(self.path)
-        q = {k: v[0] for k, v in urllib.parse.parse_qs(u.query).items()}
-        if u.path != "/api/alerts/ack":
-            return self._send(404, {"error": "not found"})
-        if q.get("k"):
-            return self._send(401, {"error": "auth"})
-        if self._role(q) != "owner":
-            return self._send(403, {"error": "auth"})
-        try:
-            body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
-            raw = body.get("ids") if isinstance(body.get("ids"), list) else [body.get("id")]
-            ids = sorted({int(x) for x in raw[:200] if str(x).lstrip("-").isdigit() and int(x) > 0})
-        except Exception:
-            ids = []
-        if not ids:
-            return self._send(400, {"error": "bad request"})
-        STATE["acked"].update(ids)
-        return self._send(200, {"ok": True, "n": len(ids)})
-
-
-if __name__ == "__main__":
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--port", type=int, default=8787)
-    ap.add_argument("--scenario", default="incident", choices=["incident", "ok", "empty", "error"])
-    ap.add_argument("--html", default=STATE["html"], help="the screen file to serve (default: site_health.html next to this script)")
-    a = ap.parse_args()
-    STATE["scenario"], STATE["html"] = a.scenario, a.html
-    print("mock site-health backend: http://localhost:%d/site   (scenario: %s)" % (a.port, a.scenario), flush=True)
-    ThreadingHTTPServer(("127.0.0.1", a.port), H).serve_forever()
-~~~~~~~~
-<!-- END FILE -->
-
-<!-- FILE: site_health_kit/check_screen.js sha256=80662c26880462f998b18b56a41ef2fd8d14d46a19c4b52e1aaa602e78ee20d7 -->
-~~~~~~~~javascript
-#!/usr/bin/env node
-/* Acceptance test of the site-health screen (Playwright, headless Chromium).
-
-     node check_screen.js                          # against the mock:  http://127.0.0.1:8787
-     node check_screen.js http://127.0.0.1:8000    # against your real server (logged-in session needed, see --cookie)
-     node check_screen.js <url> --cookie "name=value"   # session cookie for a real server
-     node check_screen.js <url> --shots ./shots    # also save screenshots (phone + desktop)
-     node check_screen.js <url> --basic            # only the checks that hold for any data
-
-   Against the mock it also switches scenarios (incident / ok / empty / error) and roles.
-   Exit code 0 = every check passed. Each line is one check: "ok" or "FAIL". */
-const { chromium } = require('playwright');
-
-const args = process.argv.slice(2);
-const flag = (n) => { const i = args.indexOf(n); return i < 0 ? null : (args[i + 1] && !args[i + 1].startsWith('--') ? args[i + 1] : true); };
-const BASE = (args[0] && !args[0].startsWith('--') ? args[0] : 'http://127.0.0.1:8787').replace(/\/$/, '');
-const SHOTS = flag('--shots'), COOKIE = flag('--cookie'), BASIC = !!flag('--basic');
-const PAGE_PATH = flag('--path') || '/site';
-
-let failed = 0, passed = 0;
-function check(name, cond, extra) { if (cond) { passed++; console.log('ok    ' + name); } else { failed++; console.log('FAIL  ' + name + (extra ? '  → ' + extra : '')); } }
-
-async function open(browser, path, vp, opts = {}) {
-  const ctx = await browser.newContext({ viewport: vp, deviceScaleFactor: 1, locale: 'he-IL', colorScheme: opts.dark ? 'dark' : 'light' });
-  if (COOKIE && typeof COOKIE === 'string') {
-    const [n, ...v] = COOKIE.split('='); const u = new URL(BASE);
-    await ctx.addCookies([{ name: n, value: v.join('='), domain: u.hostname, path: '/' }]);
-  }
-  const page = await ctx.newPage();
-  const errors = [];
-  page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
-  page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push('console: ' + m.text()); });
-  const resp = await page.goto(BASE + path, { waitUntil: 'domcontentloaded' });
-  if (resp && resp.status() === 200 && !opts.noWait) {
-    await page.waitForFunction(() => !document.body.classList.contains('loading') && document.querySelectorAll('#verdict .vbox').length === 4, null, { timeout: 20000 }).catch(() => {});
-    await page.waitForFunction(() => document.querySelectorAll('#now .nbox').length >= 1 && !/טוען/.test(document.getElementById('now').textContent), null, { timeout: 20000 }).catch(() => {});
-  }
-  return { ctx, page, errors, status: resp ? resp.status() : 0 };
-}
-const noOverflow = (page) => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
-const txt = (page, sel) => page.evaluate((s) => { const e = document.querySelector(s); return e ? e.textContent : null; }, sel);
-const count = (page, sel) => page.evaluate((s) => document.querySelectorAll(s).length, sel);
-const visible = (page, sel) => page.evaluate((s) => { const e = document.querySelector(s); if (!e) return false; const r = e.getBoundingClientRect(); return getComputedStyle(e).display !== 'none' && r.width > 0 && r.height > 0; }, sel);
-async function scenario(name) { const r = await fetch(BASE + '/__scenario?name=' + name).catch(() => null); return !!(r && r.ok); }
-
-(async () => {
-  const browser = await chromium.launch();
-  const isMock = !BASIC && await scenario('incident');
-  const PHONE = { width: 390, height: 844 }, DESK = { width: 1280, height: 900 };
-
-  /* ---------- 1. structure, on a phone ---------- */
-  let s = await open(browser, PAGE_PATH, PHONE);
-  let p = s.page;
-  check('page loads (200)', s.status === 200, 'status ' + s.status);
-  check('no horizontal scroll at 390px', await noOverflow(p));
-  check('html is rtl + hebrew', await p.evaluate(() => document.documentElement.dir === 'rtl' && document.documentElement.lang === 'he'));
-  check('"now" card shows 4 tiles', await count(p, '#now .nbox') === 4, String(await count(p, '#now .nbox')));
-  check('bottom line shows 4 tiles', await count(p, '#verdict .vbox') === 4);
-  const cards = await p.evaluate(() => Array.prototype.map.call(document.querySelectorAll('.wrap > section.card h2'), (h) => h.firstChild.textContent.trim()));
-  const WANT = ['עכשיו', 'שורה תחתונה', 'זמינות', 'מהירות לאורך זמן', 'העמודים העיקריים', 'העמודים הכבדים באתר', 'מוצרים שבורים באתר', 'תעודת האבטחה (המנעול)', 'התראות', 'הודעות שנשלחו לטלפון', 'המדידה עצמה'];
-  check('cards appear in the specified order', JSON.stringify(cards) === JSON.stringify(WANT), JSON.stringify(cards));
-  check('subtitle shows the last check time and the period', /הבדיקה האחרונה .* · 24 השעות האחרונות/.test(await txt(p, '#sub')), await txt(p, '#sub'));
-  check('alerts card and messages card start folded', await p.evaluate(() => document.getElementById('alertsList').parentElement.classList.contains('collapsed') && document.getElementById('msgList').parentElement.classList.contains('collapsed')));
-  check('explanations hidden until asked', !(await visible(p, 'p.explain')));
-  await p.click('#explbtn');
-  check('"הסברים" shows the explanations', await visible(p, 'p.explain') && (await p.getAttribute('#explbtn', 'aria-pressed')) === 'true');
-  await p.click('#explbtn');
-  if (SHOTS) await p.screenshot({ path: SHOTS + '/phone.png', fullPage: true });
-
-  /* ---------- 2. numbers match the data ---------- */
-  const data = await p.evaluate(() => state.data);
-  const per = (Array.isArray(data.availability) ? data.availability : []).filter((r) => r.section === 'לפי עמוד');
-  const checksN = per.reduce((a, r) => a + (+r.checks || 0), 0), failN = per.reduce((a, r) => a + (+r.failed || 0), 0);
-  if (checksN) {
-    const up = 100 - 100 * failN / checksN, want = up.toFixed(up < 99.95 ? 2 : 1) + '%';
-    check('uptime tile = 100 − failed/checks', (await txt(p, '#verdict .vbox[data-drill="fails"] .v')) === want, want + ' vs ' + await txt(p, '#verdict .vbox[data-drill="fails"] .v'));
-    check('availability table: one row per probed page', await count(p, '#availTbl tbody tr') === per.length);
-  } else check('no availability data → empty state text', /אין בדיקות זמינות בתקופה/.test(await txt(p, '#availTbl')));
-  const core = (Array.isArray(data.speed) ? data.speed : []).filter((r) => r.section === 'ליבה' && r.strategy === 'mobile');
-  check('core pages table: one row per core page (mobile)', core.length ? await count(p, '#coreTbl tbody tr') === core.length : /אין מדידות טלפון בתקופה/.test(await txt(p, '#coreTbl')));
-  check('heavy pages table: at most 10 rows', await count(p, '#slowTbl tbody tr') <= 10);
-
-  /* ---------- 3. drill-downs ---------- */
-  await p.click('#verdict .vbox[data-drill="fails"]');
-  await p.waitForFunction(() => document.getElementById('dov').classList.contains('on') && !/טוען…/.test(document.getElementById('dbody').textContent), null, { timeout: 10000 }).catch(() => {});
-  check('click on uptime opens the failures sheet', (await txt(p, '#dttl')) === 'כל הכשלים' && /הבדיקות שנכשלו/.test(await txt(p, '#dbody')), await txt(p, '#dttl'));
-  check('sheet is a bottom sheet on a phone', await p.evaluate(() => { const r = document.getElementById('dsheet').getBoundingClientRect(); return Math.abs(r.bottom - window.innerHeight) < 2 && r.width >= window.innerWidth - 2; }));
-  await p.keyboard.press('Escape');
-  check('Escape closes the sheet', !(await p.evaluate(() => document.getElementById('dov').classList.contains('on'))));
-  if (core.length) {
-    await p.click('#coreTbl tbody tr');
-    await p.waitForFunction(() => /המדידות|אין מדידות תקינות/.test(document.getElementById('dbody').textContent), null, { timeout: 10000 }).catch(() => {});
-    check('click on a core page opens its measurements', /^מהירות: /.test(await txt(p, '#dttl')), await txt(p, '#dttl'));
-    await p.click('#dx');
-  }
-  check('no JavaScript errors (phone)', s.errors.length === 0, s.errors.join(' | '));
-  await s.ctx.close();
-
-  /* ---------- 4. desktop + dark ---------- */
-  s = await open(browser, PAGE_PATH, DESK); p = s.page;
-  check('no horizontal scroll at 1280px', await noOverflow(p));
-  await p.click('#verdict .vbox[data-drill="outages"]');
-  check('sheet is centered on desktop', await p.evaluate(() => { const r = document.getElementById('dsheet').getBoundingClientRect(); return Math.abs((r.left + r.right) / 2 - window.innerWidth / 2) < 2 && r.width === 720; }));
-  await p.click('#dx');
-  await p.click('#segH button[data-h="168"]');
-  await p.waitForFunction(() => state.data && state.data.hours === 168 && !document.body.classList.contains('loading'), null, { timeout: 20000 }).catch(() => {});
-  check('"7 ימים" reloads with a 168-hour window', await p.evaluate(() => state.data.hours === 168) && /7 הימים האחרונים/.test(await txt(p, '#rangeTxt')));
-  await p.click('#segS button[data-s="desktop"]');
-  await p.waitForFunction(() => state.data && state.data.strategy === 'desktop' && !document.body.classList.contains('loading'), null, { timeout: 20000 }).catch(() => {});
-  check('"מחשב" reloads with strategy=desktop', await p.evaluate(() => state.data.strategy === 'desktop'));
-  if (SHOTS) await p.screenshot({ path: SHOTS + '/desktop.png', fullPage: true });
-  check('no JavaScript errors (desktop)', s.errors.length === 0, s.errors.join(' | '));
-  await s.ctx.close();
-  s = await open(browser, PAGE_PATH, PHONE, { dark: true }); p = s.page;
-  check('dark mode: page background is dark', await p.evaluate(() => { const m = getComputedStyle(document.body).backgroundColor.match(/\d+/g); return m && (+m[0] + +m[1] + +m[2]) < 150; }));
-  if (SHOTS) await p.screenshot({ path: SHOTS + '/phone-dark.png', fullPage: true });
-  await s.ctx.close();
-
-  /* ---------- 5. mock only: alert bar, roles, scenarios ---------- */
-  if (isMock) {
-    await scenario('incident');
-    s = await open(browser, PAGE_PATH, PHONE); p = s.page;
-    const openAlerts = (await p.evaluate(() => state.data.alerts_open)).filter((a) => !a.acked).length;
-    check('alert bar shows the number of open alerts', new RegExp('⚠ ' + openAlerts + ' התראות פעילות').test(await txt(p, '#alertbar .acount')), await txt(p, '#alertbar .acount'));
-    check('alert bar starts collapsed', await p.evaluate(() => document.getElementById('alertbar').classList.contains('collapsed')));
-    await p.click('#alertbar .ahead');
-    check('each alert with a URL in its body has an "open the page" link', await count(p, '#alertbar .alink') >= 1);
-    const posts = [];
-    p.on('request', (r) => { if (r.method() === 'POST') posts.push(r.url() + ' ' + r.postData()); });
-    await p.click('#alertbar .arow .ax');
-    check('✕ removes the alert at once, without reloading the screen', await count(p, '#alertbar .arow') === openAlerts - 1 && !(await p.evaluate(() => document.body.classList.contains('loading'))));
-    check('✕ posts {"ids":[id]} to /api/alerts/ack', posts.length === 1 && /\/api\/alerts\/ack \{"ids":\[\d+\]\}/.test(posts[0]), posts.join(','));
-    check('the bar stays open after a delete', !(await p.evaluate(() => document.getElementById('alertbar').classList.contains('collapsed'))));
-    await p.click('#abAll'); await p.click('#abDel');
-    check('"לסמן הכול" + "מחק מסומנות" clears the bar', !(await visible(p, '#alertbar')));
-    await p.click('#refbtn');
-    await p.waitForFunction(() => !document.body.classList.contains('loading'), null, { timeout: 20000 }).catch(() => {});
-    check('acknowledged alerts stay hidden after refresh', !(await visible(p, '#alertbar')));
-    check('…but still count as open in the bottom line', (await txt(p, '#verdict .vbox[data-drill="alerts"] .v')) === String(openAlerts));
-    await p.click('#msgCard .foldhead');
-    check('message log lists what was sent to the phone', await count(p, '#msgList li') >= 3);
-    check('no JavaScript errors (owner, incident)', s.errors.length === 0, s.errors.join(' | '));
-    await s.ctx.close();
-
-    await scenario('incident');
-    s = await open(browser, PAGE_PATH + '?role=vendor', PHONE); p = s.page;
-    await p.click('#alertbar .ahead').catch(() => {});
-    check('vendor: no delete controls on alerts', !(await visible(p, '#alertbar .ax')) && !(await visible(p, '#alertbar .abulk')));
-    check('vendor: no message log', !(await visible(p, '#msgCard')));
-    check('vendor: sees only site alerts (no internal kinds)', await p.evaluate(() => state.data.alerts_open.every((a) => ['down', 'slow', 'silent', 'cert'].indexOf(a.kind) >= 0)));
-    check('vendor: server refuses a delete', await p.evaluate(() => fetch('/api/alerts/ack', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"ids":[41]}' }).then((r) => r.status)) === 403);
-    check('vendor: server refuses the message log', await p.evaluate(() => fetch('/api/messages?h=24').then((r) => r.status)) === 403);
-    check('no JavaScript errors (vendor)', s.errors.length === 0, s.errors.join(' | '));
-    await s.ctx.close();
-
-    s = await open(browser, PAGE_PATH + '?role=noalerts', PHONE); p = s.page;
-    check('no-alerts role: no bar, no alerts card, no open-alerts tile', !(await visible(p, '#alertbar')) && !(await visible(p, '#alertsCard')) && !(await visible(p, '#verdict .vbox[data-drill="alerts"]')));
-    await s.ctx.close();
-
-    s = await open(browser, '/status?k=demo-share-token', PHONE); p = s.page;
-    check('share link: screen loads with data', s.status === 200 && await count(p, '#verdict .vbox') === 4);
-    check('share link: no logout link, no delete controls, no message log', !(await visible(p, '#outLink')) && !(await visible(p, '#alertbar .ax')) && !(await visible(p, '#msgCard')));
-    check('no JavaScript errors (share link)', s.errors.length === 0, s.errors.join(' | '));
-    await s.ctx.close();
-    s = await open(browser, '/status?k=wrong', PHONE, { noWait: true });
-    check('share link with a wrong token is refused (403)', s.status === 403);
-    await s.ctx.close();
-    const r401 = await fetch(BASE + '/api/site?k=wrong');
-    check('data call with a wrong token is refused (401)', r401.status === 401);
-
-    await scenario('empty');
-    s = await open(browser, PAGE_PATH, PHONE); p = s.page;
-    const body = await txt(p, '.wrap');
-    check('fresh install: every card shows its empty state, nothing breaks',
-      /אין בדיקות זמינות בתקופה/.test(body) && /מדידת המהירות עדיין לא התחילה/.test(body) && /הסבב על כל האתר עדיין לא התחיל/.test(body)
-      && /עדיין לא נבדק/.test(body) && /אין התראות בתקופה/.test(body) && /אין בדיקה ב־15 הדקות האחרונות/.test(body) && s.errors.length === 0, s.errors.join(' | '));
-    if (SHOTS) await p.screenshot({ path: SHOTS + '/phone-empty.png', fullPage: true });
-    await s.ctx.close();
-
-    await scenario('error');
-    s = await open(browser, PAGE_PATH, PHONE); p = s.page;
-    check('data source down: the screen still renders, no JavaScript errors', await count(p, '#verdict .vbox') === 4 && s.errors.length === 0, s.errors.join(' | '));
-    check('data source down: "now" says it could not load', /לא הצלחתי לטעון את "עכשיו"/.test(await txt(p, '#nowtick')), await txt(p, '#nowtick'));
-    await s.ctx.close();
-
-    await scenario('ok');
-    s = await open(browser, PAGE_PATH, PHONE); p = s.page;
-    check('all good: no alert bar, site "פעיל"', !(await visible(p, '#alertbar')) && /פעיל/.test(await txt(p, '#now .nbox .v')));
-    if (SHOTS) await p.screenshot({ path: SHOTS + '/phone-ok.png', fullPage: true });
-    await s.ctx.close();
-    await scenario('incident');
-  }
-
-  await browser.close();
-  console.log('\n' + passed + ' passed, ' + failed + ' failed' + (isMock ? '' : '  (basic checks only — scenario and role checks need the mock)'));
-  process.exit(failed ? 1 : 0);
-})().catch((e) => { console.error('test crashed: ' + e.stack); process.exit(2); });
-~~~~~~~~
-<!-- END FILE -->
-
-<!-- FILE: site_health_kit/reference/db.py sha256=b5c6d4a1b76c40b373d94a12e3590d02f8209e2a8fedf8d5a3830f9b9e6bf281 -->
+<!-- FILE: site-health-kit/reference/db.py sha256=b5c6d4a1b76c40b373d94a12e3590d02f8209e2a8fedf8d5a3830f9b9e6bf281 -->
 ~~~~~~~~python
 """Database access for the site-health server and collectors.
 
@@ -2875,7 +3240,7 @@ def _rpc_postgres(dsn, fn, params):
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site_health_kit/reference/functions.sql sha256=d98a3938c1ce4263f6d9f00c9d54c32b4c2c8e2057434c06be00509c5fb474d7 -->
+<!-- FILE: site-health-kit/reference/functions.sql sha256=d98a3938c1ce4263f6d9f00c9d54c32b4c2c8e2057434c06be00509c5fb474d7 -->
 ~~~~~~~~sql
 -- Site Health: every sh_* function. Apply after schema.sql. Safe to run again.
 --
@@ -3877,7 +4242,7 @@ end $$;
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site_health_kit/reference/requirements.txt sha256=2dc54db937dacc2e56b3da4fcf7ad7fdab35c58996123333188157733f3552c1 -->
+<!-- FILE: site-health-kit/reference/requirements.txt sha256=2dc54db937dacc2e56b3da4fcf7ad7fdab35c58996123333188157733f3552c1 -->
 ~~~~~~~~text
 # The server. Tested with Python 3.13.
 fastapi==0.162.5
@@ -3890,7 +4255,7 @@ psycopg[binary]==3.3.9
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site_health_kit/reference/schema.sql sha256=fb58b7f32b56e452066b5e093a8909d52cf569a9aae2d0632ce00212dff22ab1 -->
+<!-- FILE: site-health-kit/reference/schema.sql sha256=fb58b7f32b56e452066b5e093a8909d52cf569a9aae2d0632ce00212dff22ab1 -->
 ~~~~~~~~sql
 -- Site Health: tables, indexes, privileges.
 -- Plain PostgreSQL 15+, no extensions. Safe to run again: nothing here drops or rewrites data.
@@ -4075,7 +4440,7 @@ end $$;
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site_health_kit/reference/server.py sha256=1c403fc6a1d72caac4855c9c721ddd3de77543d9ee5d0061417a58dbeb4cae3e -->
+<!-- FILE: site-health-kit/reference/server.py sha256=1c403fc6a1d72caac4855c9c721ddd3de77543d9ee5d0061417a58dbeb4cae3e -->
 ~~~~~~~~python
 """Site Health server: sign-in, roles, the screen and its data calls (SPEC.md §5 and §8).
 
@@ -4711,7 +5076,7 @@ async def health():
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site_health_kit/reference/site_health.config.example.json sha256=32391a8b4a5113440d0b5cb209677227c5fed4537da28b1b718667de0dc721a8 -->
+<!-- FILE: site-health-kit/reference/site_health.config.example.json sha256=32391a8b4a5113440d0b5cb209677227c5fed4537da28b1b718667de0dc721a8 -->
 ~~~~~~~~json
 {
   "site": "https://example.co.il",
@@ -4735,7 +5100,7 @@ async def health():
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site_health_kit/reference/rum/site-health-rum.js sha256=b9d8eced011b36c1d5874a513f3345babb0646c28b1aa4666bd0278ea2cd3eac -->
+<!-- FILE: site-health-kit/reference/rum/site-health-rum.js sha256=b9d8eced011b36c1d5874a513f3345babb0646c28b1aa4666bd0278ea2cd3eac -->
 ~~~~~~~~javascript
 /* Site Health RUM: one anonymous beacon per page view (LCP + TTFB). No cookies, no ids, no query strings.
    Configure BEFORE this script: window.SiteHealthRum = { endpoint: 'https://collector.example.com/m', liveHost: 'example.com' };
@@ -4790,7 +5155,7 @@ async def health():
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site_health_kit/reference/rum/site-health-rum.php sha256=3be175709953cae5428ae51eefea7431f63013a671b04c2b487bdc985d595a23 -->
+<!-- FILE: site-health-kit/reference/rum/site-health-rum.php sha256=3be175709953cae5428ae51eefea7431f63013a671b04c2b487bdc985d595a23 -->
 ~~~~~~~~php
 <?php
 /**
@@ -4878,7 +5243,7 @@ JS;
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site_health_kit/reference/tests/conftest.py sha256=0a7b07642e0b35ea1937743219420883cb4e0f0673a0bc4f47edaeb3ebea8f3c -->
+<!-- FILE: site-health-kit/reference/tests/conftest.py sha256=0a7b07642e0b35ea1937743219420883cb4e0f0673a0bc4f47edaeb3ebea8f3c -->
 ~~~~~~~~python
 """Fixtures for the SQL tests: a scratch database with schema.sql and functions.sql applied.
 
@@ -5044,7 +5409,7 @@ def pytest_terminal_summary(terminalreporter):
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site_health_kit/reference/tests/sim.py sha256=0226390c5945f267230039e2df58c924341619fc281a789b095417f757de5ad4 -->
+<!-- FILE: site-health-kit/reference/tests/sim.py sha256=0226390c5945f267230039e2df58c924341619fc281a789b095417f757de5ad4 -->
 ~~~~~~~~python
 """A small data simulator: fills a database with believable measurements, through the write
 functions the collectors use (sh_probe_add, sh_speed_add, sh_sitemap_set, sh_rotation_next, ...).
@@ -5164,48 +5529,81 @@ def _run(url, page, strategy, source, lcp, salt):
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site_health_kit/reference/tests/test_rum_snippet.js sha256=e3ec2e982e3bc1c8c81adc199de6954064b7626dffb2c34913fb869e82fea58a -->
+<!-- FILE: site-health-kit/reference/tests/test_rum_snippet.js sha256=e4b9c42e39296c9e3d84ebc75a760977651132ad79ff5c3273475dc95bf1000b -->
 ~~~~~~~~javascript
+#!/usr/bin/env node
+/* Test of the real-user script (rum/site-health-rum.js) in a real browser (Playwright, headless Chromium).
+
+     node tests/test_rum_snippet.js
+
+   A tiny local site serves pages that include the script; a local collector records what
+   arrives. Exit code 0 = every check passed. */
 const { chromium } = require('playwright');
-const http = require('http'), fs = require('fs');
-const SNIP = fs.readFileSync('' + require('path').join(__dirname, '..', 'rum', 'site-health-rum.js') + '', 'utf8');
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+
+const SNIPPET = fs.readFileSync(path.join(__dirname, '..', 'rum', 'site-health-rum.js'), 'utf8');
+const PORT = 8801;
 const beacons = [];
-const srv = http.createServer((req, res) => {
-  if (req.url.startsWith("/m")) {
-    let b = ''; req.on('data', (c) => b += c); req.on('end', () => { beacons.push({ ct: req.headers['content-type'], origin: req.headers.origin, method: req.method, body: b }); res.writeHead(204); res.end(); });
+let failed = 0;
+function check(name, cond, extra) { if (!cond) failed++; console.log((cond ? 'ok    ' : 'FAIL  ') + name + (!cond && extra ? '  → ' + extra : '')); }
+
+const server = http.createServer((req, res) => {
+  if (req.url === '/m') {
+    let body = '';
+    req.on('data', (c) => { body += c; });
+    req.on('end', () => { beacons.push({ method: req.method, type: req.headers['content-type'], origin: req.headers.origin, body }); res.writeHead(204); res.end(); });
     return;
   }
   res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-  res.end('<!doctype html><html><body><h1 style="font-size:60px">שלום עולם, זה התוכן הראשי של העמוד</h1><p>next: <a id="n" href="/other">other</a></p>'
-    + '<script>window.SiteHealthRum={endpoint:"http://127.0.0.1:8801/m",liveHost:"localhost"};</script><script>' + SNIP + '</script></body></html>');
+  res.end('<!doctype html><html><body><h1 style="font-size:60px">התוכן הראשי של העמוד</h1><a id="next" href="/other">הלאה</a>'
+    + '<script>window.SiteHealthRum={endpoint:"http://127.0.0.1:' + PORT + '/m",liveHost:"localhost"};</script>'
+    + '<script>' + SNIPPET + '</script></body></html>');
 });
-srv.listen(8801, async () => {
-  const b = await chromium.launch();
-  const ctx = await b.newContext();
-  const p = await ctx.newPage();
-  // 1) page on the "live" host (localhost), leave by navigation
-  await p.goto('http://localhost:8801/product/abc/?utm_source=x&email=a@b.co');
-  await p.waitForTimeout(700);
-  await p.click('#n'); await p.waitForTimeout(700);
-  // 2) page on another host name (127.0.0.1 = "staging"), flagged as test, leave by closing
-  await p.goto('http://127.0.0.1:8801/cart/'); await p.waitForTimeout(500);
-  await p.goto('http://127.0.0.1:8801/category/sofas/?sh_test=1');
-  await p.waitForTimeout(700);
-  await p.close(); await new Promise((r) => setTimeout(r, 700));
-  console.log(JSON.stringify(beacons, null, 1));
-  const ok = beacons.length >= 2
-    && beacons.every((x) => x.method === 'POST' && /^text\/plain/.test(x.ct))
-    && JSON.parse(beacons[0].body).site === 'live' && JSON.parse(beacons[0].body).path === '/product/abc/' && JSON.parse(beacons[0].body).lcp > 0 && JSON.parse(beacons[0].body).test === false
-    && beacons.some((x) => { const j = JSON.parse(x.body); return j.site === '127.0.0.1' && j.test === true && j.path === '/category/sofas/'; })
-    && !beacons.some((x) => /cart/.test(x.body))
-    && beacons.every((x) => !/utm_source|email/.test(x.body));
-  console.log(ok ? 'RUM SNIPPET OK' : 'RUM SNIPPET FAILED');
-  await b.close(); srv.close();
+
+server.listen(PORT, async () => {
+  const browser = await chromium.launch();
+  const page = await (await browser.newContext()).newPage();
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  // 1. a page on the live host, left by clicking a link
+  await page.goto('http://localhost:' + PORT + '/product/abc/?utm_source=x&email=a@b.co');
+  await wait(600);
+  await page.click('#next');
+  await wait(600);
+  // 2. a private page: nothing may be sent
+  await page.goto('http://127.0.0.1:' + PORT + '/cart/');
+  await wait(400);
+  // 3. a page on another host name (stands for a staging copy), flagged as a test, left by closing the tab
+  await page.goto('http://127.0.0.1:' + PORT + '/category/sofas/?sh_test=1');
+  await wait(600);
+  await page.close();
+  await wait(600);
+
+  const rows = beacons.map((b) => JSON.parse(b.body));
+  const first = rows[0] || {};
+  check('a beacon is sent when the visitor leaves the page', rows.length >= 2, JSON.stringify(rows));
+  check('it is a POST with a text/plain body (no CORS preflight)', beacons.every((b) => b.method === 'POST' && /^text\/plain/.test(b.type || '')));
+  check('the production host is reported as "live"', first.site === 'live', first.site);
+  check('the path is sent without query string', first.path === '/product/abc/' && beacons.every((b) => !/utm_source|email/.test(b.body)), first.path);
+  check('LCP is a positive number of milliseconds', Number.isInteger(first.lcp) && first.lcp > 0, String(first.lcp));
+  check('an ordinary view is not flagged as a test', first.test === false);
+  check('exactly one beacon per page view', rows.filter((r) => r.path === '/product/abc/').length === 1);
+  check('nothing is sent from a cart page', !rows.some((r) => /cart/.test(r.path)));
+  const staging = rows.find((r) => r.path === '/category/sofas/') || {};
+  check('another host is reported by its name, not as "live"', staging.site === '127.0.0.1', staging.site);
+  check('?sh_test=1 flags the measurement as a test', staging.test === true);
+
+  await browser.close();
+  server.close();
+  console.log('\n' + (failed ? failed + ' failed' : 'all passed'));
+  process.exit(failed ? 1 : 0);
 });
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site_health_kit/reference/tests/test_server.py sha256=d9a933aba5d1a38eca13f9c9875800b7648072692f20958d3e3f6af9ccbc4eee -->
+<!-- FILE: site-health-kit/reference/tests/test_server.py sha256=d9a933aba5d1a38eca13f9c9875800b7648072692f20958d3e3f6af9ccbc4eee -->
 ~~~~~~~~python
 """Tests of server.py: access rules (SPEC.md §8), the data contract (§5), the page, /rum and /health.
 
@@ -6559,7 +6957,7 @@ def test_db_over_a_postgres_connection(request, monkeypatch):
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site_health_kit/reference/tests/test_sql.py sha256=565e1134e7deef4e4e06c3f25a7b1d06e7b14bb9859ff212a53e6bad81826362 -->
+<!-- FILE: site-health-kit/reference/tests/test_sql.py sha256=565e1134e7deef4e4e06c3f25a7b1d06e7b14bb9859ff212a53e6bad81826362 -->
 ~~~~~~~~python
 """Tests of schema.sql and functions.sql: the rules of SPEC §7.3, §7.4 and §7.8, with exact values.
 
@@ -8095,5 +8493,72 @@ def test_reads_over_90_days_take_less_than_2_seconds(db):
     assert [r["checks"] for r in section(answers["sh_speed"], "ליבה")] == [8640] * 5 + [2160] * 5
     assert section(answers["sh_speed"], "כיסוי") == [{"section": "כיסוי", "checks": 400, "slow_runs": 400}]
     assert len(answers["sh_drill_runs"]) == 8640 and len(answers["sh_drill_fails"]) == 500
+~~~~~~~~
+<!-- END FILE -->
+
+<!-- FILE: site-health-kit/tools/check_template.py sha256=e0aa3f9bad6a81fc12dd917c6b07fbc697bd0607583838eedcee91bece8ec522 -->
+~~~~~~~~python
+#!/usr/bin/env python3
+"""Proves that a deployed screen file is still the kit's screen and not a rewrite.
+
+    python3 tools/check_template.py path/to/deployed/site_health.html
+
+Passes when the file keeps the kit's structure and almost all of its lines. The edits that
+spec §6.9 allows (SH_CONFIG values, explanation sentences, OPP entries, color variables)
+change a few dozen lines at most. Prints SCREEN OK, or what is wrong. Exit code 0 / 1.
+"""
+import os
+import re
+import sys
+
+KIT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "site_health.html")
+MIN_KEPT = 0.93          # share of the kit's lines that must appear unchanged in the deployed file
+
+
+def lines(text):
+    return [l.strip() for l in text.replace("\r\n", "\n").split("\n") if l.strip()]
+
+
+def main(path):
+    kit = open(KIT, encoding="utf-8").read()
+    try:
+        raw = open(path, "rb").read()
+        got = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return ["the file is not valid UTF-8 (Hebrew text was damaged)"]
+    bad = []
+    if got.count("<!--SH_INJECT-->") != 1:
+        bad.append("the marker <!--SH_INJECT--> must appear exactly once (the server injects SH_CONFIG / SH_ROLE there)")
+    if not re.search(r'<html[^>]*\blang="he"[^>]*\bdir="rtl"|<html[^>]*\bdir="rtl"[^>]*\blang="he"', got):
+        bad.append('the <html> tag must keep lang="he" dir="rtl"')
+    if re.search(r'<(script|link|img|iframe)\b[^>]*\b(src|href)\s*=\s*["\']?(https?:)?//', got, re.I):
+        bad.append("the screen must not load anything from another host (no external scripts, styles, fonts or images)")
+    if "classList.toggle('explain')" in got or 'classList.toggle("explain")' in got:
+        bad.append("the explanations toggle must use the class explain-on (class explain on <body> hides the whole page)")
+    if re.search(r"\\u05[0-9a-fA-F]{2}|&#x?5[0-9a-fA-F]{2,3};", got):
+        bad.append("Hebrew text was escaped (\\u05.. or &#...;): keep it as plain UTF-8")
+    have = set(lines(got))
+    want = lines(kit)
+    kept = sum(1 for l in want if l in have) / len(want)
+    if kept < MIN_KEPT:
+        missing = [l for l in want if l not in have][:5]
+        bad.append("only %.0f%% of the kit's lines are unchanged (need %.0f%%): this looks like a rewrite, not a copy. "
+                   "First missing lines: %s" % (100 * kept, 100 * MIN_KEPT, " | ".join(m[:70] for m in missing)))
+    for needle, why in (("window.SH_CONFIG", "the SH_CONFIG block"), ("function render(d)", "the render function"),
+                        ("function drillRuns(", "the drill-down sheets"), ("@media print", "the print stylesheet"),
+                        ("prefers-color-scheme:dark", "dark mode")):
+        if needle not in got:
+            bad.append("missing " + why)
+    return bad
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        sys.exit(__doc__)
+    problems = main(sys.argv[1])
+    if problems:
+        print("SCREEN CHECK FAILED\n- " + "\n- ".join(problems))
+        sys.exit(1)
+    print("SCREEN OK")
 ~~~~~~~~
 <!-- END FILE -->

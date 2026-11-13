@@ -1,0 +1,137 @@
+{
+ "kit": "site-health-kit",
+ "files": [
+  {
+   "path": "START-HERE.md",
+   "bytes": 8891,
+   "lines": 125,
+   "sha256": "6a57a7e639ad01397cc4b4b2b2ee9810d8411607148468056cdf144a3ecc7e79"
+  },
+  {
+   "path": "SKILL.md",
+   "bytes": 703,
+   "lines": 15,
+   "sha256": "5eb84c7fed1a09201d9add870a0facdfc4d0cc194efb9bd82be671c9b9a34dc4"
+  },
+  {
+   "path": "AGENTS-snippet.md",
+   "bytes": 1489,
+   "lines": 26,
+   "sha256": "420c1b013b227ba4b569f150ed5416c811d5c1c88f19c260996579745c2b1bc9"
+  },
+  {
+   "path": "AGENTS.md",
+   "bytes": 2724,
+   "lines": 47,
+   "sha256": "aa385ee4bcb7c63870d701b68265df2ce9736c58f26139938964d6a0d3641836"
+  },
+  {
+   "path": "SPEC.md",
+   "bytes": 78157,
+   "lines": 1036,
+   "sha256": "fdd9f79709014250cd8877b429bf9563401f0b15b1f2232143ad076321e3bc49"
+  },
+  {
+   "path": "check_screen.js",
+   "bytes": 16279,
+   "lines": 197,
+   "sha256": "80662c26880462f998b18b56a41ef2fd8d14d46a19c4b52e1aaa602e78ee20d7"
+  },
+  {
+   "path": "mock_server.py",
+   "bytes": 26508,
+   "lines": 486,
+   "sha256": "545850f6a7feb0bb86c3b2fbe6ca126be465fe7b5b556a02b7f1c5779317f56c"
+  },
+  {
+   "path": "site_health.html",
+   "bytes": 88930,
+   "lines": 943,
+   "sha256": "35aa2ea6f3c976d6680e04eddbca6a115ed083e3ac6d0b2810f12c9809b093db"
+  },
+  {
+   "path": "reference/db.py",
+   "bytes": 4483,
+   "lines": 98,
+   "sha256": "b5c6d4a1b76c40b373d94a12e3590d02f8209e2a8fedf8d5a3830f9b9e6bf281"
+  },
+  {
+   "path": "reference/functions.sql",
+   "bytes": 50361,
+   "lines": 997,
+   "sha256": "d98a3938c1ce4263f6d9f00c9d54c32b4c2c8e2057434c06be00509c5fb474d7"
+  },
+  {
+   "path": "reference/requirements.txt",
+   "bytes": 360,
+   "lines": 8,
+   "sha256": "2dc54db937dacc2e56b3da4fcf7ad7fdab35c58996123333188157733f3552c1"
+  },
+  {
+   "path": "reference/schema.sql",
+   "bytes": 6463,
+   "lines": 180,
+   "sha256": "fb58b7f32b56e452066b5e093a8909d52cf569a9aae2d0632ce00212dff22ab1"
+  },
+  {
+   "path": "reference/server.py",
+   "bytes": 26641,
+   "lines": 631,
+   "sha256": "1c403fc6a1d72caac4855c9c721ddd3de77543d9ee5d0061417a58dbeb4cae3e"
+  },
+  {
+   "path": "reference/site_health.config.example.json",
+   "bytes": 867,
+   "lines": 19,
+   "sha256": "32391a8b4a5113440d0b5cb209677227c5fed4537da28b1b718667de0dc721a8"
+  },
+  {
+   "path": "reference/rum/site-health-rum.js",
+   "bytes": 3519,
+   "lines": 50,
+   "sha256": "b9d8eced011b36c1d5874a513f3345babb0646c28b1aa4666bd0278ea2cd3eac"
+  },
+  {
+   "path": "reference/rum/site-health-rum.php",
+   "bytes": 4163,
+   "lines": 83,
+   "sha256": "3be175709953cae5428ae51eefea7431f63013a671b04c2b487bdc985d595a23"
+  },
+  {
+   "path": "reference/tests/conftest.py",
+   "bytes": 6568,
+   "lines": 161,
+   "sha256": "0a7b07642e0b35ea1937743219420883cb4e0f0673a0bc4f47edaeb3ebea8f3c"
+  },
+  {
+   "path": "reference/tests/sim.py",
+   "bytes": 7028,
+   "lines": 115,
+   "sha256": "0226390c5945f267230039e2df58c924341619fc281a789b095417f757de5ad4"
+  },
+  {
+   "path": "reference/tests/test_rum_snippet.js",
+   "bytes": 3609,
+   "lines": 69,
+   "sha256": "e4b9c42e39296c9e3d84ebc75a760977651132ad79ff5c3273475dc95bf1000b"
+  },
+  {
+   "path": "reference/tests/test_server.py",
+   "bytes": 71803,
+   "lines": 1349,
+   "sha256": "d9a933aba5d1a38eca13f9c9875800b7648072692f20958d3e3f6af9ccbc4eee"
+  },
+  {
+   "path": "reference/tests/test_sql.py",
+   "bytes": 93048,
+   "lines": 1534,
+   "sha256": "565e1134e7deef4e4e06c3f25a7b1d06e7b14bb9859ff212a53e6bad81826362"
+  },
+  {
+   "path": "tools/check_template.py",
+   "bytes": 3026,
+   "lines": 62,
+   "sha256": "e0aa3f9bad6a81fc12dd917c6b07fbc697bd0607583838eedcee91bece8ec522"
+  }
+ ]
+}
