@@ -169,7 +169,7 @@ def api_site(q, role):
     if sc == "empty":
         out.update(availability=[], availability_series=[], speed=[], speed_series=[], alerts_open=[], alerts_recent=[],
                    product_issues=[], cert=None,
-                   health=[dict(flow_group="אתר האינטרנט", flow_name=f, status="אין נתון", cadence=c, silent_txt=None,
+                   health=[dict(flow_name=f, status="אין נתון", cadence=c, silent_txt=None,
                                 last_at=None, warn_minutes=w, late_minutes=l, note=None) for f, c, w, l in FLOWS])
         return out
     bks = buckets(d0, d1, hours)
@@ -240,7 +240,7 @@ def api_site(q, role):
     # --- health of the measurement itself
     n = now()
     stat = {"מדידת מהירות — סבב כל האתר": ("מתעכב", 22, "מאחר ב-12 דקות"), "מהירות אצל לקוחות": ("שקט", 400, "שקט כבר 6 שעות")} if sc == "incident" else {}
-    out["health"] = [dict(flow_group="אתר האינטרנט", flow_name=f, status=stat.get(f, ("תקין",))[0], cadence=c,
+    out["health"] = [dict(flow_name=f, status=stat.get(f, ("תקין",))[0], cadence=c,
                           silent_txt=stat[f][2] if f in stat else None,
                           last_at=(n - dt.timedelta(minutes=stat[f][1] if f in stat else int(1 + w * 0.3))).isoformat(),
                           warn_minutes=w, late_minutes=l, note=None) for f, c, w, l in FLOWS]

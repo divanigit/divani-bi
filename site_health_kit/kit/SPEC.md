@@ -182,9 +182,9 @@ Conventions:
 - All `*_il` fields and `at` strings are **preformatted in the site's local time zone** by the
   backend, as `DD.MM HH:MM` (24-hour). The screen prints them unchanged.
 - `bucket` is a local-time string: `YYYY-MM-DD HH:00` for hourly buckets, `YYYY-MM-DD` for daily
-  buckets. Rule: windows up to 72 hours use hourly buckets, longer windows use daily buckets. The
-  screen tells them apart by length (`> 10` = hourly) and reads characters 5–7 (month), 8–10
-  (day), 11–16 (time).
+  buckets. Rule: a window of at most 72 whole hours (`to − from < 73 hours`, which covers the extra
+  minute of §5.1) uses hourly buckets, a longer one daily buckets. The screen tells them apart by
+  length (`> 10` = hourly) and reads characters 5–7 (month), 8–10 (day), 11–16 (time).
 - Durations are integers in **milliseconds** unless stated. `null` means "no value" and is always
   tolerated; the screen prints `—`.
 - Rows are displayed in the order the server sends them. Sort on the server as stated per list.
@@ -230,8 +230,8 @@ Rules (`_range_args` in the production server):
   "speed": [
     // exactly one "bottom line" row: the home page on a phone, whatever `strategy` is
     { "section": "שורה תחתונה",          // (literal)
-      "url": "https://example.co.il/", "lcp_p50": 2310, "checks": 96,
-      "verdict": "מהיר" },              // מצוין | מהיר | בינוני | איטי, by the LCP thresholds of §3
+      "page": "בית", "url": "https://example.co.il/", "lcp_p50": 2310, "checks": 96,
+      "verdict": "מהיר" },              // מצוין | מהיר | בינוני | איטי, by the LCP thresholds of §3; null without runs
     // one row per core page AND per strategy (send both strategies; the screen filters)
     { "section": "ליבה",                // (literal)
       "strategy": "mobile", "page": "בית", "url": "https://example.co.il/",
@@ -301,14 +301,15 @@ Issue labels used in production: `בלי מחיר`, `בלי תמונה`, `לא �
   "pages":  [ { "page": "בית", "url": "https://example.co.il/", "ok": true, "status": 200, "ms": 240 } ],
             // the last FULL round, one row per probe page; ms is null when the page did not answer.
             // Empty when there was no full round in the last 15 minutes.
-  "latest": [ { "page": "בית", "ok": true } ],   // the most recent round of any kind (full or light)
+  "latest": [ { "page": "בית", "ok": true } ],   // the most recent round of any kind (full or light); at least page + ok.
+                           // Also empty when that round is older than 15 minutes: stale data must not read "פעיל"
   "light": false,          // true when `latest` is a light round
-  "all_ok": true,          // every page of `latest` answered
+  "all_ok": true,          // every page of `latest` answered (false when `latest` is empty)
   "any_ok": true,          // at least one page of `latest` answered
   "age_sec": 12,           // integer seconds since `latest`; null when older than 15 minutes
   "rum":   { "n": 143, "p75_ms": 3120 },          // real-user LCP, last hour, live site only, test rows excluded; n = 0 → "no data"
   "speed": { "lcp_ms": 2500, "score": 63, "checked_at": "<ISO 8601>" },   // latest successful lab run, home page, phone; {} if none
-  "alerts_open": 3,        // count of open alerts (after role filtering)
+  "alerts_open": 3,        // count of open alerts, seen ones included (after role filtering)
   "rum_src": { "n": 1000,                           // the last 1000 real-user rows: where they came from
                "hosts": [ { "host": "live", "n": 964 }, { "host": "staging.example.co.il", "n": 36 } ],
                "cols": ["created_at", "is_test", "lcp_ms", "path", "site"],   // diagnostic only
@@ -324,10 +325,10 @@ For a vendor or a share link `alerts_open` is recounted from the filtered list o
 
 | `what` | extra parameters | each row |
 |---|---|---|
-| `fails` | `page` (optional), `bucket` (optional) | `{ "at_il": "13.11 09:41", "page": "סל", "kind": "קוד 502", "err": "<technical text or null>", "ms": 812 }` — the failed checks, newest first, **at most 500**. `kind` is a short Hebrew reason: `לא ענה בזמן`, `קוד <status>`, `שגיאת חיבור`, `תוכן לא צפוי`. `ms` = time until the failure, or null. |
+| `fails` | `page` (optional), `bucket` (optional) | `{ "at_il": "13.11 09:41", "page": "סל", "kind": "קוד 502", "err": "<technical text or null>", "ms": 812 }` — the failed checks of full rounds (the same checks the availability numbers count), newest first, **at most 500**. `kind` is a short Hebrew reason: `לא ענה בזמן`, `קוד <status>`, `שגיאת חיבור`, `תוכן לא צפוי`. `ms` = time until the failure, or null. |
 | `bucket` | `bucket` (required) | `{ "page": "בית", "checks": 60, "failed": 0, "ms_p50": 290, "ms_max": 1900, "worst_il": "13.11 09:17" }` — one row per probe page for that hour/day. |
-| `runs` | `url` (required), `strategy`, `bucket` (optional) | `{ "ok": true, "err": null, "at_il": "13.11 10:45", "lcp_ms": 2400, "score": 64, "ttfb_ms": 410, "bytes": 3400000, "cls": 0.03, "crux_category": "FAST", "crux_lcp_ms": 2100, "opps": [ { "id": "render-blocking-resources", "title": "…", "ms": 600 } ] }` — the individual lab runs of one page, **newest first**; failed runs have `ok: false` and `err`. `opps` = what slows the page, with the estimated saving in ms. |
-| `alert` | `id` (required) | one row: the `alerts_recent` fields plus `"fails": [ { "at": "13.11 11:02", "page": "סל", "status": 502, "err": null } ]` (the failed checks behind a `down` alert) and `"sent": [ { "event": "open", "status": 200, "at": "13.11 11:02" } ]` (pushes sent; `event` is `open` or `close`; `status` 200 = delivered to the push service). |
+| `runs` | `url` (required), `strategy`, `bucket` (optional) | `{ "ok": true, "err": null, "at_il": "13.11 10:45", "lcp_ms": 2400, "score": 64, "ttfb_ms": 410, "bytes": 3400000, "cls": 0.03, "crux_category": "FAST", "crux_lcp_ms": 2100, "opps": [ { "id": "render-blocking-resources", "title": "…", "ms": 600 } ] }` — the individual lab runs of one page (every run of that URL and strategy in the window), **newest first**; a failed run is `{ok: false, err, at_il}`. `opps` = what slows the page, with the estimated saving in ms; it is filled only on the newest 100 successful runs and is `[]` on older ones (it is nine tenths of a run's size, and the sheet's "what slows the page" should describe the page as it is now). |
+| `alert` | `id` (required) | one row: the `alerts_recent` fields plus `"fails": [ { "at": "13.11 11:02", "page": "סל", "status": 502, "err": null } ]` (the failed checks behind a `down` alert, oldest first, at most 500; `status` is present only when the failure was an HTTP status, because the sheet prints "קוד <status>" whenever it is there; otherwise `err` carries the reason) and `"sent": [ { "event": "open", "status": 200, "at": "13.11 11:02" } ]` (pushes with a final result; `event` is `open` or `close`; `status` 200 = accepted by the push service). |
 
 Unknown `what`: status 400 `{"error": "what?"}`. A missing or malformed required parameter (`id`
 not a number, `url` empty, `bucket` not in one of the two bucket formats): `{"rows": []}`.
@@ -514,28 +515,33 @@ stack. Whatever you choose:
 ### 7.2 Tables
 
 All tables are private: on Supabase enable row level security on each (no policies) and revoke the
-`anon` and `authenticated` roles from tables and functions; only the secret (service) key reads them.
+`anon` and `authenticated` roles from tables and functions; only the secret (service) key reads
+them. Tables created by SQL do not get row level security on their own, and every new function is
+executable by everybody by default: the revokes are not optional.
 
 | Table | One row is | Key columns |
 |---|---|---|
-| `sh_settings` | one setting | `key`, `value` (json): time zone, site host, `down_after`, morning hour |
-| `sh_pages` | a configured page | `name` (Hebrew), `url`, `is_probe`, `is_core`, `sort`, `expect` (optional text the page must contain) |
-| `sh_probe` | one availability check | `round_at`, `kind` (`full`/`light`), `page`, `url`, `ok`, `status`, `ms`, `fail` (`timeout`/`http`/`connect`/`content`), `err`; unique (`round_at`, `kind`, `page`) |
-| `sh_speed` | one lab speed run | `at`, `url`, `page` (null for rotation pages), `strategy`, `source` (`core`/`rotation`), `ok`, `err`, `score`, `lcp_ms`, `cls`, `ttfb_ms`, `bytes`, `crux_category`, `crux_lcp_ms`, `opps` (json), `lh_version` |
+| `sh_settings` | one setting | `key`, `value` (json): site, host, label, time zone, platform, `down_after`, morning time, `keep_days`, `rum_hosts`, `private_paths`, … |
+| `sh_pages` | a configured page | `name` (Hebrew), `url`, `is_probe`, `is_core`, `is_home`, `sort`, `expect` (optional text the page must contain) |
+| `sh_probe` | one availability check | `round_at`, `kind` (`full`/`light`), `page`, `url`, `ok`, `status`, `ms`, `fail` (`timeout`/`http`/`connect`/`content`; required on a failed row, with a `status` when it is `http`), `err`; primary key (`round_at`, `kind`, `page`) |
+| `sh_speed` | one lab speed run | `at`, `url`, `page` (null for rotation pages), `strategy`, `source` (`core`/`rotation`), `ok`, `err`, `score`, `lcp_ms`, `cls`, `ttfb_ms`, `bytes`, `crux_category`, `crux_lcp_ms`, `opps` (json, at most 6 entries), `lh_version`; primary key (`url`, `strategy`, `at`) |
 | `sh_site_pages` | a page of the site, from the sitemap | `url`, `active`, `first_seen`, `last_seen`, `last_measured_at` |
 | `sh_rum` | one real-user page view | `created_at`, `site`, `path`, `lcp_ms`, `is_test` — nothing that identifies a person |
-| `sh_cert` | the certificate state | `host`, `issuer`, `not_before`, `not_after`, `days_left`, `ok`, `err`, `checked_at` |
+| `sh_cert` | the certificate state | `host`, `issuer`, `not_before`, `not_after`, `days_left`, `ok`, `err`, `checked_at` (a failed check updates only `ok`, `err`, `checked_at`) |
 | `sh_product_issues` | a broken product in a snapshot | `snap_date`, `product_id`, `issue`, `name`, `url` |
 | `sh_alerts` | an alert | `id`, `key`, `kind`, `title`, `body`, `opened_at`, `closed_at`, `acked_at`, `acked_by`; **partial unique index on `key` where `closed_at is null`** (at most one open alert per key) |
-| `sh_messages` | a push that was (or should be) sent | `id`, `at`, `alert_id`, `event` (`open`/`close`/`morning`), `kind` (Hebrew label), `title`, `msg`, `priority`, `click`, `status` (HTTP status of the push; null = pending) |
-| `sh_flows` | a measurement flow | `flow_name`, `sort`, `cadence`, `warn_minutes`, `late_minutes`, `note`, `enabled`, `last_at` |
+| `sh_messages` | a push that was (or should be) sent | `id`, `at`, `alert_id`, `event` (`open`/`close`/`morning`), `kind` (Hebrew label), `title`, `msg`, `priority`, `status` (final HTTP status of the push; null = still owed), `attempts`, `claimed_at` |
+| `sh_flows` | a measurement flow | `flow_name`, `sort`, `cadence`, `warn_minutes`, `late_minutes`, `note`, `enabled`, `alerts` (whether its silence pushes an alert), `last_at` |
 | `sh_jobs` | "this daily job is done for this day" | `job`, `day` |
 | `sh_login_log` | a login attempt | `at`, `ip`, `ok`, `who`, `ua` |
 
-Retention (a nightly cleanup): full-round probes 120 days (setting `keep_days`; four pages cost
-about 0.7 MB a day, and a free Supabase project holds 500 MB), light-round probes 7 days, speed
-runs 400 days, real-user rows 30 days, messages and alerts forever, login log 400 days. Windows
-longer than the retention simply show what is left.
+Retention (a nightly cleanup), sized so that the whole database settles around 200 MB (a free
+Supabase project holds 500 MB): full-round probes and core speed runs `keep_days` days (default
+**100**, which covers the screen's longest preset of 90 days; four pages cost about 0.8 MB of
+probes a day), rotation speed runs 45 days, light-round probes 7 days, real-user rows 30 days,
+product snapshots 30 days, login log and job markers 400 days, alerts and messages forever.
+A speed run is about 1 KB, nearly all of it `opps`. Windows longer than the retention simply
+show what is left.
 
 ### 7.3 Functions the server calls (read side)
 
@@ -571,42 +577,60 @@ Exact rules (these are the definitions the screen's texts promise):
 - **Outages:** take the full rounds of the window in time order; a round is "dead" when none of
   its pages answered; every run of **3 or more consecutive dead rounds** is one outage.
   `outage_minutes` = number of rounds in the run; start = the first dead round; end = the round
-  after the last dead one (or now). Minutes in which the prober itself did not run are not an
-  outage; that is the `שקט` state of the flow.
+  after the last dead one, or the end of the window (never later than now) when the run reaches
+  it. Minutes in which the prober itself did not run add nothing and are not an outage; that is
+  the `שקט` state of the flow.
+- **Per page rows:** one row per page that has full-round checks in the window, in configuration
+  order; a page that was removed from the configuration keeps its history and is listed last.
 - **Buckets:** `to_char(round_at at time zone <tz>, …)` with the format of §5; hourly when
-  `p_to − p_from ≤ 72 hours`, daily otherwise. Percentiles per bucket over all pages together.
+  `p_to − p_from < 73 hours`, daily otherwise. Percentiles per bucket over all pages together.
+  The hour that happens twice when clocks go back is one bucket, in the chart and in the drill.
 - **Speed, section `ליבה`:** per core page and strategy over successful runs with `source = 'core'`:
   medians of `lcp_ms`, `score`, `cls`, `ttfb_ms`; `lcp_p95`; `slow_runs` = runs with `lcp_ms > 4000`;
   `checks` = run count; `crux_*` from the newest run.
 - **`שורה תחתונה`:** the `ליבה` figures of the home page with `strategy = 'mobile'`, plus `verdict`.
   When there is no successful run in the window the row is still returned with `lcp_p50: null`.
-- **`האיטיים באתר`:** over successful phone runs with `source = 'rotation'`, grouped by URL: top 10 by median LCP.
+- **`האיטיים באתר`:** over successful phone runs with `source = 'rotation'`, grouped by URL: top 10
+  by median LCP. Core pages are not part of the rotation (they are measured every 15 minutes
+  already), so they never appear here. **`כיסוי`:** `checks` = distinct active site pages with a
+  successful rotation run in the window; `slow_runs` = active site pages in the rotation.
 - **Health:** `אין נתון` when the flow never ran; otherwise by the age of `last_at`: up to
   `warn_minutes` → `תקין`, up to `late_minutes` → `מתעכב`, beyond → `שקט`. `last_at` is written
   **last and only when a run succeeded**, so a failing collector leaves no proof of life and
   surfaces as `מתעכב`/`שקט`. Disabled flows (for example the catalogue check on a site that sells
-  nothing) are not returned.
+  nothing) are not returned. `silent_txt`: `מאחר ב-<span>` while late, `שקט כבר <span>` when silent,
+  where span is `N דקות` under two hours, `N שעות` under two days, else `N ימים`.
+  Thresholds (warn / late minutes): probe 5 / 15; core speed 45 / 90; rotation 20 / 60; sitemap,
+  certificate, catalogue 1,560 / 2,880; real users 360 / 1,440.
 - **`sh_now`:** `pages` = the newest full round if it is at most 15 minutes old; `latest` = the
-  newest round of either kind; `rum` over the last 60 minutes where `site` is a live value and
-  `is_test` is false, `p75_ms` = `percentile_cont(0.75)`; `rum_src` over the newest 1000 rows.
+  newest round of either kind, under the same 15-minute rule; `rum` over the last 60 minutes
+  where `site` is a live value and `is_test` is false, `p75_ms` = `percentile_cont(0.75)` rounded
+  (null with `n` = 0 when there are no rows; never 0, which would paint green); `rum_src` over the
+  newest 1000 rows (null when there are none); `speed` = the newest successful phone run of the
+  home page.
 
 ### 7.4 Functions the collectors call (write side)
 
-| Function | What it does |
-|---|---|
-| `sh_config()` | returns the configuration as one object: every setting loaded by `sh_setup` (`site`, `host`, `label`, `time_zone`, `platform`, `down_after`, `morning`, `keep_days`, `rum_hosts`, `private_paths`, …), `pages` (`[{name, url, probe, core, home, expect}]` in display order) and `screen` (the object the server injects as `SH_CONFIG`, §4.1). Before `sh_setup` ran there is no `time_zone`; the server then answers 502 "the site is not configured" instead of guessing |
-| `sh_setup(p_config)` | loads `site_health.config.json` into `sh_settings` / `sh_pages` / `sh_flows` (idempotent) |
-| `sh_probe_add(p_round_at, p_kind, p_rows)` | stores one probe round (duplicates ignored) and beats `בודק זמינות האתר` on a full round |
-| `sh_speed_add(p_rows)` | stores lab runs; beats the core or rotation flow when at least one run succeeded |
-| `sh_rotation_next(p_n)` | claims the `p_n` active site pages measured longest ago and returns their URLs |
-| `sh_sitemap_set(p_urls)` | replaces the list of site pages (new ones added, missing ones deactivated); refuses an empty list; beats the sitemap flow |
-| `sh_cert_set(p_row)` | stores the certificate state; beats the flow only when the check succeeded |
-| `sh_issues_set(p_snap_date, p_rows)` | stores the day's broken products (replacing that day); beats the flow |
-| `sh_job_due(p_job, p_day)` / `sh_job_mark(p_job, p_day)` | daily jobs: "is today's run still owed?" / "done" |
-| `sh_alerts_check()` | evaluates the alert rules (§7.8), opens and closes alerts, queues messages; returns the messages waiting to be pushed |
-| `sh_message_sent(p_id, p_status)` | records the HTTP status of a push |
-| `sh_morning(p_day)` | queues the daily morning message (once per day) |
-| `sh_cleanup()` | applies the retention rules |
+| Function | What it does | Returns |
+|---|---|---|
+| `sh_config()` | the configuration as one object: every setting loaded by `sh_setup` (`site`, `host`, `label`, `time_zone`, `platform`, `down_after`, `morning`, `keep_days`, `rum_hosts`, `private_paths`, …), `pages` (`[{name, url, probe, core, home, expect}]` in display order) and `screen` (the object the server injects as `SH_CONFIG`, §4.1) | the object. Before `sh_setup` ran it has no `time_zone`; the server then answers 502 "the site is not configured" |
+| `sh_setup(p_config)` | loads `site_health.config.json` (idempotent). Validates: exactly one home page and it is a probe page, at least one probe page, absolute http(s) URLs, unique names, a known time zone, a known platform. Replaces the page list (history stays) and seeds the seven flows | `sh_config()` |
+| `sh_probe_add(p_round_at, p_kind, p_rows)` | stores one probe round; rows `{page, url, ok, status, ms, fail, err}`; a round that was already stored is ignored; beats `בודק זמינות האתר` on a full round | `{"n": rows stored}` |
+| `sh_speed_add(p_rows)` | stores lab runs; rows `{at, url, page, strategy, source, ok, err, score, lcp_ms, cls, ttfb_ms, bytes, crux_category, crux_lcp_ms, opps, lh_version}`; the same (`url`, `strategy`, `at`) twice is stored once; beats the core or rotation flow when at least one run succeeded | `{"n"}` |
+| `sh_rotation_next(p_n)` | claims the `p_n` active site pages measured longest ago (never a core page) | `["url", …]` |
+| `sh_sitemap_set(p_urls)` | replaces the list of site pages (new ones added, missing ones deactivated); raises on an empty list; beats the sitemap flow | `{"n"}` |
+| `sh_cert_set(p_row)` | stores `{host, issuer, not_before, not_after, days_left, ok, err, checked_at}`; beats the flow only when `ok` | `{"n": 1}` |
+| `sh_issues_set(p_snap_date, p_rows)` | stores the day's broken products `{product_id, issue, name, url}`, replacing that day (an empty list is a valid, good snapshot); beats the flow | `{"n"}` |
+| `sh_rum_add(p_rows)` | stores real-user rows `{site, path, lcp_ms, is_test}`; drops rows outside the limits of §7.7 again, as the last line of defence | `{"n"}` |
+| `sh_job_due(p_job, p_day)` / `sh_job_mark(p_job, p_day)` | daily jobs: "is this day's run still owed?" / "done" | `true`/`false`; `true` when this call set the marker |
+| `sh_alerts_check()` | evaluates the alert rules (§7.8), opens and closes alerts, queues messages, and **claims** the messages that are owed | `[{id, title, msg, priority, kind, event}]`, oldest first |
+| `sh_message_sent(p_id, p_status)` | records the result of one push attempt (§7.9) | `{"n": 0 or 1}` |
+| `sh_morning(p_day)` | queues the morning message for that day, once. It does not look at the clock: the caller calls it when the configured `morning` time has passed | `{"n": 1 or 0}` |
+| `sh_cleanup()` | applies the retention rules | rows deleted per table |
+
+`sh_alerts_check` must be safe when two workers overlap for a minute during a deploy: no alert
+and no message is created twice, and a message returned to one caller is not returned to another
+for the next two minutes (the claim). It assumes the default `READ COMMITTED` isolation.
 
 ### 7.5 Collector: availability probe (`בודק זמינות האתר`)
 
@@ -790,21 +814,28 @@ script is never loaded for signed-in staff, nor on cart, checkout and account pa
 
 | Kind | Key | Opens when | Closes when | Title · body |
 |---|---|---|---|---|
-| `down` | `down:<page>` | the newest `down_after` rounds (full or light) of a probe page all failed. `down_after` = 1 unless the owner chose 2 | the newest round of that page answered | `האתר לא עונה: <page>` · `<reason>\n<url>` |
+| `down` | `down:<page>` | the newest `down_after` rounds (full or light, not older than 24 hours) of a probe page all failed. `down_after` = 1 unless the owner chose 2 | the newest round of that page answered | `האתר לא עונה: <page>` · `<reason>\n<url>` |
 | `slow` | `slow:<page>` | the two newest successful phone runs of a core page both have LCP > 4000 ms | the newest successful run is ≤ 4000 ms | `עמוד איטי: <page>` · `<x.x> שניות עד התוכן, פעמיים ברצף\n<url>` |
-| `silent` | `silent:<flow>` | an enabled flow that has run before is older than its `late_minutes` | it ran again | `המדידה נעצרה: <flow>` · `אין מדידה כבר <N> דקות` |
+| `silent` | `silent:<flow>` | an enabled flow whose `alerts` flag is on, that has run before, is older than its `late_minutes` | it ran again: a successful run newer than the alert | `המדידה נעצרה: <flow>` · `אין מדידה כבר <N> דקות` |
 | `cert` | `cert:<host>` | the last successful check shows fewer than 14 days | 14 days or more | `תעודת האבטחה פגה בעוד <N> ימים` · `<host>` |
 
 - Opening inserts an alert row and a message (`kind` `התראה`, `event` `open`). Closing sets
   `closed_at` and inserts a message (`kind` `חזר לתקין`, `event` `close`, text `נמשך <N> דקות`).
+- **The real-user flow never pushes a `silent` alert** (`alerts` off): a small site has no
+  visitors for hours every night, and that is not a fault. Its state still shows on the screen.
+- An open alert whose subject is gone (the page left the configuration, the flow was disabled,
+  the host changed) is closed like any other; otherwise it could never close.
 - **Insert, do not upsert.** The unique index on `key` is partial (open alerts only), and an
   upsert with `on conflict (key)` fails against a partial index on the REST interface. Look for an
   open row; insert when there is none.
 - Other parts of the owner's system may add their own alert kinds to the same table. The vendor
   role sees only the four kinds above (§8).
-- **Morning message**, daily at 07:30: `kind` `בוקר`, one push summarizing the last 24 hours
-  (availability %, outages, home page speed verdict, open alerts). Besides being useful, it is the
-  owner's daily proof that the channel works.
+- **Morning message**, once a day when the configured time (default 07:30 local) has passed:
+  `kind` `בוקר`, priority 2. Title `בוקר טוב: האתר תקין`, or `בוקר טוב: התראה פתוחה אחת` /
+  `בוקר טוב: <N> התראות פתוחות`. Lines: `זמינות <P>% ב-24 שעות` (or `אין בדיקות זמינות ב-24 שעות`),
+  `נפילות: <N> (<M> דקות)` only when there were outages, `מהירות עמוד הבית: <verdict>` only when
+  measured. The figures come from the same functions the screen uses. Besides being useful, it is
+  the owner's daily proof that the channel works.
 
 ### 7.9 Push notifications (ntfy)
 
@@ -825,12 +856,16 @@ subscribes to one topic; the system publishes to that topic.
   12 hours of alerts and publish fake ones. Generate a long random name (`sh-` + 24 random letters
   and digits), keep it in the environment only; never in the repository, on the screen or in logs.
 - HTTP 200 means ntfy accepted the message, not that a phone showed it; there is no delivery
-  receipt. Record the status of every publish with `sh_message_sent`. A failed publish is retried
-  on the next minute, up to 5 attempts; after that it stays in the log as "לא נשלחה".
+  receipt. Record the result of every attempt with `sh_message_sent(id, status)`: a 2xx status
+  settles the message as sent; **0 means "pushing is not configured"** and settles it at once as
+  not sent; any other status (use 599 for a network error or a timeout) is a failed attempt, and
+  the message is offered again on a later minute until 5 attempts have failed. Then it stays in
+  the log as "לא נשלחה". The click link (`<dashboard>/site`) is added by the sender; the database
+  does not know the dashboard's address.
 - **Send at most 30 pushes per rolling hour.** The free server allows 250 a day per sending
   address, and a flapping page with `down_after = 1` can produce two messages a minute. Messages
   that wait longer than an hour are marked as not sent instead of arriving late in a burst.
-- Without `NTFY_TOPIC` messages are logged with status 0 and nothing is sent.
+- Without `NTFY_TOPIC` nothing is sent and every message is settled with status 0.
 - Tell the owner two things at hand-over: ntfy keeps messages for 12 hours, so a phone that was
   off longer never gets them (the screen's message log is the permanent record); and iPhones
   deliver ntfy pushes less reliably than Android. If alerts matter and the owner uses an iPhone,
