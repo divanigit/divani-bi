@@ -1,0 +1,10 @@
+# For the tests of the reference (python3 -m pytest -q). Not needed on the host that runs the service.
+-r requirements.txt
+pytest==9.2.0
+httpx==0.28.1
+
+# The tests also want a PostgreSQL 15 or newer where they may create a scratch database (SH_TEST_ADMIN_URL),
+# and they use these commands when the machine has them, skipping that part otherwise: openssl (one https
+# check against a certificate made on the spot), php (the WordPress plugin, run in a stand-in), psql.
+# tests/test_rum_snippet.js and ../check_screen.js are node programs and need Playwright:
+#   npm install playwright && npx playwright install chromium        (tested with Playwright 1.63)

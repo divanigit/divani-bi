@@ -1,0 +1,100 @@
+# Site Health kit — spec: what is measured, and per-site configuration (§3, §4)
+
+Part of the Site Health kit. The entry point and the rules of the work are in `START-HERE.md`. Section numbers are the same across all spec files; paths are relative to the kit folder.
+
+---
+
+## 3. What the system does
+
+```
+ monitored website  <──── probes, speed tests, catalogue + sitemap reads, certificate check ────  collectors
+        │                                                                                              │ write
+        └── visitors' browsers send one tiny speed measurement per page view ──────► ingest ──►   database
+                                                                                                       │
+                              alert rules (every minute) ──► push to phones (ntfy) ◄──────────────────┤
+                                                                                                       │ read functions
+                                                                              small server: login, roles, JSON
+                                                                                                       │
+                                                                                         the screen (one HTML file)
+```
+
+Collectors and their cadence (all times are the site's local time zone):
+
+| Flow name (exact Hebrew, used on the screen) | What it does | Cadence |
+|---|---|---|
+| `בודק זמינות האתר` | requests every probe page, records ok / HTTP status / time to response | full round every minute; light round at the half minute |
+| `מדידת מהירות — עמודי ליבה` | lab speed test (Google PageSpeed Insights) of each core page | phone: every 15 minutes; desktop: every hour |
+| `מדידת מהירות — סבב כל האתר` | lab speed test of every page of the site, in rotation | 2 pages every 5 minutes (phone) |
+| `טעינת מפת האתר` | reads the sitemap so the rotation knows every page | once a night, from 03:00 |
+| `בדיקת תעודת האבטחה` | reads the TLS certificate's expiry | once a day, from 04:00 |
+| `בדיקת מוצרים שבורים` | reads the public catalogue; flags products without price / image / stock / add-to-cart | once a day at 04:00 (shops only) |
+| `מהירות אצל לקוחות` | real visitors' browsers report time to main content | every page view |
+| alert rules | open / close alerts, send pushes, keep the message log | every minute |
+
+A part that does not apply to a site (no sitemap, nothing to sell, no certificate, no add-on on
+the site) is switched off in the site's configuration (`off`, §7.4): its flow is disabled and
+its card (for real users: the tile of "עכשיו") hidden, instead of showing `אין נתון` for good.
+The probe and the core-page speed test cannot be switched off; the speed test needs the free
+Google key (§7.6), so the key is required for go-live (§10).
+
+The thresholds below are used everywhere (screen, alerts, texts). Do not change them.
+
+| Measure | Green | Yellow | Red |
+|---|---|---|---|
+| Server response of a probe ("now" tiles) | ≤ 500 ms | ≤ 1500 ms | > 1500 ms, or the page did not answer |
+| Time to main content, LCP (lab and real users) | ≤ 2000 ms "מצוין", ≤ 2500 ms "מהיר" | ≤ 4000 ms "בינוני" | > 4000 ms "איטי" |
+| Certificate days left | ≥ 30 | 14–29 | < 14, or the check failed |
+| Measurement flow | `תקין` | `מתעכב` | `שקט` (grey: `אין נתון`) |
+
+Definitions that the texts on the screen promise (keep them true):
+
+- **Availability** = share of full-round checks that answered correctly. Light rounds are not counted.
+- **Outage (נפילה)** = 3 or more consecutive minutes in which **no** probe page answered.
+- **Alert opens** when: one availability check fails (or two in a row: `down_after`, the "down"
+  rule of the intake); a core page is
+  slower than 4 seconds twice in a row; a measurement flow stops; the certificate has fewer than
+  14 days left. **It closes by itself** when the condition clears.
+- **"ראיתי" (✕)** hides an open alert from the red bar for everybody until that alert closes. It
+  does not close it. If the problem comes back later, that is a new alert and it shows again.
+
+---
+
+## 4. Per-site configuration
+
+Everything site-specific sits in two places.
+
+**4.1 The screen: `SH_CONFIG`** (defaults are at the top of the script in `site_health.html`; the
+server overrides them by injecting one inline script at the `<!--SH_INJECT-->` marker in `<head>`.
+In the reference the injected object is `sh_config().screen`, built from the configuration file:
+nobody edits these values in the HTML):
+
+| Key | Meaning | Default |
+|---|---|---|
+| `siteLabel` | shown under the title and in the tab title | `'example.co.il'` |
+| `brand` | small text at the top (business or system name); empty = none | `''` |
+| `homePage` | the value of `page` for the home page, exactly as the data returns it | `'בית'` |
+| `probeCount` | number of probe pages (used in explanation texts only) | `4` |
+| `coreCount` | number of core pages (used in explanation texts only) | `5` |
+| `downAfter` | after how many failed availability checks in a row an alert goes out (the configuration's `down_after`; used in the two sentences that explain the "down" rule) | `1` |
+| `liveHosts` | values of the real-user source that mean "the live site" | `['live', siteLabel, 'www.' + siteLabel]` |
+| `pathLabels` | URL path prefixes turned into readable Hebrew labels | WooCommerce: `[['/product-category/','קטגוריה: '],['/product/','מוצר: ']]`; Shopify: `[['/collections/','קטגוריה: '],['/products/','מוצר: ']]` |
+| `bucketNote` | a note under the "server response per page" drill-down; empty = none | `''` |
+| `nav` | menu entries to other screens of the same system; empty = no menu button. Never sent to an outsider (§8.2) | `[]` |
+| `here` | this screen's path in `nav` | `'/site'` |
+| `links` | extra buttons in the top bar. Never sent to an outsider (§8.2) | `[]` |
+| `api` | base path of the data calls | `'/api'` |
+| `loginPath`, `logoutPath` | | `'/login'`, `'/logout'` |
+| `shareKey` | share-link token; when set it is appended to every data call as `k=` | `''` |
+| `hide` | ids of cards that do not apply to this site: `'issuesCard'` (a site that sells nothing), `'slowCard'` (no sitemap rotation), `'certCard'` (a site without https), and `'nowRum'`, the tile `מהירות אצל לקוחות, שעה אחרונה` of "עכשיו" with its sentence in the card's explanation (a site that does not measure real users, §6.2). The reference fills it from the configuration's `hide` and `off` (§7.4) | `[]` |
+
+and the viewer's role, `SH_ROLE` (§8): `{}` for owner and staff, `{readonly: true}` for a vendor,
+`{readonly: true, noAlerts: true}` for a vendor who must not see alerts, `{share: true}` for the
+share link. The role object only hides controls; **the server enforces the same rules itself**.
+
+**4.2 The backend.** Everything about the site (its pages, time zone, platform, the "down" rule,
+the parts that are off, the screen values above) is in one file, `site_health.config.json`, which
+`sh_setup` loads into the database; §7.4 lists every key. Secrets (the database key, the
+passwords, the Google key, the alert topic) are environment variables in the host's settings:
+`reference/README.md` lists them, and `OWNER-STEPS.md` says who types each one.
+
+<!-- EOF spec/03-system.md -->

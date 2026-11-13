@@ -1,0 +1,247 @@
+{
+ "kit": "site-health-kit",
+ "version": "1.0",
+ "build": "9b6fd93243c7",
+ "files": [
+  {
+   "path": "START-HERE.md",
+   "bytes": 14466,
+   "lines": 177,
+   "sha256": "e24243c8d10916340e34117b36ab358e9adb3dbf1bc46779f4c6e47a80cd274b"
+  },
+  {
+   "path": "OWNER-STEPS.md",
+   "bytes": 38720,
+   "lines": 552,
+   "sha256": "9c3cf7de82f23b0205c88c25dbfeb7a40f04cee651787e1c621c610d04ec8e58"
+  },
+  {
+   "path": "SKILL.md",
+   "bytes": 956,
+   "lines": 16,
+   "sha256": "8c119b718c2f1eed7821d4dcc6eecae9b10289df0f3cc959a8ec0853e8f4e7f1"
+  },
+  {
+   "path": "AGENTS-snippet.md",
+   "bytes": 2322,
+   "lines": 35,
+   "sha256": "86da199c33555d5d43a5c9cb3e76e0790a97585a7d51d99a056b96bb35748e4c"
+  },
+  {
+   "path": "spec/03-system.md",
+   "bytes": 7620,
+   "lines": 100,
+   "sha256": "a21b73b546488eb1a229515af520330af697e74157689204f45ff132987a15a6"
+  },
+  {
+   "path": "spec/05-api-contract.md",
+   "bytes": 17019,
+   "lines": 224,
+   "sha256": "6c194ecf24b9b2f9d2fe9a0147d808a2280544af40f1988d1cc37440ea38f6d3"
+  },
+  {
+   "path": "spec/06-screen.md",
+   "bytes": 12634,
+   "lines": 174,
+   "sha256": "eadd64e9f899d90336011fd6a878e8b1a387377375ddedfd05a66b2ef1dc7a06"
+  },
+  {
+   "path": "spec/07-backend-data.md",
+   "bytes": 24422,
+   "lines": 265,
+   "sha256": "24ed7e80807c30341f1c1f63b42c792ed541ef8a178665e8a6a2c97d9ddc9e7c"
+  },
+  {
+   "path": "spec/07-collectors-alerts.md",
+   "bytes": 34530,
+   "lines": 425,
+   "sha256": "7ebf4f2c6129fd70e87438e525a61018b22ccdcd3c3c939c8b847cebf5dbb6f2"
+  },
+  {
+   "path": "spec/08-access.md",
+   "bytes": 14651,
+   "lines": 197,
+   "sha256": "96de2de44067bb9c47886cc3bd6644a3a19674a2b9f6524f24f8f4008606bfbf"
+  },
+  {
+   "path": "spec/09-build-and-checks.md",
+   "bytes": 11737,
+   "lines": 131,
+   "sha256": "0bee4000b906566034fbb59bbd3e54149cdb5be6e74f142a0a7efbf69f5b0b56"
+  },
+  {
+   "path": "check_screen.js",
+   "bytes": 117760,
+   "lines": 1138,
+   "sha256": "e41a66a4a6cac5f37accd5975558184e3d745d3a6cdbf44a59408fcf99b4f830"
+  },
+  {
+   "path": "mock_server.py",
+   "bytes": 33618,
+   "lines": 621,
+   "sha256": "6e45098316530754fabb456d923933a4e378ce8bc28ed1099d94344089835047"
+  },
+  {
+   "path": "site_health.html",
+   "bytes": 97189,
+   "lines": 1008,
+   "sha256": "1299267f77fa9806312bba58c6c5d60e056f5efd1e0f03db11fc7cde10a2f40c"
+  },
+  {
+   "path": "reference/README.md",
+   "bytes": 32628,
+   "lines": 377,
+   "sha256": "76e1e3e0be11b507affdb19d6f84080141da0b5be89215243827c2ec80b5bde8"
+  },
+  {
+   "path": "reference/collectors.py",
+   "bytes": 66570,
+   "lines": 1325,
+   "sha256": "e4e83012caf39ad8c8c6ee73f0b2eef1694808ee36ed7e2250fffc11a61c36f8"
+  },
+  {
+   "path": "reference/db.py",
+   "bytes": 7781,
+   "lines": 142,
+   "sha256": "a3bea64031bd6534d0f5d5918059fb74472d8dd4b57b060d314a0815770bd544"
+  },
+  {
+   "path": "reference/deadman.sql",
+   "bytes": 12902,
+   "lines": 218,
+   "sha256": "25b137cd1d6674aa8935512dcbe499dd3a2a659f4b613e775f3879f886b0d729"
+  },
+  {
+   "path": "reference/functions.sql",
+   "bytes": 67648,
+   "lines": 1235,
+   "sha256": "85ac8edd64d5d4f632c66f0b8a56eb8d39cc2c31e74147858eb2f6ba55d82ee0"
+  },
+  {
+   "path": "reference/manage.py",
+   "bytes": 26014,
+   "lines": 458,
+   "sha256": "99a1b5f803f1cca4902901ae45560be2e29de0d66cfe98183bdfd15f2814f549"
+  },
+  {
+   "path": "reference/requirements-dev.txt",
+   "bytes": 658,
+   "lines": 10,
+   "sha256": "95b351b95ffe44caf6aa62b064f630be9a2d43d6c5b585f4962e88206a9ada24"
+  },
+  {
+   "path": "reference/requirements.txt",
+   "bytes": 640,
+   "lines": 11,
+   "sha256": "cade6bb0844c751cc04486bf63155890acc4970a0f9177ffb8cdae5ccb97db1c"
+  },
+  {
+   "path": "reference/schema.sql",
+   "bytes": 9551,
+   "lines": 227,
+   "sha256": "63f215f559793652d3c49d4f646b9df7dae073ce6864ed06aadc1f26555434f1"
+  },
+  {
+   "path": "reference/server.py",
+   "bytes": 47154,
+   "lines": 989,
+   "sha256": "12ca975c9ac85b8b645066682f260db5e605eb5b47ef00d3ddf7e868aaf40caa"
+  },
+  {
+   "path": "reference/site_health.config.example.json",
+   "bytes": 1041,
+   "lines": 27,
+   "sha256": "69a507dadc81fb3fa09fc11bdd868ed6a1736e19872f3a719e50e0a8e88e139c"
+  },
+  {
+   "path": "reference/watchdog.py",
+   "bytes": 12528,
+   "lines": 247,
+   "sha256": "a0ec017ec7a0cf7504467912d787634577d60894b35585d1567f579bfd3e75e9"
+  },
+  {
+   "path": "reference/rum/site-health-rum.js",
+   "bytes": 5089,
+   "lines": 69,
+   "sha256": "8442d4ff4824985d4e849c5c67af2ee552bab86fde57e73f50144db0d93973c7"
+  },
+  {
+   "path": "reference/rum/site-health-rum.liquid",
+   "bytes": 4271,
+   "lines": 87,
+   "sha256": "8e39dd3489addf45129e0add31ca21fe9477e50760a3556cb1891855bcaa82dc"
+  },
+  {
+   "path": "reference/rum/site-health-rum.php",
+   "bytes": 5448,
+   "lines": 101,
+   "sha256": "e4bf052a9df671fad53f6f65ee1780fa3698ee87bb0d55d9ad37cb67e214deed"
+  },
+  {
+   "path": "reference/tests/conftest.py",
+   "bytes": 9503,
+   "lines": 220,
+   "sha256": "c46057190641177d059964a746238722e52f476ab48040870e6c157cddd0f14e"
+  },
+  {
+   "path": "reference/tests/fake_site.py",
+   "bytes": 30453,
+   "lines": 514,
+   "sha256": "b1ca6d9329bb072305c78c948463bfdbbaad6ae3c50677c478782542ade719bb"
+  },
+  {
+   "path": "reference/tests/sim.py",
+   "bytes": 7255,
+   "lines": 118,
+   "sha256": "bb6fa075b48329eb0b1140223489b95441f29cc8a6d76b1f834fb0ee2e84145f"
+  },
+  {
+   "path": "reference/tests/test_collectors.py",
+   "bytes": 172598,
+   "lines": 2803,
+   "sha256": "f946fc7f6c754db07d52b2b6408502f05218a4cb6604f7dfd0850f0afe25fd4b"
+  },
+  {
+   "path": "reference/tests/test_rum_snippet.js",
+   "bytes": 6505,
+   "lines": 101,
+   "sha256": "f8807fbd6c0f9d8adf2bf8970d06aefaf8de885122bdd52099d6ed9adc4dfbf5"
+  },
+  {
+   "path": "reference/tests/test_server.py",
+   "bytes": 146422,
+   "lines": 2535,
+   "sha256": "4fe1b1a62e2df5d94e363ebee72beef6b15d32a48265e644d98f9fef301dc2a2"
+  },
+  {
+   "path": "reference/tests/test_sql.py",
+   "bytes": 158157,
+   "lines": 2487,
+   "sha256": "f97192c064ae4bb0d77f6fd098d819fc7452eff4144a18236ee3c9ccf3c797cb"
+  },
+  {
+   "path": "reference/tests/fixtures/psi_lighthouse12.json",
+   "bytes": 9224,
+   "lines": 400,
+   "sha256": "59aebf964165bc738ba1d3d75873f477e5d452df56c1892ebacd664138d99549"
+  },
+  {
+   "path": "reference/tests/fixtures/psi_lighthouse13.json",
+   "bytes": 8357,
+   "lines": 367,
+   "sha256": "9b19baba430ca866c60986f19bda151a71d4edbe10ba0f1764655cdc964fd52c"
+  },
+  {
+   "path": "tools/check_access.py",
+   "bytes": 25123,
+   "lines": 459,
+   "sha256": "6db25dc7ff2a3192dcaca0a70e436a7ca544f5340a7287d75f74b1c325a3251f"
+  },
+  {
+   "path": "tools/check_template.py",
+   "bytes": 3938,
+   "lines": 72,
+   "sha256": "9e7e37b6b010fb75c960f74fb7d20bbffb8b39ed2c03d02ae1f74515629c526d"
+  }
+ ]
+}

@@ -1,0 +1,400 @@
+{
+ "captchaResult": "CAPTCHA_NOT_NEEDED",
+ "kind": "pagespeedonline#result",
+ "id": "https://example.co.il/",
+ "loadingExperience": {
+  "id": "https://example.co.il/",
+  "metrics": {
+   "LARGEST_CONTENTFUL_PAINT_MS": {
+    "percentile": 2140,
+    "distributions": [
+     {
+      "min": 0,
+      "max": 2500,
+      "proportion": 0.81
+     },
+     {
+      "min": 2500,
+      "max": 4000,
+      "proportion": 0.12
+     },
+     {
+      "min": 4000,
+      "proportion": 0.07
+     }
+    ],
+    "category": "FAST"
+   }
+  },
+  "overall_category": "AVERAGE",
+  "initial_url": "https://example.co.il/"
+ },
+ "lighthouseResult": {
+  "requestedUrl": "https://example.co.il/",
+  "finalUrl": "https://example.co.il/",
+  "lighthouseVersion": "12.8.2",
+  "fetchTime": "2025-02-05T01:31:01.240Z",
+  "audits": {
+   "largest-contentful-paint": {
+    "id": "largest-contentful-paint",
+    "title": "Largest Contentful Paint",
+    "score": 0,
+    "scoreDisplayMode": "numeric",
+    "numericValue": 10894.404,
+    "numericUnit": "millisecond"
+   },
+   "cumulative-layout-shift": {
+    "id": "cumulative-layout-shift",
+    "title": "Cumulative Layout Shift",
+    "score": 0.9,
+    "scoreDisplayMode": "numeric",
+    "numericValue": 0.09957584751767748,
+    "numericUnit": "unitless",
+    "details": {
+     "type": "debugdata"
+    }
+   },
+   "first-contentful-paint": {
+    "id": "first-contentful-paint",
+    "title": "First Contentful Paint",
+    "score": 0.01,
+    "scoreDisplayMode": "numeric",
+    "numericValue": 6802.699,
+    "numericUnit": "millisecond"
+   },
+   "total-blocking-time": {
+    "id": "total-blocking-time",
+    "title": "Total Blocking Time",
+    "score": 0.26,
+    "scoreDisplayMode": "numeric",
+    "numericValue": 1018.2689999999993,
+    "numericUnit": "millisecond"
+   },
+   "speed-index": {
+    "id": "speed-index",
+    "title": "Speed Index",
+    "score": 0.18,
+    "scoreDisplayMode": "numeric",
+    "numericValue": 8407,
+    "numericUnit": "millisecond"
+   },
+   "max-potential-fid": {
+    "id": "max-potential-fid",
+    "title": "Max Potential First Input Delay",
+    "score": 0,
+    "scoreDisplayMode": "numeric",
+    "numericValue": 1059.361,
+    "numericUnit": "millisecond"
+   },
+   "interactive": {
+    "id": "interactive",
+    "title": "Time to Interactive",
+    "score": 0.42,
+    "scoreDisplayMode": "numeric",
+    "numericValue": 7991.567,
+    "numericUnit": "millisecond"
+   },
+   "server-response-time": {
+    "id": "server-response-time",
+    "title": "Initial server response time was short",
+    "score": 1,
+    "scoreDisplayMode": "metricSavings",
+    "numericValue": 3.681,
+    "numericUnit": "millisecond",
+    "metricSavings": {
+     "FCP": 0,
+     "LCP": 0
+    },
+    "details": {
+     "type": "opportunity",
+     "overallSavingsMs": 0
+    }
+   },
+   "total-byte-weight": {
+    "id": "total-byte-weight",
+    "title": "Avoids enormous network payloads",
+    "score": 1,
+    "scoreDisplayMode": "metricSavings",
+    "numericValue": 1871037,
+    "numericUnit": "byte",
+    "details": {
+     "type": "table"
+    }
+   },
+   "metrics": {
+    "id": "metrics",
+    "title": "Metrics",
+    "score": 1,
+    "scoreDisplayMode": "informative",
+    "numericValue": 7992,
+    "numericUnit": "millisecond",
+    "details": {
+     "type": "debugdata",
+     "items": [
+      {
+       "timeToFirstByte": 5
+      }
+     ]
+    }
+   },
+   "bootup-time": {
+    "id": "bootup-time",
+    "title": "JavaScript execution time",
+    "score": 1,
+    "scoreDisplayMode": "metricSavings",
+    "numericValue": 1165.3349999999984,
+    "numericUnit": "millisecond",
+    "metricSavings": {
+     "TBT": 1000
+    },
+    "details": {
+     "type": "table"
+    }
+   },
+   "network-server-latency": {
+    "id": "network-server-latency",
+    "title": "Server Backend Latencies",
+    "score": 1,
+    "scoreDisplayMode": "informative",
+    "numericValue": 582.7149999999999,
+    "numericUnit": "millisecond",
+    "details": {
+     "type": "table"
+    }
+   },
+   "long-tasks": {
+    "id": "long-tasks",
+    "title": "Avoid long main-thread tasks",
+    "score": 1,
+    "scoreDisplayMode": "informative",
+    "metricSavings": {
+     "TBT": 1000
+    },
+    "details": {
+     "type": "table"
+    }
+   },
+   "mainthread-work-breakdown": {
+    "id": "mainthread-work-breakdown",
+    "title": "Minimize main-thread work",
+    "score": 0,
+    "scoreDisplayMode": "metricSavings",
+    "numericValue": 2087.035999999964,
+    "numericUnit": "millisecond",
+    "metricSavings": {
+     "TBT": 1000
+    },
+    "details": {
+     "type": "table"
+    }
+   },
+   "unminified-javascript": {
+    "id": "unminified-javascript",
+    "title": "Minify JavaScript",
+    "score": 0,
+    "scoreDisplayMode": "metricSavings",
+    "numericValue": 540,
+    "numericUnit": "millisecond",
+    "metricSavings": {
+     "FCP": 0,
+     "LCP": 550
+    },
+    "details": {
+     "type": "opportunity",
+     "overallSavingsMs": 540
+    }
+   },
+   "unused-javascript": {
+    "id": "unused-javascript",
+    "title": "Reduce unused JavaScript",
+    "score": 0,
+    "scoreDisplayMode": "metricSavings",
+    "numericValue": 690,
+    "numericUnit": "millisecond",
+    "metricSavings": {
+     "FCP": 0,
+     "LCP": 700
+    },
+    "details": {
+     "type": "opportunity",
+     "overallSavingsMs": 690
+    }
+   },
+   "largest-contentful-paint-element": {
+    "id": "largest-contentful-paint-element",
+    "title": "Largest Contentful Paint element",
+    "score": 0,
+    "scoreDisplayMode": "metricSavings",
+    "metricSavings": {
+     "LCP": 8400
+    },
+    "details": {
+     "type": "list"
+    }
+   },
+   "modern-image-formats": {
+    "id": "modern-image-formats",
+    "title": "Serve images in next-gen formats",
+    "score": 0,
+    "scoreDisplayMode": "metricSavings",
+    "numericValue": 1650,
+    "numericUnit": "millisecond",
+    "metricSavings": {
+     "FCP": 0,
+     "LCP": 1650
+    },
+    "details": {
+     "type": "opportunity",
+     "overallSavingsMs": 1650
+    }
+   },
+   "uses-text-compression": {
+    "id": "uses-text-compression",
+    "title": "Enable text compression",
+    "score": 0,
+    "scoreDisplayMode": "metricSavings",
+    "numericValue": 1140,
+    "numericUnit": "millisecond",
+    "metricSavings": {
+     "FCP": 150,
+     "LCP": 1150
+    },
+    "details": {
+     "type": "opportunity",
+     "overallSavingsMs": 1140
+    }
+   },
+   "uses-responsive-images": {
+    "id": "uses-responsive-images",
+    "title": "Properly size images",
+    "score": 0,
+    "scoreDisplayMode": "metricSavings",
+    "numericValue": 2100,
+    "numericUnit": "millisecond",
+    "metricSavings": {
+     "FCP": 0,
+     "LCP": 2100
+    },
+    "details": {
+     "type": "opportunity",
+     "overallSavingsMs": 2100
+    }
+   },
+   "legacy-javascript": {
+    "id": "legacy-javascript",
+    "title": "Avoid serving legacy JavaScript to modern browsers",
+    "score": 0,
+    "scoreDisplayMode": "metricSavings",
+    "numericValue": 240,
+    "numericUnit": "millisecond",
+    "metricSavings": {
+     "FCP": 0,
+     "LCP": 250
+    },
+    "details": {
+     "type": "opportunity",
+     "overallSavingsMs": 240
+    }
+   },
+   "cache-insight": {
+    "id": "cache-insight",
+    "title": "Use efficient cache lifetimes",
+    "score": 0,
+    "scoreDisplayMode": "metricSavings",
+    "metricSavings": {
+     "FCP": 0,
+     "LCP": 3250
+    },
+    "details": {
+     "type": "table"
+    }
+   },
+   "image-delivery-insight": {
+    "id": "image-delivery-insight",
+    "title": "Improve image delivery",
+    "score": 0,
+    "scoreDisplayMode": "metricSavings",
+    "metricSavings": {
+     "FCP": 0,
+     "LCP": 1950
+    },
+    "details": {
+     "type": "table"
+    }
+   },
+   "inp-breakdown-insight": {
+    "id": "inp-breakdown-insight",
+    "title": "INP breakdown",
+    "score": null,
+    "scoreDisplayMode": "notApplicable"
+   },
+   "document-latency-insight": {
+    "id": "document-latency-insight",
+    "title": "Document request latency",
+    "score": 0.5,
+    "scoreDisplayMode": "metricSavings",
+    "metricSavings": {
+     "FCP": 0,
+     "LCP": 0
+    },
+    "details": {
+     "type": "checklist"
+    }
+   },
+   "redirects": {
+    "id": "redirects",
+    "title": "Avoid multiple page redirects",
+    "score": 1,
+    "scoreDisplayMode": "metricSavings",
+    "numericValue": 0,
+    "numericUnit": "millisecond",
+    "metricSavings": {
+     "LCP": 0,
+     "FCP": 0
+    },
+    "details": {
+     "type": "opportunity",
+     "overallSavingsMs": 0
+    }
+   },
+   "render-blocking-resources": {
+    "id": "render-blocking-resources",
+    "title": "Eliminate render-blocking resources",
+    "score": 0.5,
+    "scoreDisplayMode": "metricSavings",
+    "numericValue": 0,
+    "numericUnit": "millisecond",
+    "metricSavings": {
+     "FCP": 0,
+     "LCP": 0
+    },
+    "details": {
+     "type": "opportunity",
+     "overallSavingsMs": 0
+    }
+   },
+   "dom-size": {
+    "id": "dom-size",
+    "title": "Avoids an excessive DOM size",
+    "score": 1,
+    "scoreDisplayMode": "metricSavings",
+    "numericValue": 151,
+    "numericUnit": "element",
+    "metricSavings": {
+     "TBT": 0
+    },
+    "details": {
+     "type": "table"
+    }
+   }
+  },
+  "categories": {
+   "performance": {
+    "id": "performance",
+    "title": "Performance",
+    "score": 0.32
+   }
+  }
+ },
+ "analysisUTCTimestamp": "2025-02-05T01:31:01.240Z"
+}

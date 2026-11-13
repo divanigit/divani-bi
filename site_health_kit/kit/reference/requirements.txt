@@ -1,0 +1,11 @@
+# The packages of the running service: the server, and the Postgres driver.
+# Python 3.10 or newer (every package below needs it). Tested with Python 3.13.
+# On a host, set the Python version explicitly if its default is older.
+fastapi==0.162.5
+uvicorn==0.54.0
+# Needed only with DATABASE_URL. With SUPABASE_URL + SUPABASE_SECRET_KEY, db.py uses the standard library.
+psycopg[binary]==3.3.9
+
+# collectors.py and manage.py need nothing else; watchdog.py needs the standard library only.
+# Time zones come from the operating system. Where it has none (Windows, Alpine images), add: tzdata
+# For the tests: pip install -r requirements-dev.txt

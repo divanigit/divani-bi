@@ -1,0 +1,27 @@
+{
+  "site": "https://example.co.il",
+  "label": "example.co.il",
+  "brand": "",
+  "time_zone": "Asia/Jerusalem",
+  "platform": "woocommerce",
+  "down_after": 1,
+  "morning": "07:30",
+  "pages": [
+    {"name": "בית", "url": "https://example.co.il/", "home": true, "probe": true, "core": true, "expect": "ברוכים הבאים"},
+    {"name": "קטגוריה", "url": "https://example.co.il/product-category/sofas/", "probe": true, "core": true},
+    {"name": "מוצר", "url": "https://example.co.il/product/sample-sofa/", "probe": true, "core": true, "expect": "הוספה לסל"},
+    {"name": "סל", "url": "https://example.co.il/cart/", "probe": true, "core": true},
+    {"name": "אודות", "url": "https://example.co.il/about/", "core": true}
+  ],
+  "off": [],
+  "extra_hosts": [],
+  "path_labels": [["/product-category/", "קטגוריה: "], ["/product/", "מוצר: "]],
+  "bucket_note": "",
+  "live_hosts": ["live"],
+  "keep_days": 100,
+  "rum_hosts": [],
+  "private_paths": [],
+  "hide": [],
+  "nav": [],
+  "links": []
+}

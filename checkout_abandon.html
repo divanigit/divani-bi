@@ -90,7 +90,7 @@ h2{font-size:16px;font-weight:800;margin:0 0 4px}
 .dates .go{font:inherit;font-size:14px;font-weight:700;min-height:44px;padding:0 16px;border:0;border-radius:11px;background:var(--brand);color:#fff;cursor:pointer}
 .hint{font-size:12.5px;color:var(--tx3);margin:6px 0 0}
 .explain{display:none;font-size:13px;color:var(--tx2);background:var(--bg);border:1px dashed var(--line2);border-radius:10px;padding:9px 11px;margin:8px 0 0;line-height:1.6}
-body.explain .explain{display:block}
+body.explain-on .explain{display:block}
 
 /* ---------- שורה תחתונה ---------- */
 .verdict{display:flex;flex-wrap:wrap;gap:10px}
@@ -501,7 +501,7 @@ $('fPhone').addEventListener('click', function(){ state.phone = !state.phone; sy
 $('repName').value = repName();
 $('repName').addEventListener('change', function(){ try { localStorage.setItem('owl_rep', $('repName').value.trim()); } catch (e) {} });
 $('refbtn').addEventListener('click', load);
-$('explbtn').addEventListener('click', function(){ var on = document.body.classList.toggle('explain'); $('explbtn').setAttribute('aria-pressed', on ? 'true' : 'false'); });
+$('explbtn').addEventListener('click', function(){ var on = document.body.classList.toggle('explain-on'); $('explbtn').setAttribute('aria-pressed', on ? 'true' : 'false'); });
 load();
 
 /* ---------- יומן הודעות ---------- */
