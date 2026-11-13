@@ -113,7 +113,7 @@ def test_setup_loads_the_example_configuration(db):
         "off": [], "extra_hosts": [], "hide": [], "nav": [], "links": []}
     assert set(config) - {"host", "screen"} == set(example_config())      # every key of the file, as it was loaded
     assert config["pages"] == [
-        {"name": "בית", "url": URL["בית"], "probe": True, "core": True, "home": True, "expect": None},
+        {"name": "בית", "url": URL["בית"], "probe": True, "core": True, "home": True, "expect": "ברוכים הבאים"},
         {"name": "קטגוריה", "url": URL["קטגוריה"], "probe": True, "core": True, "home": False, "expect": None},
         {"name": "מוצר", "url": URL["מוצר"], "probe": True, "core": True, "home": False, "expect": "הוספה לסל"},
         {"name": "סל", "url": URL["סל"], "probe": True, "core": True, "home": False, "expect": None},
@@ -161,7 +161,8 @@ def test_setup_switches_off_the_parts_that_do_not_apply_to_the_site(db):
 
     db.rpc("sh_sitemap_set", p_urls=[SITE + "/a/", SITE + "/b/"])
     config = db.setup(off=["real_users", "sitemap"])                      # answered in a fixed order
-    assert config["off"] == ["sitemap", "real_users"] and config["screen"]["hide"] == ["slowCard"]
+    # without real-user measurements the "עכשיו" row has no tile for them: nothing reads "no data" for good
+    assert config["off"] == ["sitemap", "real_users"] and config["screen"]["hide"] == ["slowCard", "nowRum"]
     assert _enabled(db) == [PROBE_FLOW, CORE_FLOW, CERT_FLOW, CATALOGUE_FLOW]
     assert [r["flow_name"] for r in db.rpc("sh_health")] == _enabled(db)   # the screen lists what is measured
     assert db.rpc("sh_rotation_next", p_n=5) == []                         # and no page takes a turn in the rotation
@@ -177,6 +178,10 @@ def test_setup_switches_off_the_parts_that_do_not_apply_to_the_site(db):
     assert config["off"] == ["sitemap", "catalogue", "cert"]
     assert config["screen"]["hide"] == ["slowCard", "issuesCard", "certCard"]
     assert _enabled(db) == [PROBE_FLOW, CORE_FLOW, RUM_FLOW]
+    config = db.rpc("sh_setup", p_config=dict(plain, off=["sitemap", "real_users"], hide=["nowRum", "myCard"]))
+    assert config["screen"]["hide"] == ["nowRum", "myCard", "slowCard", "issuesCard", "certCard"]      # each card once
+    assert _enabled(db) == [PROBE_FLOW, CORE_FLOW]
+    config = db.rpc("sh_setup", p_config=plain)
     assert db.rpc("sh_config") == config
 
     assert db.setup()["off"] == [] and _enabled(db) == everything          # the entry left the file: on again
@@ -307,7 +312,7 @@ def _page(name="בית", url=SITE + "/", **flags):
 HOME = _page(home=True, probe=True, core=True)
 
 
-@pytest.mark.parametrize("change, message", [
+SETUP_REFUSALS = [
     ({"site": "example.co.il"}, '"site" must be an absolute http\\(s\\) address, got example.co.il'),
     ({"site": None}, '"site" must be an absolute http\\(s\\) address, got nothing'),
     ({"time_zone": "Mars/Olympus"}, 'unknown "time_zone" Mars/Olympus'),
@@ -362,11 +367,57 @@ HOME = _page(home=True, probe=True, core=True)
     ({"pages": [HOME, _page("ב", url="/cart/")]}, "absolute http\\(s\\) address: ב"),
     ({"pages": [HOME, _page("ב", url="ftp://example.co.il/")]}, "absolute http\\(s\\) address: ב"),
     ({"pages": [HOME, {"name": "ב"}]}, "absolute http\\(s\\) address: ב"),
-])
+]
+
+
+@pytest.mark.parametrize("change, message", SETUP_REFUSALS)
 def test_setup_refuses_a_bad_configuration_and_keeps_the_old_one(db, change, message):
     before = db.setup()
     fails_with(db, psycopg.errors.RaiseException, "sh_setup: .*" + message, "sh_setup", p_config=example_config(**change))
     assert db.rpc("sh_config") == before
+
+
+# More configurations whose fate is not plain: a value that Postgres must convert first (it refuses some with
+# its own words, before sh_setup's checks), the spellings of true and false it accepts, null where a list goes.
+LOOKS_ODD = [
+    {"down_after": "2.5"}, {"down_after": 2.0}, {"down_after": True}, {"down_after": [2]},
+    {"down_after": "99999999999"}, {"down_after": " 2 "}, {"down_after": "+3"}, {"down_after": "2", "site": None},
+    {"site": 5}, {"site": ""}, {"site": "HTTPS://example.co.il"}, {"site": ["https://example.co.il"]},
+    {"site": "https://example.co.il///"}, {"site": "https://:80/"},
+    {"time_zone": 7}, {"time_zone": ["Asia/Jerusalem"]}, {"time_zone": "asia/jerusalem"}, {"time_zone": "UTC"},
+    {"platform": ""}, {"platform": None}, {"morning": "07:30\n"}, {"morning": None}, {"morning": "23:59"},
+    {"keep_days": "100 "}, {"keep_days": None}, {"keep_days": "030"}, {"keep_days": 400},
+    {"live_hosts": None}, {"path_labels": None}, {"rum_hosts": None}, {"private_paths": None},
+    {"extra_hosts": None}, {"off": None}, {"hide": None}, {"nav": None}, {"links": None},
+    {"rum_hosts": ["a b"]}, {"private_paths": ["a\tb"]}, {"off": ["sitemap", 5]}, {"hide": [None]},
+    {"extra_hosts": ["shop.example.co.il", {"b": 1, "aa": [2, "x"], "ccc": None}]},
+    {"pages": [dict(HOME, probe="yes", core="ON", home=" t ")]}, {"pages": [dict(HOME, home=1)]},
+    {"pages": [dict(HOME, core="maybe")]}, {"pages": [dict(HOME, probe="o")]}, {"pages": [dict(HOME, home="of")]},
+    {"pages": [dict(HOME, home=1.0)]}, {"pages": [dict(HOME, probe="")]}, {"pages": [dict(HOME, core=[True])]},
+    {"pages": [HOME, 7]}, {"pages": [HOME, ["x"]]}, {"pages": [dict(HOME, name=5)]},
+    {"pages": [HOME, _page("ב", url="https://?x")]}, {"pages": [HOME, _page("ב", url=" https://example.co.il/x")]},
+    {"pages": [HOME, _page("ב", url="https:// x")]}, {"pages": [HOME, _page("ב", url="https://example.co.il/ב")]},
+    {"pages": [HOME, _page("ב", probe=True), _page("ג", url=5)]},
+    {"pages": [_page(home=True, core=True), _page("ב", home=False, probe="false")]},
+]
+
+
+@pytest.mark.parametrize("change", [change for change, _ in SETUP_REFUSALS] + LOOKS_ODD)
+def test_install_sql_refuses_with_the_words_of_the_database(db, change):
+    """manage.py install-sql checks a configuration before it writes the file: whatever sh_setup refuses, it
+    refuses with the very message the database gives, and what sh_setup takes it takes."""
+    if str(REFERENCE) not in sys.path:
+        sys.path.insert(0, str(REFERENCE))
+    import manage
+
+    config = example_config(**change)
+    try:
+        with db.conn.transaction():
+            db.rpc("sh_setup", p_config=config)
+        said = None
+    except psycopg.Error as e:
+        said = e.diag.message_primary
+    assert manage._config_problem(config) == said
 
 
 # ================================================================ availability (spec §7.3)
@@ -1735,7 +1786,7 @@ def test_cleanup_before_the_site_is_set_up_uses_the_default(db):
 
 def test_rum_add_drops_what_is_outside_the_limits_of_the_ingest(db):
     db.setup()
-    long = "/" + "x" * 299                                                # 300 characters: the longest path kept
+    long = "/" + "x" * 299
     assert db.rpc("sh_rum_add", p_rows=[{"site": "live", "path": "/", "lcp_ms": 0},
                                         {"site": "live", "path": "/", "lcp_ms": 60001},
                                         {"path": "/", "lcp_ms": 1000}, {"site": "live", "lcp_ms": 1000},
@@ -1743,17 +1794,42 @@ def test_rum_add_drops_what_is_outside_the_limits_of_the_ingest(db):
                                         {"site": "", "path": "/", "lcp_ms": 1000},
                                         {"site": "a" * 101, "path": "/", "lcp_ms": 1000},
                                         {"site": "live\n", "path": "/", "lcp_ms": 1000},
-                                        {"site": "live", "path": long + "x", "lcp_ms": 1000}]) == {"n": 0}
+                                        # more than 120 bytes, also once cut: not sent as a browser sends it
+                                        {"site": "live", "path": "/" + "ס" * 60, "lcp_ms": 1000},
+                                        {"site": "live", "path": "/" + "\U0001D400" * 300, "lcp_ms": 1000}]) == {"n": 0}
     assert flow(db, RUM_FLOW)["status"] == "אין נתון"
     assert db.rpc("sh_rum_add", p_rows=[
         {"site": "live", "path": "/product/sofa/?email=a@b.co&utm=x#top", "lcp_ms": 1, "is_test": True},
         {"site": "dev.example.co.il", "path": "/cart/", "lcp_ms": 60000},
-        {"site": "a" * 100, "path": long + "?" + "q" * 500, "lcp_ms": 300},      # the query string does not count
-        {"site": "live", "path": "/", "lcp_ms": 2400.4}]) == {"n": 4}
+        {"site": "a" * 100, "path": long + "?" + "q" * 500, "lcp_ms": 300},      # cut at 120; the query string goes first
+        {"site": "live", "path": "/" + "ס" * 59, "lcp_ms": 301},                # 119 bytes: kept as it came
+        {"site": "live", "path": "/", "lcp_ms": 2400.4}]) == {"n": 5}
     assert db.sql("select site, path, lcp_ms, is_test, created_at = now() from sh_rum order by lcp_ms") == [
-        ("live", "/product/sofa/", 1, True, True), ("a" * 100, long, 300, False, True),
+        ("live", "/product/sofa/", 1, True, True), ("a" * 100, "/" + "x" * 119, 300, False, True),
+        ("live", "/" + "ס" * 59, 301, False, True),
         ("live", "/", 2400, False, True), ("dev.example.co.il", "/cart/", 60000, False, True)]
     assert flow(db, RUM_FLOW)["status"] == "תקין"
+
+
+# Paths of more than 120 characters, cut by sh_rum_add as the server cuts them before it sends them
+CUTS = ["/" + "x" * 119, "/" + "x" * 299, "/" + "x" * 117 + "%D7%A1", "/" + "x" * 118 + "%2F", "/" + "x" * 119 + "%2",
+        "/" + "x" * 116 + "%D7%A1%D7%A4", "/" + "x" * 116 + "%d7%a1%d7%a4", "/" + "x" * 113 + "%E2%80%99abc",
+        "/" + "x" * 110 + "%F0%9F%98%80" + "z" * 20, "/" + "x" * 111 + "%F0%9F%98%80", "/" + "x" * 113 + "%D7%A1zz",
+        "/product/" + "%D7%A1%D7%A4%D7%94-" * 10, "/" + "%D7%A1" * 30 + "?q=" + "y" * 200, "/" + "x" * 118 + "%"]
+
+
+def test_rum_add_cuts_a_long_path_exactly_as_the_server_does(db):
+    if str(REFERENCE) not in sys.path:
+        sys.path.insert(0, str(REFERENCE))
+    import server
+
+    db.setup()
+    rows = [{"site": "live", "path": path, "lcp_ms": n + 1} for n, path in enumerate(CUTS)]
+    assert db.rpc("sh_rum_add", p_rows=rows) == {"n": len(CUTS)}
+    stored = [path for (path,) in db.sql("select path from sh_rum order by lcp_ms")]
+    assert stored == [server._cut_path(re.split("[?#]", path, maxsplit=1)[0]) for path in CUTS]
+    assert all(len(path) <= 120 for path in stored) and stored[:4] == [
+        "/" + "x" * 119, "/" + "x" * 119, "/" + "x" * 117, "/" + "x" * 118]
 
 
 def test_rum_add_stores_nothing_once_a_day_holds_30000_rows(db):

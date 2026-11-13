@@ -26,6 +26,7 @@ Tests switch behaviour through the attributes of FakeSite. By hand:
 import argparse
 import gzip
 import json
+import sys
 import threading
 import time
 import urllib.parse
@@ -41,6 +42,7 @@ PAGES = {"/": "בית", "/product-category/sofas/": "קטגוריה", "/product/
 SHOPIFY_PAGES = {"/": "בית", "/collections/sofas": "קטגוריה", "/products/sample-sofa": "מוצר", "/cart": "סל",
                  "/pages/about": "אודות"}
 NOT_PROBED = "אודות"
+HOME_TEXT = "ברוכים הבאים"                   # on the home page only: the "expect" of the home page in config()
 CONTACT = "/%D7%A6%D7%95%D7%A8-%D7%A7%D7%A9%D7%A8/"                 # "/צור-קשר/", as a sitemap spells it
 SITEMAP_NS = 'xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"'
 IMAGE_NS = 'xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"'
@@ -183,7 +185,8 @@ class FakeSite:
         config = {"site": self.url, "label": "fake.example", "time_zone": "Asia/Jerusalem", "platform": self.platform,
                   "down_after": 1, "morning": "07:30",
                   "pages": [{"name": name, "url": self.url + path, "home": path == "/", "probe": name != NOT_PROBED,
-                             "core": True, **({"expect": "הוספה לסל"} if name == "מוצר" else {})}
+                             "core": True, **({"expect": "הוספה לסל"} if name == "מוצר" else
+                                              {"expect": HOME_TEXT} if path == "/" else {})}
                             for path, name in self.pages.items()]}
         config.update(changes)
         return config
@@ -307,7 +310,8 @@ class _Handler(BaseHTTPRequestHandler):
         if name:
             html = broken.get("body") or (
                 '<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>%s</title></head>'
-                "<body><h1>%s</h1><button>הוספה לסל</button></body></html>" % (name, name))
+                "<body><h1>%s</h1>%s<button>הוספה לסל</button></body></html>"
+                % (name, name, "<p>%s</p>" % HOME_TEXT if path == "/" else ""))
             return self._send(200, "text/html; charset=utf-8", html.encode("utf-8"), wait=broken.get("body_delay", 0))
         self._send(404, "text/html", b"<html><body>not found</body></html>")
 
@@ -486,7 +490,13 @@ def main(argv=None):
     parser.add_argument("config", nargs="?", help="where to write the site's configuration (JSON)")
     parser.add_argument("--platform", choices=["woocommerce", "shopify"], default="woocommerce")
     args = parser.parse_args(argv)
-    site = FakeSite(args.port, args.platform)
+    try:                                        # bind first: nothing is printed or written for a port that is not ours
+        site = FakeSite(args.port, args.platform)
+    except (OSError, OverflowError) as e:
+        again = " ".join(["python3 tests/fake_site.py", str(args.port + 1 if args.port < 65535 else 8900)] + ([args.config] if args.config else [])
+                         + (["--platform", "shopify"] if args.platform == "shopify" else []))
+        sys.exit("port %d cannot be opened (%s). Another program may be using it: try another one, such as  %s"
+                 % (args.port, getattr(e, "strerror", None) or e, again))
     config = json.dumps(site.config(), ensure_ascii=False, indent=2)
     if args.config:
         Path(args.config).write_text(config + "\n", encoding="utf-8")

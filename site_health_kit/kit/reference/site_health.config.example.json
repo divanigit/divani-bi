@@ -7,7 +7,7 @@
   "down_after": 1,
   "morning": "07:30",
   "pages": [
-    {"name": "בית", "url": "https://example.co.il/", "home": true, "probe": true, "core": true},
+    {"name": "בית", "url": "https://example.co.il/", "home": true, "probe": true, "core": true, "expect": "ברוכים הבאים"},
     {"name": "קטגוריה", "url": "https://example.co.il/product-category/sofas/", "probe": true, "core": true},
     {"name": "מוצר", "url": "https://example.co.il/product/sample-sofa/", "probe": true, "core": true, "expect": "הוספה לסל"},
     {"name": "סל", "url": "https://example.co.il/cart/", "probe": true, "core": true},

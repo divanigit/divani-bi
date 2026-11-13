@@ -18,7 +18,7 @@ feeds the page canned answers and checks the rules below one by one, against any
    extra `links`, `הסברים`, `רענון`, `ייצא PDF`.
 3. **Red alert bar** — only when there are open alerts nobody marked as seen (§6.4).
 4. Title "בריאות האתר" and subtitle `<siteLabel> · הבדיקה האחרונה HH:MM · <period>`.
-5. Card **עכשיו** — four tiles and a row of chips (§6.2).
+5. Card **עכשיו** — four tiles (three on a site that does not measure real users) and a row of chips (§6.2).
 6. Card with the **controls**: period `24 שעות | 7 ימים | 30 יום | 90 יום`, strategy `טלפון | מחשב`,
    a custom date range (`מתאריך`, `עד`, `הצג`), and the line `מוצג: <period>`.
 7. Card **שורה תחתונה** — four tiles: `מהירות עמוד הבית בטלפון`, `זמינות`, `נפילות`, `התראות פתוחות`.
@@ -49,6 +49,12 @@ server-response thresholds; then `עודכן HH:MM:SS · רענון אוטומט
 The card reloads every 60 seconds on its own timer, also while a drill-down is open.
 When `/api/site/now` fails, the tiles are replaced by one grey tile `הנתון לא זמין כרגע`.
 
+A site that does not measure real users (`real_users` is off, §7.4) gets `nowRum` in
+`SH_CONFIG.hide`. The tile `מהירות אצל לקוחות, שעה אחרונה` is then not rendered at all, also
+before the first round (three tiles, never one that reads `אין מדידות` for good), and the sentence
+about it in the card's explanation (`<span id="nowRumTxt">`) is hidden. Without `nowRum` the card
+is exactly as above.
+
 A count of one is written in singular Hebrew everywhere on the screen (`מדידה אחת`, `כשל אחד`,
 `התראה פתוחה אחת`, `יום אחד`, `נבדק לפני שנייה`), never "1 מדידות".
 
@@ -72,7 +78,12 @@ centered 720 px panel from 720 px width; closes with ✕, a click outside, or Es
 | a row of `המדידה עצמה` | what the flow measures and what to do | none |
 
 The runs sheet shows: count, median, slowest, fastest, Google's real-user verdict when present,
-then the top 6 reasons by average estimated saving, then the table of runs (first 100).
+then the top 6 reasons by average estimated saving (the mean over the runs that report the reason,
+highest first, never more than 6), then the table of runs (first 100). The median is said in words:
+`מהיר מצוין` up to 2000 ms, `מהיר` up to 2500, `בינוני` up to 4000, `איטי` above; the tag of each run
+reads `מצוין` / `מהיר` / `בינוני` / `איטי` on the same thresholds. When no run of the answer
+succeeded: `אין מדידות תקינות (N ניסיונות נכשלו: <err of the newest run>).` (`ניסיון אחד נכשל`
+for one), and `אין מדידות תקינות.` when the answer has no run at all.
 
 The main screen reloads every 60 seconds, **except while a sheet is open**. A reload that returns
 after a newer one started is discarded (sequence guard). While loading, a thin progress bar and a
@@ -149,7 +160,9 @@ PageSpeed results with `locale=he` so that fallback is Hebrew too (§7.6).
 - The color variables, if the owner asks for their brand color (`--brand`).
 
 A card that does not apply to the site is hidden with `SH_CONFIG.hide` (§4.1), never by deleting
-its markup: the script expects every card to exist.
+its markup: the script expects every card to exist. The same list takes `nowRum`, the real-user
+tile of "עכשיו" (§6.2); the backend adds it when `real_users` is off. When you edit the explanation
+of "עכשיו", keep `<span id="nowRumTxt">` around the sentence about that tile.
 
 Anything else: do not change. If you believe something must change, ask the owner first.
 

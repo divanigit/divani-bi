@@ -291,7 +291,7 @@ html,body{overflow-x:hidden}
     <div class="now" id="now"><div class="nbox"><div class="k">האתר עכשיו</div><div class="v"><span class="dot n"></span>טוען…</div></div></div>
     <div class="npages" id="nowpages"></div>
     <p class="nowtick" id="nowtick"></p>
-    <p class="explain">"עכשיו" = סבב הבדיקה האחרון של המערכת, כל דקה, <span data-txt="pages">4 עמודים</span>. "תגובת שרת" = כמה זמן עובר מהבקשה עד שהשרת מתחיל לענות: ירוק עד 0.5 שנ', צהוב עד 1.5, אדום מעל או כשעמוד לא עונה. "מהירות אצל לקוחות" = מה שגולשים אמיתיים חוו בשעה האחרונה, זמן עד תוכן ראשי, אחוזון 75, נמדד בדפדפן של הגולש על ידי קוד מדידה קטן שמותקן באתר. מתחת למספר כתוב מאיזה אתר הגיעו המדידות. מתרענן לבד כל 60 שניות.</p>
+    <p class="explain">"עכשיו" = סבב הבדיקה האחרון של המערכת, כל דקה, <span data-txt="pages">4 עמודים</span>. "תגובת שרת" = כמה זמן עובר מהבקשה עד שהשרת מתחיל לענות: ירוק עד 0.5 שנ', צהוב עד 1.5, אדום מעל או כשעמוד לא עונה. <span id="nowRumTxt">"מהירות אצל לקוחות" = מה שגולשים אמיתיים חוו בשעה האחרונה, זמן עד תוכן ראשי, אחוזון 75, נמדד בדפדפן של הגולש על ידי קוד מדידה קטן שמותקן באתר. מתחת למספר כתוב מאיזה אתר הגיעו המדידות. </span>מתרענן לבד כל 60 שניות.</p>
   </section>
 
   <section class="card" id="ctlCard">
@@ -427,7 +427,7 @@ var CFG = (function(){
     loginPath: '/login',
     logoutPath: '/logout',
     shareKey: '',                // טוקן של קישור שיתוף; מצורף לכל קריאת נתונים כ-k=
-    hide: []                     // כרטיסים שלא רלוונטיים לאתר הזה, לפי מזהה: 'issuesCard' (אתר בלי חנות), 'slowCard', 'certCard'
+    hide: []                     // כרטיסים שלא רלוונטיים לאתר הזה, לפי מזהה: 'issuesCard' (אתר בלי חנות), 'slowCard', 'certCard'; 'nowRum' = בלי אריח "מהירות אצל לקוחות" בכרטיס "עכשיו"
   };
   var o = window.SH_CONFIG || {};
   Object.keys(o).forEach(function(k){ d[k] = o[k]; });
@@ -446,7 +446,7 @@ if (ROLE.share) ROLE.readonly = true;
   if (ROLE.readonly) root.classList.add('ro');
   if (ROLE.share) root.classList.add('share');
   if (ROLE.noAlerts) root.classList.add('noalerts');
-  (CFG.hide || []).forEach(function(id){ var el = document.getElementById(id); if (el) el.style.display = 'none'; });
+  (CFG.hide || []).forEach(function(id){ var el = document.getElementById(id === 'nowRum' ? 'nowRumTxt' : id); if (el) el.style.display = 'none'; });
   document.title = 'בריאות האתר — ' + CFG.siteLabel;
   document.getElementById('brandTxt').textContent = CFG.brand || '';
   document.getElementById('outLink').setAttribute('href', CFG.logoutPath);
@@ -969,7 +969,9 @@ function renderNow(d){
   var sp = d.speed || {}; var spT = sp.checked_at ? new Date(sp.checked_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) : '—';
   var lab = sp.lcp_ms ? [sp.lcp_ms <= 2500 ? 'ok' : sp.lcp_ms <= 4000 ? 'w' : 'd', (sp.lcp_ms / 1000).toFixed(1) + ' שנ\'', 'דף הבית בטלפון, ' + spT + ' · ציון ' + (sp.score == null ? '—' : sp.score) + ' · יעד 2.5'] : ['n', '—', 'אין מדידה'];
   function box(k, c){ return '<div class="nbox"><div class="k">' + k + '</div><div class="v"><span class="dot ' + c[0] + '"></span>' + c[1] + '</div><div class="m">' + c[2] + '</div></div>'; }
-  $('now').innerHTML = box('האתר עכשיו', site) + box('תגובת שרת עכשיו', srv) + box('מהירות אצל לקוחות, שעה אחרונה', rumBox) + box('מעבדה, מדידה אחרונה', lab);
+  /* hide: ['nowRum'] = האתר לא מודד מהירות אצל לקוחות: בלי האריח, ולא אריח שאומר "אין מדידות" לתמיד */
+  var noRum = (CFG.hide || []).indexOf('nowRum') >= 0;
+  $('now').innerHTML = box('האתר עכשיו', site) + box('תגובת שרת עכשיו', srv) + (noRum ? '' : box('מהירות אצל לקוחות, שעה אחרונה', rumBox)) + box('מעבדה, מדידה אחרונה', lab);
   $('nowpages').innerHTML = pages.map(function(p){ var c = p.ok ? nowColorMs(p.ms) : 'd'; return '<span class="tag ' + (c === 'ok' ? 'ok' : c === 'w' ? 'w' : 'd') + '" title="' + esc(p.url || '') + '">' + esc(p.page) + ' ' + (p.ok ? nowSec(p.ms) : 'לא עונה' + (p.status ? ' (' + esc(p.status) + ')' : '')) + '</span>'; }).join('');
   var al = +d.alerts_open || 0;
   $('nowtick').textContent = 'עודכן ' + new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' · רענון אוטומטי כל 60 שניות' + (al ? ' · ' + cnt(al, 'התראה פתוחה אחת', 'התראות פתוחות') : '');

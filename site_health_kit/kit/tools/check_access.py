@@ -156,6 +156,15 @@ def injected(page):
         return None, None
 
 
+def no_menu(who, config):
+    """An outsider's page carries no menu (nav) and no extra buttons (links): they hold the addresses of the
+    owner's other screens, and hiding them on the screen does not keep them out of the page source."""
+    check("%s: the page carries no nav and no links (the owner's other screens)" % who,
+          isinstance(config, dict) and not config.get("nav") and not config.get("links"),
+          "nav %r, links %r" % ((config or {}).get("nav"), (config or {}).get("links")) if isinstance(config, dict)
+          else "no SH_CONFIG in the page")
+
+
 def sign_in(call, password, who):
     answer = call("POST", "/login", body=urllib.parse.urlencode({"p": password}).encode("utf-8"),
                   kind="application/x-www-form-urlencoded")
@@ -270,10 +279,12 @@ def vendor(call, cookie, attributes, https):
               and age is not None and age <= VENDOR_DAYS * 86400,
               sorted(a for a in attributes if not a.startswith("expires")))
     page = call("GET", "/site", cookie)
-    role = injected(page.text)[1] or {}
+    config, role = injected(page.text)
+    role = role or {}
     check("vendor: GET /site answers 200 and the page says read-only",
           page.status == 200 and role.get("readonly") is True and not role.get("share"),
           "status %d, role %r" % (page.status, role))
+    no_menu("vendor", config)
     site = see_site(call, "vendor", cookie)
     no_push_list(call, "vendor", site, cookie)
     check("vendor: GET /api/messages answers 403 {\"error\": \"auth\"}",
@@ -293,9 +304,11 @@ def vendor(call, cookie, attributes, https):
 
 
 def quiet(call, cookie, known_ids):
-    role = injected(call("GET", "/site", cookie).text)[1] or {}
+    config, role = injected(call("GET", "/site", cookie).text)
+    role = role or {}
     check("vendor without alerts: the page says so (noAlerts)",
           role.get("noAlerts") is True and role.get("readonly") is True, "role %r" % role)
+    no_menu("vendor without alerts", config)
     site = call("GET", "/api/site?h=168", cookie).json or {}
     check("vendor without alerts: both alert lists are empty",
           site.get("alerts_open") == [] and site.get("alerts_recent") == [],
@@ -319,6 +332,7 @@ def share(call, token):
           "status %d, role %r" % (page.status, role))
     check("share link: the page carries the token for its data calls (shareKey)",
           (config or {}).get("shareKey") == token)
+    no_menu("share link", config)
     site = see_site(call, "share link", k=token)
     no_push_list(call, "share link", site, k=token)
     check("share link: GET /api/messages answers 401", refused(call("GET", "/api/messages" + k), 401))
@@ -347,6 +361,10 @@ def wrong_token(call, wrong, vendor_cookie):
 
 
 def owner(call, cookie, outsiders, token):
+    config = injected(call("GET", "/site", cookie).text)[0] or {}
+    if not (config.get("nav") or config.get("links")):
+        notes.append("the owner's page has no menu (nav) and no extra buttons (links) either, so \"carries no nav and "
+                     "no links\" could not be seen at work")
     messages = call("GET", "/api/messages", cookie)
     check("owner: GET /api/messages answers 200 with rows",
           messages.status == 200 and isinstance((messages.json or {}).get("rows"), list), "status %d" % messages.status)

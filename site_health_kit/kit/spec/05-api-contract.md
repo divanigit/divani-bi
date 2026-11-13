@@ -183,8 +183,10 @@ also when it has nothing to say: `what=fails&page=&bucket=&h=24`. **An empty val
 parameter is absent** (all pages, the whole window), not a malformed one.
 
 Unknown `what`: status 400 `{"error": "what?"}`. A missing or malformed parameter (`id` not a
-number, `url` empty, a required `bucket` missing or empty, a non-empty `bucket` that is not in one
-of the two bucket formats): `{"rows": []}`, without touching the database.
+number of at most 18 digits, `url` empty, a required `bucket` missing or empty, a non-empty
+`bucket` that is not in one of the two bucket formats or names no real day or hour, such as
+`2026-13-45` or `2026-11-12 24:00`): `{"rows": []}`, without touching the database. `alert`
+ignores `bucket`.
 Backend failure: status 502 `{"error": "<text>"}`; the sheet then says "לא הצלחתי לטעון".
 
 ### 5.5 `GET /api/messages?(h | f,t)` → the push log; `{"rows": [...]}`, newest first

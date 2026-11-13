@@ -155,7 +155,8 @@ language sql stable set search_path = public as $$
       'probeCount', p.probes, 'coreCount', p.cores, 'downAfter', s.v -> 'down_after',
       'liveHosts', s.v -> 'live_hosts', 'pathLabels', s.v -> 'path_labels', 'bucketNote', s.v -> 'bucket_note',
       'nav', s.v -> 'nav', 'links', s.v -> 'links',
-      -- the cards the configuration hides, then the card of each part that is switched off
+      -- the cards the configuration hides, then the card of each part that is switched off (for
+      -- real-user measurements: the tile "מהירות אצל לקוחות, שעה אחרונה" of the "עכשיו" row)
       'hide', (select coalesce(jsonb_agg(card order by n), '[]')
                from (select card, min(n) as n
                      from (select h.card, h.n
@@ -163,7 +164,7 @@ language sql stable set search_path = public as $$
                            union all
                            select c.card, 1000 + c.n
                            from (values (1, 'sitemap', 'slowCard'), (2, 'catalogue', 'issuesCard'),
-                                        (3, 'cert', 'certCard')) as c(n, part, card)
+                                        (3, 'cert', 'certCard'), (4, 'real_users', 'nowRum')) as c(n, part, card)
                            where o.off ? c.part) listed
                      group by card) cards))))
   from s, p, o
@@ -776,11 +777,16 @@ language sql set search_path = public as $$
 $$;
 
 -- Real-user page views: [{site, path, lcp_ms, is_test}]. The last line of defence for the
--- limits of the ingest (spec §7.7): no query string is stored, and a row with an impossible
--- timing, a site that is not "live" or a host name, or a path longer than 300 characters is dropped.
--- And nothing at all is stored while the last 24 hours already hold 30,000 rows: the ingest is
--- open to the internet, and a flood of forged views must not fill the database (a full database
--- stops storing probes and alerts too). 30,000 a day is about 130 MB over the 30 days rows are kept.
+-- limits of the ingest (spec §7.7): no query string is stored; a path is cut at 120 characters
+-- as the server cuts it (never inside a "%XX" escape, nor inside a character whose escapes were
+-- cut off); and a row is dropped when its path is then still more than 120 bytes (the server
+-- sends paths percent-encoded, as browsers do), its timing is impossible, or its site is not
+-- "live" or a host name. And nothing at all is stored while the last 24 hours already hold
+-- 30,000 rows: the ingest is open to the internet, and a flood of forged views must not fill the
+-- database (a full database stops storing probes and alerts too). Measured on Postgres 16, the
+-- largest row (a site of 100 characters, a path of 120) takes 296 bytes with its index: 30,000 a
+-- day over the 31 days that can be kept (sh_cleanup deletes what is older than 30) is about
+-- 275 MB (262 MiB).
 create or replace function sh_rum_add(p_rows jsonb) returns jsonb
 language sql set search_path = public as $$
   with room as (
@@ -789,10 +795,15 @@ language sql set search_path = public as $$
   ), added as (
     insert into sh_rum (site, path, lcp_ms, is_test)
     select r.site, r.path, r.lcp_ms, coalesce(r.is_test, false)
-    from (select site, regexp_replace(path, '[?#].*$', '') as path, lcp_ms, is_test
-          from jsonb_to_recordset(p_rows) as x(site text, path text, lcp_ms numeric, is_test boolean)) r
+    from (select site, lcp_ms, is_test,
+                 case when length(whole) <= 120 then whole
+                      else regexp_replace(regexp_replace(left(whole, 120), '%[0-9A-Fa-f]?$', ''),
+                             '(%[CDcd][0-9A-Fa-f]|%[Ee][0-9A-Fa-f](%[89ABab][0-9A-Fa-f])?'
+                             '|%[Ff][0-7](%[89ABab][0-9A-Fa-f]){0,2})$', '') end as path
+          from (select site, regexp_replace(path, '[?#].*$', '') as whole, lcp_ms, is_test
+                from jsonb_to_recordset(p_rows) as x(site text, path text, lcp_ms numeric, is_test boolean)) sent) r
     where (select free from room)
-      and r.site ~ '^[a-z0-9.-]{1,100}$' and length(r.path) <= 300 and r.lcp_ms between 1 and 60000
+      and r.site ~ '^[a-z0-9.-]{1,100}$' and octet_length(r.path) <= 120 and r.lcp_ms between 1 and 60000
     returning 1
   ), beat as (
     update sh_flows set last_at = now()

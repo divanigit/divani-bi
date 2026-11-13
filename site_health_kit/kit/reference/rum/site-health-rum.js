@@ -1,5 +1,6 @@
 /* Site Health RUM: one beacon per page view, from the visitor's browser to the Site Health dashboard.
-   What is sent: the page's path (never the query string), the time until its main content was painted (LCP),
+   What is sent: the page's path (never the query string; at most 300 characters, of which the dashboard
+   keeps the first 120), the time until its main content was painted (LCP),
    the time until the first byte, how the page was opened, and whether the address carried ?sh_test=1.
    Where to: cfg.endpoint, and nowhere else. No cookie and no id; the dashboard stores no address of the visitor.
    Nothing is sent from cart, checkout, account and order pages, nor from a path that holds an "@" or

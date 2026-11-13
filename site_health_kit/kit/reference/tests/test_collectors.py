@@ -40,7 +40,7 @@ import conftest  # noqa: E402
 import db  # noqa: E402
 import manage  # noqa: E402
 import watchdog  # noqa: E402
-from fake_site import PAGES, PSI_ERRORS, SHOPIFY_PAGES, FakeSite, sitemap_index, urlset  # noqa: E402
+from fake_site import HOME_TEXT, PAGES, PSI_ERRORS, SHOPIFY_PAGES, FakeSite, sitemap_index, urlset  # noqa: E402
 
 UTC = timezone.utc
 ZONE = ZoneInfo("Asia/Jerusalem")                 # the time zone of the fake site's configuration
@@ -983,11 +983,12 @@ def test_several_sitemap_lines_and_a_line_for_another_host(site):
      "declares entities"),
     (lambda site: site.files.update({"/page-sitemap.xml": ("application/xml", "<urlset/>".encode("utf-16"))}),
      "not UTF-8"),
-    # UTF-16 without its byte-order mark is valid UTF-8 (with a NUL in every pair), and the bytes
-    # "<!ENTITY" are not in it: only the NUL test refuses this entity bomb before the parser sees it
+    # UTF-16 without its byte-order mark: the bytes "<!ENTITY" are not in it, and the declaration is seen all the same
     (lambda site: site.files.update({"/page-sitemap.xml": ("application/xml", (
         '<?xml version="1.0" encoding="UTF-16LE"?><!DOCTYPE urlset [<!ENTITY a "aaaaaaaaaa"><!ENTITY b "&a;&a;&a;&a;">]>'
-        '<urlset><url><loc>&b;</loc></url></urlset>').encode("utf-16-le"))}), "not UTF-8"),
+        '<urlset><url><loc>&b;</loc></url></urlset>').encode("utf-16-le"))}), "declares entities"),
+    (lambda site: site.files.update({"/page-sitemap.xml": ("application/xml", "<urlset><url/></urlset>".encode("utf-16-le"))}),
+     "not UTF-8"),
     (lambda site: site.files.update({"/product-sitemap.xml": ("application/xml", b"\x1f\x8b\x08 not gzip")}),
      "gzip file that cannot be opened"),
     (lambda site: site.files.update({"/sitemap_index.xml": sitemap_index(
@@ -1002,6 +1003,35 @@ def test_one_file_that_fails_aborts_the_whole_load(sql, site, break_it, message)
         collectors.sitemap_job(collectors.read_config(), T0)
     assert sql.sql("select url from sh_site_pages where active order by url") == [(url,) for url in sorted(known)]
     assert last_run(sql, SITEMAP_FLOW) is None                            # yesterday's list, and no proof of life
+
+
+BOMB = '<!DOCTYPE urlset [<!ENTITY a "aaaaaaaaaa"><!ENTITY b "&a;&a;&a;&a;&a;&a;&a;&a;">]><urlset><url><loc>&b;</loc></url></urlset>'
+
+
+@pytest.mark.parametrize("raw, declares", [
+    (BOMB.encode("utf-8"), True),
+    (BOMB.encode("utf-16"), True),                                        # with its byte-order mark
+    (('<?xml version="1.0" encoding="UTF-16"?>' + BOMB).encode("utf-16-le"), True),       # without one
+    (('<?xml version="1.0" encoding="UTF-16"?>' + BOMB).encode("utf-16-be"), True),
+    (('<?xml version="1.0" encoding="windows-1255"?>' + BOMB).encode("cp1255"), True),
+    (b'<!DOCTYPE urlset [<!ENTITY % p "x">]><urlset/>', True),          # a parameter entity
+    (b'<!DOCTYPE urlset [<!ENTITY e SYSTEM "file:///etc/passwd">]><urlset><url><loc>&e;</loc></url></urlset>', True),
+    (b'<!DOCTYPE urlset [<!NOTATION n SYSTEM "x"><!ENTITY e SYSTEM "y" NDATA n>]><urlset/>', True),
+    (urlset("https://example.co.il", "/a/")[1], False),
+    (b'<!DOCTYPE urlset><urlset><url><loc>https://example.co.il/a&amp;b/</loc></url></urlset>', False),
+    (b"<urlset><!-- <!ENTITY a 'b'> is only words here --></urlset>", False),
+    (b"<urlset><url><loc><![CDATA[<!ENTITY a 'b'>]]></loc></url></urlset>", False),
+    (b"<html><body>Just a moment...</body></html>", False), (b"not xml at all", False), (b"", False),
+])
+def test_an_entity_declaration_is_seen_in_any_encoding(raw, declares):
+    assert collectors._declares_entities(raw) is declares
+
+
+def test_the_words_of_an_entity_declaration_in_a_comment_are_no_declaration(site):
+    """Only a real declaration is refused: the bytes "<!ENTITY" in a comment declare nothing."""
+    body = urlset(site.url, "/a/")[1].replace(b"<url>", b"<!-- <!ENTITY x 'y'> --><url>", 1)
+    site.files["/page-sitemap.xml"] = ("application/xml", body)
+    assert "/a/" in paths(site, collectors.sitemap_load(site.url))
 
 
 def test_a_file_larger_than_the_limit_is_refused(site, monkeypatch):
@@ -1855,7 +1885,8 @@ def everywhere(monkeypatch, site):
     ("http://example.co.il/cart/", "http://www.example.co.il/about/", (), True),             # with www: the same site
     ("http://www.example.co.il/cart/", "http://example.co.il/about/", (), True),
     ("http://EXAMPLE.co.il/cart/", "http://example.co.il./about/", (), True),
-    ("http://example.co.il/cart/", "http://example.co.il:8080/about/", (), True),            # the host is what counts
+    ("http://example.co.il/cart/", "http://example.co.il:80/about/", (), True),              # the same port, spelled out
+    ("http://example.co.il/cart/", "http://example.co.il:8080/about/", (), False),           # another service of the host
     ("http://example.co.il/cart/", "http://someone@example.co.il/about/", (), True),
     ("http://example.co.il/cart/", "http://shop.example.co.il/about/", (), False),           # a host of its own
     ("http://example.co.il/cart/", "http://shop.example.co.il/about/", ("shop.example.co.il",), True),
@@ -1873,6 +1904,51 @@ def test_which_redirects_are_followed(site, monkeypatch, start, target, hosts, f
     answer = collectors.fetch(start, timeout=2, hosts=hosts, public=True)
     assert (answer.status, answer.elsewhere) == ((200, False) if followed else (302, True))
     assert [path for _, path, _ in site.hits] == (["/cart/", "/about/"] if followed else ["/cart/"])
+
+
+@pytest.mark.parametrize("current, target, why", [
+    ("http://example.co.il/a", "https://example.co.il/b", ""),                     # up to https: the usual move
+    ("http://example.co.il:80/a", "https://www.example.co.il:443/b", ""),
+    ("https://example.co.il/a", "https://www.example.co.il/b", ""),
+    ("http://example.co.il:8080/a", "http://example.co.il:8080/b", ""),           # a site on a port of its own stays there
+    ("http://example.co.il/a", "http://shop.example.co.il/b", "to another host"),
+    ("http://example.co.il/a", "http://pay.example.co.il:8080/b", ""),            # a host of extra_hosts, on its own port
+    ("https://example.co.il/a", "https://pay.example.co.il:8443/b", ""),
+    ("https://example.co.il/a", "http://example.co.il/b", "from https to http"),   # never down to clear text
+    ("https://example.co.il/a", "http://example.co.il:443/b", "from https to http"),
+    ("https://example.co.il/a", "http://pay.example.co.il/b", "from https to http"),     # an extra host, too
+    ("https://example.co.il/a", "https://example.co.il:8443/b", "to another port"),
+    ("http://example.co.il/a", "http://example.co.il:8080/b", "to another port"),
+    ("http://example.co.il/a", "https://example.co.il:8443/b", "to another port"),
+    ("http://example.co.il:8080/a", "https://example.co.il/b", "to another port"),
+    ("http://example.co.il/a", "http://example.co.il:x/b", "to another port"),
+    ("http://example.co.il/a", "ftp://example.co.il/b", "to an address that is not http(s)"),
+    ("http://example.co.il/a", "javascript:alert(1)", "to an address that is not http(s)"),
+])
+def test_why_a_redirect_is_not_followed(current, target, why):
+    assert collectors._redirect_refused(current, target, {"example.co.il", "pay.example.co.il"}) == why
+
+
+def test_a_redirect_from_https_down_to_http_or_to_another_port_is_not_followed(site, https_site, monkeypatch):
+    port, certificate = https_site
+    monkeypatch.setattr(collectors, "_TLS", ssl.create_default_context(cafile=str(certificate)))
+    with socket.socket() as other:                                        # a second service of this machine
+        other.bind(("127.0.0.1", 0))
+        other.listen()
+        for target, why in ((site.url + "/cart/", "from https to http"),
+                            ("http://127.0.0.1:%d/cart/" % port, "from https to http"),      # even on the same port
+                            ("https://127.0.0.1:%d/cart/" % other.getsockname()[1], "to another port")):
+            page = {"name": "סל", "url": "https://127.0.0.1:%d/cart/?to=%s" % (port, urllib.parse.quote(target, safe=""))}
+            row = collectors.probe_check(page, 5)
+            assert (row["ok"], row["fail"], row["status"], row["err"]) == (False, "http", 302, "redirected " + why)
+        other.settimeout(0.2)
+        with pytest.raises(socket.timeout):
+            other.accept()                                                # it never heard of the request
+    assert site.hits == []                                                # nor did the plain http server
+    same = "https://127.0.0.1:%d/" % port                                 # the same scheme and port: followed
+    row = collectors.probe_check({"name": "סל", "url": "https://127.0.0.1:%d/cart/?to=%s" % (
+        port, urllib.parse.quote(same, safe="")), "expect": "הוספה לסל"}, 5)
+    assert (row["ok"], row["status"]) == (True, 200)
 
 
 def test_a_redirect_from_http_to_https_of_the_same_host_is_followed(site, monkeypatch):
@@ -2047,6 +2123,13 @@ def https_site(tmp_path):
 
     class Page(http.server.BaseHTTPRequestHandler):
         def do_GET(self):
+            moved = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query).get("to")
+            if moved:                                                     # ?to=<address>: a redirect there
+                self.send_response(302)
+                self.send_header("Location", moved[0])
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
             body = "<html><body><button>הוספה לסל</button></body></html>".encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -2284,6 +2367,25 @@ def test_the_configuration_of_the_fake_has_a_public_fifth_page(site):
         ("בית", "/", True, True), ("קטגוריה", "/product-category/sofas/", True, True),
         ("מוצר", "/product/sample-sofa/", True, True), ("סל", "/cart/", True, True), ("אודות", "/about/", False, True)]
     assert all(collectors.probe_check(p, 2)["ok"] for p in pages)         # every one of them opens for anybody
+    # the home page has an "expect" (START-HERE asks for one), and it is on the home page only
+    assert [p.get("expect") for p in pages] == [HOME_TEXT, None, "הוספה לסל", None, None]
+    for page in site.use("shopify").config()["pages"][1:]:
+        assert collectors.probe_check(dict(page, expect=HOME_TEXT), 2)["fail"] == "content"
+
+
+def test_the_fake_site_on_a_port_that_is_taken_says_so_in_one_line(tmp_path):
+    config = tmp_path / "site_health.config.json"
+    with socket.socket() as taken:
+        taken.bind(("127.0.0.1", 0))
+        taken.listen()
+        port = taken.getsockname()[1]
+        done = subprocess.run([sys.executable, str(REFERENCE / "tests" / "fake_site.py"), str(port), str(config),
+                               "--platform", "shopify"], capture_output=True, encoding="utf-8", timeout=60)
+    assert (done.returncode, done.stdout) == (1, "") and "Traceback" not in done.stderr
+    assert done.stderr.splitlines() == [
+        "port %d cannot be opened (Address already in use). Another program may be using it: try another one, such as "
+        " python3 tests/fake_site.py %d %s --platform shopify" % (port, port + 1, config)]
+    assert not config.exists()                                            # nothing is written for a port that is not ours
 
 
 # ================================================================ 12. manage.py: the files for the owner
@@ -2341,20 +2443,43 @@ def test_install_sql_writes_one_file_that_installs_an_empty_database_and_runs_tw
             admin.execute('drop database if exists "%s" with (force)' % name)
 
 
-@pytest.mark.parametrize("change, message", [
-    ({"time_zone": None}, '"time_zone" is required: the time zone of the site\'s customers, such as Asia/Jerusalem'),
-    ({"time_zone": "Mars/Olympus"}, 'unknown "time_zone" Mars/Olympus'),
-    ({"site": "example.co.il"}, '"site" must be an absolute http(s) address'),
-    ({"pages": "all of them"}, '"pages" must be a list of pages'),
-    ({"pages": []}, 'exactly one page must have "home": true, found 0'),
+@pytest.mark.parametrize("change, message", [            # every case, against the database: test_sql.py
+    ({"time_zone": None}, 'sh_setup: "time_zone" is required: the time zone of the site\'s customers, such as '
+                          'Asia/Jerusalem'),
+    ({"time_zone": "Mars/Olympus"}, 'sh_setup: unknown "time_zone" Mars/Olympus'),
+    ({"site": "example.co.il"}, 'sh_setup: "site" must be an absolute http(s) address, got example.co.il'),
+    ({"off": ["sitemap", "speed"]}, 'sh_setup: "off" takes sitemap, real_users, catalogue or cert, got ["sitemap", "speed"]'),
+    ({"down_after": "2.5"}, 'invalid input syntax for type integer: "2.5"'),
+    ({"pages": "all of them"}, 'sh_setup: "pages" must be a list of pages'),
+    ({"pages": []}, 'sh_setup: exactly one page must have "home": true, found 0'),
     ({"pages": [{"name": "בית", "url": "https://example.co.il/", "home": True, "probe": True}]},
-     "the home page must be a probe page and a core page"),
+     "sh_setup: the home page must be a core page"),
+    ({"pages": [{"name": "בית", "url": "https://example.co.il/", "home": True, "core": True},
+                {"name": "סל", "url": "https://example.co.il/cart/", "probe": True}]},
+     "sh_setup: the home page must be a probe page"),
 ])
 def test_install_sql_refuses_a_configuration_the_database_would_refuse(site, tmp_path, change, message):
     source, out = tmp_path / "site_health.config.json", tmp_path / "install.sql"
     source.write_text(json.dumps(site.config(**change), ensure_ascii=False), encoding="utf-8")
     assert run_manage("install-sql", "--config", str(source), "--out", str(out)) == "%s: %s" % (source, message)
-    assert not out.exists()
+    assert sorted(path.name for path in tmp_path.iterdir()) == ["site_health.config.json"]       # nothing was written
+
+
+def test_install_sql_never_leaves_half_a_file(site, tmp_path, monkeypatch):
+    source, out = tmp_path / "site_health.config.json", tmp_path / "install.sql"
+    source.write_text(json.dumps(site.config(), ensure_ascii=False), encoding="utf-8")
+    out.write_text("the file of the last run\n", encoding="utf-8")
+    written = Path.write_text
+
+    def cut_short(path, text, *args, **kwargs):                           # the disk fills up halfway
+        written(path, text[: len(text) // 2], *args, **kwargs)
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(Path, "write_text", cut_short)
+    assert run_manage("install-sql", "--config", str(source), "--out", str(out)) == (
+        "%s cannot be written: No space left on device" % out)
+    assert out.read_text(encoding="utf-8") == "the file of the last run\n"         # the old file, whole
+    assert sorted(path.name for path in tmp_path.iterdir()) == ["install.sql", "site_health.config.json"]
 
 
 def test_install_sql_says_what_is_wrong_with_the_file_itself(tmp_path):

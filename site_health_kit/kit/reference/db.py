@@ -31,8 +31,9 @@ class DbError(Exception):
     viewer: it is either a fixed sentence of this file or the message the database itself sent.
     Connection details (host, user; never a password or a key) go to the log.
 
-    answered: True when the database ran the call and refused what it was given (bad data); False
-    when it was not reached, or failed for a reason that another call would meet as well."""
+    answered: True when the call was refused for what it carried (bad data), by the database or by
+    the driver before it was sent; False when the database was not reached, or the call failed for a
+    reason that another call would meet as well."""
 
     def __init__(self, text, answered=False):
         super().__init__(text)
@@ -105,26 +106,37 @@ def _rpc_postgres(dsn, fn, params):
         _thread.conn = psycopg.connect(dsn, autocommit=True, prepare_threshold=None, connect_timeout=TIMEOUT)
         return _thread.conn
 
+    connecting = True                                          # which step an error without a message comes from
     try:
         conn = getattr(_thread, "conn", None)
         reused = conn is not None and not conn.closed
         if not reused:
             conn = connect()
+        connecting = False
         try:
             return conn.execute(sql, values).fetchone()[0]
         except psycopg.OperationalError:
             if not (reused and conn.closed):
                 raise
-            return connect().execute(sql, values).fetchone()[0]    # an idle connection was dropped: once more
+            connecting = True
+            conn = connect()                                   # an idle connection was dropped: once more
+            connecting = False
+            return conn.execute(sql, values).fetchone()[0]
     except psycopg.OperationalError as e:
         log.warning("database call %s failed: %s", fn, e)       # the full text (host, user) stays in the log
         raise DbError(e.diag.message_primary or "database unreachable") from None
     except psycopg.Error as e:
+        if e.diag.message_primary:
+            # SQLSTATE classes 22, 23 and P0: a data exception, a broken constraint, a "raise exception"
+            raise DbError(e.diag.message_primary, answered=(e.sqlstate or "")[:2] in ("22", "23", "P0")) from None
         # Only what the database itself said is passed on. An error without such a message was raised on
-        # this side, and its text can quote the connection string with its password (a "%" in the
-        # password, quotes pasted around the address): it goes neither to the viewer nor to the log.
-        if not e.diag.message_primary:
+        # this side. While connecting, its text can quote the connection string with its password (a "%"
+        # in the password, quotes pasted around the address): it goes neither to the viewer nor to the log.
+        if connecting:
             log.warning("database call %s failed: %s (is DATABASE_URL well formed?)", fn, type(e).__name__)
             raise DbError("database call failed (%s): check DATABASE_URL" % type(e).__name__) from None
-        # SQLSTATE classes 22, 23 and P0: a data exception, a broken constraint, a "raise exception"
-        raise DbError(e.diag.message_primary, answered=(e.sqlstate or "")[:2] in ("22", "23", "P0")) from None
+        # Raised while the call was being sent: the driver refused one of its values (a NUL in a text, a
+        # value it cannot convert). That is the call's own fault, not the connection's.
+        log.warning("database call %s failed: %s (a value of the call cannot be sent)", fn, type(e).__name__)
+        raise DbError("database call failed (%s): the call carried a value the database cannot store"
+                      % type(e).__name__, answered=True) from None

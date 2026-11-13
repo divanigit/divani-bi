@@ -13,6 +13,8 @@ in exactly the shapes described in spec/05-api-contract.md. Use it to:
 
 Roles (what the real server injects):  /site  owner ·  /site?role=vendor  read-only
   /site?role=noalerts  read-only without alerts ·  /status?k=demo-share-token  share link
+Configuration: /site?hide=nowRum,certCard  puts those ids into SH_CONFIG.hide, as a real server does for
+  the parts that are off (nowRum = the real-user tile of "עכשיו", for a site without real-user measuring).
 Sessions: opening /site sets a mock session cookie. A data call without that cookie and without
   a valid k= answers 401, as a real server does (so a share page that forgets its token gets no data).
 Scenarios: incident (default) · ok · empty (fresh install, no data) · error (data source down)
@@ -333,17 +335,30 @@ def api_now(role):
 
 # ---------------------------------------------------------------- /api/site/drill
 
+def is_bucket(text):
+    """One of the two bucket formats of spec §5, and a real day or a real hour of one ('2026-13-45' is not)."""
+    if not BUCKET_RE.match(text):
+        return False
+    try:
+        dt.datetime.strptime(text, "%Y-%m-%d %H:00" if len(text) > 10 else "%Y-%m-%d")
+    except ValueError:
+        return False
+    return True
+
+
 def drill_request_ok(q):
-    """Spec §5.4: a missing or malformed parameter answers {"rows": []}. An empty value means "absent"."""
+    """Spec §5.4: a missing or malformed parameter answers {"rows": []}. An empty value means "absent".
+    The same rules as reference/server.py: an id is ASCII digits that fit a bigint; an alert has no bucket."""
     what, bucket = q.get("what"), q.get("bucket") or ""
-    if bucket and not BUCKET_RE.match(bucket):
+    if what == "alert":
+        aid = q.get("id") or ""
+        return aid.isascii() and aid.isdigit() and len(aid) <= 18
+    if bucket and not is_bucket(bucket):
         return False
     if what == "bucket":
         return bool(bucket)
     if what == "runs":
         return bool(q.get("url"))
-    if what == "alert":
-        return (q.get("id") or "").isdigit()
     return True
 
 
@@ -480,12 +495,14 @@ class H(BaseHTTPRequestHandler):
         m = re.search(r"mock_role=(owner|vendor|noalerts)\b", self.headers.get("Cookie", ""))
         return m.group(1) if m else None
 
-    def _page(self, role, share_key=""):
+    def _page(self, role, share_key="", hide=()):
         html = open(STATE["html"], encoding="utf-8").read()
         if "<!--SH_INJECT-->" not in html:
             return None
         cfg = {"siteLabel": "example.co.il", "brand": "DEMO", "shareKey": share_key, "downAfter": 1,
                "bucketNote": "עמוד הסל וקטגוריה תמיד איטיים יותר: הם לא נשמרים בזיכרון המטמון של האתר ונבנים מחדש בכל כניסה."}
+        if hide:
+            cfg["hide"] = list(hide)
         if role == "owner":
             cfg["links"] = [{"href": "#", "label": "מסך נוסף", "title": "דוגמה לכפתור נוסף"}]
             cfg["nav"] = [["g", "האתר"], ["a", "/site", "בריאות האתר"], ["a", "#", "מסך נוסף"]]
@@ -493,8 +510,8 @@ class H(BaseHTTPRequestHandler):
         inject = "<script>window.SH_CONFIG=%s;window.SH_ROLE=%s;</script>" % (json.dumps(cfg, ensure_ascii=False), json.dumps(r))
         return html.replace("<!--SH_INJECT-->", inject, 1)
 
-    def _send_page(self, role, share_key="", cookie=None):
-        html = self._page(role, share_key)
+    def _send_page(self, role, share_key="", cookie=None, hide=()):
+        html = self._page(role, share_key, hide)
         if html is None:
             return self._send(500, "the screen file has no <!--SH_INJECT--> marker in its <head>: %s" % STATE["html"],
                               "text/plain; charset=utf-8")
@@ -508,7 +525,9 @@ class H(BaseHTTPRequestHandler):
             role = q.get("role", "owner")
             if role not in ("owner", "vendor", "noalerts"):
                 role = "owner"
-            return self._send_page(role, cookie="mock_role=%s; Path=/; SameSite=Lax" % role)     # the mock's session
+            # ids of SH_CONFIG.hide; only plain names, so nothing from the address can reach the page as markup
+            hide = [h for h in (q.get("hide") or "").split(",") if re.fullmatch(r"[A-Za-z]{1,40}", h)]
+            return self._send_page(role, cookie="mock_role=%s; Path=/; SameSite=Lax" % role, hide=hide)  # the mock's session
         if path == "/status":
             if q.get("k") != SHARE_TOKEN:
                 return self._send(403, "<div dir='rtl' style='font-family:system-ui;padding:48px;text-align:center'>הקישור אינו תקין או שפג תוקפו.</div>", "text/html; charset=utf-8")
@@ -582,7 +601,8 @@ if __name__ == "__main__":
         httpd = ThreadingHTTPServer(("127.0.0.1", a.port), H)
     except OSError as e:
         print("port %d cannot be opened (%s). Another program is using it: try  python3 mock_server.py --port %d"
-              % (a.port, e.strerror or e, a.port + 1), file=sys.stderr)
+              "  and then: node check_screen.js http://127.0.0.1:%d" % (a.port, e.strerror or e, a.port + 1, a.port + 1),
+              file=sys.stderr)
         sys.exit(1)
     print("mock site-health backend: http://localhost:%d/site   (scenario: %s)" % (a.port, a.scenario), flush=True)
     try:

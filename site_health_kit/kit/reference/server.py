@@ -6,8 +6,9 @@ this file decides who may see what and turns failures into the statuses of spec 
     uvicorn server:app --host 0.0.0.0 --port 8000 --no-access-log     # one worker: each would start its own collectors
 
 The share token travels in the query string (spec §8.2), hence --no-access-log. If the flag is forgotten,
-this file still keeps query strings out of uvicorn's access log. Under another server program, turn its
-access log off.
+this file still keeps query strings out of uvicorn's access log, an encoded "?" (%3F) included. Never run
+a live service with --log-level trace: uvicorn then prints every request whole, outside the access log.
+Under another server program, turn its access log off.
 
 Environment: SH_PASS_OWNER (without it nobody can sign in), SH_PASS_STAFF, SH_PASS_VENDOR_<NAME>,
 SH_VENDOR_NOALERTS, SH_SHARE_TOKEN, SH_PROXY_HOPS, SH_SCREEN, SH_RUM_PER_MINUTE, SH_RUM_PER_DAY,
@@ -55,11 +56,14 @@ OPEN_PATHS = {"/login", "/logout", "/health", "/m"}          # answered before a
 DATA_PATHS = {"/api/site", "/api/site/now", "/api/site/drill"}
 OUTSIDER_PATHS = DATA_PATHS | {"/site", "/status"}           # all an outsider may GET; nothing else, no other method
 SITE_ALERT_KINDS = {"down", "slow", "silent", "cert"}        # the only alerts an outsider sees
+# Keys of SH_CONFIG that an outsider's page never carries: the menu and the extra buttons hold the
+# addresses of the owner's other screens, and the page source is the outsider's to read.
+OWNER_ONLY = ("nav", "links")
 
 MAX_FAILURES, FAILURE_WINDOW = 8, 600                        # wrong passwords and share tokens of one address, in seconds
 PROBE_FLOW = "בודק זמינות האתר"                              # the flow whose last run is "the last check"
 
-RUM_MAX_BYTES, RUM_MAX_PATH, RUM_PER_ADDRESS, RUM_BATCH, RUM_QUEUE = 1024, 300, 60, 50, 1000
+RUM_MAX_BYTES, RUM_MAX_PATH, RUM_PER_ADDRESS, RUM_BATCH, RUM_QUEUE = 1024, 120, 60, 50, 1000
 RUM_PER_MINUTE, RUM_PER_DAY = 300, 20000                     # rows stored for all addresses together, unless
                                                              # SH_RUM_PER_MINUTE / SH_RUM_PER_DAY say otherwise
 # Path segments that name an account, checkout, order or admin page: such a view is never stored.
@@ -75,6 +79,13 @@ RUM_CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 RUM_RUN = re.compile(r"[A-Za-z0-9_]+")
 RUM_HEX = re.compile(r"[0-9A-Fa-f]{16,}")
 RUM_UUID = re.compile(r"[0-9A-Fa-f]{8}(-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}")
+# A longer path is cut at RUM_MAX_PATH characters (a Hebrew slug, percent-encoded, is six characters a
+# letter). Then the end of the cut loses half an escape ("%D" or "%"), and the escapes of a character
+# whose UTF-8 bytes were cut off (a lead byte without all of its continuation bytes).
+RUM_ASCII = "".join(map(chr, range(0x21, 0x7f)))             # what a path keeps as it is; the rest is encoded
+RUM_HALF_ESCAPE = re.compile(r"%[0-9A-Fa-f]?\Z")
+RUM_HALF_CHARACTER = re.compile(r"(%[CDcd][0-9A-Fa-f]|%[Ee][0-9A-Fa-f](%[89ABab][0-9A-Fa-f])?"
+                                r"|%[Ff][0-7](%[89ABab][0-9A-Fa-f]){0,2})\Z")
 BUCKET = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}( [0-9]{2}:00)?")       # a day or an hour, as the charts name them
 
 TEXT_WRONG = "סיסמה שגויה"
@@ -260,7 +271,9 @@ def _client_ip(request):
     is SH_PROXY_HOPS entries from the right: 1 (the default) for one proxy, 2 where the host has two (its
     documentation says), 0 for no proxy at all, which uses the socket peer. Entries further left are
     whatever the client sent; counting by them would let anybody dodge the limits. An entry that is not
-    an IP address is not believed either: the socket peer is used. Never longer than 45 characters."""
+    an IP address is not believed either: the socket peer is used. When the peer is no IP address
+    either (a Unix socket; or uvicorn, which takes the peer from X-Forwarded-For when the request comes
+    from 127.0.0.1), the answer is "?": the text of a header is never stored or counted by."""
     hops = os.environ.get("SH_PROXY_HOPS", "1").strip()
     hops = int(hops) if hops.isascii() and hops.isdigit() else 1
     forwarded = [entry.strip() for entry in request.headers.get("x-forwarded-for", "").split(",") if entry.strip()]
@@ -268,8 +281,7 @@ def _client_ip(request):
         address = _address(forwarded[-min(hops, len(forwarded))])
         if address:
             return address
-    peer = request.client.host if request.client else "?"
-    return _address(peer) or peer[:45]
+    return _address(request.client.host if request.client and request.client.host else "") or "?"
 
 
 def _counted_as(ip):
@@ -353,7 +365,11 @@ def _screen_state():
 
 
 def _screen(config, viewer):
-    """The screen file, with this site's configuration and the viewer's role written in at the marker."""
+    """The screen file, with this site's configuration and the viewer's role written in at the marker.
+    An outsider's copy leaves out OWNER_ONLY: hiding the menu on the screen would not keep its
+    addresses out of the page source."""
+    if viewer.outsider:
+        config = {key: value for key, value in config.items() if key not in OWNER_ONLY}
     head, tail = _screen_parts()
     script = "<script>window.SH_CONFIG=%s;window.SH_ROLE=%s;</script>" % (
         _inline_json(config), _inline_json(viewer.screen_role))
@@ -479,11 +495,15 @@ def _start_collectors():
 
 class _NoQueryStrings(logging.Filter):
     """Cuts the query string off the request line that uvicorn's access log prints. The share token
-    travels in the query string (/status?k=...), and a secret does not belong in the host's log."""
+    travels in the query string (/status?k=...), and a secret does not belong in the host's log. The
+    line is cut at an encoded "?" as well: uvicorn prints the path encoded again, so "/status%3Fk=..."
+    (which the router reads as the path "/status?k=...") reaches the log as "/status%3Fk%3D...".
+    This covers the access log only: uvicorn's --log-level trace prints every request whole."""
+    QUERY = re.compile(r"\?|%3[Ff]")
 
     def filter(self, record):
         if isinstance(record.args, tuple):
-            record.args = tuple(arg.split("?", 1)[0] if isinstance(arg, str) else arg for arg in record.args)
+            record.args = tuple(self.QUERY.split(arg, 1)[0] if isinstance(arg, str) else arg for arg in record.args)
         return True
 
 
@@ -737,14 +757,17 @@ async def api_drill(request: Request):
         return _json({"error": "what?"}, 400)
     # A required parameter that is missing or malformed, and a bucket that is not a bucket, match nothing
     # (spec §5.4): the answer is known without asking the database. An id is a number that fits a bigint.
-    usable = {"fails": True, "bucket": bucket is not None, "runs": bool(url),
+    # A page or an address with a control character names nothing either, and the database could not
+    # even take it as a parameter (a NUL).
+    page = q.get("page") or None
+    usable = {"fails": page is None or _storable(page), "bucket": bucket is not None,
+              "runs": bool(url) and _storable(url),
               "alert": alert_id.isascii() and alert_id.isdigit() and len(alert_id) <= 18}[what]
     if not usable or (bucket and what != "alert" and not _is_bucket(bucket)):
         return _json({"rows": []})
     if what == "fails":
         p_from, p_to, _ = await _window(request)
-        rows = await rpc("sh_drill_fails", {"p_from": p_from, "p_to": p_to, "p_page": q.get("page") or None,
-                                            "p_bucket": bucket})
+        rows = await rpc("sh_drill_fails", {"p_from": p_from, "p_to": p_to, "p_page": page, "p_bucket": bucket})
     elif what == "bucket":
         rows = await rpc("sh_drill_bucket", {"p_bucket": bucket})
     elif what == "runs":
@@ -845,14 +868,26 @@ def _may_name_someone(decoded):
                for run in RUM_RUN.findall(decoded))
 
 
-def _storable(path):
-    """Whether the database can store the text: no control character (a NUL fails the whole batch it
-    travels in) and nothing that cannot be written as UTF-8 (half of a surrogate pair)."""
+def _storable(text):
+    """Whether the database can store the text, or take it as a parameter: no control character (a
+    NUL fails the whole batch it travels in) and nothing that cannot be written as UTF-8 (half of a
+    surrogate pair)."""
     try:
-        path.encode("utf-8")
+        text.encode("utf-8")
     except UnicodeError:
         return False
-    return not RUM_CONTROL.search(path)
+    return not RUM_CONTROL.search(text)
+
+
+def _cut_path(path):
+    """The path as it is stored: in the form a browser sends (a character outside printable ASCII
+    percent-encoded, so a row's path is never more bytes than characters), and at most RUM_MAX_PATH
+    characters. A cut never ends inside a "%XX" escape or inside a character that the escapes before
+    it begin; sh_rum_add cuts the same way."""
+    path = urllib.parse.quote(path, safe=RUM_ASCII)
+    if len(path) <= RUM_MAX_PATH:
+        return path
+    return RUM_HALF_CHARACTER.sub("", RUM_HALF_ESCAPE.sub("", path[:RUM_MAX_PATH]))
 
 
 async def _rum_row(request):
@@ -884,8 +919,9 @@ async def _rum_row(request):
     if name not in site.names and name.removeprefix("www.") not in site.hosts:
         return None
     path = re.split("[?#]", path, maxsplit=1)[0]
-    if len(path) > RUM_MAX_PATH or not _storable(path):
+    if not _storable(path):
         return None
+    # Judged whole, before the cut: what lies beyond the stored part may name a person or a private page.
     decoded = urllib.parse.unquote(path)         # compared decoded: a translated slug arrives percent-encoded
     if site.private.intersection(decoded.lower().split("/")) or not _storable(decoded) or _may_name_someone(decoded):
         return None
@@ -893,7 +929,7 @@ async def _rum_row(request):
         return None
     if not _rum_within_budget():                 # last: only a row that would be stored uses the budget up
         return None
-    return {"site": name, "path": path, "lcp_ms": round(lcp), "is_test": beacon.get("test") is True}
+    return {"site": name, "path": _cut_path(path), "lcp_ms": round(lcp), "is_test": beacon.get("test") is True}
 
 
 async def _rum_store(row):

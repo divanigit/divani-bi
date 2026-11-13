@@ -34,7 +34,7 @@ import sys
 import urllib.parse
 import zipfile
 from datetime import datetime, timezone
-from zoneinfo import ZoneInfo, available_timezones
+from zoneinfo import available_timezones
 
 import collectors
 import db
@@ -99,28 +99,138 @@ def init_db(args):
         print("Next: python3 manage.py setup site_health.config.json")
 
 
-def _config_problem(config):
-    """What sh_setup would refuse and can be told without a database, or None. The database has the
-    last word: rehearse the finished file on a scratch database (init-db --file)."""
-    site = urllib.parse.urlsplit(str(config.get("site") or ""))
-    if site.scheme not in ("http", "https") or not site.hostname:
-        return '"site" must be an absolute http(s) address'
-    zone = config.get("time_zone")
-    if not isinstance(zone, str) or not zone:
-        return '"time_zone" is required: the time zone of the site\'s customers, such as Asia/Jerusalem'
-    try:
-        ZoneInfo(zone)
-    except (ValueError, OSError, KeyError):     # unknown; unless this machine knows no time zone at all
-        if available_timezones():
-            return 'unknown "time_zone" %s' % zone
-    pages = config.get("pages")
-    if not isinstance(pages, list) or not all(isinstance(page, dict) for page in pages):
-        return '"pages" must be a list of pages'
-    homes = [page for page in pages if page.get("home") is True]
+def _jsonb(value):
+    """A JSON value as Postgres writes a jsonb value: ", " and ": " between the items, and the keys of
+    an object shortest first (as sh_setup's messages quote what they refuse)."""
+    if isinstance(value, dict):
+        keys = sorted(value, key=lambda key: (len(key.encode("utf-8")), key.encode("utf-8")))
+        return "{%s}" % ", ".join("%s: %s" % (json.dumps(key, ensure_ascii=False), _jsonb(value[key])) for key in keys)
+    if isinstance(value, list):
+        return "[%s]" % ", ".join(map(_jsonb, value))
+    return json.dumps(value, ensure_ascii=False)
+
+
+def _text(value):
+    """What Postgres's ->> gives for a value of the configuration: None for null (and for a key that
+    is not there), a string as it is, anything else as its JSON text."""
+    return value if value is None or isinstance(value, str) else _jsonb(value)
+
+
+class _Refused(Exception):
+    pass
+
+
+def _int(text):
+    """text::int, as Postgres reads it: or the error it raises."""
+    if not re.fullmatch(r"[ \t\n\r\v\f]*[+-]?[0-9]+[ \t\n\r\v\f]*", text):
+        raise _Refused('invalid input syntax for type integer: "%s"' % text)
+    if not -2 ** 31 <= int(text) < 2 ** 31:
+        raise _Refused('value "%s" is out of range for type integer' % text)
+    return int(text)
+
+
+def _bool(value):
+    """coalesce((page ->> key)::boolean, false), as Postgres reads it: or the error it raises."""
+    text = _text(value)
+    if text is None:
+        return False
+    word = text.strip(" \t\n\r\v\f").lower()
+    for spelling, meaning, shortest in (("true", True, 1), ("false", False, 1), ("yes", True, 1), ("no", False, 1),
+                                        ("on", True, 2), ("off", False, 2), ("1", True, 1), ("0", False, 1)):
+        if len(word) >= shortest and spelling.startswith(word):
+            return meaning
+    raise _Refused('invalid input syntax for type boolean: "%s"' % text)
+
+
+def _setup_refusal(config):
+    """The checks of sh_setup, in its order, without a database: raises _Refused with the message the
+    database would give. The database has the last word all the same: rehearse the finished file on a
+    scratch database (init-db --file)."""
+    def refuse(text):
+        raise _Refused("sh_setup: " + text)
+
+    def text(key, default=None):        # coalesce(p_config ->> key, default)
+        value = _text(config.get(key))
+        return default if value is None else value
+
+    def listed(key):                    # coalesce(p_config -> key, '[]') is a list: -> keeps a null
+        return key not in config or isinstance(config[key], list)
+
+    down_after = _int(text("down_after", "1"))          # cast where sh_setup declares it: before every check
+    if not re.match(r"https?://[^/: \t\n\r\v\f]", text("site", "").rstrip("/")):
+        refuse('"site" must be an absolute http(s) address, got %s' % text("site", "nothing"))
+    zone = text("time_zone", "")
+    if not zone:
+        refuse('"time_zone" is required: the time zone of the site\'s customers, such as Asia/Jerusalem')
+    known = available_timezones()
+    if known and zone not in known:     # a machine that knows no time zone at all leaves it to the database
+        refuse('unknown "time_zone" %s' % zone)
+    platform = text("platform", "other")
+    if platform not in ("woocommerce", "shopify", "other"):
+        refuse('"platform" must be woocommerce, shopify or other, got %s' % platform)
+    if down_after < 1:
+        refuse('"down_after" must be 1 or more, got %d' % down_after)
+    morning = text("morning", "07:30")
+    if not re.fullmatch(r"([01][0-9]|2[0-3]):[0-5][0-9]", morning):
+        refuse('"morning" must be a time such as 07:30, got %s' % morning)
+    if not listed("live_hosts") or not listed("path_labels"):
+        refuse('"live_hosts" and "path_labels" must be lists')
+    keep_days = text("keep_days", "100")
+    if not re.fullmatch(r"[3-9][0-9]|[1-3][0-9][0-9]|400", keep_days):
+        refuse('"keep_days" must be a whole number of days from 30 to 400, got %s' % keep_days)
+    if not listed("rum_hosts") or not listed("private_paths"):
+        refuse('"rum_hosts" and "private_paths" must be lists')
+    rum_hosts, private = config.get("rum_hosts", []), config.get("private_paths", [])
+    if any(not isinstance(host, str) or not re.fullmatch(r"[a-z0-9.-]+", host) for host in rum_hosts):
+        refuse('"rum_hosts" takes host names in lower case, such as staging.example.co.il, got %s' % _jsonb(rum_hosts))
+    if any(not isinstance(part, str) or not re.fullmatch(r"[^/?#\s]+", part) for part in private):
+        refuse('"private_paths" takes single path segments, such as checkout or its translated slug, got %s'
+               % _jsonb(private))
+    if not all(listed(key) for key in ("extra_hosts", "off", "hide", "nav", "links")):
+        refuse('"extra_hosts", "off", "hide", "nav" and "links" must be lists')
+    extra, off, hide = config.get("extra_hosts", []), config.get("off", []), config.get("hide", [])
+    if any(not isinstance(host, str) or not re.fullmatch(r"[a-z0-9.-]+", host) for host in extra):
+        refuse('"extra_hosts" takes host names in lower case, such as shop.example.co.il, got %s' % _jsonb(extra))
+    if any(part not in ("sitemap", "real_users", "catalogue", "cert") for part in off):
+        refuse('"off" takes sitemap, real_users, catalogue or cert, got %s' % _jsonb(off))
+    if any(not isinstance(card, str) for card in hide):
+        refuse('"hide" takes the ids of cards of the screen, such as slowCard, got %s' % _jsonb(hide))
+    if not isinstance(config.get("pages"), list):
+        refuse('"pages" must be a list of pages')
+
+    pages = []                          # (name, url, probe, core, home), as ->> and ::boolean read them
+    for page in config["pages"]:
+        page = page if isinstance(page, dict) else {}
+        pages.append((_text(page.get("name")), _text(page.get("url")),
+                      _bool(page.get("probe")), _bool(page.get("core")), _bool(page.get("home"))))
+    names = [name for name, *_ in pages if name is not None]
+    if len([name for name in names if name != ""]) < len(pages):
+        refuse('every page needs a "name"')
+    if len(set(names)) < len(pages):
+        refuse("page names must be unique")
+    bad = [name for name, url, *_ in pages if url is None or not re.match(r"https?://[^/\s]", url)]
+    if bad:
+        refuse('the "url" of a page must be an absolute http(s) address: %s' % ", ".join(bad))
+    homes = [page for page in pages if page[4]]
     if len(homes) != 1:
-        return 'exactly one page must have "home": true, found %d' % len(homes)
-    if not (homes[0].get("probe") is True and homes[0].get("core") is True):
-        return "the home page must be a probe page and a core page"
+        refuse('exactly one page must have "home": true, found %d' % len(homes))
+    if not any(page[2] for page in pages):
+        refuse('at least one page must have "probe": true')
+    if not homes[0][2]:
+        refuse("the home page must be a probe page")
+    if not homes[0][3]:
+        refuse("the home page must be a core page")
+    for name, url, *_ in pages:         # stored through sh_url, into a column that takes no null
+        if not re.match(r"[A-Za-z][A-Za-z0-9+.-]*://[^/?#\s]", url.strip(" ")):
+            raise _Refused('null value in column "url" of relation "sh_pages" violates not-null constraint')
+
+
+def _config_problem(config):
+    """The message sh_setup would refuse the configuration with, or None."""
+    try:
+        _setup_refusal(config)
+    except _Refused as refusal:
+        return str(refusal)
     return None
 
 
@@ -128,7 +238,7 @@ def install_sql(args):
     """One file for the SQL editor of the database: nothing here connects anywhere or holds a secret."""
     config = _config_file(args.config)
     problem = _config_problem(config)
-    if problem:
+    if problem:                                 # the database's own words, and nothing is written
         sys.exit("%s: %s" % (args.config, problem))
     text = json.dumps(config, ensure_ascii=False, indent=1)
     quote = "$sh_config$"                       # dollar quoting: the JSON goes in as it is, whatever it holds
@@ -154,7 +264,16 @@ def install_sql(args):
     ]
     out = pathlib.Path(args.out)
     body = "\n".join(parts)
-    out.write_text(body, encoding="utf-8")
+    part = out.with_name(out.name + ".part")    # written beside it, then put in its place: never half a file
+    try:
+        part.write_text(body, encoding="utf-8")
+        os.replace(part, out)
+    except OSError as e:
+        try:
+            part.unlink(missing_ok=True)
+        except OSError:
+            pass
+        sys.exit("%s cannot be written: %s" % (out, e.strerror or e))
     print("wrote %s: schema.sql, functions.sql and the configuration of %s (%d lines, %d KB, no secret in it)"
           % (out, config["site"], body.count("\n"), len(body.encode("utf-8")) // 1024 + 1))
     print("Rehearse it on a scratch database, twice:  DATABASE_URL=<a scratch database> python3 manage.py init-db "

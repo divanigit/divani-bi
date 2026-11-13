@@ -68,6 +68,14 @@ for path, body in found:
     with open(path, 'w', encoding='utf-8', newline='\n') as f:
         f.write(body)
 print('KIT OK: unpacked %d files into %s/ (kit version %s, build __BUILD__)' % (len(found), DEST, VERSION))
+kit, stray = {path for path, _ in found}, []
+for root, dirs, names in os.walk(DEST):
+    dirs[:] = sorted(d for d in dirs if d not in __SKIP_DIRS__)
+    stray += [p for p in (os.path.join(root, n).replace(os.sep, '/') for n in sorted(names))
+              if p not in kit and not p.endswith(__SKIP_EXT__)]
+if stray:
+    print('not part of the kit: ' + ', '.join(stray[:20]) + (' and %d more' % (len(stray) - 20) if len(stray) > 20 else '')
+          + '; remove them')
 # --- end unpack ---'''
 
 # One line, as the head prints it. It finds the script above inside the file and runs it; a missing
@@ -122,6 +130,11 @@ line that starts with `KIT NOT UNPACKED` and says why:
   sent again. Never recreate a file of the kit from memory.
 - *already holds another kit*: an older or newer kit is unpacked here. Do not remove it on your
   own: tell the owner which two versions there are and ask which one to work with.
+
+After `KIT OK`, a second line `not part of the kit: …; remove them` names files in
+`site-health-kit/` that this kit does not hold: left from an earlier unpack, or written there by
+hand. The unpack deleted nothing. Delete those files, so that nothing in the folder contradicts
+the kit; what you build goes into `site-health/`, never into `site-health-kit/`.
 
 **Step 2: read `site-health-kit/START-HERE.md`** completely, to its last line
 (`<!-- EOF START-HERE.md -->`), at most 150 lines per command. It tells you what else to read
@@ -217,7 +230,8 @@ def build():
         blocks.append("<!-- FILE: %s/%s sha256=%s -->\n%s%s\n%s%s\n<!-- END FILE -->\n" % (DEST, rel, digest, FENCE, lang, body, FENCE))
         toc.append("- `%s/%s` (%d lines)" % (DEST, rel, body.count("\n")))
     payload = "\n".join(blocks)
-    unpack = UNPACK.replace("__COUNT__", str(len(names)))
+    unpack = (UNPACK.replace("__COUNT__", str(len(names))).replace("__SKIP_DIRS__", repr(sorted(SKIP_DIRS)))
+              .replace("__SKIP_EXT__", repr(tuple(sorted(SKIP_EXT)))))
     head = (HEAD.replace("__UNPACK__", unpack).replace("__ONE_LINER__", ONE_LINER).replace("__TOC__", "\n".join(toc))
             .replace("__SIZE__", str(len(payload.encode("utf-8")) // 1024)).replace("__COUNT__", str(len(names)))
             .replace("__VERSION__", KIT_VERSION).replace("__BUILD__", build_id))
@@ -254,10 +268,32 @@ def check(names):
         if bad or got != sorted(names):
             raise SystemExit("round trip differs: %s / extra or missing: %s" % (bad, set(got) ^ set(names)))
 
-        # 2. the same version again is fine (it restores the kit's files); another version is refused untouched
+        if r.stdout.count("\n") != 1:
+            raise SystemExit("a fresh unpack printed more than its one line:\n" + r.stdout)
+
+        # 2. the same version again is fine (it restores the kit's files) and names, without deleting them,
+        #    the files that are not the kit's; what tests and screenshots leave behind is not named
+        leftovers = {"spec/04-old.md": "an older spec\n", "reference/notes.txt": "by hand\n",
+                     "reference/__pycache__/server.cpython-313.pyc": "", "shots/phone.png": "", "kit.log": ""}
+        for rel, body in leftovers.items():
+            os.makedirs(os.path.dirname(os.path.join(good, DEST, rel)), exist_ok=True)
+            with open(os.path.join(good, DEST, rel), "w", encoding="utf-8") as f:
+                f.write(body)
+        with open(os.path.join(good, DEST, "site_health.html"), "a", encoding="utf-8") as f:
+            f.write("a line added by hand\n")
         r = _unpack_in(good)
-        if r.returncode or not r.stdout.startswith("KIT OK"):
-            raise SystemExit("unpacking the same version a second time failed:\n" + r.stdout + r.stderr)
+        lines = r.stdout.splitlines()
+        named = "not part of the kit: %s/reference/notes.txt, %s/spec/04-old.md; remove them" % (DEST, DEST)
+        if r.returncode or len(lines) != 2 or not lines[0].startswith("KIT OK") or lines[1] != named:
+            raise SystemExit("unpacking the same version a second time did not restore the kit and name the stray "
+                             "files:\n" + r.stdout + r.stderr)
+        if (open(os.path.join(good, DEST, "site_health.html"), encoding="utf-8").read() != read("site_health.html")
+                or not all(os.path.exists(os.path.join(good, DEST, rel)) for rel in leftovers)):
+            raise SystemExit("the second unpack did not restore site_health.html, or deleted a file that is not the kit's")
+        for rel in leftovers:
+            os.remove(os.path.join(good, DEST, rel))
+
+        # another version is refused untouched
         for other in ('{"kit": "site-health-kit", "version": "0.9", "files": []}', '{"kit": "site-health-kit", "files": []}', "{"):
             with open(os.path.join(good, DEST, "MANIFEST.json"), "w", encoding="utf-8") as f:
                 f.write(other)
@@ -300,9 +336,9 @@ def check(names):
         if (r.returncode != 1 or not r.stderr.startswith("KIT NOT UNPACKED: no file named " + NAME)
                 or "Traceback" in r.stderr or os.listdir(renamed) != ["SITE_HEALTH_KIT (1).md"]):
             raise SystemExit("a renamed kit file is not explained:\n" + r.stdout + r.stderr)
-    print("round trip ok: %d files identical after unpacking; a second unpack of the same version works; another "
-          "version, %d damaged or cut copies and a renamed file are refused in one line and leave nothing behind"
-          % (len(names), len(broken)))
+    print("round trip ok: %d files identical after unpacking; a second unpack of the same version restores them and "
+          "names the files that are not the kit's; another version, %d damaged or cut copies and a renamed file are "
+          "refused in one line and leave nothing behind" % (len(names), len(broken)))
 
 
 if __name__ == "__main__":

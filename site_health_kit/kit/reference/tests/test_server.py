@@ -8,6 +8,7 @@ transport; skipped otherwise). The kit's own files are found as conftest.py says
 
     cd reference && python3 -m pytest -q tests/test_server.py
 """
+import contextlib
 import copy
 import hmac
 import json
@@ -59,6 +60,10 @@ SCREEN_CONFIG = {"siteLabel": "example.co.il", "brand": "", "homePage": "בית"
                  "downAfter": 1, "liveHosts": ["live"],
                  "pathLabels": [["/product-category/", "קטגוריה: "], ["/product/", "מוצר: "]], "bucketNote": "",
                  "hide": [], "nav": [], "links": []}
+# What an outsider's page carries: no menu and no extra buttons, which hold the addresses of the owner's other screens
+OUTSIDER_SCREEN = {key: value for key, value in SCREEN_CONFIG.items() if key not in ("nav", "links")}
+MENU = {"nav": [["g", "פנימי"], ["a", "https://intranet.example.co.il/sales-secret-dashboard", "מכירות"]],
+        "links": [{"href": "https://intranet.example.co.il/reports", "label": "דוחות", "title": "הורדת דוחות"}]}
 CONFIG = {"site": "https://example.co.il", "host": "example.co.il", "label": "example.co.il", "brand": "",
           "time_zone": "Asia/Jerusalem", "platform": "woocommerce", "down_after": 1, "morning": "07:30",
           "keep_days": 100, "off": [], "hide": [], "nav": [], "links": [], "extra_hosts": [], "rum_hosts": [],
@@ -461,7 +466,7 @@ def test_the_share_page_is_served_for_the_right_token_only(visit):
     client = visit(None)
     page = client.get("/status", params={"k": TOKEN})
     assert page.status_code == 200 and "set-cookie" not in page.headers
-    assert injected(page.text) == (dict(SCREEN_CONFIG, shareKey=TOKEN), {"share": True})
+    assert injected(page.text) == (dict(OUTSIDER_SCREEN, shareKey=TOKEN), {"share": True})
     for k in ("wrong", TOKEN + "x", TOKEN[:-1], TOKEN.upper(), ""):
         refused = client.get("/status", params={"k": k})
         assert refused.status_code == 403 and server.TEXT_BAD_LINK in refused.text and "SH_CONFIG" not in refused.text
@@ -820,9 +825,8 @@ def test_every_attempt_is_logged(fake, visit):
     assert fake.params("sh_login_log_add") == {"p_ip": "203.0.113.9", "p_ok": True, "p_who": "AGENCY",
                                                "p_ua": ("Phone/1.0 " + "x" * 300)[:200]}
     fake.calls.clear()
-    sign_in(visit(None), PASSWORDS["owner"])
-    assert fake.params("sh_login_log_add") == {"p_ip": "testclient", "p_ok": True, "p_who": "owner",
-                                               "p_ua": "testclient"}
+    sign_in(visit(None), PASSWORDS["owner"])                   # the test client's peer is the text "testclient"
+    assert fake.params("sh_login_log_add") == {"p_ip": "?", "p_ok": True, "p_who": "owner", "p_ua": "testclient"}
 
 
 @pytest.mark.parametrize("hops, forwarded, address", [
@@ -832,13 +836,14 @@ def test_every_attempt_is_logged(fake, visit):
     ("1", "6.6.6.6, 7.7.7.7, 198.51.100.7", "198.51.100.7"),
     ("2", "6.6.6.6, 198.51.100.7, 172.70.1.1", "198.51.100.7"),          # two proxies: the last but one
     ("2", "198.51.100.7", "198.51.100.7"),                     # fewer entries than proxies: the oldest there is
-    ("0", "6.6.6.6, 198.51.100.7", "testclient"),              # no proxy: the header is the client's word, not used
+    ("0", "6.6.6.6, 198.51.100.7", "?"),                       # no proxy: the header is the client's word, not used
     ("", "6.6.6.6, 198.51.100.7", "198.51.100.7"), ("many", "6.6.6.6, 198.51.100.7", "198.51.100.7"),
     ("-1", "6.6.6.6, 198.51.100.7", "198.51.100.7"),           # not a count: the default
-    (None, "", "testclient"), (None, None, "testclient"),
-    # the entry must be an address; anything else is not believed, and the socket peer is used
-    (None, "6.6.6.6, not-an-address", "testclient"), (None, "198.51.100.7.evil", "testclient"),
-    (None, "9.9.9.9, " + "B" * 6000 + "<script>alert(1)</script>", "testclient"),
+    (None, "", "?"), (None, None, "?"),
+    # the entry must be an address; anything else is not believed, and the socket peer is used. The peer
+    # of the test client is the text "testclient", no address either: "?", never the text
+    (None, "6.6.6.6, not-an-address", "?"), (None, "198.51.100.7.evil", "?"),
+    (None, "9.9.9.9, " + "B" * 6000 + "<script>alert(1)</script>", "?"),
     (None, "203.0.113.9:4711", "203.0.113.9"), (None, "[2001:DB8::1]:443", "2001:db8::1"),      # some hosts add the port
     (None, "2001:0db8:0000:0000:0000:0000:0000:0001", "2001:db8::1"),                           # one spelling per address
     (None, "::ffff:203.0.113.9", "203.0.113.9"), (None, "fe80::1%eth0", "fe80::1"),
@@ -863,8 +868,12 @@ def test_the_address_in_the_login_log_is_never_longer_than_45_characters():
     def request(peer, forwarded=""):
         return types.SimpleNamespace(headers={"x-forwarded-for": forwarded}, client=types.SimpleNamespace(host=peer))
 
-    assert server._client_ip(request("unix-socket-" + "x" * 100)) == ("unix-socket-" + "x" * 100)[:45]
+    assert server._client_ip(request("unix-socket-" + "x" * 100)) == "?"          # a peer that is no address
     assert server._client_ip(request("10.0.0.1", "y" * 5000)) == "10.0.0.1"
+    # what uvicorn makes of a request from 127.0.0.1: the peer is the header's last entry, whatever it holds
+    garbage = "B" * 6000 + "<script>alert(1)</script>"
+    assert server._client_ip(request(garbage, "9.9.9.9, " + garbage)) == "?"
+    assert server._client_ip(request("", "")) == "?" and server._client_ip(request(None, "")) == "?"
     longest = "0123:4567:89ab:cdef:0123:4567:89ab:cdef"
     assert server._client_ip(request("10.0.0.1", longest)) == "123:4567:89ab:cdef:123:4567:89ab:cdef"
     assert server._client_ip(types.SimpleNamespace(headers={}, client=None)) == "?"
@@ -880,7 +889,7 @@ def test_the_addresses_of_one_ipv6_network_count_as_one(fake, visit):
     assert logged[:3] == ["2001:db8:1:2::1", "2001:db8:1:2::2", "2001:db8:1:2::3"]      # the log keeps the address itself
     assert sign_in(visit(None), PASSWORDS["owner"], **{"X-Forwarded-For": "2001:db8:1:3::1"}).status_code == 303
     assert server._counted_as("2001:db8:1:2::1") == "2001:db8:1:2::/64"
-    assert server._counted_as("198.51.100.7") == "198.51.100.7" and server._counted_as("testclient") == "testclient"
+    assert server._counted_as("198.51.100.7") == "198.51.100.7" and server._counted_as("?") == "?"
 
 
 def test_signing_in_works_while_the_database_is_down(fake, visit):
@@ -1168,6 +1177,10 @@ def test_drill_passes_the_parameters_through(fake, visit):
     {"what": "bucket", "bucket": "٢٠٢٦-١١-١٣"}, {"what": "bucket", "bucket": "0000-01-01"},
     {"what": "bucket", "bucket": "2026-11-13'; drop table sh_probe; --"},
     {"what": "fails", "bucket": "last hour"}, {"what": "fails", "page": "סל", "bucket": "2026-11-13 09"},
+    # a page or an address with a control character: a NUL the database could not even take as a parameter
+    {"what": "fails", "page": "\x00"}, {"what": "fails", "page": "סל\x00"}, {"what": "fails", "page": "סל\n"},
+    {"what": "fails", "page": "\x7f", "bucket": "2026-11-13"},
+    {"what": "runs", "url": "https://example.co.il/\x00"}, {"what": "runs", "url": "https://example.co.il/\t"},
 ])
 def test_drill_with_a_missing_or_malformed_parameter_has_no_rows_and_asks_nothing(query, fake, visit):
     fake.failing.update(["sh_config", "sh_drill_fails", "sh_drill_bucket", "sh_drill_runs", "sh_drill_alert"])
@@ -1302,7 +1315,22 @@ def test_the_page_carries_the_role_of_the_viewer(role, visit):
     path = "/status" if role == "share" else "/site"
     config, screen_role = injected(send(visit, role, "GET", path).text)
     assert screen_role == SCREEN_ROLE[role]
-    assert config == (dict(SCREEN_CONFIG, shareKey=TOKEN) if role == "share" else SCREEN_CONFIG)
+    assert config == (dict(OUTSIDER_SCREEN, shareKey=TOKEN) if role == "share" else
+                      OUTSIDER_SCREEN if role in ("vendor", "noalerts") else SCREEN_CONFIG)
+
+
+@pytest.mark.parametrize("role", ["owner", "staff", "vendor", "noalerts", "share"])
+def test_the_owners_other_screens_never_reach_an_outsiders_page(role, fake, visit):
+    """The screen hides the menu from an outsider, but hiding is not enough: the page source is theirs to read."""
+    fake.answers["sh_config"] = dict(CONFIG, screen=dict(SCREEN_CONFIG, **MENU))
+    page = send(visit, role, "GET", "/status" if role == "share" else "/site").text
+    config, _ = injected(page)
+    if role in ("owner", "staff"):
+        assert (config["nav"], config["links"]) == (MENU["nav"], MENU["links"])
+    else:
+        assert "nav" not in config and "links" not in config
+        assert "intranet.example.co.il" not in page and "sales-secret-dashboard" not in page and "דוחות" not in page
+        assert {key: value for key, value in config.items() if key != "shareKey"} == OUTSIDER_SCREEN       # the rest is all there
 
 
 HOSTILE = {"siteLabel": 'x</script><script>alert("1")</script>', "brand": "a'b\"c\\d</SCRIPT >",
@@ -1310,24 +1338,31 @@ HOSTILE = {"siteLabel": 'x</script><script>alert("1")</script>', "brand": "a'b\"
            "nav": [["a", "/x", "]]>;window.SH_ROLE={};"]]}
 
 
-def test_a_hostile_configuration_value_cannot_leave_the_script(fake, visit):
+# the owner's page carries the hostile menu entry too; a vendor's carries everything but the menu
+HOSTILE_SEEN = {"owner": (HOSTILE, {}),
+                "vendor": ({key: value for key, value in HOSTILE.items() if key != "nav"}, {"readonly": True})}
+
+
+@pytest.mark.parametrize("role", HOSTILE_SEEN)
+def test_a_hostile_configuration_value_cannot_leave_the_script(role, fake, visit):
     fake.answers["sh_config"] = dict(CONFIG, screen=HOSTILE)
     plain = Scripts(SCREEN.read_text(encoding="utf-8")).found
-    page = visit("vendor").get("/site").text
+    page = visit(role).get("/site").text
     scripts = Scripts(page).found
     assert len(scripts) == len(plain) + 1 and scripts[1:] == plain          # one script more, the screen's own intact
     assert not re.search("[<\u2028\u2029]", scripts[0])                     # nothing that can end or break the script
-    assert injected(page) == (HOSTILE, {"readonly": True})                  # and the values arrive unchanged
+    assert injected(page) == HOSTILE_SEEN[role]                             # and the values arrive unchanged
     assert "<script>alert" not in page and page.count("</script>") == len(plain) + 1
 
 
 @pytest.mark.skipif(not shutil.which("node"), reason="needs node")
-def test_the_injected_script_is_javascript_that_yields_the_same_values(fake, visit):
+@pytest.mark.parametrize("role", HOSTILE_SEEN)
+def test_the_injected_script_is_javascript_that_yields_the_same_values(role, fake, visit):
     fake.answers["sh_config"] = dict(CONFIG, screen=HOSTILE)
-    script = Scripts(visit("vendor").get("/site").text).found[0]
+    script = Scripts(visit(role).get("/site").text).found[0]
     program = "var window = {};%s;process.stdout.write(JSON.stringify([window.SH_CONFIG, window.SH_ROLE]))" % script
     done = subprocess.run(["node", "-e", program], capture_output=True, encoding="utf-8", timeout=60, check=True)
-    assert json.loads(done.stdout) == [HOSTILE, {"readonly": True}]
+    assert json.loads(done.stdout) == list(HOSTILE_SEEN[role])
 
 
 def test_the_configuration_is_read_once_a_minute(fake, clock, visit):
@@ -1500,9 +1535,22 @@ def test_the_configured_host_may_be_written_with_www(fake, visit):
     ({"test": True}, {"is_test": True}), ({"test": "yes"}, {"is_test": False}),
     ({"site": "example.co.il"}, {"site": "example.co.il"}),                              # the site's host by its name
     ({"site": "www.example.co.il"}, {"site": "www.example.co.il"}),
-    ({"path": "/" + "x" * 299}, {"path": "/" + "x" * 299}),                              # 300 characters
-    ({"path": "/" + "ס" * 100 + "x" * 199}, {"path": "/" + "ס" * 100 + "x" * 199}),      # characters, not bytes
-    ({"path": "/" + "x" * 299 + "?utm_source=" + "y" * 200}, {"path": "/" + "x" * 299}), # the query string does not count
+    ({"path": "/" + "x" * 119}, {"path": "/" + "x" * 119}),                              # 120 characters: whole
+    ({"path": "/" + "x" * 299}, {"path": "/" + "x" * 119}),                              # longer: cut at 120
+    ({"path": "/" + "x" * 299 + "?utm_source=" + "y" * 200}, {"path": "/" + "x" * 119}), # the query string does not count
+    # a cut never ends inside an escape, nor inside a character whose escapes were cut off
+    ({"path": "/" + "x" * 117 + "%D7%A1"}, {"path": "/" + "x" * 117}),                   # "%D" would be left: not kept
+    ({"path": "/" + "x" * 118 + "%2F"}, {"path": "/" + "x" * 118}),                      # "%"
+    ({"path": "/" + "x" * 116 + "%D7%A1%D7%A4"}, {"path": "/" + "x" * 116}),             # "%D7": half a Hebrew letter
+    ({"path": "/" + "x" * 113 + "%E2%80%99abc"}, {"path": "/" + "x" * 113}),             # two thirds of a character
+    ({"path": "/" + "x" * 110 + "%F0%9F%98%80" + "z" * 20}, {"path": "/" + "x" * 110}),  # three quarters of one
+    ({"path": "/" + "x" * 113 + "%D7%A1zz"}, {"path": "/" + "x" * 113 + "%D7%A1"}),      # a whole one stays
+    ({"path": "/product/" + "%D7%A1%D7%A4%D7%94-" * 10},                                 # a long Hebrew slug, as sent
+     {"path": "/product/" + "%D7%A1%D7%A4%D7%94-" * 5 + "%D7%A1%D7%A4"}),
+    # stored in the form a browser sends: never more bytes than characters
+    ({"path": "/ספה/"}, {"path": "/%D7%A1%D7%A4%D7%94/"}), ({"path": "/a b/"}, {"path": "/a%20b/"}),
+    ({"path": "/" + "ס" * 100 + "x" * 199}, {"path": "/" + "%D7%A1" * 19}),
+    ({"path": "/" + "\U0001D400" * 50}, {"path": "/" + "%F0%9D%90%80" * 9}),            # 201 bytes: 109 characters
     ({"path": "/%D7%A7%D7%95%D7%A4%D7%94/"}, {"path": "/%D7%A7%D7%95%D7%A4%D7%94/"}),    # private only where configured
     ({"v": 1, "ttfb": 180, "nav": "navigate", "anything": {"else": [1]}}, {}),            # unknown fields are ignored
     # ordinary addresses that only look a little like an identifier
@@ -1526,7 +1574,6 @@ def test_what_is_stored(change, row, fake, visit):
     {"path": "/checkout/order-pay/77/"}, {"path": "/my-account/view-order/77/"}, {"path": "/12345/orders/abcdef"},
     {"path": "/wp-admin/index.php"}, {"path": "/admin"}, {"path": "/wp-login.php"},
     {"path": "/my-account/lost-password/"}, {"path": "/%63heckout/"}, {"path": "/shop/CHECKOUT%2Fpay"},
-    {"path": "/" + "x" * 300}, {"path": "/" + "ס" * 100 + "x" * 200},                    # 301 characters
     {"path": "product/sofa/"}, {"path": "https://example.co.il/x"}, {"path": ""}, {"path": None}, {"path": 7},
     {"lcp": 0}, {"lcp": 0.4}, {"lcp": 60001}, {"lcp": -5}, {"lcp": "2345"}, {"lcp": None}, {"lcp": True}, {"lcp": [1]},
     {"site": ""}, {"site": None}, {"site": "Live Site"}, {"site": "a" * 101}, {"site": "live\n"}, {"site": ["live"]},
@@ -1541,6 +1588,9 @@ def test_what_is_stored(change, row, fake, visit):
     {"path": "/t/aB3dE5gH7jK9mN1pQ3sT5vW7/"},                                            # 24 letters and digits
     {"path": "/t/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.abc/"},
     {"path": "/t/%61B3dE5gH7jK9mN1pQ3sT5vW7/"},                                          # the same, partly encoded
+    # judged whole: what lies beyond the 120 characters that would be kept counts all the same
+    {"path": "/" + "x" * 130 + "/someone@example.com/"}, {"path": "/" + "x" * 125 + "/checkout/"},
+    {"path": "/" + "x" * 125 + "/5f2a9c1e7b3d4a6f/"},
     # a path the database could not store, or that is no address of a page
     {"path": "/batch/1\x00"}, {"path": "/a\nb/"}, {"path": "/a\x7fb/"}, {"path": "/a\x1fb/"}, {"path": "/a%00b/"},
     {"path": "/half/\ud83d/"},                                                          # half a surrogate pair
@@ -1560,7 +1610,7 @@ def test_what_is_dropped(change, fake, visit):
 def test_the_private_paths_of_the_configuration_are_never_stored(path, kept, fake, visit):
     fake.answers["sh_config"] = dict(CONFIG, private_paths=["קופה", "My-Cart"])
     beacon(visit(None), dict(BEACON, path=path), **ORIGIN)
-    assert [row["path"] for row in stored(fake)] == [path] * kept
+    assert [row["path"] for row in stored(fake)] == [urllib.parse.quote(path)] * kept     # stored as a browser sends it
 
 
 @pytest.mark.parametrize("body", [b"", b"not json", b"[1]", b"null", b'"x"', b'{"site":"live","path":"/","lcp":NaN}',
@@ -1993,7 +2043,7 @@ def test_db_without_configuration(monkeypatch):
         REAL_RPC("sh_ping")
 
 
-def test_db_over_a_postgres_connection(request, monkeypatch):
+def test_db_over_a_postgres_connection(request, monkeypatch, caplog):
     try:
         url = request.getfixturevalue("database")              # conftest.py: a scratch database with the kit's SQL
     except (Exception, pytest.exit.Exception) as e:            # this file alone needs no Postgres: skip, do not stop
@@ -2023,6 +2073,12 @@ def test_db_over_a_postgres_connection(request, monkeypatch):
         with pytest.raises(db.DbError) as error:                           # a NUL: the database refuses this data
             REAL_RPC("sh_rum_add", {"p_rows": [{"site": "live", "path": "/a\x00", "lcp_ms": 5, "is_test": False}]})
         assert error.value.answered is True and "\x00" not in str(error.value)
+        with caplog.at_level(logging.DEBUG), pytest.raises(db.DbError) as error:      # a NUL in a plain parameter:
+            REAL_RPC("sh_drill_fails", dict(span, p_page="סל\x00", p_bucket=None))     # the driver refuses to send it
+        assert str(error.value) == ("database call failed (DataError): the call carried a value the database cannot "
+                                    "store") and error.value.answered is True
+        assert "DATABASE_URL" not in str(error.value) and "DATABASE_URL" not in caplog.text       # not the address's fault
+        assert REAL_RPC("sh_ping") == "ok" and db._thread.conn is conn     # nor the connection's
 
         class Dropped:                                                     # a kept connection the server has closed
             closed = False
@@ -2087,12 +2143,16 @@ def test_the_access_log_never_holds_a_query_string():
         access.info('%s - "%s %s HTTP/%s" %d', "203.0.113.9:4711", "GET", "/status?k=" + TOKEN, "1.1", 200)
         access.info('%s - "%s %s HTTP/%s" %d', "203.0.113.9:4711", "GET", "/api/site/now?h=24&k=%s&x=?" % TOKEN, "1.1", 200)
         access.info('%s - "%s %s HTTP/%s" %d', "203.0.113.9:4711", "GET", "/site", "1.1", 303)
+        # "/status%3Fk=..." is the path "/status?k=..." to the router, and uvicorn prints it encoded again
+        access.info('%s - "%s %s HTTP/%s" %d', "203.0.113.9:4711", "GET", "/status%3Fk%3D" + TOKEN, "1.1", 303)
+        access.info('%s - "%s %s HTTP/%s" %d', "203.0.113.9:4711", "GET", "/status%3fk%3d" + TOKEN, "1.1", 303)
     finally:
         access.removeHandler(handler)
         access.setLevel(level)
     assert [record.getMessage() for record in records] == [
         '203.0.113.9:4711 - "GET /status HTTP/1.1" 200', '203.0.113.9:4711 - "GET /api/site/now HTTP/1.1" 200',
-        '203.0.113.9:4711 - "GET /site HTTP/1.1" 303']
+        '203.0.113.9:4711 - "GET /site HTTP/1.1" 303', '203.0.113.9:4711 - "GET /status HTTP/1.1" 303',
+        '203.0.113.9:4711 - "GET /status HTTP/1.1" 303']
     assert len([f for f in access.filters if isinstance(f, server._NoQueryStrings)]) == 1
     with TestClient(server.app):                               # starting the server does not add it twice
         pass
@@ -2119,12 +2179,13 @@ def test_the_plain_start_command_keeps_the_share_token_out_of_the_log(tmp_path):
                     assert process.poll() is None and time.time() < deadline, "the server did not start"
                     time.sleep(0.1)
             seen = [status_of(base + path) for path in (
-                "/status?k=" + TOKEN, "/api/site/now?h=24&k=" + TOKEN, "/site?k=" + TOKEN, "/status?k=wrong-" + TOKEN)]
+                "/status?k=" + TOKEN, "/api/site/now?h=24&k=" + TOKEN, "/site?k=" + TOKEN, "/status?k=wrong-" + TOKEN,
+                "/status%3Fk=" + TOKEN, "/status%3fk%3d" + TOKEN)]          # an encoded "?": no route, and no token in the log
         finally:
             process.terminate()
             process.wait(30)
     log = log_file.read_text(encoding="utf-8", errors="replace")
-    assert seen == [502, 502, 303, 403]                        # no database here: the right token gets as far as that
+    assert seen == [502, 502, 303, 403, 303, 303]              # no database here: the right token gets as far as that
     assert '"GET /status HTTP/1.1" 502' in log and '"GET /api/site/now HTTP/1.1" 502' in log     # the log is on,
     assert '"GET /site HTTP/1.1" 303' in log and '"GET /status HTTP/1.1" 403' in log
     assert TOKEN not in log and "k=" not in log                                                  # without the token
@@ -2139,28 +2200,48 @@ CHECK_ENV = {"SH_PASS_VENDOR_CHECK": PASSWORDS["vendor"], "SH_PASS_VENDOR_CHECK_
              "SH_SHARE_TOKEN": TOKEN, "SH_PASS_OWNER": PASSWORDS["owner"]}
 
 
-@pytest.fixture
-def live(fake):
+@contextlib.contextmanager
+def serving(**options):
     """The reference server on a real socket, inside this process: its database is the fake of these tests.
-    Yields its address."""
+    Yields its address. `options`: settings of uvicorn.Config."""
     import uvicorn
 
     listener = socket.socket()
     listener.bind(("127.0.0.1", 0))
-    # proxy_headers off: for a client on 127.0.0.1 uvicorn would otherwise take the client's address from
-    # X-Forwarded-For by itself, and "no proxy in front" could not be told from "one proxy in front"
-    running = uvicorn.Server(uvicorn.Config(server.app, log_config=None, access_log=False, lifespan="off",
-                                            proxy_headers=False))
+    running = uvicorn.Server(uvicorn.Config(server.app, log_config=None, access_log=False, lifespan="off", **options))
     thread = threading.Thread(target=running.run, kwargs={"sockets": [listener]}, daemon=True)
     thread.start()
-    deadline = time.time() + 30
-    while not running.started:
-        assert time.time() < deadline and thread.is_alive(), "the server did not start"
-        time.sleep(0.01)
-    yield "http://127.0.0.1:%d" % listener.getsockname()[1]
-    running.should_exit = True
-    thread.join(30)
-    listener.close()
+    try:
+        deadline = time.time() + 30
+        while not running.started:
+            assert time.time() < deadline and thread.is_alive(), "the server did not start"
+            time.sleep(0.01)
+        yield "http://127.0.0.1:%d" % listener.getsockname()[1]
+    finally:
+        running.should_exit = True
+        thread.join(30)
+        listener.close()
+
+
+@pytest.fixture
+def live(fake):
+    # proxy_headers off: for a client on 127.0.0.1 uvicorn would otherwise take the client's address from
+    # X-Forwarded-For by itself, and "no proxy in front" could not be told from "one proxy in front"
+    with serving(proxy_headers=False) as address:
+        yield address
+
+
+def test_an_entry_that_uvicorn_believes_is_never_stored_as_an_address(fake):
+    """uvicorn's default start believes X-Forwarded-For from 127.0.0.1 (a proxy on the same machine): the
+    peer the server sees is then the header's last entry, whatever it holds. The login log gets "?"."""
+    garbage = "B" * 6000 + "<script>alert(1)</script>"
+    with serving() as base:
+        request = urllib.request.Request(base + "/login", data=b"p=a-guess", headers={
+            "X-Forwarded-For": "9.9.9.9, " + garbage, "Content-Type": "application/x-www-form-urlencoded"})
+        with pytest.raises(urllib.error.HTTPError) as refused:
+            urllib.request.build_opener(urllib.request.ProxyHandler({})).open(request, timeout=20)
+    assert refused.value.code == 401
+    assert [params["p_ip"] for fn, params in fake.calls if fn == "sh_login_log_add"] == ["?"]
 
 
 def check_access(base, *flags, **env):
@@ -2182,6 +2263,7 @@ def replace_route(path, handler, monkeypatch):
 
 def test_check_access_passes_against_the_reference_server(live, fake):
     assert fake.answer("sh_drill_alert", {"p_id": 41})[0]["sent"]          # there is something to hide
+    fake.answers["sh_config"] = dict(CONFIG, screen=dict(SCREEN_CONFIG, **MENU))      # and a menu of other screens
     code, output = check_access(live, **CHECK_ENV)
     assert code == 0, output
     assert failures(output) == [] and re.search(r"\n\d\d passed, 0 failed\n", output)
@@ -2198,8 +2280,12 @@ def test_check_access_passes_against_the_reference_server(live, fake):
                  "ok    share link: a wrong token answers 403 and shows nothing",
                  "ok    vendor without alerts: both alert lists are empty",
                  "ok    vendor: sees none of the alerts of other kinds that the owner sees",
-                 "ok    share link: with the token even the owner gets what the link shows, not more"):
+                 "ok    share link: with the token even the owner gets what the link shows, not more",
+                 "ok    vendor: the page carries no nav and no links (the owner's other screens)",
+                 "ok    vendor without alerts: the page carries no nav and no links (the owner's other screens)",
+                 "ok    share link: the page carries no nav and no links (the owner's other screens)"):
         assert line in output.splitlines(), line
+    assert "note  the owner's page has no menu" not in output              # the check was seen at work
     assert "sh_alert_ack" not in fake.names() and "sh_rum_add" not in fake.names()       # it changed nothing
     assert len(server._failures) == 2                          # one wrong password, one wrong token
     for secret in (*PASSWORDS.values(), TOKEN, TOKEN[:-1], "sh_session=", server._token("agency-pass-03", expiry(30))):
@@ -2219,6 +2305,8 @@ def test_check_access_takes_ready_cookies(live, visit):
     code, output = check_access(live, SH_SHARE_TOKEN=TOKEN, **cookies)
     assert code == 0, output
     assert "the session cookie is HttpOnly" not in output      # no sign-in was seen, so there is nothing to say of it
+    assert ("note  the owner's page has no menu (nav) and no extra buttons (links) either, so \"carries no nav and no "
+            "links\" could not be seen at work") in output.splitlines()     # this site has no other screens
 
 
 @pytest.mark.parametrize("flags, env, said", [
@@ -2290,6 +2378,10 @@ BROKEN = {
                                       "nobody: POST /m answers 204 with an empty body (not a beacon)"),
     "/health asks for a session": (lambda m: m.setattr(server, "OPEN_PATHS", server.OPEN_PATHS - {"/health"}),
                                    "nobody: GET /health answers 200 with ok, db and last_probe_age_sec"),
+    "outsiders get the owner's menu": (
+        lambda m: (m.setattr(server, "OWNER_ONLY", ()),
+                   m.setitem(db.rpc.answers, "sh_config", dict(CONFIG, screen=dict(SCREEN_CONFIG, **MENU)))),
+        "vendor: the page carries no nav and no links (the owner's other screens)"),
     "an answer without the headers": (
         lambda m: m.setattr(server, "SECURITY_HEADERS", {"X-Robots-Tag": "noindex"}),
         "headers: GET /api/site carries X-Robots-Tag, Referrer-Policy, X-Frame-Options and X-Content-Type-Options"),
@@ -2395,17 +2487,42 @@ def test_without_the_kit_the_run_ends_with_one_line_that_names_sh_kit_dir(reposi
     assert code == 2 and "were not found in %s. Set SH_KIT_DIR" % (tmp_path / "nowhere") in output
 
 
+def _refused_by_the_scratch_server(**changes):
+    """SH_TEST_ADMIN_URL with `changes` (a wrong password, a database that is not there), when the server of
+    these tests answers and refuses it; else None (no server here, or one that lets anybody in)."""
+    from psycopg.conninfo import make_conninfo
+    import psycopg
+
+    address = make_conninfo(conftest.ADMIN_URL, **changes)
+    try:
+        psycopg.connect(conftest.ADMIN_URL, connect_timeout=5).close()
+    except psycopg.Error:
+        return None
+    try:
+        psycopg.connect(address, connect_timeout=5).close()
+    except psycopg.Error:
+        return address
+    return None
+
+
 @pytest.mark.parametrize("address, where", [
     ("postgresql://postgres:TopSecretPw@127.0.0.1:9/postgres", "127.0.0.1:9"),
     ("postgresql://postgres:TopSecretPw@127.0.0.1:9/postgres?connect_timeout=2", "127.0.0.1:9"),
     ("postgresql://postgres:My%TopSecretPw@127.0.0.1:9/postgres", "an address that is not a connection string"),
+    # a server answers there, and refuses: the same one line
+    (lambda: _refused_by_the_scratch_server(password="TopSecretPw-wrong"), None),
+    (lambda: _refused_by_the_scratch_server(dbname="sh_no_such_database"), None),
 ])
 def test_without_a_postgres_the_run_ends_with_one_line_and_no_password(address, where):
+    if callable(address):
+        address, where = address(), conftest._where(conftest.ADMIN_URL)
+        if address is None:
+            pytest.skip("no scratch Postgres here that refuses a wrong password")
     code, output = run_pytest(REFERENCE, "tests/test_sql.py", SH_TEST_ADMIN_URL=address)
     assert code == 2, output[-2000:]
-    assert ("No Postgres answers at SH_TEST_ADMIN_URL (%s). Start one, or set SH_TEST_ADMIN_URL to a server where the "
-            "tests may create and drop a scratch database; see \"Running the tests\" in reference/README.md." % where
-            ) in output
+    assert ("No usable Postgres at SH_TEST_ADMIN_URL (%s): no answer, or the sign-in was refused. Start one, or set "
+            "SH_TEST_ADMIN_URL to a server where the tests may create and drop a scratch database; see \"Running the "
+            "tests\" in reference/README.md." % where) in output
     assert "TopSecretPw" not in output and "Traceback" not in output and "password" not in output
     assert len(output.strip().splitlines()) <= 3               # not one traceback per test
 
@@ -2414,5 +2531,5 @@ def test_the_server_tests_alone_need_no_postgres():
     code, output = run_pytest(REFERENCE, "tests/test_server.py", "-k", "test_db_over_a_postgres_connection or test_health",
                               "-rs", SH_TEST_ADMIN_URL="postgresql://postgres:TopSecretPw@127.0.0.1:9/postgres")
     assert code == 0 and re.search(r"\n\d+ passed, 1 skipped", output), output[-2000:]
-    assert "no scratch Postgres database: No Postgres answers at SH_TEST_ADMIN_URL (127.0.0.1:9)" in output
+    assert "no scratch Postgres database: No usable Postgres at SH_TEST_ADMIN_URL (127.0.0.1:9)" in output
     assert "TopSecretPw" not in output

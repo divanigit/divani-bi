@@ -3,8 +3,8 @@
 
      node check_screen.js                                # against the mock:  http://127.0.0.1:8787
      node check_screen.js http://127.0.0.1:8000 --cookie "name=value"
-                                                         # your real server; the session cookie of a signed-in
-                                                         # viewer (owner or vendor)
+                                                         # your real server; the session cookie of the throwaway
+                                                         # check vendor (OWNER-STEPS.md step 5), never the owner's
      node check_screen.js <url> --path "/status?k=<token>"
                                                          # another page than /site, for example the share link
                                                          # of a real server (it needs no cookie)
@@ -18,10 +18,12 @@
         failed reads, the sequence guard, both timers, the alert bar, every click, the date
         range, colours against the thresholds, print, roles, the menu button, downAfter,
         texts with markup in them.                                                         Any server.
-     C. Scenarios, roles and sessions of the mock (incident, ok, empty, error, hostile).   Mock only.
+     C. Scenarios, roles, sessions and ?hide= of the mock (incident, ok, empty, error, hostile). Mock only.
 
    The test only reads from the server: groups A and C send GET calls (C also deletes alerts, in
    the mock), and every call of group B is answered inside the browser and never reaches the server.
+   A check that breaks (a click that cannot happen, a sheet that does not close) is one FAIL line,
+   and the run goes on to its summary "N passed, M failed".
    Needs Playwright 1.45 or newer. Exit code 0 = every check passed, 1 = at least one failed,
    2 = the test could not run. */
 'use strict';
@@ -39,14 +41,20 @@ const NA = 'הנתון לא זמין כרגע';
 const CFG = { api: '/api', loginPath: '/login', homePage: 'בית', here: '/site' };
 
 let failed = 0, passed = 0;
+let s = null, p = null, sh = null;        // the page under test (each group opens its own), the last sheet read
 function check(name, cond, extra) { if (cond) { passed++; console.log('ok    ' + name); } else { failed++; console.log('FAIL  ' + name + (extra != null && extra !== '' ? '  → ' + String(extra).slice(0, 300) : '')); } }
-/* one group of checks; a crash inside it is one failed check, and the other groups still run */
-async function block(name, fn) { try { await fn(); } catch (e) { check(name + ': ran to its end', false, String(e && e.message || e).split('\n')[0]); } }
+const firstLine = (e) => String(e && e.message || e).split('\n')[0];
+/* one group of checks; a crash inside it is one failed check, its page is closed, and the other groups still run */
+async function block(name, fn) {
+  try { await fn(); } catch (e) { check(name + ': ran to its end', false, firstLine(e) + '  (the rest of this group did not run)'); }
+  if (s) await s.ctx.close().catch(() => {});
+}
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const until = async (fn, ms = 5000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await fn()) return true; await sleep(25); } return false; };
 
 /* ---------- reading the page ---------- */
-const txt = (page, sel) => page.evaluate((s) => { const e = document.querySelector(s); return e ? e.textContent : null; }, sel);
+/* a missing element reads as a text that no check expects, so the check fails instead of the run */
+const txt = (page, sel) => page.evaluate((s) => { const e = document.querySelector(s); return e ? e.textContent : '(no element ' + s + ')'; }, sel);
 const texts = (page, sel) => page.evaluate((s) => Array.prototype.map.call(document.querySelectorAll(s), (e) => e.textContent), sel);
 const count = (page, sel) => page.evaluate((s) => document.querySelectorAll(s).length, sel);
 const visible = (page, sel) => page.evaluate((s) => { const e = document.querySelector(s); if (!e) return false; const r = e.getBoundingClientRect(); return getComputedStyle(e).display !== 'none' && r.width > 0 && r.height > 0; }, sel);
@@ -54,14 +62,41 @@ const shown = (page, sel) => page.evaluate((s) => Array.prototype.filter.call(do
 const css = (page, sel, prop) => page.evaluate(([s, k]) => { const e = document.querySelector(s); return e ? getComputedStyle(e)[k] : null; }, [sel, prop]);
 /* the screen sets overflow-x:hidden on html and body, so the root never scrolls: an element that
    is too wide shows only in the body's own scroll width */
+const rgbSum = (c) => { const m = String(c).match(/\d+/g); return m ? +m[0] + +m[1] + +m[2] : -1; };
 const noOverflow = (page) => page.evaluate(() => document.body.scrollWidth <= window.innerWidth + 1);
 const settle = (page) => page.waitForFunction(() => !document.body.classList.contains('loading') && document.querySelectorAll('#verdict .vbox').length === 4 && !/טוען…/.test(document.getElementById('now').textContent), null, { timeout: 15000 }).catch(() => {});
-const sheetOn = (page) => page.evaluate(() => document.getElementById('dov').classList.contains('on'));
+const sheetOn = (page) => page.evaluate(() => document.getElementById('dov').classList.contains('on')).catch(() => false);
 const sheetReady = (page) => page.waitForFunction(() => document.getElementById('dov').classList.contains('on') && !/טוען…/.test(document.getElementById('dbody').textContent), null, { timeout: 5000 }).catch(() => {});
-const closeSheet = async (page) => { if (await sheetOn(page)) await page.keyboard.press('Escape'); };
+/* closes the sheet without the page's help: after a failed check, so that the next steps still run */
+const shut = (page) => page.evaluate(() => { document.getElementById('dov').classList.remove('on'); document.body.style.overflow = ''; }).catch(() => {});
+const escapeFailed = new WeakSet();
+const closeSheet = async (page) => {
+  if (!(await sheetOn(page))) return;
+  await page.keyboard.press('Escape');
+  if (!(await sheetOn(page))) return;
+  if (!escapeFailed.has(page)) { escapeFailed.add(page); check('Escape closes the sheet (between two steps)', false, 'it stayed open; the test closed it itself and goes on'); }
+  await shut(page);
+};
+/* before a click: a sheet or the menu that is still open (a close that failed) would swallow the click.
+   It is one failed check, and the test closes it so that the click can still happen. */
+async function unblock(page, sel) {
+  const left = await page.evaluate((q) => {
+    let t = null; try { t = document.querySelector(q); } catch (e) { /* not a CSS selector */ }
+    const out = [];
+    [['dov', 'a sheet'], ['shov', 'the menu']].forEach(([id, what]) => {
+      const o = document.getElementById(id);
+      if (o && o.classList.contains('on') && !(t && o.contains(t))) { o.classList.remove('on'); document.body.style.overflow = ''; out.push(what); }
+    });
+    return out;
+  }, sel).catch(() => []);
+  if (left.length) check('nothing is left open before the click on ' + sel, false, left.join(' and ') + ' was still open; the test closed it');
+}
 /* what the open sheet shows; a closed sheet reads as empty, so a click that opened nothing cannot pass on old content */
 const sheet = (page) => page.evaluate(() => document.getElementById('dov').classList.contains('on') ? { title: document.getElementById('dttl').textContent, body: document.getElementById('dbody').textContent, rows: document.querySelectorAll('#dbody tbody tr').length, items: document.querySelectorAll('#dbody li').length } : { title: '', body: '', rows: 0, items: 0 });
-const tiles = (page, sel) => page.evaluate((s) => Array.prototype.map.call(document.querySelectorAll(s), (b) => { const g = (c) => { const e = b.querySelector(c); return e ? e.textContent : ''; }; const d = b.querySelector('.dot'); return { k: g('.k'), v: g('.v'), m: g('.m'), dot: d ? d.className.replace('dot ', '') : '' }; }), sel);
+/* a tile that is not there reads as an empty tile, so a check of t[3] fails instead of crashing */
+const NOTILE = Object.freeze({ k: '', v: '', m: '', dot: '' });
+const padded = (a) => new Proxy(a, { get: (o, k) => (typeof k === 'string' && /^\d+$/.test(k) && !(k in o) ? NOTILE : o[k]) });
+const tiles = (page, sel) => page.evaluate((s) => Array.prototype.map.call(document.querySelectorAll(s), (b) => { const g = (c) => { const e = b.querySelector(c); return e ? e.textContent : ''; }; const d = b.querySelector('.dot'); return { k: g('.k'), v: g('.v'), m: g('.m'), dot: d ? d.className.replace('dot ', '') : '' }; }), sel).then(padded);
 async function scenario(name) { const r = await fetch(BASE + '/__scenario?name=' + name).catch(() => null); if (!r || !r.ok) return false; const j = await r.json().catch(() => null); return !!(j && j.mock === 'site-health-kit'); }
 
 /* ---------- canned answers (group B): the test plays the backend ---------- */
@@ -86,7 +121,7 @@ async function hostileWalk(s, who) {
     Object.keys(worst).forEach((k) => { worst[k] = Math.max(worst[k], x[k]); });
   };
   await p.click('#explbtn');
-  await p.click('#alertbar .ahead').catch(() => {});
+  await p.click('#alertbar .ahead', { quiet: true }).catch(() => {});
   for (const h of ['#alertsCard .foldhead', '#msgCard .foldhead']) if (await visible(p, h)) await p.click(h);
   await look();
   for (const sel of ['#verdict .vbox[data-drill="home"]', '#verdict .vbox[data-drill="fails"]', '#verdict .vbox[data-drill="outages"]', '#verdict .vbox[data-drill="alerts"]', '#availTbl tr.rowbtn', '#outages li.rowbtn',
@@ -112,7 +147,7 @@ function fakeBackend(home, api) {
   const F = { log: [], acked: new Set(), over: {}, HOME: home || CFG.homePage, api: api || CFG.api };
   F.PAGES = [[F.HOME, U + '/'], ['קטגוריה', U + '/product-category/sofas/'], ['מוצר', U + '/product/sample-sofa/'], ['סל', U + '/cart/']];
   F.ALERTS = [
-    { id: 41, kind: 'down', title: 'האתר לא עונה: סל', body: 'קוד 502\n' + U + '/cart/', open: true, opened_il: '12.11 11:02', closed_il: null, minutes: 14 },
+    { id: 41, kind: 'down', title: 'האתר לא עונה: סל', body: 'האתר לא עונה: סל\nקוד 502\n' + U + '/cart/', open: true, opened_il: '12.11 11:02', closed_il: null, minutes: 14 },
     { id: 40, kind: 'slow', title: 'עמוד איטי: קטגוריה', body: '4.6 שניות עד התוכן, פעמיים ברצף\n' + U + '/product-category/sofas/', open: true, opened_il: '12.11 09:10', closed_il: null, minutes: 125 },
     { id: 39, kind: 'silent', title: 'המדידה נעצרה: טעינת מפת האתר', body: 'אין מדידה כבר 3 ימים', open: true, opened_il: '11.11 02:00', closed_il: null, minutes: 2000 },
     { id: 38, kind: 'down', title: 'האתר לא עונה: ' + F.HOME, body: 'לא ענה בזמן', open: false, opened_il: '12.11 01:20', closed_il: '12.11 01:21', minutes: 1 }];
@@ -196,6 +231,18 @@ async function open(browser, path, vp, o = {}) {
   const page = await ctx.newPage();
   page.setDefaultTimeout(5000);
   const s = { ctx, page, errors: [], status: 0, site: null, F: null };
+  /* A click that cannot happen is one failed check, not the end of the run ({quiet: true}: the caller
+     handles it). The reads of one element answer null when the element is not there. */
+  const click0 = page.click.bind(page);
+  page.click = async (sel, opt) => {
+    const { quiet, ...o } = opt || {};
+    await unblock(page, sel);
+    try { return await click0(sel, o); } catch (e) { if (quiet || page.isClosed()) throw e; check('the test can click ' + sel, false, firstLine(e)); }
+  };
+  for (const m of ['getAttribute', 'isChecked', 'isDisabled', 'inputValue']) {
+    const f = page[m].bind(page);
+    page[m] = (...a) => f(...a).catch((e) => { if (page.isClosed()) throw e; return null; });
+  }
   page.on('pageerror', (e) => s.errors.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) s.errors.push('console: ' + m.text()); });
   page.on('response', (r) => { try { if (new URL(r.url()).pathname === CFG.api + '/site' && r.status() === 200) r.json().then((j) => { s.site = j; }).catch(() => {}); } catch (e) { /* not a URL the test cares about */ } });
@@ -236,89 +283,107 @@ async function reload(s, change) {
   const runC = isMock && !BASIC;
 
   /* ================= A. the page as the server gives it ================= */
-  let s = await open(browser, PAGE_PATH, PHONE), p = s.page;
+  s = await open(browser, PAGE_PATH, PHONE).catch((e) => {
+    console.error('Nothing answers at ' + BASE + PAGE_PATH + ' (' + firstLine(e).replace(/^page\.goto: /, '') + ').\nStart your server, or the kit\'s mock (python3 mock_server.py), and give its address:  node check_screen.js http://127.0.0.1:<port>');
+    process.exit(2);
+  });
+  p = s.page;
   const isScreen = s.status === 200 && await p.evaluate(() => !!(document.getElementById('verdict') && document.getElementById('now') && document.getElementById('dov')));
   check('the page loads (200) and is the site-health screen', isScreen, 'status ' + s.status + ', address ' + p.url());
   if (!isScreen) {
-    console.error('\n' + BASE + PAGE_PATH + ' did not give the screen, so nothing else can be checked.\nFor a real server pass the cookie of a signed-in owner (--cookie "name=value"), or test the share link (--path "/status?k=<token>").');
+    console.error('\n' + BASE + PAGE_PATH + ' did not give the screen, so nothing else can be checked.\nFor a real server pass the session cookie of the throwaway check vendor (OWNER-STEPS.md step 5: --cookie "name=value"), never the owner\'s, or test the share link (--path "/status?k=<token>").');
     process.exit(2);
   }
-  Object.assign(CFG, await p.evaluate(() => { const c = window.CFG || {}, o = {}; ['api', 'loginPath', 'homePage', 'here'].forEach((k) => { if (typeof c[k] === 'string' && c[k]) o[k] = c[k]; }); return o; }));
-  check('no horizontal scroll at 390px', await noOverflow(p));
-  check('html is rtl + hebrew', await p.evaluate(() => document.documentElement.dir === 'rtl' && document.documentElement.lang === 'he'));
-  check('"now" card shows 4 tiles', await count(p, '#now .nbox') === 4, String(await count(p, '#now .nbox')));
-  check('bottom line shows 4 tiles', await count(p, '#verdict .vbox') === 4);
-  const cards = await p.evaluate(() => Array.prototype.map.call(document.querySelectorAll('.wrap > section.card h2'), (h) => h.firstChild.textContent.trim()));
-  const WANT = ['עכשיו', 'שורה תחתונה', 'זמינות', 'מהירות לאורך זמן', 'העמודים העיקריים', 'העמודים הכבדים באתר', 'מוצרים שבורים באתר', 'תעודת האבטחה (המנעול)', 'התראות', 'הודעות שנשלחו לטלפון', 'המדידה עצמה'];
-  check('cards appear in the specified order', JSON.stringify(cards) === JSON.stringify(WANT), JSON.stringify(cards));
-  check('subtitle shows the last check time and the period', /הבדיקה האחרונה .* · 24 השעות האחרונות/.test(await txt(p, '#sub')), await txt(p, '#sub'));
-  check('alerts card and messages card start folded', await p.evaluate(() => document.getElementById('alertsList').parentElement.classList.contains('collapsed') && document.getElementById('msgList').parentElement.classList.contains('collapsed')));
-  check('explanations hidden until asked', !(await visible(p, 'p.explain')));
-  await p.click('#explbtn');
-  check('"הסברים" shows the explanations, and the page stays', await visible(p, 'p.explain') && (await p.getAttribute('#explbtn', 'aria-pressed')) === 'true' && await visible(p, '#verdictCard'));
-  await p.click('#explbtn');
-  check('the screen asks nothing from another host', await p.evaluate(() => performance.getEntriesByType('resource').every((e) => new URL(e.name).host === location.host)));
-  if (SHOTS) await p.screenshot({ path: SHOTS + '/phone.png', fullPage: true });
+  Object.assign(CFG, await p.evaluate(() => { const c = window.CFG || {}, o = {}; ['api', 'loginPath', 'homePage', 'here'].forEach((k) => { if (typeof c[k] === 'string' && c[k]) o[k] = c[k]; }); if (Array.isArray(c.hide)) o.hide = c.hide.slice(); return o; }));
 
-  /* numbers against the data the server sent */
-  const data = s.site || {};
-  const per = (Array.isArray(data.availability) ? data.availability : []).filter((r) => r.section === 'לפי עמוד');
-  const checksN = per.reduce((a, r) => a + (+r.checks || 0), 0), failN = per.reduce((a, r) => a + (+r.failed || 0), 0);
-  const upTile = await txt(p, '#verdict .vbox[data-drill="fails"] .v');
-  if (checksN) {
-    const up = 100 - 100 * failN / checksN;
-    check('uptime tile = 100 − failed/checks, and "100%" only without a single failure', failN === 0 ? upTile === '100%' : /^\d{1,2}\.\d\d%$/.test(upTile) && Math.abs(parseFloat(upTile) - Math.min(up, 99.99)) < 0.0051, upTile + ' for ' + failN + '/' + checksN);
-    check('availability table: one row per probed page', await count(p, '#availTbl tbody tr') === per.length);
-  } else if (Array.isArray(data.availability)) check('no availability data → empty state text', /אין בדיקות זמינות בתקופה/.test(await txt(p, '#availTbl')));
-  const core = (Array.isArray(data.speed) ? data.speed : []).filter((r) => r.section === 'ליבה' && r.strategy === 'mobile');
-  if (Array.isArray(data.speed)) check('core pages table: one row per core page (mobile)', core.length ? await count(p, '#coreTbl tbody tr') === core.length : /אין מדידות טלפון בתקופה/.test(await txt(p, '#coreTbl')));
-  check('heavy pages table: at most 10 rows', await count(p, '#slowTbl tbody tr') <= 10);
+  await block('A1 the page on a phone', async () => {
+    check('no horizontal scroll at 390px', await noOverflow(p));
+    check('html is rtl + hebrew', await p.evaluate(() => document.documentElement.dir === 'rtl' && document.documentElement.lang === 'he'));
+    /* the server hides the real-user tile (hide: nowRum) on a site that does not measure real users */
+    const nowN = (CFG.hide || []).indexOf('nowRum') >= 0 ? 3 : 4;
+    check('"now" card shows ' + nowN + ' tiles' + (nowN === 3 ? ' (hide has nowRum)' : ''), await count(p, '#now .nbox') === nowN, String(await count(p, '#now .nbox')));
+    check('bottom line shows 4 tiles', await count(p, '#verdict .vbox') === 4);
+    const cards = await p.evaluate(() => Array.prototype.map.call(document.querySelectorAll('.wrap > section.card h2'), (h) => h.firstChild.textContent.trim()));
+    const WANT = ['עכשיו', 'שורה תחתונה', 'זמינות', 'מהירות לאורך זמן', 'העמודים העיקריים', 'העמודים הכבדים באתר', 'מוצרים שבורים באתר', 'תעודת האבטחה (המנעול)', 'התראות', 'הודעות שנשלחו לטלפון', 'המדידה עצמה'];
+    check('cards appear in the specified order', JSON.stringify(cards) === JSON.stringify(WANT), JSON.stringify(cards));
+    check('subtitle shows the last check time and the period', /הבדיקה האחרונה .* · 24 השעות האחרונות/.test(await txt(p, '#sub')), await txt(p, '#sub'));
+    check('alerts card and messages card start folded', await p.evaluate(() => document.getElementById('alertsList').parentElement.classList.contains('collapsed') && document.getElementById('msgList').parentElement.classList.contains('collapsed')));
+    check('explanations hidden until asked', !(await visible(p, 'p.explain')));
+    await p.click('#explbtn');
+    check('"הסברים" shows the explanations, and the page stays', await visible(p, 'p.explain') && (await p.getAttribute('#explbtn', 'aria-pressed')) === 'true' && await visible(p, '#verdictCard'));
+    await p.evaluate(() => document.getElementById('explbtn').click());     // back, through the script: also when the button hid the page
+    check('the screen asks nothing from another host', await p.evaluate(() => performance.getEntriesByType('resource').every((e) => new URL(e.name).host === location.host)));
+    if (SHOTS) await p.screenshot({ path: SHOTS + '/phone.png', fullPage: true });
 
-  /* sheets */
-  await p.click('#verdict .vbox[data-drill="fails"]'); await sheetReady(p);
-  let sh = await sheet(p);
-  check('click on uptime opens the failures sheet', sh.title === 'כל הכשלים' && /הבדיקות שנכשלו/.test(sh.body), sh.title);
-  if (failN > 0) check('the failures sheet lists the failed checks (an empty page= and bucket= mean "all")', sh.rows >= 1, sh.rows + ' rows for ' + failN + ' failures');
-  check('sheet is a bottom sheet on a phone', await p.evaluate(() => { const r = document.getElementById('dsheet').getBoundingClientRect(); return Math.abs(r.bottom - window.innerHeight) < 2 && r.width >= window.innerWidth - 2; }));
-  await p.keyboard.press('Escape');
-  check('Escape closes the sheet', !(await sheetOn(p)));
-  if (core.length) {
-    await p.click('#coreTbl tbody tr');
-    await p.waitForFunction(() => /המדידות|אין מדידות תקינות/.test(document.getElementById('dbody').textContent), null, { timeout: 10000 }).catch(() => {});
+    /* numbers against the data the server sent */
+    const data = s.site || {};
+    const per = (Array.isArray(data.availability) ? data.availability : []).filter((r) => r.section === 'לפי עמוד');
+    const checksN = per.reduce((a, r) => a + (+r.checks || 0), 0), failN = per.reduce((a, r) => a + (+r.failed || 0), 0);
+    const upTile = await txt(p, '#verdict .vbox[data-drill="fails"] .v');
+    if (checksN) {
+      const up = 100 - 100 * failN / checksN;
+      check('uptime tile = 100 − failed/checks, and "100%" only without a single failure', failN === 0 ? upTile === '100%' : /^\d{1,2}\.\d\d%$/.test(upTile) && Math.abs(parseFloat(upTile) - Math.min(up, 99.99)) < 0.0051, upTile + ' for ' + failN + '/' + checksN);
+      check('availability table: one row per probed page', await count(p, '#availTbl tbody tr') === per.length);
+    } else if (Array.isArray(data.availability)) check('no availability data → empty state text', /אין בדיקות זמינות בתקופה/.test(await txt(p, '#availTbl')));
+    const core = (Array.isArray(data.speed) ? data.speed : []).filter((r) => r.section === 'ליבה' && r.strategy === 'mobile');
+    if (Array.isArray(data.speed)) check('core pages table: one row per core page (mobile)', core.length ? await count(p, '#coreTbl tbody tr') === core.length : /אין מדידות טלפון בתקופה/.test(await txt(p, '#coreTbl')));
+    check('heavy pages table: at most 10 rows', await count(p, '#slowTbl tbody tr') <= 10);
+
+    /* sheets */
+    await p.click('#verdict .vbox[data-drill="fails"]'); await sheetReady(p);
     sh = await sheet(p);
-    check('click on a core page opens its measurements', /^מהירות: /.test(sh.title), sh.title);
-    if (+core[0].checks > 0) check('the measurements sheet lists the runs of that page (an empty bucket= means "the whole period")', sh.rows >= 1, sh.rows + ' rows for ' + core[0].checks + ' runs');
-    await p.click('#dx');
-  }
-  check('no JavaScript errors (phone)', s.errors.length === 0, s.errors.join(' | '));
-  await s.ctx.close();
+    check('click on uptime opens the failures sheet', sh.title === 'כל הכשלים' && /הבדיקות שנכשלו/.test(sh.body), sh.title);
+    if (failN > 0) check('the failures sheet lists the failed checks (an empty page= and bucket= mean "all")', sh.rows >= 1, sh.rows + ' rows for ' + failN + ' failures');
+    check('sheet is a bottom sheet on a phone', await p.evaluate(() => { const r = document.getElementById('dsheet').getBoundingClientRect(); return Math.abs(r.bottom - window.innerHeight) < 2 && r.width >= window.innerWidth - 2; }));
+    await p.keyboard.press('Escape');
+    check('Escape closes the sheet', !(await sheetOn(p)));
+    escapeFailed.add(p); await shut(p);                        // when it stayed open, the test closes it and goes on
+    if (core.length) {
+      await p.click('#coreTbl tbody tr');
+      await p.waitForFunction(() => /המדידות|אין מדידות תקינות/.test(document.getElementById('dbody').textContent), null, { timeout: 10000 }).catch(() => {});
+      sh = await sheet(p);
+      check('click on a core page opens its measurements', /^מהירות: /.test(sh.title), sh.title);
+      if (+core[0].checks > 0) check('the measurements sheet lists the runs of that page (an empty bucket= means "the whole period")', sh.rows >= 1, sh.rows + ' rows for ' + core[0].checks + ' runs');
+      await p.click('#dx');
+    }
+    check('no JavaScript errors (phone)', s.errors.length === 0, s.errors.join(' | '));
+    await s.ctx.close();
+  });
 
-  /* desktop + dark */
-  s = await open(browser, PAGE_PATH, DESK); p = s.page;
-  check('no horizontal scroll at 1280px', await noOverflow(p));
-  await p.click('#verdict .vbox[data-drill="outages"]');
-  check('sheet is centered on desktop', await p.evaluate(() => { const r = document.getElementById('dsheet').getBoundingClientRect(); return Math.abs((r.left + r.right) / 2 - window.innerWidth / 2) < 2 && r.width === 720; }));
-  await p.click('#dx');
-  await p.click('#segH button[data-h="168"]');
-  await until(() => s.site && s.site.hours === 168, 15000); await settle(p);
-  check('"7 ימים" reloads with a 168-hour window', !!s.site && s.site.hours === 168 && /7 הימים האחרונים/.test(await txt(p, '#rangeTxt')));
-  await p.click('#segS button[data-s="desktop"]');
-  await until(() => s.site && s.site.strategy === 'desktop', 15000); await settle(p);
-  check('"מחשב" reloads with strategy=desktop', !!s.site && s.site.strategy === 'desktop');
-  if (SHOTS) await p.screenshot({ path: SHOTS + '/desktop.png', fullPage: true });
-  check('no JavaScript errors (desktop)', s.errors.length === 0, s.errors.join(' | '));
-  await s.ctx.close();
-  s = await open(browser, PAGE_PATH, PHONE, { dark: true }); p = s.page;
-  const rgbSum = (c) => { const m = String(c).match(/\d+/g); return m ? +m[0] + +m[1] + +m[2] : -1; };
-  check('dark mode: dark background, light text', rgbSum(await css(p, 'body', 'backgroundColor')) < 150 && rgbSum(await css(p, 'h1', 'color')) > 500 && rgbSum(await css(p, '#verdict .vbox .v', 'color')) > 500, (await css(p, 'body', 'backgroundColor')) + ' / ' + (await css(p, 'h1', 'color')));
-  if (SHOTS) await p.screenshot({ path: SHOTS + '/phone-dark.png', fullPage: true });
-  await s.ctx.close();
+  await block('A2 desktop and dark', async () => {
+    s = await open(browser, PAGE_PATH, DESK); p = s.page;
+    check('no horizontal scroll at 1280px', await noOverflow(p));
+    await p.click('#verdict .vbox[data-drill="outages"]');
+    check('sheet is centered on desktop', await p.evaluate(() => { const r = document.getElementById('dsheet').getBoundingClientRect(); return Math.abs((r.left + r.right) / 2 - window.innerWidth / 2) < 2 && r.width === 720; }));
+    await p.click('#dx');
+    await p.click('#segH button[data-h="168"]');
+    await until(() => s.site && s.site.hours === 168, 15000); await settle(p);
+    check('"7 ימים" reloads with a 168-hour window', !!s.site && s.site.hours === 168 && /7 הימים האחרונים/.test(await txt(p, '#rangeTxt')));
+    await p.click('#segS button[data-s="desktop"]');
+    await until(() => s.site && s.site.strategy === 'desktop', 15000); await settle(p);
+    check('"מחשב" reloads with strategy=desktop', !!s.site && s.site.strategy === 'desktop');
+    if (SHOTS) await p.screenshot({ path: SHOTS + '/desktop.png', fullPage: true });
+    check('no JavaScript errors (desktop)', s.errors.length === 0, s.errors.join(' | '));
+    await s.ctx.close();
+    s = await open(browser, PAGE_PATH, PHONE, { dark: true }); p = s.page;
+    check('dark mode: dark background, light text', rgbSum(await css(p, 'body', 'backgroundColor')) < 150 && rgbSum(await css(p, 'h1', 'color')) > 500 && rgbSum(await css(p, '#verdict .vbox .v', 'color')) > 500, (await css(p, 'body', 'backgroundColor')) + ' / ' + (await css(p, 'h1', 'color')));
+    if (SHOTS) await p.screenshot({ path: SHOTS + '/phone-dark.png', fullPage: true });
+    await s.ctx.close();
+  });
 
   /* ================= B. the rules of the screen, against canned answers ================= */
 
   await block('B1 the cards', async () => {
     s = await fake(browser); p = s.page;
     for (const w of [390, 360, 320]) { await p.setViewportSize({ width: w, height: 800 }); check('no horizontal scroll at ' + w + 'px with every card full', await noOverflow(p), 'body is ' + await p.evaluate(() => document.body.scrollWidth) + 'px wide'); }
+    const where = [];
+    for (const w of [719, 720]) {
+      await p.setViewportSize({ width: w, height: 800 });
+      await p.click('#verdict .vbox[data-drill="outages"]');
+      where.push(w + ':' + await p.evaluate(() => { const r = document.getElementById('dsheet').getBoundingClientRect(); return Math.abs(r.bottom - window.innerHeight) < 2 && r.width >= window.innerWidth - 2 ? 'bottom' : r.width === 720 && r.top > 0 && Math.abs((r.left + r.right) / 2 - window.innerWidth / 2) < 2 ? 'centered' : 'other ' + Math.round(r.top) + '/' + Math.round(r.width); }));
+      await closeSheet(p);
+    }
+    check('the sheet is a bottom sheet up to 719 px and a centered 720 px panel from 720 px', where.join() === '719:bottom,720:centered', where.join());
     await p.setViewportSize(PHONE);
     check('subtitle: site label · last check of the availability flow (viewer\'s clock) · period', / · הבדיקה האחרונה 15:35 · 24 השעות האחרונות$/.test(await txt(p, '#sub')), await txt(p, '#sub'));
     const v = await tiles(p, '#verdict .vbox');
@@ -477,7 +542,7 @@ async function reload(s, change) {
     await p.click('#alertbar .ahead');
     check('a tap opens the list', await shown(p, '#alertbar .arow') === 3 && await visible(p, '#alertbar .abulk'));
     const sub = await txt(p, '#alertbar .arow[data-id="41"] .sub');
-    check('a row: the body with a readable page name instead of the address, then "מאז <time>"', sub === 'קוד 502 · /cart · מאז 12.11 11:02', sub);
+    check('a row: the body without the line that repeats the title, a readable page name instead of the address, then "מאז <time>"', sub === 'קוד 502 · /cart · מאז 12.11 11:02', sub);
     check('a row with an address in its body gets the link "לפתוח את העמוד ↗"; a row without one does not', (await count(p, '#alertbar .alink')) === 2 && (await p.getAttribute('#alertbar .arow[data-id="41"] .alink', 'href')) === U + '/cart/' && (await count(p, '#alertbar .arow[data-id="39"] .alink')) === 0);
     await p.evaluate(() => { const a = document.querySelector('#alertbar .alink'); a.addEventListener('click', (e) => e.preventDefault()); a.click(); });
     check('a tap on the link does not open the alert as well', !(await sheetOn(p)) && (await p.getAttribute('#alertbar .alink', 'target')) === '_blank');
@@ -652,7 +717,9 @@ async function reload(s, change) {
     let t = await tiles(p, '#now .nbox');
     check('every page answers: "פעיל", green', t[0].k === 'האתר עכשיו' && t[0].v === 'פעיל' && t[0].dot === 'ok' && t[0].m === 'נבדק לפני 12 שניות · 4 מתוך 4 עמודים עונים', JSON.stringify(t[0]));
     check('server response: the home page, 0.24 s is green; the slowest page is named', t[1].v === '0.24 שנ\'' && t[1].dot === 'ok' && t[1].m === 'דף הבית · הכי איטי כרגע: סל 1.7 שנ\'', JSON.stringify(t[1]));
-    check('real users: 3.1 s is yellow; the views and the source line', t[2].v === '3.1 שנ\'' && t[2].dot === 'w' && t[2].m === '143 צפיות בשעה האחרונה · אחוזון 75מקור: האתר החי · כל 1000 המדידות האחרונות', JSON.stringify(t[2]));
+    /* whether the source line of the real-user tile is in another colour than the rest of its small text */
+    const srcWarn = () => p.evaluate(() => { const m = document.querySelectorAll('#now .nbox')[2].querySelector('.m'), e = Array.prototype.filter.call(m.querySelectorAll('*'), (x) => /^מקור:/.test(x.textContent))[0]; return !!e && getComputedStyle(e).color !== getComputedStyle(m).color; });
+    check('real users: 3.1 s is yellow; the views and the source line', t[2].v === '3.1 שנ\'' && t[2].dot === 'w' && t[2].m === '143 צפיות בשעה האחרונה · אחוזון 75מקור: האתר החי · כל 1000 המדידות האחרונות' && !(await srcWarn()), JSON.stringify(t[2]));
     check('lab: 2.5 s is green; time, score, target', t[3].v === '2.5 שנ\'' && t[3].dot === 'ok' && t[3].m === 'דף הבית בטלפון, 15:30 · ציון 63 · יעד 2.5', JSON.stringify(t[3]));
     check('a chip per page, coloured by the server-response thresholds (0.5 s, 1.5 s)', (await chips()).join() === 'tag ok:' + H + ' 0.24 שנ\',tag ok:קטגוריה 0.31 שנ\',tag w:מוצר 0.69 שנ\',tag d:סל 1.7 שנ\'', (await chips()).join());
     check('the line under the chips: time, the 60-second refresh, the open alerts', /^עודכן \d\d:\d\d:\d\d · רענון אוטומטי כל 60 שניות · 3 התראות פתוחות$/.test(await txt(p, '#nowtick')), await txt(p, '#nowtick'));
@@ -670,10 +737,14 @@ async function reload(s, change) {
     check('thresholds: server 1.5 s yellow, real users 2.501 s yellow, lab 2.501 s yellow', t[1].dot === 'w' && t[2].dot === 'w' && t[3].dot === 'w', JSON.stringify(t.slice(1)));
     t = await now((d) => { d.pages[0].ms = 1501; d.pages[3].ms = 100; });
     check('thresholds: server 1.501 s red', t[1].dot === 'd' && t[1].v === '1.5 שנ\'' && t[1].m === 'דף הבית', JSON.stringify(t[1]));
+    t = await now((d) => { d.age_sec = 89; });
+    const at89 = t[0].m;
+    t = await now((d) => { d.age_sec = 90; });
+    check('the age of the round: seconds up to 89, minutes from 90', /^נבדק לפני 89 שניות · /.test(at89) && /^נבדק לפני 2 דקות · /.test(t[0].m), at89 + ' | ' + t[0].m);
     t = await now((d) => { d.age_sec = 1; d.rum.n = 1; d.rum_src = { n: 1, hosts: [{ host: 'live', n: 1 }], cols: [], test: 1 }; });
     check('counts of one in singular Hebrew: second, view, measurement', t[0].m === 'נבדק לפני שנייה · 4 מתוך 4 עמודים עונים' && t[2].m === 'צפייה אחת בשעה האחרונה · אחוזון 75מקור: האתר החי · מדידה אחת · מתוכן מדידת בדיקה אחת', t[0].m + ' | ' + t[2].m);
     t = await now((d) => { d.rum_src = { n: 1000, hosts: [{ host: 'live', n: 964 }, { host: 'staging.shop.test', n: 36 }], cols: [], test: 12 }; });
-    check('measurements from another site are listed by source', t[2].m === '143 צפיות בשעה האחרונה · אחוזון 75מקור: live 964 · staging.shop.test 36 (מתוך 1000 המדידות האחרונות) · מתוכן 12 מדידות בדיקה', t[2].m);
+    check('measurements from another site are listed by source, in warning colour', t[2].m === '143 צפיות בשעה האחרונה · אחוזון 75מקור: live 964 · staging.shop.test 36 (מתוך 1000 המדידות האחרונות) · מתוכן 12 מדידות בדיקה' && await srcWarn(), t[2].m);
     t = await now((d) => { Object.assign(d, { pages: [], latest: [], light: false, all_ok: false, any_ok: false, age_sec: null, rum: { n: 0, p75_ms: null }, speed: {}, alerts_open: 0, rum_src: null }); });
     check('no round in the last 15 minutes: four grey tiles, "אין נתון" and not "פעיל" or "נפל"', t.length === 4 && t.every((x) => x.dot === 'n') && t[0].v === 'אין נתון' && t[0].m === 'אין בדיקה ב-15 הדקות האחרונות' && t[1].v === '—' && t[1].m === 'אין נתון' && t[2].m === 'אין מדידות בשעה האחרונה' && t[3].m === 'אין מדידה' && (await chips()).length === 0, JSON.stringify(t));
     await s.ctx.close();
@@ -719,6 +790,8 @@ async function reload(s, change) {
     check('print hides the controls: top bar, period card, "יציאה", ✕, checkboxes, bulk row, chevrons', gone.length === 0, gone.join(' '));
     check('print unfolds everything: all alerts of the bar, the alerts card, the message log', await shown(p, '#alertbar .arow') === 3 && await visible(p, '#alertsList') && await visible(p, '#msgList') && (await css(p, '#alertbar .alist', 'maxHeight')) === 'none');
     check('print shows every table row: all 70 products', await shown(p, '#issuesTbl tbody tr') === 70, String(await shown(p, '#issuesTbl tbody tr')));
+    const size = await p.evaluate(() => { const out = []; const walk = (rules) => Array.prototype.forEach.call(rules, (r) => { if (r.type === 6) out.push(r.style.getPropertyValue('size')); else if (r.cssRules) walk(r.cssRules); }); Array.prototype.forEach.call(document.styleSheets, (x) => walk(x.cssRules)); return out.join(' | '); });
+    check('print on A4 landscape', /^a4 landscape$/i.test(size.trim()), size);
     check('print from a device in dark mode: white page, dark text, the light status colours', (await css(p, 'body', 'backgroundColor')) === 'rgb(255, 255, 255)' && (await css(p, '#verdictCard', 'backgroundColor')) === 'rgb(255, 255, 255)' && (await css(p, '#verdict .vbox', 'backgroundColor')) === 'rgb(255, 255, 255)' && rgbSum(await css(p, 'h1', 'color')) < 150 && (await css(p, '#alertbar', 'color')) === 'rgb(163, 39, 31)' && (await css(p, '#healthTbl .tag.ok', 'color')) === 'rgb(11, 110, 79)' && (await css(p, '#healthTbl .tag.w', 'color')) === 'rgb(143, 95, 8)', (await css(p, '#alertbar', 'color')) + ' / ' + (await css(p, '#healthTbl .tag.ok', 'color')));
     await s.ctx.close();
   });
@@ -731,7 +804,7 @@ async function reload(s, change) {
     check('…and opens the menu: group title, entries, this screen marked', await visible(p, '#shov') && (await count(p, '#shlist a')) === 2 && (await txt(p, '#shlist .shg')) === 'האתר' && (await txt(p, '#shlist a.shcur')) === 'בריאות האתר' && (await p.getAttribute('#shlist a:not(.shcur)', 'href')) === '/another');
     await p.keyboard.press('Escape');
     check('…Escape closes it', !(await visible(p, '#shov')));
-    check('owner: the message log is asked for', s.F.n('/messages') === 1 && await visible(p, '#msgCard'));
+    check('owner: the message log is asked for', await until(() => s.F.n('/messages') === 1, 3000) && await visible(p, '#msgCard'));
     await s.ctx.close();
 
     s = await fake(browser); p = s.page;                       // nav: []
@@ -784,7 +857,7 @@ async function reload(s, change) {
   await block('B11 SH_CONFIG', async () => {
     s = await fake(browser, { cfg: { siteLabel: 'shop.test', brand: 'DEMO-B', homePage: 'ראשי', probeCount: 1, coreCount: 1, api: '/data', loginPath: '/signin', logoutPath: '/bye',
       pathLabels: [['/product/', 'פריט: ']], bucketNote: 'הערה על עמוד הסל', liveHosts: ['www.shop.test'] } }); p = s.page;
-    check('api: every data call goes to that base', s.F.n('/site') === 1 && s.F.n('/site/now') === 1 && s.F.n('/messages') === 1);
+    check('api: every data call goes to that base', await until(() => s.F.n('/site') === 1 && s.F.n('/site/now') === 1 && s.F.n('/messages') === 1, 3000), s.F.log.map((e) => e.path).join(' '));
     check('siteLabel and brand: tab title, subtitle, the small text at the top', (await p.title()) === 'בריאות האתר — shop.test' && /^shop\.test · /.test(await txt(p, '#sub')) && (await txt(p, '#brandTxt')) === 'DEMO-B', await p.title());
     check('logoutPath: the address of "יציאה"', (await p.getAttribute('#outLink', 'href')) === '/bye');
     const t = await tiles(p, '#now .nbox');
@@ -821,6 +894,68 @@ async function reload(s, change) {
     await s.ctx.close();
     s = await fake(browser, { hostile: true, role: { share: true }, cfg: { shareKey: 'tok-1' } });
     await hostileWalk(s, 'share link');
+    await s.ctx.close();
+  });
+
+  await block('B13 the runs sheet: what slows the page, failed runs, the median in words', async () => {
+    let rows = [];
+    s = await fake(browser, { over: { '/site/drill': (q) => (q.what === 'runs' ? { body: { rows } } : null) } }); p = s.page;
+    /* opens the runs sheet of the first core page with these rows, reads it and closes it */
+    const runs = async (r) => {
+      rows = r;
+      await p.click('#coreTbl tbody tr:nth-child(1)'); await sheetReady(p);
+      const x = await p.evaluate(() => {
+        const on = document.getElementById('dov').classList.contains('on'), t = document.querySelector('#dbody tbody tr td:nth-child(2) .tag');
+        return { body: on ? document.getElementById('dbody').textContent : '', why: on ? Array.prototype.map.call(document.querySelectorAll('#dbody ul.list li'), (e) => e.textContent) : [], tag: on && t ? t.className + ':' + t.textContent : '' };
+      });
+      await closeSheet(p);
+      return x;
+    };
+    const ok = (lcp, opps) => ({ ok: true, err: null, at_il: '12.11 10:15', lcp_ms: lcp, score: 64, ttfb_ms: 410, bytes: 3400000, cls: 0.03, crux_category: null, crux_lcp_ms: null, opps: opps || [] });
+    const o = (id, ms) => ({ id, title: 'title of ' + id, ms });
+    /* eight reasons. By the average saving: A 1.5, B 1.2, C 1.1, D 0.9, E 0.8, F 0.73, G 0.6, H 0.5 s.
+       By total, F (2.2 s) and H (2.0 s) come second and third; by the largest single value F is first. */
+    const [A, B, C, D, E, F, G, H] = ['render-blocking-resources', 'unused-javascript', 'modern-image-formats', 'offscreen-images', 'server-response-time', 'uses-optimized-images', 'uses-text-compression', 'redirects'];
+    let x = await runs([ok(2400, [o(A, 1500), o(B, 1400), o(C, 1100), o(D, 900), o(E, 800), o(F, 2000), o(G, 600), o(H, 500)]), ok(2500, [o(B, 1000), o(E, 800), o(F, 100), o(H, 500)]), ok(2600, [o(F, 100), o(H, 500)]), ok(2700, [o(H, 500)])]);
+    const OPPS = await p.evaluate(() => (typeof OPP === 'object' && OPP) || {});      // the page's own translations (§6.8 lets a site edit them)
+    const want = [[A, '1.5'], [B, '1.2'], [C, '1.1'], [D, '0.9'], [E, '0.8'], [F, '0.7']].map(([id, v]) => v + ' ש\' ' + (OPPS[id] || 'title of ' + id));
+    check('runs sheet with 8 reasons: exactly the top 6 by average saving, highest first (not by total, peak or count)', JSON.stringify(x.why) === JSON.stringify(want), x.why.join(' | '));
+
+    const bad = (err) => ({ ok: false, err, at_il: '12.11 10:00' });
+    x = await runs([bad('NO_FCP'), bad('NO_LCP'), bad('TIMEOUT')]);
+    check('only failed runs: "אין מדידות תקינות (3 ניסיונות נכשלו: <reason of the newest>)"', x.body === 'אין מדידות תקינות (3 ניסיונות נכשלו: NO_FCP).', x.body);
+    x = await runs([bad('ERRORED_DOCUMENT_REQUEST')]);
+    check('one failed run: "ניסיון אחד נכשל" with its reason', x.body === 'אין מדידות תקינות (ניסיון אחד נכשל: ERRORED_DOCUMENT_REQUEST).', x.body);
+    x = await runs([]);
+    check('no run at all: "אין מדידות תקינות."', x.body === 'אין מדידות תקינות.', x.body);
+
+    const wrong = [];
+    for (const [ms, word, tag] of [[1999, 'מהיר מצוין', 'tag ok:מצוין'], [2000, 'מהיר מצוין', 'tag ok:מצוין'], [2001, 'מהיר', 'tag ok:מהיר'], [2500, 'מהיר', 'tag ok:מהיר'],
+      [2501, 'בינוני', 'tag w:בינוני'], [4000, 'בינוני', 'tag w:בינוני'], [4001, 'איטי', 'tag d:איטי']]) {
+      x = await runs([ok(ms)]);
+      const m = x.body.match(/עד התוכן העיקרי: (.+?)\. הכי איטית/), got = (m ? m[1] : '?') + ' / ' + x.tag;
+      if (got !== word + ' / ' + tag) wrong.push(ms + ' ms: ' + got);
+    }
+    check('the median in words: "מהיר מצוין" up to 2000 ms, "מהיר" up to 2500, "בינוני" up to 4000, "איטי" above (1999 / 2000 / 2001 / 2500 / 2501 / 4000 / 4001); the run\'s tag agrees', wrong.length === 0, wrong.join(' | '));
+    check('no JavaScript errors (runs sheet)', s.errors.length === 0, s.errors.join(' | '));
+    await s.ctx.close();
+  });
+
+  await block('B14 a site that does not measure real users (SH_CONFIG.hide: nowRum)', async () => {
+    s = await fake(browser, { clock: '2026-11-12T16:00:00+02:00', cfg: { hide: ['nowRum'] } }); p = s.page;
+    let t = await tiles(p, '#now .nbox');
+    check('hide nowRum: "עכשיו" has three tiles, without "מהירות אצל לקוחות"; the others as always', t.length === 3 && t.map((x) => x.k).join('|') === 'האתר עכשיו|תגובת שרת עכשיו|מעבדה, מדידה אחרונה'
+      && t[0].v === 'פעיל' && t[1].v === '0.24 שנ\'' && t[2].v === '2.5 שנ\'' && t[2].m === 'דף הבית בטלפון, 15:30 · ציון 63 · יעד 2.5', JSON.stringify(t));
+    await p.click('#explbtn');
+    const ex = await p.evaluate(() => document.querySelector('#nowcard p.explain').innerText);
+    check('…and the explanation of "עכשיו" says nothing about real users; the rest of it stays', !/מהירות אצל לקוחות/.test(ex) && /תגובת שרת/.test(ex) && /מתרענן לבד כל 60 שניות/.test(ex), ex);
+    check('…every card is still there', await visible(p, '#verdictCard') && await visible(p, '#coreCard') && await visible(p, '#slowCard') && await visible(p, '#issuesCard') && await visible(p, '#certCard') && await visible(p, '#healthCard'));
+    s.F.over['/site/now'] = () => ({ body: Object.assign(s.F.now(), { pages: [], latest: [], all_ok: false, any_ok: false, age_sec: null, rum: { n: 0, p75_ms: null }, speed: {}, rum_src: null }) });
+    const tick = await txt(p, '#nowtick');
+    await p.clock.runFor(60000); await until(async () => (await txt(p, '#nowtick')) !== tick, 3000);
+    t = await tiles(p, '#now .nbox');
+    check('hide nowRum, no round yet: three grey tiles, none of them about real users', t.length === 3 && t.every((x) => x.dot === 'n') && !t.some((x) => /לקוחות/.test(x.k) || /אין מדידות בשעה האחרונה/.test(x.m)), JSON.stringify(t));
+    check('no JavaScript errors (hide nowRum)', s.errors.length === 0, s.errors.join(' | '));
     await s.ctx.close();
   });
 
@@ -876,7 +1011,7 @@ async function reload(s, change) {
       await scenario('incident');
       s = await open(browser, PAGE_PATH + '?role=vendor', PHONE); p = s.page;
       const asked = []; p.on('request', (r) => asked.push(r.method() + ' ' + new URL(r.url()).pathname));
-      await p.click('#alertbar .ahead').catch(() => {});
+      await p.click('#alertbar .ahead', { quiet: true }).catch(() => {});
       check('vendor: no delete controls on alerts, no menu button', !(await visible(p, '#alertbar .ax')) && !(await visible(p, '#alertbar .abulk')) && !(await visible(p, '#shham')));
       check('vendor: no message log', !(await visible(p, '#msgCard')));
       check('vendor: sees only site alerts (no internal kinds)', s.site.alerts_open.length === 2 && s.site.alerts_open.every((a) => ['down', 'slow', 'silent', 'cert'].indexOf(a.kind) >= 0));
@@ -908,6 +1043,20 @@ async function reload(s, change) {
       let r = await one('/api/site/drill?what=bucket&h=24');
       check('mock: a drill-down with a missing or malformed parameter answers {"rows": []}', r.status === 200 && r.body.rows.length === 0 && (await one('/api/site/drill?what=bucket&bucket=garbage')).body.rows.length === 0 && (await one('/api/site/drill?what=runs&url=')).body.rows.length === 0 && (await one('/api/site/drill?what=alert&id=x')).body.rows.length === 0);
       check('mock: an unknown what answers 400; data answers are no-store', (await one('/api/site/drill?what=nope')).status === 400 && r.cache === 'no-store');
+      const rowsOf = async (path) => { const x = await one(path); return x.body && Array.isArray(x.body.rows) ? x.body.rows.length : -1; };
+      const hour = encodeURIComponent('2026-11-12 03:00'), badHour = encodeURIComponent('2026-11-12 24:00');
+      const got = [await rowsOf('/api/site/drill?what=fails&page=&bucket=' + hour + '&h=24'), await rowsOf('/api/site/drill?what=fails&page=&bucket=2026-13-45&h=24'), await rowsOf('/api/site/drill?what=fails&page=&bucket=' + badHour + '&h=24'),
+        await rowsOf('/api/site/drill?what=runs&url=' + encodeURIComponent('https://example.co.il/') + '&bucket=2026-02-30&h=24'), await rowsOf('/api/site/drill?what=bucket&bucket=2026-02-30'),
+        await rowsOf('/api/site/drill?what=alert&id=41&bucket=garbage'), await rowsOf('/api/site/drill?what=alert&id=0000000000000000041')];
+      check('mock, as the reference server: a bucket in the right shape that is no real day or hour (2026-13-45, 24:00, 30.2) answers {"rows": []}; an alert ignores bucket; an id of 19 digits is malformed', got[0] > 0 && got.slice(1, 5).every((x) => x === 0) && got[5] === 1 && got[6] === 0, got.join(','));
+    });
+
+    await block('C7 the server hides what the site does not measure', async () => {
+      await scenario('incident');
+      s = await open(browser, PAGE_PATH + '?hide=nowRum,certCard', PHONE); p = s.page;
+      const t = await tiles(p, '#now .nbox');
+      check('mock ?hide=nowRum,certCard: "עכשיו" without the real-user tile, no certificate card, the other cards stay', t.length === 3 && !t.some((x) => /לקוחות/.test(x.k)) && !(await visible(p, '#certCard')) && await visible(p, '#slowCard') && await visible(p, '#healthCard'), JSON.stringify(t.map((x) => x.k)));
+      await s.ctx.close();
     });
 
     await block('C3 fresh install', async () => {
@@ -956,4 +1105,9 @@ async function reload(s, change) {
   await browser.close();
   console.log('\n' + passed + ' passed, ' + failed + ' failed' + (runC ? '' : '  (groups A and B; group C needs the kit\'s mock)'));
   process.exit(failed ? 1 : 0);
-})().catch((e) => { console.error('test crashed: ' + e.stack); process.exit(2); });
+})().catch((e) => {
+  /* only what no group catches ends up here, such as a browser that cannot start */
+  console.error('test crashed: ' + String(e && e.stack || e).split('\n').slice(0, 3).join('\n'));
+  console.log('\n' + passed + ' passed, ' + failed + ' failed  (the test could not run to its end)');
+  process.exit(2);
+});

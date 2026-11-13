@@ -47,9 +47,13 @@ def main(path):
     for needle, why in (("window.SH_CONFIG", "the SH_CONFIG block"), ("function render(d)", "the render function"),
                         ("function drillRuns(", "the drill-down sheets"), ("@media print", "the print stylesheet"),
                         ("prefers-color-scheme:dark", "dark mode"),
-                        (".shham[hidden]{display:none}", "the rule that hides the menu button when there is no menu")):
+                        (".shham[hidden]{display:none}", "the rule that hides the menu button when there is no menu"),
+                        ("indexOf('nowRum')", "the switch that leaves out the real-user tile of \"עכשיו\" (SH_CONFIG.hide: nowRum)")):
         if needle not in got:
             bad.append("missing " + why)
+    if got.count('id="nowRumTxt"') != 1:
+        bad.append('the explanation of "עכשיו" lost its <span id="nowRumTxt">: with hide nowRum the sentence about '
+                   "real users would stay on a site that does not measure them")
     # the parts of the explanation sentences that the script fills from SH_CONFIG (spec §6.9)
     for key, times in (("pages", 2), ("probed", 1), ("downRule", 1)):
         if got.count('data-txt="%s"' % key) != times:

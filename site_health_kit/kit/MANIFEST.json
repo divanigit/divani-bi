@@ -1,7 +1,7 @@
 {
  "kit": "site-health-kit",
  "version": "1.0",
- "build": "cb4e4c792776",
+ "build": "06d7fca9c171",
  "files": [
   {
    "path": "START-HERE.md",
@@ -35,15 +35,15 @@
   },
   {
    "path": "spec/05-api-contract.md",
-   "bytes": 16798,
-   "lines": 221,
-   "sha256": "262f5da2b61f98a490668d121ff38e8c8bc221a84af066ec1ba75cd5bfa81916"
+   "bytes": 16918,
+   "lines": 223,
+   "sha256": "1262005b7c0cfac3311c63e590c9f1cb75f179c74a1f3c52802bb1a732117543"
   },
   {
    "path": "spec/06-screen.md",
-   "bytes": 10972,
-   "lines": 156,
-   "sha256": "fcb31cf77c0d07e54fbf662925288b92df99371cb0c85cbd56bde95236f3c82a"
+   "bytes": 12256,
+   "lines": 169,
+   "sha256": "0457ad8927a5a6dc6dbfbb550ce7ba62f892eaf8c3a05d8ad1e30118df2994ca"
   },
   {
    "path": "spec/07-backend-data.md",
@@ -71,21 +71,21 @@
   },
   {
    "path": "check_screen.js",
-   "bytes": 100929,
-   "lines": 959,
-   "sha256": "e9b965eb93228d315f3478fcd9b8985d51840d81044d3b0b4980772255433c02"
+   "bytes": 115340,
+   "lines": 1113,
+   "sha256": "5171161d814c9517db5e05945606d0fb8547b13bf9e234059261302537f74a36"
   },
   {
    "path": "mock_server.py",
-   "bytes": 32155,
-   "lines": 591,
-   "sha256": "5ced111dde57d37ebef4f9a79569ac4acff562fd96416efc036e73cce02852b7"
+   "bytes": 33256,
+   "lines": 611,
+   "sha256": "f43d597f083e8917f5888dfdb6163ee374a5f096eb9c27773ffa7ca924cb3d77"
   },
   {
    "path": "site_health.html",
-   "bytes": 96807,
-   "lines": 1006,
-   "sha256": "bb510e0d1a2cc0cc101564c270a71a1024dc123d5e5713d37072d5ae3038280c"
+   "bytes": 97189,
+   "lines": 1008,
+   "sha256": "1299267f77fa9806312bba58c6c5d60e056f5efd1e0f03db11fc7cde10a2f40c"
   },
   {
    "path": "reference/README.md",
@@ -95,15 +95,15 @@
   },
   {
    "path": "reference/collectors.py",
-   "bytes": 63732,
-   "lines": 1261,
-   "sha256": "2e70e6b93b2de3f094e5684a843ce5b430100c2b5ba165242b37b168036093e3"
+   "bytes": 66570,
+   "lines": 1325,
+   "sha256": "e4e83012caf39ad8c8c6ee73f0b2eef1694808ee36ed7e2250fffc11a61c36f8"
   },
   {
    "path": "reference/db.py",
-   "bytes": 6950,
-   "lines": 130,
-   "sha256": "77107778aeee8e6a9d975568838799c61386ec1477f6049411b54faefcabbf9e"
+   "bytes": 7781,
+   "lines": 142,
+   "sha256": "a3bea64031bd6534d0f5d5918059fb74472d8dd4b57b060d314a0815770bd544"
   },
   {
    "path": "reference/deadman.sql",
@@ -113,15 +113,15 @@
   },
   {
    "path": "reference/functions.sql",
-   "bytes": 66700,
-   "lines": 1224,
-   "sha256": "e55d082236d241718f6a3a09ad567f9f6024a909d2c40a95179050c69c47c5a8"
+   "bytes": 67648,
+   "lines": 1235,
+   "sha256": "85ac8edd64d5d4f632c66f0b8a56eb8d39cc2c31e74147858eb2f6ba55d82ee0"
   },
   {
    "path": "reference/manage.py",
-   "bytes": 19570,
-   "lines": 339,
-   "sha256": "88a0c3c344079214428bed045f05d1a1ce1d2c9cc0a916c92049e1c09ec617f2"
+   "bytes": 26014,
+   "lines": 458,
+   "sha256": "99a1b5f803f1cca4902901ae45560be2e29de0d66cfe98183bdfd15f2814f549"
   },
   {
    "path": "reference/requirements-dev.txt",
@@ -137,21 +137,21 @@
   },
   {
    "path": "reference/schema.sql",
-   "bytes": 9394,
-   "lines": 225,
-   "sha256": "3d5c21fb9fa4cb76bbf902a64a60af1b29e54c8a3a622f71c5b6477a8279ecf9"
+   "bytes": 9551,
+   "lines": 227,
+   "sha256": "63f215f559793652d3c49d4f646b9df7dae073ce6864ed06aadc1f26555434f1"
   },
   {
    "path": "reference/server.py",
-   "bytes": 44531,
-   "lines": 953,
-   "sha256": "1600113e8c403b5f6fc0313a22906cf660b41e42df31238e5360b7fc68b65a76"
+   "bytes": 47154,
+   "lines": 989,
+   "sha256": "12ca975c9ac85b8b645066682f260db5e605eb5b47ef00d3ddf7e868aaf40caa"
   },
   {
    "path": "reference/site_health.config.example.json",
-   "bytes": 1004,
+   "bytes": 1041,
    "lines": 27,
-   "sha256": "7243d05e5faf4089dca3fdc9fb6a934f5ee0757248c4e71f38672e02dbfaf977"
+   "sha256": "69a507dadc81fb3fa09fc11bdd868ed6a1736e19872f3a719e50e0a8e88e139c"
   },
   {
    "path": "reference/watchdog.py",
@@ -161,9 +161,9 @@
   },
   {
    "path": "reference/rum/site-health-rum.js",
-   "bytes": 5018,
-   "lines": 68,
-   "sha256": "b28adf76abf71c47670d03d9ed4b42e031f42ef361c747d25069157f428576e4"
+   "bytes": 5089,
+   "lines": 69,
+   "sha256": "8442d4ff4824985d4e849c5c67af2ee552bab86fde57e73f50144db0d93973c7"
   },
   {
    "path": "reference/rum/site-health-rum.liquid",
@@ -179,15 +179,15 @@
   },
   {
    "path": "reference/tests/conftest.py",
-   "bytes": 9438,
+   "bytes": 9503,
    "lines": 220,
-   "sha256": "52704f5bb5817b77797af78d616822423b68ab48b7ab9446c3db1ebdae55ec5e"
+   "sha256": "c46057190641177d059964a746238722e52f476ab48040870e6c157cddd0f14e"
   },
   {
    "path": "reference/tests/fake_site.py",
-   "bytes": 29571,
-   "lines": 504,
-   "sha256": "75353ba103d045939f2bf7ff4b170a9eb4899c501ca1548c54527316892adf48"
+   "bytes": 30453,
+   "lines": 514,
+   "sha256": "b1ca6d9329bb072305c78c948463bfdbbaad6ae3c50677c478782542ade719bb"
   },
   {
    "path": "reference/tests/sim.py",
@@ -197,9 +197,9 @@
   },
   {
    "path": "reference/tests/test_collectors.py",
-   "bytes": 163744,
-   "lines": 2678,
-   "sha256": "3807251bb501f33cd2d27c2346eb1274ab60a8273f2e5f0cfd56e5c507dafb09"
+   "bytes": 172598,
+   "lines": 2803,
+   "sha256": "f946fc7f6c754db07d52b2b6408502f05218a4cb6604f7dfd0850f0afe25fd4b"
   },
   {
    "path": "reference/tests/test_rum_snippet.js",
@@ -209,15 +209,15 @@
   },
   {
    "path": "reference/tests/test_server.py",
-   "bytes": 137846,
-   "lines": 2418,
-   "sha256": "b6b9d223df72307d8fd959e292e11045de0b6585fb566d718077f4430a32078d"
+   "bytes": 146422,
+   "lines": 2535,
+   "sha256": "4fe1b1a62e2df5d94e363ebee72beef6b15d32a48265e644d98f9fef301dc2a2"
   },
   {
    "path": "reference/tests/test_sql.py",
-   "bytes": 153045,
-   "lines": 2408,
-   "sha256": "991cf70ef40ecb12f6c4508ead1cf89e63512ee6e981b7a44a89e8c021883d22"
+   "bytes": 157933,
+   "lines": 2484,
+   "sha256": "76bf635fc83f75629c13cb3c5b666f8f3db050e2a59eca0c00687cb653f6f3d3"
   },
   {
    "path": "reference/tests/fixtures/psi_lighthouse12.json",
@@ -233,15 +233,15 @@
   },
   {
    "path": "tools/check_access.py",
-   "bytes": 24093,
-   "lines": 441,
-   "sha256": "adaf5f49559765fee7b4af0499de34bc980c3fbcd237ebc565835b40dc5418b3"
+   "bytes": 25123,
+   "lines": 459,
+   "sha256": "229c5ce55f1752007063b0ec47ef942e7ee2879faf88d9541bd7b824cdaadc61"
   },
   {
    "path": "tools/check_template.py",
-   "bytes": 3555,
-   "lines": 68,
-   "sha256": "57451c252c9d534e961b8ac3523ed1e5172777cf797d1ab7c46464d002beb794"
+   "bytes": 3938,
+   "lines": 72,
+   "sha256": "9e7e37b6b010fb75c960f74fb7d20bbffb8b39ed2c03d02ae1f74515629c526d"
   }
  ]
 }

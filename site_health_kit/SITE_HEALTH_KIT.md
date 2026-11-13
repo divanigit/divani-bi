@@ -23,7 +23,7 @@
 
 # For the coding agent
 
-This file is a container: kit version 1.0 (build cb4e4c792776), 41 files (about 1217 KB), embedded
+This file is a container: kit version 1.0 (build 06d7fca9c171), 41 files (about 1272 KB), embedded
 below the line `FILES BELOW`. **Do not read or print the part below that line.** Unpack it instead.
 
 **Step 1: unpack.** From the directory that contains this file, run this one command:
@@ -42,6 +42,11 @@ line that starts with `KIT NOT UNPACKED` and says why:
   sent again. Never recreate a file of the kit from memory.
 - *already holds another kit*: an older or newer kit is unpacked here. Do not remove it on your
   own: tell the owner which two versions there are and ask which one to work with.
+
+After `KIT OK`, a second line `not part of the kit: …; remove them` names files in
+`site-health-kit/` that this kit does not hold: left from an earlier unpack, or written there by
+hand. The unpack deleted nothing. Delete those files, so that nothing in the folder contradicts
+the kit; what you build goes into `site-health/`, never into `site-health-kit/`.
 
 **Step 2: read `site-health-kit/START-HERE.md`** completely, to its last line
 (`<!-- EOF START-HERE.md -->`), at most 150 lines per command. It tells you what else to read
@@ -81,7 +86,15 @@ for path, body in found:
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, 'w', encoding='utf-8', newline='\n') as f:
         f.write(body)
-print('KIT OK: unpacked %d files into %s/ (kit version %s, build cb4e4c792776)' % (len(found), DEST, VERSION))
+print('KIT OK: unpacked %d files into %s/ (kit version %s, build 06d7fca9c171)' % (len(found), DEST, VERSION))
+kit, stray = {path for path, _ in found}, []
+for root, dirs, names in os.walk(DEST):
+    dirs[:] = sorted(d for d in dirs if d not in ['.pytest_cache', '__pycache__', 'node_modules', 'shots'])
+    stray += [p for p in (os.path.join(root, n).replace(os.sep, '/') for n in sorted(names))
+              if p not in kit and not p.endswith(('.log', '.png', '.pyc', '.zip'))]
+if stray:
+    print('not part of the kit: ' + ', '.join(stray[:20]) + (' and %d more' % (len(stray) - 20) if len(stray) > 20 else '')
+          + '; remove them')
 # --- end unpack ---
 ```
 
@@ -93,41 +106,41 @@ Contents:
 - `site-health-kit/AGENTS-snippet.md` (34 lines)
 - `site-health-kit/MANIFEST.json` (247 lines)
 - `site-health-kit/spec/03-system.md` (98 lines)
-- `site-health-kit/spec/05-api-contract.md` (221 lines)
-- `site-health-kit/spec/06-screen.md` (156 lines)
+- `site-health-kit/spec/05-api-contract.md` (223 lines)
+- `site-health-kit/spec/06-screen.md` (169 lines)
 - `site-health-kit/spec/07-backend-data.md` (254 lines)
 - `site-health-kit/spec/07-collectors-alerts.md` (409 lines)
 - `site-health-kit/spec/08-access.md` (191 lines)
 - `site-health-kit/spec/09-build-and-checks.md` (124 lines)
-- `site-health-kit/check_screen.js` (959 lines)
-- `site-health-kit/mock_server.py` (591 lines)
-- `site-health-kit/site_health.html` (1006 lines)
+- `site-health-kit/check_screen.js` (1113 lines)
+- `site-health-kit/mock_server.py` (611 lines)
+- `site-health-kit/site_health.html` (1008 lines)
 - `site-health-kit/reference/README.md` (361 lines)
-- `site-health-kit/reference/collectors.py` (1261 lines)
-- `site-health-kit/reference/db.py` (130 lines)
+- `site-health-kit/reference/collectors.py` (1325 lines)
+- `site-health-kit/reference/db.py` (142 lines)
 - `site-health-kit/reference/deadman.sql` (218 lines)
-- `site-health-kit/reference/functions.sql` (1224 lines)
-- `site-health-kit/reference/manage.py` (339 lines)
+- `site-health-kit/reference/functions.sql` (1235 lines)
+- `site-health-kit/reference/manage.py` (458 lines)
 - `site-health-kit/reference/requirements-dev.txt` (10 lines)
 - `site-health-kit/reference/requirements.txt` (11 lines)
-- `site-health-kit/reference/schema.sql` (225 lines)
-- `site-health-kit/reference/server.py` (953 lines)
+- `site-health-kit/reference/schema.sql` (227 lines)
+- `site-health-kit/reference/server.py` (989 lines)
 - `site-health-kit/reference/site_health.config.example.json` (27 lines)
 - `site-health-kit/reference/watchdog.py` (247 lines)
-- `site-health-kit/reference/rum/site-health-rum.js` (68 lines)
+- `site-health-kit/reference/rum/site-health-rum.js` (69 lines)
 - `site-health-kit/reference/rum/site-health-rum.liquid` (87 lines)
 - `site-health-kit/reference/rum/site-health-rum.php` (101 lines)
 - `site-health-kit/reference/tests/conftest.py` (220 lines)
-- `site-health-kit/reference/tests/fake_site.py` (504 lines)
+- `site-health-kit/reference/tests/fake_site.py` (514 lines)
 - `site-health-kit/reference/tests/sim.py` (118 lines)
-- `site-health-kit/reference/tests/test_collectors.py` (2678 lines)
+- `site-health-kit/reference/tests/test_collectors.py` (2803 lines)
 - `site-health-kit/reference/tests/test_rum_snippet.js` (101 lines)
-- `site-health-kit/reference/tests/test_server.py` (2418 lines)
-- `site-health-kit/reference/tests/test_sql.py` (2408 lines)
+- `site-health-kit/reference/tests/test_server.py` (2535 lines)
+- `site-health-kit/reference/tests/test_sql.py` (2484 lines)
 - `site-health-kit/reference/tests/fixtures/psi_lighthouse12.json` (400 lines)
 - `site-health-kit/reference/tests/fixtures/psi_lighthouse13.json` (367 lines)
-- `site-health-kit/tools/check_access.py` (441 lines)
-- `site-health-kit/tools/check_template.py` (68 lines)
+- `site-health-kit/tools/check_access.py` (459 lines)
+- `site-health-kit/tools/check_template.py` (72 lines)
 
 ---
 
@@ -847,12 +860,12 @@ in the other (needs Playwright).
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/MANIFEST.json sha256=21221e7f6653c402097d163f011f72d8040f17af39b0d4f560eb54f0b8290964 -->
+<!-- FILE: site-health-kit/MANIFEST.json sha256=64d3dc2d5939c5ec74f0aec3cc336c6bebd3c0316eeb12405e63b53b866af288 -->
 ~~~~~~~~json
 {
  "kit": "site-health-kit",
  "version": "1.0",
- "build": "cb4e4c792776",
+ "build": "06d7fca9c171",
  "files": [
   {
    "path": "START-HERE.md",
@@ -886,15 +899,15 @@ in the other (needs Playwright).
   },
   {
    "path": "spec/05-api-contract.md",
-   "bytes": 16798,
-   "lines": 221,
-   "sha256": "262f5da2b61f98a490668d121ff38e8c8bc221a84af066ec1ba75cd5bfa81916"
+   "bytes": 16918,
+   "lines": 223,
+   "sha256": "1262005b7c0cfac3311c63e590c9f1cb75f179c74a1f3c52802bb1a732117543"
   },
   {
    "path": "spec/06-screen.md",
-   "bytes": 10972,
-   "lines": 156,
-   "sha256": "fcb31cf77c0d07e54fbf662925288b92df99371cb0c85cbd56bde95236f3c82a"
+   "bytes": 12256,
+   "lines": 169,
+   "sha256": "0457ad8927a5a6dc6dbfbb550ce7ba62f892eaf8c3a05d8ad1e30118df2994ca"
   },
   {
    "path": "spec/07-backend-data.md",
@@ -922,21 +935,21 @@ in the other (needs Playwright).
   },
   {
    "path": "check_screen.js",
-   "bytes": 100929,
-   "lines": 959,
-   "sha256": "e9b965eb93228d315f3478fcd9b8985d51840d81044d3b0b4980772255433c02"
+   "bytes": 115340,
+   "lines": 1113,
+   "sha256": "5171161d814c9517db5e05945606d0fb8547b13bf9e234059261302537f74a36"
   },
   {
    "path": "mock_server.py",
-   "bytes": 32155,
-   "lines": 591,
-   "sha256": "5ced111dde57d37ebef4f9a79569ac4acff562fd96416efc036e73cce02852b7"
+   "bytes": 33256,
+   "lines": 611,
+   "sha256": "f43d597f083e8917f5888dfdb6163ee374a5f096eb9c27773ffa7ca924cb3d77"
   },
   {
    "path": "site_health.html",
-   "bytes": 96807,
-   "lines": 1006,
-   "sha256": "bb510e0d1a2cc0cc101564c270a71a1024dc123d5e5713d37072d5ae3038280c"
+   "bytes": 97189,
+   "lines": 1008,
+   "sha256": "1299267f77fa9806312bba58c6c5d60e056f5efd1e0f03db11fc7cde10a2f40c"
   },
   {
    "path": "reference/README.md",
@@ -946,15 +959,15 @@ in the other (needs Playwright).
   },
   {
    "path": "reference/collectors.py",
-   "bytes": 63732,
-   "lines": 1261,
-   "sha256": "2e70e6b93b2de3f094e5684a843ce5b430100c2b5ba165242b37b168036093e3"
+   "bytes": 66570,
+   "lines": 1325,
+   "sha256": "e4e83012caf39ad8c8c6ee73f0b2eef1694808ee36ed7e2250fffc11a61c36f8"
   },
   {
    "path": "reference/db.py",
-   "bytes": 6950,
-   "lines": 130,
-   "sha256": "77107778aeee8e6a9d975568838799c61386ec1477f6049411b54faefcabbf9e"
+   "bytes": 7781,
+   "lines": 142,
+   "sha256": "a3bea64031bd6534d0f5d5918059fb74472d8dd4b57b060d314a0815770bd544"
   },
   {
    "path": "reference/deadman.sql",
@@ -964,15 +977,15 @@ in the other (needs Playwright).
   },
   {
    "path": "reference/functions.sql",
-   "bytes": 66700,
-   "lines": 1224,
-   "sha256": "e55d082236d241718f6a3a09ad567f9f6024a909d2c40a95179050c69c47c5a8"
+   "bytes": 67648,
+   "lines": 1235,
+   "sha256": "85ac8edd64d5d4f632c66f0b8a56eb8d39cc2c31e74147858eb2f6ba55d82ee0"
   },
   {
    "path": "reference/manage.py",
-   "bytes": 19570,
-   "lines": 339,
-   "sha256": "88a0c3c344079214428bed045f05d1a1ce1d2c9cc0a916c92049e1c09ec617f2"
+   "bytes": 26014,
+   "lines": 458,
+   "sha256": "99a1b5f803f1cca4902901ae45560be2e29de0d66cfe98183bdfd15f2814f549"
   },
   {
    "path": "reference/requirements-dev.txt",
@@ -988,21 +1001,21 @@ in the other (needs Playwright).
   },
   {
    "path": "reference/schema.sql",
-   "bytes": 9394,
-   "lines": 225,
-   "sha256": "3d5c21fb9fa4cb76bbf902a64a60af1b29e54c8a3a622f71c5b6477a8279ecf9"
+   "bytes": 9551,
+   "lines": 227,
+   "sha256": "63f215f559793652d3c49d4f646b9df7dae073ce6864ed06aadc1f26555434f1"
   },
   {
    "path": "reference/server.py",
-   "bytes": 44531,
-   "lines": 953,
-   "sha256": "1600113e8c403b5f6fc0313a22906cf660b41e42df31238e5360b7fc68b65a76"
+   "bytes": 47154,
+   "lines": 989,
+   "sha256": "12ca975c9ac85b8b645066682f260db5e605eb5b47ef00d3ddf7e868aaf40caa"
   },
   {
    "path": "reference/site_health.config.example.json",
-   "bytes": 1004,
+   "bytes": 1041,
    "lines": 27,
-   "sha256": "7243d05e5faf4089dca3fdc9fb6a934f5ee0757248c4e71f38672e02dbfaf977"
+   "sha256": "69a507dadc81fb3fa09fc11bdd868ed6a1736e19872f3a719e50e0a8e88e139c"
   },
   {
    "path": "reference/watchdog.py",
@@ -1012,9 +1025,9 @@ in the other (needs Playwright).
   },
   {
    "path": "reference/rum/site-health-rum.js",
-   "bytes": 5018,
-   "lines": 68,
-   "sha256": "b28adf76abf71c47670d03d9ed4b42e031f42ef361c747d25069157f428576e4"
+   "bytes": 5089,
+   "lines": 69,
+   "sha256": "8442d4ff4824985d4e849c5c67af2ee552bab86fde57e73f50144db0d93973c7"
   },
   {
    "path": "reference/rum/site-health-rum.liquid",
@@ -1030,15 +1043,15 @@ in the other (needs Playwright).
   },
   {
    "path": "reference/tests/conftest.py",
-   "bytes": 9438,
+   "bytes": 9503,
    "lines": 220,
-   "sha256": "52704f5bb5817b77797af78d616822423b68ab48b7ab9446c3db1ebdae55ec5e"
+   "sha256": "c46057190641177d059964a746238722e52f476ab48040870e6c157cddd0f14e"
   },
   {
    "path": "reference/tests/fake_site.py",
-   "bytes": 29571,
-   "lines": 504,
-   "sha256": "75353ba103d045939f2bf7ff4b170a9eb4899c501ca1548c54527316892adf48"
+   "bytes": 30453,
+   "lines": 514,
+   "sha256": "b1ca6d9329bb072305c78c948463bfdbbaad6ae3c50677c478782542ade719bb"
   },
   {
    "path": "reference/tests/sim.py",
@@ -1048,9 +1061,9 @@ in the other (needs Playwright).
   },
   {
    "path": "reference/tests/test_collectors.py",
-   "bytes": 163744,
-   "lines": 2678,
-   "sha256": "3807251bb501f33cd2d27c2346eb1274ab60a8273f2e5f0cfd56e5c507dafb09"
+   "bytes": 172598,
+   "lines": 2803,
+   "sha256": "f946fc7f6c754db07d52b2b6408502f05218a4cb6604f7dfd0850f0afe25fd4b"
   },
   {
    "path": "reference/tests/test_rum_snippet.js",
@@ -1060,15 +1073,15 @@ in the other (needs Playwright).
   },
   {
    "path": "reference/tests/test_server.py",
-   "bytes": 137846,
-   "lines": 2418,
-   "sha256": "b6b9d223df72307d8fd959e292e11045de0b6585fb566d718077f4430a32078d"
+   "bytes": 146422,
+   "lines": 2535,
+   "sha256": "4fe1b1a62e2df5d94e363ebee72beef6b15d32a48265e644d98f9fef301dc2a2"
   },
   {
    "path": "reference/tests/test_sql.py",
-   "bytes": 153045,
-   "lines": 2408,
-   "sha256": "991cf70ef40ecb12f6c4508ead1cf89e63512ee6e981b7a44a89e8c021883d22"
+   "bytes": 157933,
+   "lines": 2484,
+   "sha256": "76bf635fc83f75629c13cb3c5b666f8f3db050e2a59eca0c00687cb653f6f3d3"
   },
   {
    "path": "reference/tests/fixtures/psi_lighthouse12.json",
@@ -1084,15 +1097,15 @@ in the other (needs Playwright).
   },
   {
    "path": "tools/check_access.py",
-   "bytes": 24093,
-   "lines": 441,
-   "sha256": "adaf5f49559765fee7b4af0499de34bc980c3fbcd237ebc565835b40dc5418b3"
+   "bytes": 25123,
+   "lines": 459,
+   "sha256": "229c5ce55f1752007063b0ec47ef942e7ee2879faf88d9541bd7b824cdaadc61"
   },
   {
    "path": "tools/check_template.py",
-   "bytes": 3555,
-   "lines": 68,
-   "sha256": "57451c252c9d534e961b8ac3523ed1e5172777cf797d1ab7c46464d002beb794"
+   "bytes": 3938,
+   "lines": 72,
+   "sha256": "9e7e37b6b010fb75c960f74fb7d20bbffb8b39ed2c03d02ae1f74515629c526d"
   }
  ]
 }
@@ -1202,7 +1215,7 @@ passwords, the Google key, the alert topic) are environment variables in the hos
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/spec/05-api-contract.md sha256=262f5da2b61f98a490668d121ff38e8c8bc221a84af066ec1ba75cd5bfa81916 -->
+<!-- FILE: site-health-kit/spec/05-api-contract.md sha256=1262005b7c0cfac3311c63e590c9f1cb75f179c74a1f3c52802bb1a732117543 -->
 ~~~~~~~~markdown
 # Site Health kit — spec: the JSON the screen reads (§5, binding)
 
@@ -1389,8 +1402,10 @@ also when it has nothing to say: `what=fails&page=&bucket=&h=24`. **An empty val
 parameter is absent** (all pages, the whole window), not a malformed one.
 
 Unknown `what`: status 400 `{"error": "what?"}`. A missing or malformed parameter (`id` not a
-number, `url` empty, a required `bucket` missing or empty, a non-empty `bucket` that is not in one
-of the two bucket formats): `{"rows": []}`, without touching the database.
+number of at most 18 digits, `url` empty, a required `bucket` missing or empty, a non-empty
+`bucket` that is not in one of the two bucket formats or names no real day or hour, such as
+`2026-13-45` or `2026-11-12 24:00`): `{"rows": []}`, without touching the database. `alert`
+ignores `bucket`.
 Backend failure: status 502 `{"error": "<text>"}`; the sheet then says "לא הצלחתי לטעון".
 
 ### 5.5 `GET /api/messages?(h | f,t)` → the push log; `{"rows": [...]}`, newest first
@@ -1428,7 +1443,7 @@ The screen removes the rows at once and only reloads if the call fails.
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/spec/06-screen.md sha256=fcb31cf77c0d07e54fbf662925288b92df99371cb0c85cbd56bde95236f3c82a -->
+<!-- FILE: site-health-kit/spec/06-screen.md sha256=0457ad8927a5a6dc6dbfbb550ce7ba62f892eaf8c3a05d8ad1e30118df2994ca -->
 ~~~~~~~~markdown
 # Site Health kit — spec: the screen (§6, binding)
 
@@ -1450,7 +1465,7 @@ feeds the page canned answers and checks the rules below one by one, against any
    extra `links`, `הסברים`, `רענון`, `ייצא PDF`.
 3. **Red alert bar** — only when there are open alerts nobody marked as seen (§6.4).
 4. Title "בריאות האתר" and subtitle `<siteLabel> · הבדיקה האחרונה HH:MM · <period>`.
-5. Card **עכשיו** — four tiles and a row of chips (§6.2).
+5. Card **עכשיו** — four tiles (three on a site that does not measure real users) and a row of chips (§6.2).
 6. Card with the **controls**: period `24 שעות | 7 ימים | 30 יום | 90 יום`, strategy `טלפון | מחשב`,
    a custom date range (`מתאריך`, `עד`, `הצג`), and the line `מוצג: <period>`.
 7. Card **שורה תחתונה** — four tiles: `מהירות עמוד הבית בטלפון`, `זמינות`, `נפילות`, `התראות פתוחות`.
@@ -1481,6 +1496,12 @@ server-response thresholds; then `עודכן HH:MM:SS · רענון אוטומט
 The card reloads every 60 seconds on its own timer, also while a drill-down is open.
 When `/api/site/now` fails, the tiles are replaced by one grey tile `הנתון לא זמין כרגע`.
 
+A site that does not measure real users (`real_users` is off, §7.4) gets `nowRum` in
+`SH_CONFIG.hide`. The tile `מהירות אצל לקוחות, שעה אחרונה` is then not rendered at all, also
+before the first round (three tiles, never one that reads `אין מדידות` for good), and the sentence
+about it in the card's explanation (`<span id="nowRumTxt">`) is hidden. Without `nowRum` the card
+is exactly as above.
+
 A count of one is written in singular Hebrew everywhere on the screen (`מדידה אחת`, `כשל אחד`,
 `התראה פתוחה אחת`, `יום אחד`, `נבדק לפני שנייה`), never "1 מדידות".
 
@@ -1504,7 +1525,12 @@ centered 720 px panel from 720 px width; closes with ✕, a click outside, or Es
 | a row of `המדידה עצמה` | what the flow measures and what to do | none |
 
 The runs sheet shows: count, median, slowest, fastest, Google's real-user verdict when present,
-then the top 6 reasons by average estimated saving, then the table of runs (first 100).
+then the top 6 reasons by average estimated saving (the mean over the runs that report the reason,
+highest first, never more than 6), then the table of runs (first 100). The median is said in words:
+`מהיר מצוין` up to 2000 ms, `מהיר` up to 2500, `בינוני` up to 4000, `איטי` above; the tag of each run
+reads `מצוין` / `מהיר` / `בינוני` / `איטי` on the same thresholds. When no run of the answer
+succeeded: `אין מדידות תקינות (N ניסיונות נכשלו: <err of the newest run>).` (`ניסיון אחד נכשל`
+for one), and `אין מדידות תקינות.` when the answer has no run at all.
 
 The main screen reloads every 60 seconds, **except while a sheet is open**. A reload that returns
 after a newer one started is discarded (sequence guard). While loading, a thin progress bar and a
@@ -1581,7 +1607,9 @@ PageSpeed results with `locale=he` so that fallback is Hebrew too (§7.6).
 - The color variables, if the owner asks for their brand color (`--brand`).
 
 A card that does not apply to the site is hidden with `SH_CONFIG.hide` (§4.1), never by deleting
-its markup: the script expects every card to exist.
+its markup: the script expects every card to exist. The same list takes `nowRum`, the real-user
+tile of "עכשיו" (§6.2); the backend adds it when `real_users` is off. When you edit the explanation
+of "עכשיו", keep `<span id="nowRumTxt">` around the sentence about that tile.
 
 Anything else: do not change. If you believe something must change, ask the owner first.
 
@@ -2587,15 +2615,15 @@ Each of these was a real problem in the production original. Do not rediscover t
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/check_screen.js sha256=e9b965eb93228d315f3478fcd9b8985d51840d81044d3b0b4980772255433c02 -->
+<!-- FILE: site-health-kit/check_screen.js sha256=5171161d814c9517db5e05945606d0fb8547b13bf9e234059261302537f74a36 -->
 ~~~~~~~~javascript
 #!/usr/bin/env node
 /* Acceptance test of the site-health screen (Playwright, headless Chromium).
 
      node check_screen.js                                # against the mock:  http://127.0.0.1:8787
      node check_screen.js http://127.0.0.1:8000 --cookie "name=value"
-                                                         # your real server; the session cookie of a signed-in
-                                                         # viewer (owner or vendor)
+                                                         # your real server; the session cookie of the throwaway
+                                                         # check vendor (OWNER-STEPS.md step 5), never the owner's
      node check_screen.js <url> --path "/status?k=<token>"
                                                          # another page than /site, for example the share link
                                                          # of a real server (it needs no cookie)
@@ -2613,6 +2641,8 @@ Each of these was a real problem in the production original. Do not rediscover t
 
    The test only reads from the server: groups A and C send GET calls (C also deletes alerts, in
    the mock), and every call of group B is answered inside the browser and never reaches the server.
+   A check that breaks (a click that cannot happen, a sheet that does not close) is one FAIL line,
+   and the run goes on to its summary "N passed, M failed".
    Needs Playwright 1.45 or newer. Exit code 0 = every check passed, 1 = at least one failed,
    2 = the test could not run. */
 'use strict';
@@ -2630,14 +2660,20 @@ const NA = 'הנתון לא זמין כרגע';
 const CFG = { api: '/api', loginPath: '/login', homePage: 'בית', here: '/site' };
 
 let failed = 0, passed = 0;
+let s = null, p = null, sh = null;        // the page under test (each group opens its own), the last sheet read
 function check(name, cond, extra) { if (cond) { passed++; console.log('ok    ' + name); } else { failed++; console.log('FAIL  ' + name + (extra != null && extra !== '' ? '  → ' + String(extra).slice(0, 300) : '')); } }
-/* one group of checks; a crash inside it is one failed check, and the other groups still run */
-async function block(name, fn) { try { await fn(); } catch (e) { check(name + ': ran to its end', false, String(e && e.message || e).split('\n')[0]); } }
+const firstLine = (e) => String(e && e.message || e).split('\n')[0];
+/* one group of checks; a crash inside it is one failed check, its page is closed, and the other groups still run */
+async function block(name, fn) {
+  try { await fn(); } catch (e) { check(name + ': ran to its end', false, firstLine(e) + '  (the rest of this group did not run)'); }
+  if (s) await s.ctx.close().catch(() => {});
+}
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const until = async (fn, ms = 5000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await fn()) return true; await sleep(25); } return false; };
 
 /* ---------- reading the page ---------- */
-const txt = (page, sel) => page.evaluate((s) => { const e = document.querySelector(s); return e ? e.textContent : null; }, sel);
+/* a missing element reads as a text that no check expects, so the check fails instead of the run */
+const txt = (page, sel) => page.evaluate((s) => { const e = document.querySelector(s); return e ? e.textContent : '(no element ' + s + ')'; }, sel);
 const texts = (page, sel) => page.evaluate((s) => Array.prototype.map.call(document.querySelectorAll(s), (e) => e.textContent), sel);
 const count = (page, sel) => page.evaluate((s) => document.querySelectorAll(s).length, sel);
 const visible = (page, sel) => page.evaluate((s) => { const e = document.querySelector(s); if (!e) return false; const r = e.getBoundingClientRect(); return getComputedStyle(e).display !== 'none' && r.width > 0 && r.height > 0; }, sel);
@@ -2645,14 +2681,41 @@ const shown = (page, sel) => page.evaluate((s) => Array.prototype.filter.call(do
 const css = (page, sel, prop) => page.evaluate(([s, k]) => { const e = document.querySelector(s); return e ? getComputedStyle(e)[k] : null; }, [sel, prop]);
 /* the screen sets overflow-x:hidden on html and body, so the root never scrolls: an element that
    is too wide shows only in the body's own scroll width */
+const rgbSum = (c) => { const m = String(c).match(/\d+/g); return m ? +m[0] + +m[1] + +m[2] : -1; };
 const noOverflow = (page) => page.evaluate(() => document.body.scrollWidth <= window.innerWidth + 1);
 const settle = (page) => page.waitForFunction(() => !document.body.classList.contains('loading') && document.querySelectorAll('#verdict .vbox').length === 4 && !/טוען…/.test(document.getElementById('now').textContent), null, { timeout: 15000 }).catch(() => {});
-const sheetOn = (page) => page.evaluate(() => document.getElementById('dov').classList.contains('on'));
+const sheetOn = (page) => page.evaluate(() => document.getElementById('dov').classList.contains('on')).catch(() => false);
 const sheetReady = (page) => page.waitForFunction(() => document.getElementById('dov').classList.contains('on') && !/טוען…/.test(document.getElementById('dbody').textContent), null, { timeout: 5000 }).catch(() => {});
-const closeSheet = async (page) => { if (await sheetOn(page)) await page.keyboard.press('Escape'); };
+/* closes the sheet without the page's help: after a failed check, so that the next steps still run */
+const shut = (page) => page.evaluate(() => { document.getElementById('dov').classList.remove('on'); document.body.style.overflow = ''; }).catch(() => {});
+const escapeFailed = new WeakSet();
+const closeSheet = async (page) => {
+  if (!(await sheetOn(page))) return;
+  await page.keyboard.press('Escape');
+  if (!(await sheetOn(page))) return;
+  if (!escapeFailed.has(page)) { escapeFailed.add(page); check('Escape closes the sheet (between two steps)', false, 'it stayed open; the test closed it itself and goes on'); }
+  await shut(page);
+};
+/* before a click: a sheet or the menu that is still open (a close that failed) would swallow the click.
+   It is one failed check, and the test closes it so that the click can still happen. */
+async function unblock(page, sel) {
+  const left = await page.evaluate((q) => {
+    let t = null; try { t = document.querySelector(q); } catch (e) { /* not a CSS selector */ }
+    const out = [];
+    [['dov', 'a sheet'], ['shov', 'the menu']].forEach(([id, what]) => {
+      const o = document.getElementById(id);
+      if (o && o.classList.contains('on') && !(t && o.contains(t))) { o.classList.remove('on'); document.body.style.overflow = ''; out.push(what); }
+    });
+    return out;
+  }, sel).catch(() => []);
+  if (left.length) check('nothing is left open before the click on ' + sel, false, left.join(' and ') + ' was still open; the test closed it');
+}
 /* what the open sheet shows; a closed sheet reads as empty, so a click that opened nothing cannot pass on old content */
 const sheet = (page) => page.evaluate(() => document.getElementById('dov').classList.contains('on') ? { title: document.getElementById('dttl').textContent, body: document.getElementById('dbody').textContent, rows: document.querySelectorAll('#dbody tbody tr').length, items: document.querySelectorAll('#dbody li').length } : { title: '', body: '', rows: 0, items: 0 });
-const tiles = (page, sel) => page.evaluate((s) => Array.prototype.map.call(document.querySelectorAll(s), (b) => { const g = (c) => { const e = b.querySelector(c); return e ? e.textContent : ''; }; const d = b.querySelector('.dot'); return { k: g('.k'), v: g('.v'), m: g('.m'), dot: d ? d.className.replace('dot ', '') : '' }; }), sel);
+/* a tile that is not there reads as an empty tile, so a check of t[3] fails instead of crashing */
+const NOTILE = Object.freeze({ k: '', v: '', m: '', dot: '' });
+const padded = (a) => new Proxy(a, { get: (o, k) => (typeof k === 'string' && /^\d+$/.test(k) && !(k in o) ? NOTILE : o[k]) });
+const tiles = (page, sel) => page.evaluate((s) => Array.prototype.map.call(document.querySelectorAll(s), (b) => { const g = (c) => { const e = b.querySelector(c); return e ? e.textContent : ''; }; const d = b.querySelector('.dot'); return { k: g('.k'), v: g('.v'), m: g('.m'), dot: d ? d.className.replace('dot ', '') : '' }; }), sel).then(padded);
 async function scenario(name) { const r = await fetch(BASE + '/__scenario?name=' + name).catch(() => null); if (!r || !r.ok) return false; const j = await r.json().catch(() => null); return !!(j && j.mock === 'site-health-kit'); }
 
 /* ---------- canned answers (group B): the test plays the backend ---------- */
@@ -2677,7 +2740,7 @@ async function hostileWalk(s, who) {
     Object.keys(worst).forEach((k) => { worst[k] = Math.max(worst[k], x[k]); });
   };
   await p.click('#explbtn');
-  await p.click('#alertbar .ahead').catch(() => {});
+  await p.click('#alertbar .ahead', { quiet: true }).catch(() => {});
   for (const h of ['#alertsCard .foldhead', '#msgCard .foldhead']) if (await visible(p, h)) await p.click(h);
   await look();
   for (const sel of ['#verdict .vbox[data-drill="home"]', '#verdict .vbox[data-drill="fails"]', '#verdict .vbox[data-drill="outages"]', '#verdict .vbox[data-drill="alerts"]', '#availTbl tr.rowbtn', '#outages li.rowbtn',
@@ -2703,7 +2766,7 @@ function fakeBackend(home, api) {
   const F = { log: [], acked: new Set(), over: {}, HOME: home || CFG.homePage, api: api || CFG.api };
   F.PAGES = [[F.HOME, U + '/'], ['קטגוריה', U + '/product-category/sofas/'], ['מוצר', U + '/product/sample-sofa/'], ['סל', U + '/cart/']];
   F.ALERTS = [
-    { id: 41, kind: 'down', title: 'האתר לא עונה: סל', body: 'קוד 502\n' + U + '/cart/', open: true, opened_il: '12.11 11:02', closed_il: null, minutes: 14 },
+    { id: 41, kind: 'down', title: 'האתר לא עונה: סל', body: 'האתר לא עונה: סל\nקוד 502\n' + U + '/cart/', open: true, opened_il: '12.11 11:02', closed_il: null, minutes: 14 },
     { id: 40, kind: 'slow', title: 'עמוד איטי: קטגוריה', body: '4.6 שניות עד התוכן, פעמיים ברצף\n' + U + '/product-category/sofas/', open: true, opened_il: '12.11 09:10', closed_il: null, minutes: 125 },
     { id: 39, kind: 'silent', title: 'המדידה נעצרה: טעינת מפת האתר', body: 'אין מדידה כבר 3 ימים', open: true, opened_il: '11.11 02:00', closed_il: null, minutes: 2000 },
     { id: 38, kind: 'down', title: 'האתר לא עונה: ' + F.HOME, body: 'לא ענה בזמן', open: false, opened_il: '12.11 01:20', closed_il: '12.11 01:21', minutes: 1 }];
@@ -2787,6 +2850,18 @@ async function open(browser, path, vp, o = {}) {
   const page = await ctx.newPage();
   page.setDefaultTimeout(5000);
   const s = { ctx, page, errors: [], status: 0, site: null, F: null };
+  /* A click that cannot happen is one failed check, not the end of the run ({quiet: true}: the caller
+     handles it). The reads of one element answer null when the element is not there. */
+  const click0 = page.click.bind(page);
+  page.click = async (sel, opt) => {
+    const { quiet, ...o } = opt || {};
+    await unblock(page, sel);
+    try { return await click0(sel, o); } catch (e) { if (quiet || page.isClosed()) throw e; check('the test can click ' + sel, false, firstLine(e)); }
+  };
+  for (const m of ['getAttribute', 'isChecked', 'isDisabled', 'inputValue']) {
+    const f = page[m].bind(page);
+    page[m] = (...a) => f(...a).catch((e) => { if (page.isClosed()) throw e; return null; });
+  }
   page.on('pageerror', (e) => s.errors.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) s.errors.push('console: ' + m.text()); });
   page.on('response', (r) => { try { if (new URL(r.url()).pathname === CFG.api + '/site' && r.status() === 200) r.json().then((j) => { s.site = j; }).catch(() => {}); } catch (e) { /* not a URL the test cares about */ } });
@@ -2827,89 +2902,107 @@ async function reload(s, change) {
   const runC = isMock && !BASIC;
 
   /* ================= A. the page as the server gives it ================= */
-  let s = await open(browser, PAGE_PATH, PHONE), p = s.page;
+  s = await open(browser, PAGE_PATH, PHONE).catch((e) => {
+    console.error('Nothing answers at ' + BASE + PAGE_PATH + ' (' + firstLine(e).replace(/^page\.goto: /, '') + ').\nStart your server, or the kit\'s mock (python3 mock_server.py), and give its address:  node check_screen.js http://127.0.0.1:<port>');
+    process.exit(2);
+  });
+  p = s.page;
   const isScreen = s.status === 200 && await p.evaluate(() => !!(document.getElementById('verdict') && document.getElementById('now') && document.getElementById('dov')));
   check('the page loads (200) and is the site-health screen', isScreen, 'status ' + s.status + ', address ' + p.url());
   if (!isScreen) {
-    console.error('\n' + BASE + PAGE_PATH + ' did not give the screen, so nothing else can be checked.\nFor a real server pass the cookie of a signed-in owner (--cookie "name=value"), or test the share link (--path "/status?k=<token>").');
+    console.error('\n' + BASE + PAGE_PATH + ' did not give the screen, so nothing else can be checked.\nFor a real server pass the session cookie of the throwaway check vendor (OWNER-STEPS.md step 5: --cookie "name=value"), never the owner\'s, or test the share link (--path "/status?k=<token>").');
     process.exit(2);
   }
-  Object.assign(CFG, await p.evaluate(() => { const c = window.CFG || {}, o = {}; ['api', 'loginPath', 'homePage', 'here'].forEach((k) => { if (typeof c[k] === 'string' && c[k]) o[k] = c[k]; }); return o; }));
-  check('no horizontal scroll at 390px', await noOverflow(p));
-  check('html is rtl + hebrew', await p.evaluate(() => document.documentElement.dir === 'rtl' && document.documentElement.lang === 'he'));
-  check('"now" card shows 4 tiles', await count(p, '#now .nbox') === 4, String(await count(p, '#now .nbox')));
-  check('bottom line shows 4 tiles', await count(p, '#verdict .vbox') === 4);
-  const cards = await p.evaluate(() => Array.prototype.map.call(document.querySelectorAll('.wrap > section.card h2'), (h) => h.firstChild.textContent.trim()));
-  const WANT = ['עכשיו', 'שורה תחתונה', 'זמינות', 'מהירות לאורך זמן', 'העמודים העיקריים', 'העמודים הכבדים באתר', 'מוצרים שבורים באתר', 'תעודת האבטחה (המנעול)', 'התראות', 'הודעות שנשלחו לטלפון', 'המדידה עצמה'];
-  check('cards appear in the specified order', JSON.stringify(cards) === JSON.stringify(WANT), JSON.stringify(cards));
-  check('subtitle shows the last check time and the period', /הבדיקה האחרונה .* · 24 השעות האחרונות/.test(await txt(p, '#sub')), await txt(p, '#sub'));
-  check('alerts card and messages card start folded', await p.evaluate(() => document.getElementById('alertsList').parentElement.classList.contains('collapsed') && document.getElementById('msgList').parentElement.classList.contains('collapsed')));
-  check('explanations hidden until asked', !(await visible(p, 'p.explain')));
-  await p.click('#explbtn');
-  check('"הסברים" shows the explanations, and the page stays', await visible(p, 'p.explain') && (await p.getAttribute('#explbtn', 'aria-pressed')) === 'true' && await visible(p, '#verdictCard'));
-  await p.click('#explbtn');
-  check('the screen asks nothing from another host', await p.evaluate(() => performance.getEntriesByType('resource').every((e) => new URL(e.name).host === location.host)));
-  if (SHOTS) await p.screenshot({ path: SHOTS + '/phone.png', fullPage: true });
+  Object.assign(CFG, await p.evaluate(() => { const c = window.CFG || {}, o = {}; ['api', 'loginPath', 'homePage', 'here'].forEach((k) => { if (typeof c[k] === 'string' && c[k]) o[k] = c[k]; }); if (Array.isArray(c.hide)) o.hide = c.hide.slice(); return o; }));
 
-  /* numbers against the data the server sent */
-  const data = s.site || {};
-  const per = (Array.isArray(data.availability) ? data.availability : []).filter((r) => r.section === 'לפי עמוד');
-  const checksN = per.reduce((a, r) => a + (+r.checks || 0), 0), failN = per.reduce((a, r) => a + (+r.failed || 0), 0);
-  const upTile = await txt(p, '#verdict .vbox[data-drill="fails"] .v');
-  if (checksN) {
-    const up = 100 - 100 * failN / checksN;
-    check('uptime tile = 100 − failed/checks, and "100%" only without a single failure', failN === 0 ? upTile === '100%' : /^\d{1,2}\.\d\d%$/.test(upTile) && Math.abs(parseFloat(upTile) - Math.min(up, 99.99)) < 0.0051, upTile + ' for ' + failN + '/' + checksN);
-    check('availability table: one row per probed page', await count(p, '#availTbl tbody tr') === per.length);
-  } else if (Array.isArray(data.availability)) check('no availability data → empty state text', /אין בדיקות זמינות בתקופה/.test(await txt(p, '#availTbl')));
-  const core = (Array.isArray(data.speed) ? data.speed : []).filter((r) => r.section === 'ליבה' && r.strategy === 'mobile');
-  if (Array.isArray(data.speed)) check('core pages table: one row per core page (mobile)', core.length ? await count(p, '#coreTbl tbody tr') === core.length : /אין מדידות טלפון בתקופה/.test(await txt(p, '#coreTbl')));
-  check('heavy pages table: at most 10 rows', await count(p, '#slowTbl tbody tr') <= 10);
+  await block('A1 the page on a phone', async () => {
+    check('no horizontal scroll at 390px', await noOverflow(p));
+    check('html is rtl + hebrew', await p.evaluate(() => document.documentElement.dir === 'rtl' && document.documentElement.lang === 'he'));
+    /* the server hides the real-user tile (hide: nowRum) on a site that does not measure real users */
+    const nowN = (CFG.hide || []).indexOf('nowRum') >= 0 ? 3 : 4;
+    check('"now" card shows ' + nowN + ' tiles' + (nowN === 3 ? ' (hide has nowRum)' : ''), await count(p, '#now .nbox') === nowN, String(await count(p, '#now .nbox')));
+    check('bottom line shows 4 tiles', await count(p, '#verdict .vbox') === 4);
+    const cards = await p.evaluate(() => Array.prototype.map.call(document.querySelectorAll('.wrap > section.card h2'), (h) => h.firstChild.textContent.trim()));
+    const WANT = ['עכשיו', 'שורה תחתונה', 'זמינות', 'מהירות לאורך זמן', 'העמודים העיקריים', 'העמודים הכבדים באתר', 'מוצרים שבורים באתר', 'תעודת האבטחה (המנעול)', 'התראות', 'הודעות שנשלחו לטלפון', 'המדידה עצמה'];
+    check('cards appear in the specified order', JSON.stringify(cards) === JSON.stringify(WANT), JSON.stringify(cards));
+    check('subtitle shows the last check time and the period', /הבדיקה האחרונה .* · 24 השעות האחרונות/.test(await txt(p, '#sub')), await txt(p, '#sub'));
+    check('alerts card and messages card start folded', await p.evaluate(() => document.getElementById('alertsList').parentElement.classList.contains('collapsed') && document.getElementById('msgList').parentElement.classList.contains('collapsed')));
+    check('explanations hidden until asked', !(await visible(p, 'p.explain')));
+    await p.click('#explbtn');
+    check('"הסברים" shows the explanations, and the page stays', await visible(p, 'p.explain') && (await p.getAttribute('#explbtn', 'aria-pressed')) === 'true' && await visible(p, '#verdictCard'));
+    await p.evaluate(() => document.getElementById('explbtn').click());     // back, through the script: also when the button hid the page
+    check('the screen asks nothing from another host', await p.evaluate(() => performance.getEntriesByType('resource').every((e) => new URL(e.name).host === location.host)));
+    if (SHOTS) await p.screenshot({ path: SHOTS + '/phone.png', fullPage: true });
 
-  /* sheets */
-  await p.click('#verdict .vbox[data-drill="fails"]'); await sheetReady(p);
-  let sh = await sheet(p);
-  check('click on uptime opens the failures sheet', sh.title === 'כל הכשלים' && /הבדיקות שנכשלו/.test(sh.body), sh.title);
-  if (failN > 0) check('the failures sheet lists the failed checks (an empty page= and bucket= mean "all")', sh.rows >= 1, sh.rows + ' rows for ' + failN + ' failures');
-  check('sheet is a bottom sheet on a phone', await p.evaluate(() => { const r = document.getElementById('dsheet').getBoundingClientRect(); return Math.abs(r.bottom - window.innerHeight) < 2 && r.width >= window.innerWidth - 2; }));
-  await p.keyboard.press('Escape');
-  check('Escape closes the sheet', !(await sheetOn(p)));
-  if (core.length) {
-    await p.click('#coreTbl tbody tr');
-    await p.waitForFunction(() => /המדידות|אין מדידות תקינות/.test(document.getElementById('dbody').textContent), null, { timeout: 10000 }).catch(() => {});
+    /* numbers against the data the server sent */
+    const data = s.site || {};
+    const per = (Array.isArray(data.availability) ? data.availability : []).filter((r) => r.section === 'לפי עמוד');
+    const checksN = per.reduce((a, r) => a + (+r.checks || 0), 0), failN = per.reduce((a, r) => a + (+r.failed || 0), 0);
+    const upTile = await txt(p, '#verdict .vbox[data-drill="fails"] .v');
+    if (checksN) {
+      const up = 100 - 100 * failN / checksN;
+      check('uptime tile = 100 − failed/checks, and "100%" only without a single failure', failN === 0 ? upTile === '100%' : /^\d{1,2}\.\d\d%$/.test(upTile) && Math.abs(parseFloat(upTile) - Math.min(up, 99.99)) < 0.0051, upTile + ' for ' + failN + '/' + checksN);
+      check('availability table: one row per probed page', await count(p, '#availTbl tbody tr') === per.length);
+    } else if (Array.isArray(data.availability)) check('no availability data → empty state text', /אין בדיקות זמינות בתקופה/.test(await txt(p, '#availTbl')));
+    const core = (Array.isArray(data.speed) ? data.speed : []).filter((r) => r.section === 'ליבה' && r.strategy === 'mobile');
+    if (Array.isArray(data.speed)) check('core pages table: one row per core page (mobile)', core.length ? await count(p, '#coreTbl tbody tr') === core.length : /אין מדידות טלפון בתקופה/.test(await txt(p, '#coreTbl')));
+    check('heavy pages table: at most 10 rows', await count(p, '#slowTbl tbody tr') <= 10);
+
+    /* sheets */
+    await p.click('#verdict .vbox[data-drill="fails"]'); await sheetReady(p);
     sh = await sheet(p);
-    check('click on a core page opens its measurements', /^מהירות: /.test(sh.title), sh.title);
-    if (+core[0].checks > 0) check('the measurements sheet lists the runs of that page (an empty bucket= means "the whole period")', sh.rows >= 1, sh.rows + ' rows for ' + core[0].checks + ' runs');
-    await p.click('#dx');
-  }
-  check('no JavaScript errors (phone)', s.errors.length === 0, s.errors.join(' | '));
-  await s.ctx.close();
+    check('click on uptime opens the failures sheet', sh.title === 'כל הכשלים' && /הבדיקות שנכשלו/.test(sh.body), sh.title);
+    if (failN > 0) check('the failures sheet lists the failed checks (an empty page= and bucket= mean "all")', sh.rows >= 1, sh.rows + ' rows for ' + failN + ' failures');
+    check('sheet is a bottom sheet on a phone', await p.evaluate(() => { const r = document.getElementById('dsheet').getBoundingClientRect(); return Math.abs(r.bottom - window.innerHeight) < 2 && r.width >= window.innerWidth - 2; }));
+    await p.keyboard.press('Escape');
+    check('Escape closes the sheet', !(await sheetOn(p)));
+    escapeFailed.add(p); await shut(p);                        // when it stayed open, the test closes it and goes on
+    if (core.length) {
+      await p.click('#coreTbl tbody tr');
+      await p.waitForFunction(() => /המדידות|אין מדידות תקינות/.test(document.getElementById('dbody').textContent), null, { timeout: 10000 }).catch(() => {});
+      sh = await sheet(p);
+      check('click on a core page opens its measurements', /^מהירות: /.test(sh.title), sh.title);
+      if (+core[0].checks > 0) check('the measurements sheet lists the runs of that page (an empty bucket= means "the whole period")', sh.rows >= 1, sh.rows + ' rows for ' + core[0].checks + ' runs');
+      await p.click('#dx');
+    }
+    check('no JavaScript errors (phone)', s.errors.length === 0, s.errors.join(' | '));
+    await s.ctx.close();
+  });
 
-  /* desktop + dark */
-  s = await open(browser, PAGE_PATH, DESK); p = s.page;
-  check('no horizontal scroll at 1280px', await noOverflow(p));
-  await p.click('#verdict .vbox[data-drill="outages"]');
-  check('sheet is centered on desktop', await p.evaluate(() => { const r = document.getElementById('dsheet').getBoundingClientRect(); return Math.abs((r.left + r.right) / 2 - window.innerWidth / 2) < 2 && r.width === 720; }));
-  await p.click('#dx');
-  await p.click('#segH button[data-h="168"]');
-  await until(() => s.site && s.site.hours === 168, 15000); await settle(p);
-  check('"7 ימים" reloads with a 168-hour window', !!s.site && s.site.hours === 168 && /7 הימים האחרונים/.test(await txt(p, '#rangeTxt')));
-  await p.click('#segS button[data-s="desktop"]');
-  await until(() => s.site && s.site.strategy === 'desktop', 15000); await settle(p);
-  check('"מחשב" reloads with strategy=desktop', !!s.site && s.site.strategy === 'desktop');
-  if (SHOTS) await p.screenshot({ path: SHOTS + '/desktop.png', fullPage: true });
-  check('no JavaScript errors (desktop)', s.errors.length === 0, s.errors.join(' | '));
-  await s.ctx.close();
-  s = await open(browser, PAGE_PATH, PHONE, { dark: true }); p = s.page;
-  const rgbSum = (c) => { const m = String(c).match(/\d+/g); return m ? +m[0] + +m[1] + +m[2] : -1; };
-  check('dark mode: dark background, light text', rgbSum(await css(p, 'body', 'backgroundColor')) < 150 && rgbSum(await css(p, 'h1', 'color')) > 500 && rgbSum(await css(p, '#verdict .vbox .v', 'color')) > 500, (await css(p, 'body', 'backgroundColor')) + ' / ' + (await css(p, 'h1', 'color')));
-  if (SHOTS) await p.screenshot({ path: SHOTS + '/phone-dark.png', fullPage: true });
-  await s.ctx.close();
+  await block('A2 desktop and dark', async () => {
+    s = await open(browser, PAGE_PATH, DESK); p = s.page;
+    check('no horizontal scroll at 1280px', await noOverflow(p));
+    await p.click('#verdict .vbox[data-drill="outages"]');
+    check('sheet is centered on desktop', await p.evaluate(() => { const r = document.getElementById('dsheet').getBoundingClientRect(); return Math.abs((r.left + r.right) / 2 - window.innerWidth / 2) < 2 && r.width === 720; }));
+    await p.click('#dx');
+    await p.click('#segH button[data-h="168"]');
+    await until(() => s.site && s.site.hours === 168, 15000); await settle(p);
+    check('"7 ימים" reloads with a 168-hour window', !!s.site && s.site.hours === 168 && /7 הימים האחרונים/.test(await txt(p, '#rangeTxt')));
+    await p.click('#segS button[data-s="desktop"]');
+    await until(() => s.site && s.site.strategy === 'desktop', 15000); await settle(p);
+    check('"מחשב" reloads with strategy=desktop', !!s.site && s.site.strategy === 'desktop');
+    if (SHOTS) await p.screenshot({ path: SHOTS + '/desktop.png', fullPage: true });
+    check('no JavaScript errors (desktop)', s.errors.length === 0, s.errors.join(' | '));
+    await s.ctx.close();
+    s = await open(browser, PAGE_PATH, PHONE, { dark: true }); p = s.page;
+    check('dark mode: dark background, light text', rgbSum(await css(p, 'body', 'backgroundColor')) < 150 && rgbSum(await css(p, 'h1', 'color')) > 500 && rgbSum(await css(p, '#verdict .vbox .v', 'color')) > 500, (await css(p, 'body', 'backgroundColor')) + ' / ' + (await css(p, 'h1', 'color')));
+    if (SHOTS) await p.screenshot({ path: SHOTS + '/phone-dark.png', fullPage: true });
+    await s.ctx.close();
+  });
 
   /* ================= B. the rules of the screen, against canned answers ================= */
 
   await block('B1 the cards', async () => {
     s = await fake(browser); p = s.page;
     for (const w of [390, 360, 320]) { await p.setViewportSize({ width: w, height: 800 }); check('no horizontal scroll at ' + w + 'px with every card full', await noOverflow(p), 'body is ' + await p.evaluate(() => document.body.scrollWidth) + 'px wide'); }
+    const where = [];
+    for (const w of [719, 720]) {
+      await p.setViewportSize({ width: w, height: 800 });
+      await p.click('#verdict .vbox[data-drill="outages"]');
+      where.push(w + ':' + await p.evaluate(() => { const r = document.getElementById('dsheet').getBoundingClientRect(); return Math.abs(r.bottom - window.innerHeight) < 2 && r.width >= window.innerWidth - 2 ? 'bottom' : r.width === 720 && r.top > 0 && Math.abs((r.left + r.right) / 2 - window.innerWidth / 2) < 2 ? 'centered' : 'other ' + Math.round(r.top) + '/' + Math.round(r.width); }));
+      await closeSheet(p);
+    }
+    check('the sheet is a bottom sheet up to 719 px and a centered 720 px panel from 720 px', where.join() === '719:bottom,720:centered', where.join());
     await p.setViewportSize(PHONE);
     check('subtitle: site label · last check of the availability flow (viewer\'s clock) · period', / · הבדיקה האחרונה 15:35 · 24 השעות האחרונות$/.test(await txt(p, '#sub')), await txt(p, '#sub'));
     const v = await tiles(p, '#verdict .vbox');
@@ -3068,7 +3161,7 @@ async function reload(s, change) {
     await p.click('#alertbar .ahead');
     check('a tap opens the list', await shown(p, '#alertbar .arow') === 3 && await visible(p, '#alertbar .abulk'));
     const sub = await txt(p, '#alertbar .arow[data-id="41"] .sub');
-    check('a row: the body with a readable page name instead of the address, then "מאז <time>"', sub === 'קוד 502 · /cart · מאז 12.11 11:02', sub);
+    check('a row: the body without the line that repeats the title, a readable page name instead of the address, then "מאז <time>"', sub === 'קוד 502 · /cart · מאז 12.11 11:02', sub);
     check('a row with an address in its body gets the link "לפתוח את העמוד ↗"; a row without one does not', (await count(p, '#alertbar .alink')) === 2 && (await p.getAttribute('#alertbar .arow[data-id="41"] .alink', 'href')) === U + '/cart/' && (await count(p, '#alertbar .arow[data-id="39"] .alink')) === 0);
     await p.evaluate(() => { const a = document.querySelector('#alertbar .alink'); a.addEventListener('click', (e) => e.preventDefault()); a.click(); });
     check('a tap on the link does not open the alert as well', !(await sheetOn(p)) && (await p.getAttribute('#alertbar .alink', 'target')) === '_blank');
@@ -3243,7 +3336,9 @@ async function reload(s, change) {
     let t = await tiles(p, '#now .nbox');
     check('every page answers: "פעיל", green', t[0].k === 'האתר עכשיו' && t[0].v === 'פעיל' && t[0].dot === 'ok' && t[0].m === 'נבדק לפני 12 שניות · 4 מתוך 4 עמודים עונים', JSON.stringify(t[0]));
     check('server response: the home page, 0.24 s is green; the slowest page is named', t[1].v === '0.24 שנ\'' && t[1].dot === 'ok' && t[1].m === 'דף הבית · הכי איטי כרגע: סל 1.7 שנ\'', JSON.stringify(t[1]));
-    check('real users: 3.1 s is yellow; the views and the source line', t[2].v === '3.1 שנ\'' && t[2].dot === 'w' && t[2].m === '143 צפיות בשעה האחרונה · אחוזון 75מקור: האתר החי · כל 1000 המדידות האחרונות', JSON.stringify(t[2]));
+    /* whether the source line of the real-user tile is in another colour than the rest of its small text */
+    const srcWarn = () => p.evaluate(() => { const m = document.querySelectorAll('#now .nbox')[2].querySelector('.m'), e = Array.prototype.filter.call(m.querySelectorAll('*'), (x) => /^מקור:/.test(x.textContent))[0]; return !!e && getComputedStyle(e).color !== getComputedStyle(m).color; });
+    check('real users: 3.1 s is yellow; the views and the source line', t[2].v === '3.1 שנ\'' && t[2].dot === 'w' && t[2].m === '143 צפיות בשעה האחרונה · אחוזון 75מקור: האתר החי · כל 1000 המדידות האחרונות' && !(await srcWarn()), JSON.stringify(t[2]));
     check('lab: 2.5 s is green; time, score, target', t[3].v === '2.5 שנ\'' && t[3].dot === 'ok' && t[3].m === 'דף הבית בטלפון, 15:30 · ציון 63 · יעד 2.5', JSON.stringify(t[3]));
     check('a chip per page, coloured by the server-response thresholds (0.5 s, 1.5 s)', (await chips()).join() === 'tag ok:' + H + ' 0.24 שנ\',tag ok:קטגוריה 0.31 שנ\',tag w:מוצר 0.69 שנ\',tag d:סל 1.7 שנ\'', (await chips()).join());
     check('the line under the chips: time, the 60-second refresh, the open alerts', /^עודכן \d\d:\d\d:\d\d · רענון אוטומטי כל 60 שניות · 3 התראות פתוחות$/.test(await txt(p, '#nowtick')), await txt(p, '#nowtick'));
@@ -3261,10 +3356,14 @@ async function reload(s, change) {
     check('thresholds: server 1.5 s yellow, real users 2.501 s yellow, lab 2.501 s yellow', t[1].dot === 'w' && t[2].dot === 'w' && t[3].dot === 'w', JSON.stringify(t.slice(1)));
     t = await now((d) => { d.pages[0].ms = 1501; d.pages[3].ms = 100; });
     check('thresholds: server 1.501 s red', t[1].dot === 'd' && t[1].v === '1.5 שנ\'' && t[1].m === 'דף הבית', JSON.stringify(t[1]));
+    t = await now((d) => { d.age_sec = 89; });
+    const at89 = t[0].m;
+    t = await now((d) => { d.age_sec = 90; });
+    check('the age of the round: seconds up to 89, minutes from 90', /^נבדק לפני 89 שניות · /.test(at89) && /^נבדק לפני 2 דקות · /.test(t[0].m), at89 + ' | ' + t[0].m);
     t = await now((d) => { d.age_sec = 1; d.rum.n = 1; d.rum_src = { n: 1, hosts: [{ host: 'live', n: 1 }], cols: [], test: 1 }; });
     check('counts of one in singular Hebrew: second, view, measurement', t[0].m === 'נבדק לפני שנייה · 4 מתוך 4 עמודים עונים' && t[2].m === 'צפייה אחת בשעה האחרונה · אחוזון 75מקור: האתר החי · מדידה אחת · מתוכן מדידת בדיקה אחת', t[0].m + ' | ' + t[2].m);
     t = await now((d) => { d.rum_src = { n: 1000, hosts: [{ host: 'live', n: 964 }, { host: 'staging.shop.test', n: 36 }], cols: [], test: 12 }; });
-    check('measurements from another site are listed by source', t[2].m === '143 צפיות בשעה האחרונה · אחוזון 75מקור: live 964 · staging.shop.test 36 (מתוך 1000 המדידות האחרונות) · מתוכן 12 מדידות בדיקה', t[2].m);
+    check('measurements from another site are listed by source, in warning colour', t[2].m === '143 צפיות בשעה האחרונה · אחוזון 75מקור: live 964 · staging.shop.test 36 (מתוך 1000 המדידות האחרונות) · מתוכן 12 מדידות בדיקה' && await srcWarn(), t[2].m);
     t = await now((d) => { Object.assign(d, { pages: [], latest: [], light: false, all_ok: false, any_ok: false, age_sec: null, rum: { n: 0, p75_ms: null }, speed: {}, alerts_open: 0, rum_src: null }); });
     check('no round in the last 15 minutes: four grey tiles, "אין נתון" and not "פעיל" or "נפל"', t.length === 4 && t.every((x) => x.dot === 'n') && t[0].v === 'אין נתון' && t[0].m === 'אין בדיקה ב-15 הדקות האחרונות' && t[1].v === '—' && t[1].m === 'אין נתון' && t[2].m === 'אין מדידות בשעה האחרונה' && t[3].m === 'אין מדידה' && (await chips()).length === 0, JSON.stringify(t));
     await s.ctx.close();
@@ -3310,6 +3409,8 @@ async function reload(s, change) {
     check('print hides the controls: top bar, period card, "יציאה", ✕, checkboxes, bulk row, chevrons', gone.length === 0, gone.join(' '));
     check('print unfolds everything: all alerts of the bar, the alerts card, the message log', await shown(p, '#alertbar .arow') === 3 && await visible(p, '#alertsList') && await visible(p, '#msgList') && (await css(p, '#alertbar .alist', 'maxHeight')) === 'none');
     check('print shows every table row: all 70 products', await shown(p, '#issuesTbl tbody tr') === 70, String(await shown(p, '#issuesTbl tbody tr')));
+    const size = await p.evaluate(() => { const out = []; const walk = (rules) => Array.prototype.forEach.call(rules, (r) => { if (r.type === 6) out.push(r.style.getPropertyValue('size')); else if (r.cssRules) walk(r.cssRules); }); Array.prototype.forEach.call(document.styleSheets, (x) => walk(x.cssRules)); return out.join(' | '); });
+    check('print on A4 landscape', /^a4 landscape$/i.test(size.trim()), size);
     check('print from a device in dark mode: white page, dark text, the light status colours', (await css(p, 'body', 'backgroundColor')) === 'rgb(255, 255, 255)' && (await css(p, '#verdictCard', 'backgroundColor')) === 'rgb(255, 255, 255)' && (await css(p, '#verdict .vbox', 'backgroundColor')) === 'rgb(255, 255, 255)' && rgbSum(await css(p, 'h1', 'color')) < 150 && (await css(p, '#alertbar', 'color')) === 'rgb(163, 39, 31)' && (await css(p, '#healthTbl .tag.ok', 'color')) === 'rgb(11, 110, 79)' && (await css(p, '#healthTbl .tag.w', 'color')) === 'rgb(143, 95, 8)', (await css(p, '#alertbar', 'color')) + ' / ' + (await css(p, '#healthTbl .tag.ok', 'color')));
     await s.ctx.close();
   });
@@ -3322,7 +3423,7 @@ async function reload(s, change) {
     check('…and opens the menu: group title, entries, this screen marked', await visible(p, '#shov') && (await count(p, '#shlist a')) === 2 && (await txt(p, '#shlist .shg')) === 'האתר' && (await txt(p, '#shlist a.shcur')) === 'בריאות האתר' && (await p.getAttribute('#shlist a:not(.shcur)', 'href')) === '/another');
     await p.keyboard.press('Escape');
     check('…Escape closes it', !(await visible(p, '#shov')));
-    check('owner: the message log is asked for', s.F.n('/messages') === 1 && await visible(p, '#msgCard'));
+    check('owner: the message log is asked for', await until(() => s.F.n('/messages') === 1, 3000) && await visible(p, '#msgCard'));
     await s.ctx.close();
 
     s = await fake(browser); p = s.page;                       // nav: []
@@ -3375,7 +3476,7 @@ async function reload(s, change) {
   await block('B11 SH_CONFIG', async () => {
     s = await fake(browser, { cfg: { siteLabel: 'shop.test', brand: 'DEMO-B', homePage: 'ראשי', probeCount: 1, coreCount: 1, api: '/data', loginPath: '/signin', logoutPath: '/bye',
       pathLabels: [['/product/', 'פריט: ']], bucketNote: 'הערה על עמוד הסל', liveHosts: ['www.shop.test'] } }); p = s.page;
-    check('api: every data call goes to that base', s.F.n('/site') === 1 && s.F.n('/site/now') === 1 && s.F.n('/messages') === 1);
+    check('api: every data call goes to that base', await until(() => s.F.n('/site') === 1 && s.F.n('/site/now') === 1 && s.F.n('/messages') === 1, 3000), s.F.log.map((e) => e.path).join(' '));
     check('siteLabel and brand: tab title, subtitle, the small text at the top', (await p.title()) === 'בריאות האתר — shop.test' && /^shop\.test · /.test(await txt(p, '#sub')) && (await txt(p, '#brandTxt')) === 'DEMO-B', await p.title());
     check('logoutPath: the address of "יציאה"', (await p.getAttribute('#outLink', 'href')) === '/bye');
     const t = await tiles(p, '#now .nbox');
@@ -3412,6 +3513,68 @@ async function reload(s, change) {
     await s.ctx.close();
     s = await fake(browser, { hostile: true, role: { share: true }, cfg: { shareKey: 'tok-1' } });
     await hostileWalk(s, 'share link');
+    await s.ctx.close();
+  });
+
+  await block('B13 the runs sheet: what slows the page, failed runs, the median in words', async () => {
+    let rows = [];
+    s = await fake(browser, { over: { '/site/drill': (q) => (q.what === 'runs' ? { body: { rows } } : null) } }); p = s.page;
+    /* opens the runs sheet of the first core page with these rows, reads it and closes it */
+    const runs = async (r) => {
+      rows = r;
+      await p.click('#coreTbl tbody tr:nth-child(1)'); await sheetReady(p);
+      const x = await p.evaluate(() => {
+        const on = document.getElementById('dov').classList.contains('on'), t = document.querySelector('#dbody tbody tr td:nth-child(2) .tag');
+        return { body: on ? document.getElementById('dbody').textContent : '', why: on ? Array.prototype.map.call(document.querySelectorAll('#dbody ul.list li'), (e) => e.textContent) : [], tag: on && t ? t.className + ':' + t.textContent : '' };
+      });
+      await closeSheet(p);
+      return x;
+    };
+    const ok = (lcp, opps) => ({ ok: true, err: null, at_il: '12.11 10:15', lcp_ms: lcp, score: 64, ttfb_ms: 410, bytes: 3400000, cls: 0.03, crux_category: null, crux_lcp_ms: null, opps: opps || [] });
+    const o = (id, ms) => ({ id, title: 'title of ' + id, ms });
+    /* eight reasons. By the average saving: A 1.5, B 1.2, C 1.1, D 0.9, E 0.8, F 0.73, G 0.6, H 0.5 s.
+       By total, F (2.2 s) and H (2.0 s) come second and third; by the largest single value F is first. */
+    const [A, B, C, D, E, F, G, H] = ['render-blocking-resources', 'unused-javascript', 'modern-image-formats', 'offscreen-images', 'server-response-time', 'uses-optimized-images', 'uses-text-compression', 'redirects'];
+    let x = await runs([ok(2400, [o(A, 1500), o(B, 1400), o(C, 1100), o(D, 900), o(E, 800), o(F, 2000), o(G, 600), o(H, 500)]), ok(2500, [o(B, 1000), o(E, 800), o(F, 100), o(H, 500)]), ok(2600, [o(F, 100), o(H, 500)]), ok(2700, [o(H, 500)])]);
+    const OPPS = await p.evaluate(() => (typeof OPP === 'object' && OPP) || {});      // the page's own translations (§6.8 lets a site edit them)
+    const want = [[A, '1.5'], [B, '1.2'], [C, '1.1'], [D, '0.9'], [E, '0.8'], [F, '0.7']].map(([id, v]) => v + ' ש\' ' + (OPPS[id] || 'title of ' + id));
+    check('runs sheet with 8 reasons: exactly the top 6 by average saving, highest first (not by total, peak or count)', JSON.stringify(x.why) === JSON.stringify(want), x.why.join(' | '));
+
+    const bad = (err) => ({ ok: false, err, at_il: '12.11 10:00' });
+    x = await runs([bad('NO_FCP'), bad('NO_LCP'), bad('TIMEOUT')]);
+    check('only failed runs: "אין מדידות תקינות (3 ניסיונות נכשלו: <reason of the newest>)"', x.body === 'אין מדידות תקינות (3 ניסיונות נכשלו: NO_FCP).', x.body);
+    x = await runs([bad('ERRORED_DOCUMENT_REQUEST')]);
+    check('one failed run: "ניסיון אחד נכשל" with its reason', x.body === 'אין מדידות תקינות (ניסיון אחד נכשל: ERRORED_DOCUMENT_REQUEST).', x.body);
+    x = await runs([]);
+    check('no run at all: "אין מדידות תקינות."', x.body === 'אין מדידות תקינות.', x.body);
+
+    const wrong = [];
+    for (const [ms, word, tag] of [[1999, 'מהיר מצוין', 'tag ok:מצוין'], [2000, 'מהיר מצוין', 'tag ok:מצוין'], [2001, 'מהיר', 'tag ok:מהיר'], [2500, 'מהיר', 'tag ok:מהיר'],
+      [2501, 'בינוני', 'tag w:בינוני'], [4000, 'בינוני', 'tag w:בינוני'], [4001, 'איטי', 'tag d:איטי']]) {
+      x = await runs([ok(ms)]);
+      const m = x.body.match(/עד התוכן העיקרי: (.+?)\. הכי איטית/), got = (m ? m[1] : '?') + ' / ' + x.tag;
+      if (got !== word + ' / ' + tag) wrong.push(ms + ' ms: ' + got);
+    }
+    check('the median in words: "מהיר מצוין" up to 2000 ms, "מהיר" up to 2500, "בינוני" up to 4000, "איטי" above (1999 / 2000 / 2001 / 2500 / 2501 / 4000 / 4001); the run\'s tag agrees', wrong.length === 0, wrong.join(' | '));
+    check('no JavaScript errors (runs sheet)', s.errors.length === 0, s.errors.join(' | '));
+    await s.ctx.close();
+  });
+
+  await block('B14 a site that does not measure real users (SH_CONFIG.hide: nowRum)', async () => {
+    s = await fake(browser, { clock: '2026-11-12T16:00:00+02:00', cfg: { hide: ['nowRum'] } }); p = s.page;
+    let t = await tiles(p, '#now .nbox');
+    check('hide nowRum: "עכשיו" has three tiles, without "מהירות אצל לקוחות"; the others as always', t.length === 3 && t.map((x) => x.k).join('|') === 'האתר עכשיו|תגובת שרת עכשיו|מעבדה, מדידה אחרונה'
+      && t[0].v === 'פעיל' && t[1].v === '0.24 שנ\'' && t[2].v === '2.5 שנ\'' && t[2].m === 'דף הבית בטלפון, 15:30 · ציון 63 · יעד 2.5', JSON.stringify(t));
+    await p.click('#explbtn');
+    const ex = await p.evaluate(() => document.querySelector('#nowcard p.explain').innerText);
+    check('…and the explanation of "עכשיו" says nothing about real users; the rest of it stays', !/מהירות אצל לקוחות/.test(ex) && /תגובת שרת/.test(ex) && /מתרענן לבד כל 60 שניות/.test(ex), ex);
+    check('…every card is still there', await visible(p, '#verdictCard') && await visible(p, '#coreCard') && await visible(p, '#slowCard') && await visible(p, '#issuesCard') && await visible(p, '#certCard') && await visible(p, '#healthCard'));
+    s.F.over['/site/now'] = () => ({ body: Object.assign(s.F.now(), { pages: [], latest: [], all_ok: false, any_ok: false, age_sec: null, rum: { n: 0, p75_ms: null }, speed: {}, rum_src: null }) });
+    const tick = await txt(p, '#nowtick');
+    await p.clock.runFor(60000); await until(async () => (await txt(p, '#nowtick')) !== tick, 3000);
+    t = await tiles(p, '#now .nbox');
+    check('hide nowRum, no round yet: three grey tiles, none of them about real users', t.length === 3 && t.every((x) => x.dot === 'n') && !t.some((x) => /לקוחות/.test(x.k) || /אין מדידות בשעה האחרונה/.test(x.m)), JSON.stringify(t));
+    check('no JavaScript errors (hide nowRum)', s.errors.length === 0, s.errors.join(' | '));
     await s.ctx.close();
   });
 
@@ -3467,7 +3630,7 @@ async function reload(s, change) {
       await scenario('incident');
       s = await open(browser, PAGE_PATH + '?role=vendor', PHONE); p = s.page;
       const asked = []; p.on('request', (r) => asked.push(r.method() + ' ' + new URL(r.url()).pathname));
-      await p.click('#alertbar .ahead').catch(() => {});
+      await p.click('#alertbar .ahead', { quiet: true }).catch(() => {});
       check('vendor: no delete controls on alerts, no menu button', !(await visible(p, '#alertbar .ax')) && !(await visible(p, '#alertbar .abulk')) && !(await visible(p, '#shham')));
       check('vendor: no message log', !(await visible(p, '#msgCard')));
       check('vendor: sees only site alerts (no internal kinds)', s.site.alerts_open.length === 2 && s.site.alerts_open.every((a) => ['down', 'slow', 'silent', 'cert'].indexOf(a.kind) >= 0));
@@ -3499,6 +3662,20 @@ async function reload(s, change) {
       let r = await one('/api/site/drill?what=bucket&h=24');
       check('mock: a drill-down with a missing or malformed parameter answers {"rows": []}', r.status === 200 && r.body.rows.length === 0 && (await one('/api/site/drill?what=bucket&bucket=garbage')).body.rows.length === 0 && (await one('/api/site/drill?what=runs&url=')).body.rows.length === 0 && (await one('/api/site/drill?what=alert&id=x')).body.rows.length === 0);
       check('mock: an unknown what answers 400; data answers are no-store', (await one('/api/site/drill?what=nope')).status === 400 && r.cache === 'no-store');
+      const rowsOf = async (path) => { const x = await one(path); return x.body && Array.isArray(x.body.rows) ? x.body.rows.length : -1; };
+      const hour = encodeURIComponent('2026-11-12 03:00'), badHour = encodeURIComponent('2026-11-12 24:00');
+      const got = [await rowsOf('/api/site/drill?what=fails&page=&bucket=' + hour + '&h=24'), await rowsOf('/api/site/drill?what=fails&page=&bucket=2026-13-45&h=24'), await rowsOf('/api/site/drill?what=fails&page=&bucket=' + badHour + '&h=24'),
+        await rowsOf('/api/site/drill?what=runs&url=' + encodeURIComponent('https://example.co.il/') + '&bucket=2026-02-30&h=24'), await rowsOf('/api/site/drill?what=bucket&bucket=2026-02-30'),
+        await rowsOf('/api/site/drill?what=alert&id=41&bucket=garbage'), await rowsOf('/api/site/drill?what=alert&id=0000000000000000041')];
+      check('mock, as the reference server: a bucket in the right shape that is no real day or hour (2026-13-45, 24:00, 30.2) answers {"rows": []}; an alert ignores bucket; an id of 19 digits is malformed', got[0] > 0 && got.slice(1, 5).every((x) => x === 0) && got[5] === 1 && got[6] === 0, got.join(','));
+    });
+
+    await block('C7 the server hides what the site does not measure', async () => {
+      await scenario('incident');
+      s = await open(browser, PAGE_PATH + '?hide=nowRum,certCard', PHONE); p = s.page;
+      const t = await tiles(p, '#now .nbox');
+      check('mock ?hide=nowRum,certCard: "עכשיו" without the real-user tile, no certificate card, the other cards stay', t.length === 3 && !t.some((x) => /לקוחות/.test(x.k)) && !(await visible(p, '#certCard')) && await visible(p, '#slowCard') && await visible(p, '#healthCard'), JSON.stringify(t.map((x) => x.k)));
+      await s.ctx.close();
     });
 
     await block('C3 fresh install', async () => {
@@ -3547,11 +3724,16 @@ async function reload(s, change) {
   await browser.close();
   console.log('\n' + passed + ' passed, ' + failed + ' failed' + (runC ? '' : '  (groups A and B; group C needs the kit\'s mock)'));
   process.exit(failed ? 1 : 0);
-})().catch((e) => { console.error('test crashed: ' + e.stack); process.exit(2); });
+})().catch((e) => {
+  /* only what no group catches ends up here, such as a browser that cannot start */
+  console.error('test crashed: ' + String(e && e.stack || e).split('\n').slice(0, 3).join('\n'));
+  console.log('\n' + passed + ' passed, ' + failed + ' failed  (the test could not run to its end)');
+  process.exit(2);
+});
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/mock_server.py sha256=5ced111dde57d37ebef4f9a79569ac4acff562fd96416efc036e73cce02852b7 -->
+<!-- FILE: site-health-kit/mock_server.py sha256=f43d597f083e8917f5888dfdb6163ee374a5f096eb9c27773ffa7ca924cb3d77 -->
 ~~~~~~~~python
 #!/usr/bin/env python3
 """Mock backend for the site-health screen. Standard library only.
@@ -3568,6 +3750,8 @@ in exactly the shapes described in spec/05-api-contract.md. Use it to:
 
 Roles (what the real server injects):  /site  owner ·  /site?role=vendor  read-only
   /site?role=noalerts  read-only without alerts ·  /status?k=demo-share-token  share link
+Configuration: /site?hide=nowRum,certCard  puts those ids into SH_CONFIG.hide, as a real server does for
+  the parts that are off (nowRum = the real-user tile of "עכשיו", for a site without real-user measuring).
 Sessions: opening /site sets a mock session cookie. A data call without that cookie and without
   a valid k= answers 401, as a real server does (so a share page that forgets its token gets no data).
 Scenarios: incident (default) · ok · empty (fresh install, no data) · error (data source down)
@@ -3888,17 +4072,30 @@ def api_now(role):
 
 # ---------------------------------------------------------------- /api/site/drill
 
+def is_bucket(text):
+    """One of the two bucket formats of spec §5, and a real day or a real hour of one ('2026-13-45' is not)."""
+    if not BUCKET_RE.match(text):
+        return False
+    try:
+        dt.datetime.strptime(text, "%Y-%m-%d %H:00" if len(text) > 10 else "%Y-%m-%d")
+    except ValueError:
+        return False
+    return True
+
+
 def drill_request_ok(q):
-    """Spec §5.4: a missing or malformed parameter answers {"rows": []}. An empty value means "absent"."""
+    """Spec §5.4: a missing or malformed parameter answers {"rows": []}. An empty value means "absent".
+    The same rules as reference/server.py: an id is ASCII digits that fit a bigint; an alert has no bucket."""
     what, bucket = q.get("what"), q.get("bucket") or ""
-    if bucket and not BUCKET_RE.match(bucket):
+    if what == "alert":
+        aid = q.get("id") or ""
+        return aid.isascii() and aid.isdigit() and len(aid) <= 18
+    if bucket and not is_bucket(bucket):
         return False
     if what == "bucket":
         return bool(bucket)
     if what == "runs":
         return bool(q.get("url"))
-    if what == "alert":
-        return (q.get("id") or "").isdigit()
     return True
 
 
@@ -4035,12 +4232,14 @@ class H(BaseHTTPRequestHandler):
         m = re.search(r"mock_role=(owner|vendor|noalerts)\b", self.headers.get("Cookie", ""))
         return m.group(1) if m else None
 
-    def _page(self, role, share_key=""):
+    def _page(self, role, share_key="", hide=()):
         html = open(STATE["html"], encoding="utf-8").read()
         if "<!--SH_INJECT-->" not in html:
             return None
         cfg = {"siteLabel": "example.co.il", "brand": "DEMO", "shareKey": share_key, "downAfter": 1,
                "bucketNote": "עמוד הסל וקטגוריה תמיד איטיים יותר: הם לא נשמרים בזיכרון המטמון של האתר ונבנים מחדש בכל כניסה."}
+        if hide:
+            cfg["hide"] = list(hide)
         if role == "owner":
             cfg["links"] = [{"href": "#", "label": "מסך נוסף", "title": "דוגמה לכפתור נוסף"}]
             cfg["nav"] = [["g", "האתר"], ["a", "/site", "בריאות האתר"], ["a", "#", "מסך נוסף"]]
@@ -4048,8 +4247,8 @@ class H(BaseHTTPRequestHandler):
         inject = "<script>window.SH_CONFIG=%s;window.SH_ROLE=%s;</script>" % (json.dumps(cfg, ensure_ascii=False), json.dumps(r))
         return html.replace("<!--SH_INJECT-->", inject, 1)
 
-    def _send_page(self, role, share_key="", cookie=None):
-        html = self._page(role, share_key)
+    def _send_page(self, role, share_key="", cookie=None, hide=()):
+        html = self._page(role, share_key, hide)
         if html is None:
             return self._send(500, "the screen file has no <!--SH_INJECT--> marker in its <head>: %s" % STATE["html"],
                               "text/plain; charset=utf-8")
@@ -4063,7 +4262,9 @@ class H(BaseHTTPRequestHandler):
             role = q.get("role", "owner")
             if role not in ("owner", "vendor", "noalerts"):
                 role = "owner"
-            return self._send_page(role, cookie="mock_role=%s; Path=/; SameSite=Lax" % role)     # the mock's session
+            # ids of SH_CONFIG.hide; only plain names, so nothing from the address can reach the page as markup
+            hide = [h for h in (q.get("hide") or "").split(",") if re.fullmatch(r"[A-Za-z]{1,40}", h)]
+            return self._send_page(role, cookie="mock_role=%s; Path=/; SameSite=Lax" % role, hide=hide)  # the mock's session
         if path == "/status":
             if q.get("k") != SHARE_TOKEN:
                 return self._send(403, "<div dir='rtl' style='font-family:system-ui;padding:48px;text-align:center'>הקישור אינו תקין או שפג תוקפו.</div>", "text/html; charset=utf-8")
@@ -4137,7 +4338,8 @@ if __name__ == "__main__":
         httpd = ThreadingHTTPServer(("127.0.0.1", a.port), H)
     except OSError as e:
         print("port %d cannot be opened (%s). Another program is using it: try  python3 mock_server.py --port %d"
-              % (a.port, e.strerror or e, a.port + 1), file=sys.stderr)
+              "  and then: node check_screen.js http://127.0.0.1:%d" % (a.port, e.strerror or e, a.port + 1, a.port + 1),
+              file=sys.stderr)
         sys.exit(1)
     print("mock site-health backend: http://localhost:%d/site   (scenario: %s)" % (a.port, a.scenario), flush=True)
     try:
@@ -4147,7 +4349,7 @@ if __name__ == "__main__":
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/site_health.html sha256=bb510e0d1a2cc0cc101564c270a71a1024dc123d5e5713d37072d5ae3038280c -->
+<!-- FILE: site-health-kit/site_health.html sha256=1299267f77fa9806312bba58c6c5d60e056f5efd1e0f03db11fc7cde10a2f40c -->
 ~~~~~~~~html
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
@@ -4442,7 +4644,7 @@ html,body{overflow-x:hidden}
     <div class="now" id="now"><div class="nbox"><div class="k">האתר עכשיו</div><div class="v"><span class="dot n"></span>טוען…</div></div></div>
     <div class="npages" id="nowpages"></div>
     <p class="nowtick" id="nowtick"></p>
-    <p class="explain">"עכשיו" = סבב הבדיקה האחרון של המערכת, כל דקה, <span data-txt="pages">4 עמודים</span>. "תגובת שרת" = כמה זמן עובר מהבקשה עד שהשרת מתחיל לענות: ירוק עד 0.5 שנ', צהוב עד 1.5, אדום מעל או כשעמוד לא עונה. "מהירות אצל לקוחות" = מה שגולשים אמיתיים חוו בשעה האחרונה, זמן עד תוכן ראשי, אחוזון 75, נמדד בדפדפן של הגולש על ידי קוד מדידה קטן שמותקן באתר. מתחת למספר כתוב מאיזה אתר הגיעו המדידות. מתרענן לבד כל 60 שניות.</p>
+    <p class="explain">"עכשיו" = סבב הבדיקה האחרון של המערכת, כל דקה, <span data-txt="pages">4 עמודים</span>. "תגובת שרת" = כמה זמן עובר מהבקשה עד שהשרת מתחיל לענות: ירוק עד 0.5 שנ', צהוב עד 1.5, אדום מעל או כשעמוד לא עונה. <span id="nowRumTxt">"מהירות אצל לקוחות" = מה שגולשים אמיתיים חוו בשעה האחרונה, זמן עד תוכן ראשי, אחוזון 75, נמדד בדפדפן של הגולש על ידי קוד מדידה קטן שמותקן באתר. מתחת למספר כתוב מאיזה אתר הגיעו המדידות. </span>מתרענן לבד כל 60 שניות.</p>
   </section>
 
   <section class="card" id="ctlCard">
@@ -4578,7 +4780,7 @@ var CFG = (function(){
     loginPath: '/login',
     logoutPath: '/logout',
     shareKey: '',                // טוקן של קישור שיתוף; מצורף לכל קריאת נתונים כ-k=
-    hide: []                     // כרטיסים שלא רלוונטיים לאתר הזה, לפי מזהה: 'issuesCard' (אתר בלי חנות), 'slowCard', 'certCard'
+    hide: []                     // כרטיסים שלא רלוונטיים לאתר הזה, לפי מזהה: 'issuesCard' (אתר בלי חנות), 'slowCard', 'certCard'; 'nowRum' = בלי אריח "מהירות אצל לקוחות" בכרטיס "עכשיו"
   };
   var o = window.SH_CONFIG || {};
   Object.keys(o).forEach(function(k){ d[k] = o[k]; });
@@ -4597,7 +4799,7 @@ if (ROLE.share) ROLE.readonly = true;
   if (ROLE.readonly) root.classList.add('ro');
   if (ROLE.share) root.classList.add('share');
   if (ROLE.noAlerts) root.classList.add('noalerts');
-  (CFG.hide || []).forEach(function(id){ var el = document.getElementById(id); if (el) el.style.display = 'none'; });
+  (CFG.hide || []).forEach(function(id){ var el = document.getElementById(id === 'nowRum' ? 'nowRumTxt' : id); if (el) el.style.display = 'none'; });
   document.title = 'בריאות האתר — ' + CFG.siteLabel;
   document.getElementById('brandTxt').textContent = CFG.brand || '';
   document.getElementById('outLink').setAttribute('href', CFG.logoutPath);
@@ -5120,7 +5322,9 @@ function renderNow(d){
   var sp = d.speed || {}; var spT = sp.checked_at ? new Date(sp.checked_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) : '—';
   var lab = sp.lcp_ms ? [sp.lcp_ms <= 2500 ? 'ok' : sp.lcp_ms <= 4000 ? 'w' : 'd', (sp.lcp_ms / 1000).toFixed(1) + ' שנ\'', 'דף הבית בטלפון, ' + spT + ' · ציון ' + (sp.score == null ? '—' : sp.score) + ' · יעד 2.5'] : ['n', '—', 'אין מדידה'];
   function box(k, c){ return '<div class="nbox"><div class="k">' + k + '</div><div class="v"><span class="dot ' + c[0] + '"></span>' + c[1] + '</div><div class="m">' + c[2] + '</div></div>'; }
-  $('now').innerHTML = box('האתר עכשיו', site) + box('תגובת שרת עכשיו', srv) + box('מהירות אצל לקוחות, שעה אחרונה', rumBox) + box('מעבדה, מדידה אחרונה', lab);
+  /* hide: ['nowRum'] = האתר לא מודד מהירות אצל לקוחות: בלי האריח, ולא אריח שאומר "אין מדידות" לתמיד */
+  var noRum = (CFG.hide || []).indexOf('nowRum') >= 0;
+  $('now').innerHTML = box('האתר עכשיו', site) + box('תגובת שרת עכשיו', srv) + (noRum ? '' : box('מהירות אצל לקוחות, שעה אחרונה', rumBox)) + box('מעבדה, מדידה אחרונה', lab);
   $('nowpages').innerHTML = pages.map(function(p){ var c = p.ok ? nowColorMs(p.ms) : 'd'; return '<span class="tag ' + (c === 'ok' ? 'ok' : c === 'w' ? 'w' : 'd') + '" title="' + esc(p.url || '') + '">' + esc(p.page) + ' ' + (p.ok ? nowSec(p.ms) : 'לא עונה' + (p.status ? ' (' + esc(p.status) + ')' : '')) + '</span>'; }).join('');
   var al = +d.alerts_open || 0;
   $('nowtick').textContent = 'עודכן ' + new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' · רענון אוטומטי כל 60 שניות' + (al ? ' · ' + cnt(al, 'התראה פתוחה אחת', 'התראות פתוחות') : '');
@@ -5524,7 +5728,7 @@ not pg_cron, pg_net or Vault, not a real shop.
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/reference/collectors.py sha256=2e70e6b93b2de3f094e5684a843ce5b430100c2b5ba165242b37b168036093e3 -->
+<!-- FILE: site-health-kit/reference/collectors.py sha256=e4e83012caf39ad8c8c6ee73f0b2eef1694808ee36ed7e2250fffc11a61c36f8 -->
 ~~~~~~~~python
 """Site Health collectors: everything that measures the site and hands rows to the database (spec §7.4-§7.10).
 
@@ -5567,6 +5771,7 @@ import threading
 import time
 import urllib.parse
 import xml.etree.ElementTree as ElementTree
+import xml.parsers.expat
 import zlib
 from collections import deque
 from datetime import datetime, time as clock_time, timedelta, timezone
@@ -5705,7 +5910,8 @@ class Answer(NamedTuple):
     headers: http.client.HTTPMessage
     body: bytes             # at most the bytes that were asked for
     waited: float           # seconds from the start until the headers of the final response arrived
-    elsewhere: bool = False             # the answer is a redirect to another host, and it was not followed
+    elsewhere: bool = False             # the answer is a redirect that was not followed (see fetch)
+    refused: str = ""                   # and why, such as "to another host" (see _redirect_refused)
 
 
 def user_agent():
@@ -5777,11 +5983,14 @@ def fetch(url, *, timeout, read=0, method="GET", headers=None, data=None, redire
     redirects followed, and one deadline of `timeout` seconds for all of it, the body included.
     At most `read` bytes of the body are read; the rest is never downloaded.
 
-    A redirect is followed only to the host the request started on (with or without "www.", on http
-    or https) or to one of `hosts`. Any other redirect is the answer, with `elsewhere` set: what a
-    site answers must never choose which machine this one talks to. With `public`, every hop
-    connects to an address of the public internet only (see _open). Every request to the monitored
-    site passes both; the services named in the environment pass `public` False.
+    A redirect is followed only to the host the request started on (with or without "www.") or to
+    one of `hosts`, and only on the same footing (_redirect_refused): never from https down to
+    http, and never to another port of the same host, except the step up from http on port 80 to
+    https on 443. Any other redirect is the answer, with `elsewhere` set and `refused` saying why:
+    what a site answers must never choose which machine, or which service of a machine, this one
+    talks to. With `public`, every hop connects to an address of the public internet only (see
+    _open). Every request to the monitored site passes both; the services named in the environment
+    pass `public` False.
 
     Raises TimeoutError when the deadline passes, another OSError (NotPublic among them) or
     http.client.HTTPException when the connection fails (name resolution, TLS, reset), ValueError
@@ -5814,8 +6023,9 @@ def fetch(url, *, timeout, read=0, method="GET", headers=None, data=None, redire
             location = response.getheader("Location")
             if response.status in (301, 302, 303, 307, 308) and location and hop < redirects:
                 target = urllib.parse.urljoin(url, location)
-                if _bare(urllib.parse.urlsplit(target).hostname) not in allowed:
-                    return Answer(response.status, response.headers, b"", waited, True)
+                refused = _redirect_refused(url, target, allowed)
+                if refused:
+                    return Answer(response.status, response.headers, b"", waited, True, refused)
                 url = target
                 continue
             chunks, size = [], 0
@@ -5829,6 +6039,30 @@ def fetch(url, *, timeout, read=0, method="GET", headers=None, data=None, redire
             return Answer(response.status, response.headers, b"".join(chunks), waited)
         finally:
             connection.close()
+
+
+DEFAULT_PORTS = {"http": 80, "https": 443}
+
+
+def _redirect_refused(current, target, allowed):
+    """Why a redirect from `current` to `target` is not followed, or "" when it may be. `allowed`:
+    the hosts it may lead to, without "www.". The port is compared on the same host only: a host of
+    extra_hosts may live on a port of its own."""
+    here, there = urllib.parse.urlsplit(current), urllib.parse.urlsplit(target)
+    if there.scheme not in DEFAULT_PORTS:
+        return "to an address that is not http(s)"
+    if _bare(there.hostname) not in allowed:
+        return "to another host"
+    if here.scheme == "https" and there.scheme == "http":
+        return "from https to http"
+    try:
+        ports = (here.port or DEFAULT_PORTS[here.scheme], there.port or DEFAULT_PORTS[there.scheme])
+    except ValueError:                                         # a port that is no number, or out of range
+        return "to another port"
+    same_host = _bare(here.hostname) == _bare(there.hostname)
+    if same_host and ports[0] != ports[1] and (here.scheme, there.scheme, *ports) != ("http", "https", 80, 443):
+        return "to another port"
+    return ""
 
 
 def _left(deadline):
@@ -5870,7 +6104,7 @@ def probe_check(page, timeout, hosts=()):
     else:
         row.update(status=answer.status, ms=round(answer.waited * 1000))
         if answer.status != 200:                # 200 and nothing else: a 204 or a 206 is not the page
-            row.update(fail="http", err="redirected to another host" if answer.elsewhere
+            row.update(fail="http", err="redirected " + answer.refused if answer.elsewhere
                        else "redirected more than %d times, or to nowhere" % REDIRECTS
                        if 300 <= answer.status < 400 else None)
         elif expect and expect not in _page_text(answer):
@@ -6159,21 +6393,21 @@ def _sitemap_read(address, hosts=()):
     answer = fetch(address, timeout=60, read=limit + 1, hosts=hosts, public=True,
                    headers={"Accept": "application/xml,text/xml,*/*;q=0.8"})
     if answer.elsewhere:                        # a file of another host is not ours to fetch, however we got there
-        raise CollectorError("redirected to another host: %s" % address[:200])
+        raise CollectorError("redirected %s: %s" % (answer.refused, address[:200]))
     if answer.status != 200:
         raise CollectorError("HTTP %d for %s" % (answer.status, address[:200]))
     raw = _unzip(answer.body, limit)
     if len(raw) > limit:
         raise CollectorError("a sitemap file of more than %s (SH_SITEMAP_MB raises the limit): %s"
                              % (_size(limit), address[:200]))
+    if _declares_entities(raw):                 # the parser would expand them
+        raise CollectorError("a sitemap that declares entities is refused: %s" % address[:200])
     try:
-        raw.decode("utf-8")                     # the protocol says UTF-8; it also keeps the next test honest
+        raw.decode("utf-8")                     # the protocol says UTF-8
     except UnicodeDecodeError:
         raise CollectorError("a sitemap that is not UTF-8: %s" % address[:200]) from None
     if b"\x00" in raw:                          # UTF-16 without its mark passes as UTF-8, with a NUL in every pair
         raise CollectorError("a sitemap that is not UTF-8: %s" % address[:200])
-    if b"<!ENTITY" in raw:                      # the parser would expand them
-        raise CollectorError("a sitemap that declares entities is refused: %s" % address[:200])
     try:
         root = ElementTree.fromstring(raw)
     except ElementTree.ParseError as e:         # a firewall's page is not a sitemap
@@ -6192,6 +6426,40 @@ def _sitemap_read(address, hosts=()):
         if text and text.strip():
             addresses.append(text.strip())
     return kind, addresses
+
+
+class _Seen(Exception):
+    """Raised from inside expat, to stop its reading: what _declares_entities looks for was found, or
+    can no longer come."""
+
+    def __init__(self, declared):
+        super().__init__()
+        self.declared = declared
+
+
+def _declares_entities(raw):
+    """Whether the document declares an entity, in any form (general or parameter, internal or
+    external, parsed or not). expat reads the document as the document says it is encoded (UTF-16
+    without its byte order mark too), so no spelling of the bytes can hide a declaration from this
+    look; a search for "<!ENTITY" in the bytes could be dodged that way. Declarations live in the
+    DOCTYPE, before the first element, so the reading stops at the first element. A document that
+    expat cannot read is not this function's business: the parse that follows says what is wrong."""
+    def declared(*args):
+        raise _Seen(True)
+
+    def first_element(*args):
+        raise _Seen(False)
+
+    parser = xml.parsers.expat.ParserCreate()
+    parser.EntityDeclHandler = parser.UnparsedEntityDeclHandler = declared
+    parser.StartElementHandler = first_element
+    try:
+        parser.Parse(raw, True)
+    except _Seen as seen:
+        return seen.declared
+    except (xml.parsers.expat.ExpatError, ValueError):
+        pass
+    return False
 
 
 def _page_url(home, address, private):
@@ -6217,7 +6485,7 @@ def _catalogue_page(address, hosts=()):
     answer = fetch(address, timeout=60, read=CATALOGUE_BYTES + 1, hosts=hosts, public=True,
                    headers={"Accept": "application/json"})
     if answer.elsewhere:
-        raise CollectorError("the catalogue redirects to another host")
+        raise CollectorError("the catalogue redirects " + answer.refused)
     if answer.status != 200:
         raise CollectorError("HTTP %d from the catalogue" % answer.status)
     if "json" not in (answer.headers.get("Content-Type") or "").lower():
@@ -6790,7 +7058,7 @@ if __name__ == "__main__":
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/reference/db.py sha256=77107778aeee8e6a9d975568838799c61386ec1477f6049411b54faefcabbf9e -->
+<!-- FILE: site-health-kit/reference/db.py sha256=a3bea64031bd6534d0f5d5918059fb74472d8dd4b57b060d314a0815770bd544 -->
 ~~~~~~~~python
 """Database access for the site-health server and collectors.
 
@@ -6825,8 +7093,9 @@ class DbError(Exception):
     viewer: it is either a fixed sentence of this file or the message the database itself sent.
     Connection details (host, user; never a password or a key) go to the log.
 
-    answered: True when the database ran the call and refused what it was given (bad data); False
-    when it was not reached, or failed for a reason that another call would meet as well."""
+    answered: True when the call was refused for what it carried (bad data), by the database or by
+    the driver before it was sent; False when the database was not reached, or the call failed for a
+    reason that another call would meet as well."""
 
     def __init__(self, text, answered=False):
         super().__init__(text)
@@ -6899,29 +7168,40 @@ def _rpc_postgres(dsn, fn, params):
         _thread.conn = psycopg.connect(dsn, autocommit=True, prepare_threshold=None, connect_timeout=TIMEOUT)
         return _thread.conn
 
+    connecting = True                                          # which step an error without a message comes from
     try:
         conn = getattr(_thread, "conn", None)
         reused = conn is not None and not conn.closed
         if not reused:
             conn = connect()
+        connecting = False
         try:
             return conn.execute(sql, values).fetchone()[0]
         except psycopg.OperationalError:
             if not (reused and conn.closed):
                 raise
-            return connect().execute(sql, values).fetchone()[0]    # an idle connection was dropped: once more
+            connecting = True
+            conn = connect()                                   # an idle connection was dropped: once more
+            connecting = False
+            return conn.execute(sql, values).fetchone()[0]
     except psycopg.OperationalError as e:
         log.warning("database call %s failed: %s", fn, e)       # the full text (host, user) stays in the log
         raise DbError(e.diag.message_primary or "database unreachable") from None
     except psycopg.Error as e:
+        if e.diag.message_primary:
+            # SQLSTATE classes 22, 23 and P0: a data exception, a broken constraint, a "raise exception"
+            raise DbError(e.diag.message_primary, answered=(e.sqlstate or "")[:2] in ("22", "23", "P0")) from None
         # Only what the database itself said is passed on. An error without such a message was raised on
-        # this side, and its text can quote the connection string with its password (a "%" in the
-        # password, quotes pasted around the address): it goes neither to the viewer nor to the log.
-        if not e.diag.message_primary:
+        # this side. While connecting, its text can quote the connection string with its password (a "%"
+        # in the password, quotes pasted around the address): it goes neither to the viewer nor to the log.
+        if connecting:
             log.warning("database call %s failed: %s (is DATABASE_URL well formed?)", fn, type(e).__name__)
             raise DbError("database call failed (%s): check DATABASE_URL" % type(e).__name__) from None
-        # SQLSTATE classes 22, 23 and P0: a data exception, a broken constraint, a "raise exception"
-        raise DbError(e.diag.message_primary, answered=(e.sqlstate or "")[:2] in ("22", "23", "P0")) from None
+        # Raised while the call was being sent: the driver refused one of its values (a NUL in a text, a
+        # value it cannot convert). That is the call's own fault, not the connection's.
+        log.warning("database call %s failed: %s (a value of the call cannot be sent)", fn, type(e).__name__)
+        raise DbError("database call failed (%s): the call carried a value the database cannot store"
+                      % type(e).__name__, answered=True) from None
 ~~~~~~~~
 <!-- END FILE -->
 
@@ -7148,7 +7428,7 @@ $$);
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/reference/functions.sql sha256=e55d082236d241718f6a3a09ad567f9f6024a909d2c40a95179050c69c47c5a8 -->
+<!-- FILE: site-health-kit/reference/functions.sql sha256=85ac8edd64d5d4f632c66f0b8a56eb8d39cc2c31e74147858eb2f6ba55d82ee0 -->
 ~~~~~~~~sql
 -- Site Health: every sh_* function. Apply after schema.sql. Safe to run again.
 --
@@ -7307,7 +7587,8 @@ language sql stable set search_path = public as $$
       'probeCount', p.probes, 'coreCount', p.cores, 'downAfter', s.v -> 'down_after',
       'liveHosts', s.v -> 'live_hosts', 'pathLabels', s.v -> 'path_labels', 'bucketNote', s.v -> 'bucket_note',
       'nav', s.v -> 'nav', 'links', s.v -> 'links',
-      -- the cards the configuration hides, then the card of each part that is switched off
+      -- the cards the configuration hides, then the card of each part that is switched off (for
+      -- real-user measurements: the tile "מהירות אצל לקוחות, שעה אחרונה" of the "עכשיו" row)
       'hide', (select coalesce(jsonb_agg(card order by n), '[]')
                from (select card, min(n) as n
                      from (select h.card, h.n
@@ -7315,7 +7596,7 @@ language sql stable set search_path = public as $$
                            union all
                            select c.card, 1000 + c.n
                            from (values (1, 'sitemap', 'slowCard'), (2, 'catalogue', 'issuesCard'),
-                                        (3, 'cert', 'certCard')) as c(n, part, card)
+                                        (3, 'cert', 'certCard'), (4, 'real_users', 'nowRum')) as c(n, part, card)
                            where o.off ? c.part) listed
                      group by card) cards))))
   from s, p, o
@@ -7928,11 +8209,16 @@ language sql set search_path = public as $$
 $$;
 
 -- Real-user page views: [{site, path, lcp_ms, is_test}]. The last line of defence for the
--- limits of the ingest (spec §7.7): no query string is stored, and a row with an impossible
--- timing, a site that is not "live" or a host name, or a path longer than 300 characters is dropped.
--- And nothing at all is stored while the last 24 hours already hold 30,000 rows: the ingest is
--- open to the internet, and a flood of forged views must not fill the database (a full database
--- stops storing probes and alerts too). 30,000 a day is about 130 MB over the 30 days rows are kept.
+-- limits of the ingest (spec §7.7): no query string is stored; a path is cut at 120 characters
+-- as the server cuts it (never inside a "%XX" escape, nor inside a character whose escapes were
+-- cut off); and a row is dropped when its path is then still more than 120 bytes (the server
+-- sends paths percent-encoded, as browsers do), its timing is impossible, or its site is not
+-- "live" or a host name. And nothing at all is stored while the last 24 hours already hold
+-- 30,000 rows: the ingest is open to the internet, and a flood of forged views must not fill the
+-- database (a full database stops storing probes and alerts too). Measured on Postgres 16, the
+-- largest row (a site of 100 characters, a path of 120) takes 296 bytes with its index: 30,000 a
+-- day over the 31 days that can be kept (sh_cleanup deletes what is older than 30) is about
+-- 275 MB (262 MiB).
 create or replace function sh_rum_add(p_rows jsonb) returns jsonb
 language sql set search_path = public as $$
   with room as (
@@ -7941,10 +8227,15 @@ language sql set search_path = public as $$
   ), added as (
     insert into sh_rum (site, path, lcp_ms, is_test)
     select r.site, r.path, r.lcp_ms, coalesce(r.is_test, false)
-    from (select site, regexp_replace(path, '[?#].*$', '') as path, lcp_ms, is_test
-          from jsonb_to_recordset(p_rows) as x(site text, path text, lcp_ms numeric, is_test boolean)) r
+    from (select site, lcp_ms, is_test,
+                 case when length(whole) <= 120 then whole
+                      else regexp_replace(regexp_replace(left(whole, 120), '%[0-9A-Fa-f]?$', ''),
+                             '(%[CDcd][0-9A-Fa-f]|%[Ee][0-9A-Fa-f](%[89ABab][0-9A-Fa-f])?'
+                             '|%[Ff][0-7](%[89ABab][0-9A-Fa-f]){0,2})$', '') end as path
+          from (select site, regexp_replace(path, '[?#].*$', '') as whole, lcp_ms, is_test
+                from jsonb_to_recordset(p_rows) as x(site text, path text, lcp_ms numeric, is_test boolean)) sent) r
     where (select free from room)
-      and r.site ~ '^[a-z0-9.-]{1,100}$' and length(r.path) <= 300 and r.lcp_ms between 1 and 60000
+      and r.site ~ '^[a-z0-9.-]{1,100}$' and octet_length(r.path) <= 120 and r.lcp_ms between 1 and 60000
     returning 1
   ), beat as (
     update sh_flows set last_at = now()
@@ -8377,7 +8668,7 @@ notify pgrst, 'reload schema';
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/reference/manage.py sha256=88a0c3c344079214428bed045f05d1a1ce1d2c9cc0a916c92049e1c09ec617f2 -->
+<!-- FILE: site-health-kit/reference/manage.py sha256=99a1b5f803f1cca4902901ae45560be2e29de0d66cfe98183bdfd15f2814f549 -->
 ~~~~~~~~python
 """Site Health: a small command line for whoever deploys the reference.
 
@@ -8415,7 +8706,7 @@ import sys
 import urllib.parse
 import zipfile
 from datetime import datetime, timezone
-from zoneinfo import ZoneInfo, available_timezones
+from zoneinfo import available_timezones
 
 import collectors
 import db
@@ -8480,28 +8771,138 @@ def init_db(args):
         print("Next: python3 manage.py setup site_health.config.json")
 
 
-def _config_problem(config):
-    """What sh_setup would refuse and can be told without a database, or None. The database has the
-    last word: rehearse the finished file on a scratch database (init-db --file)."""
-    site = urllib.parse.urlsplit(str(config.get("site") or ""))
-    if site.scheme not in ("http", "https") or not site.hostname:
-        return '"site" must be an absolute http(s) address'
-    zone = config.get("time_zone")
-    if not isinstance(zone, str) or not zone:
-        return '"time_zone" is required: the time zone of the site\'s customers, such as Asia/Jerusalem'
-    try:
-        ZoneInfo(zone)
-    except (ValueError, OSError, KeyError):     # unknown; unless this machine knows no time zone at all
-        if available_timezones():
-            return 'unknown "time_zone" %s' % zone
-    pages = config.get("pages")
-    if not isinstance(pages, list) or not all(isinstance(page, dict) for page in pages):
-        return '"pages" must be a list of pages'
-    homes = [page for page in pages if page.get("home") is True]
+def _jsonb(value):
+    """A JSON value as Postgres writes a jsonb value: ", " and ": " between the items, and the keys of
+    an object shortest first (as sh_setup's messages quote what they refuse)."""
+    if isinstance(value, dict):
+        keys = sorted(value, key=lambda key: (len(key.encode("utf-8")), key.encode("utf-8")))
+        return "{%s}" % ", ".join("%s: %s" % (json.dumps(key, ensure_ascii=False), _jsonb(value[key])) for key in keys)
+    if isinstance(value, list):
+        return "[%s]" % ", ".join(map(_jsonb, value))
+    return json.dumps(value, ensure_ascii=False)
+
+
+def _text(value):
+    """What Postgres's ->> gives for a value of the configuration: None for null (and for a key that
+    is not there), a string as it is, anything else as its JSON text."""
+    return value if value is None or isinstance(value, str) else _jsonb(value)
+
+
+class _Refused(Exception):
+    pass
+
+
+def _int(text):
+    """text::int, as Postgres reads it: or the error it raises."""
+    if not re.fullmatch(r"[ \t\n\r\v\f]*[+-]?[0-9]+[ \t\n\r\v\f]*", text):
+        raise _Refused('invalid input syntax for type integer: "%s"' % text)
+    if not -2 ** 31 <= int(text) < 2 ** 31:
+        raise _Refused('value "%s" is out of range for type integer' % text)
+    return int(text)
+
+
+def _bool(value):
+    """coalesce((page ->> key)::boolean, false), as Postgres reads it: or the error it raises."""
+    text = _text(value)
+    if text is None:
+        return False
+    word = text.strip(" \t\n\r\v\f").lower()
+    for spelling, meaning, shortest in (("true", True, 1), ("false", False, 1), ("yes", True, 1), ("no", False, 1),
+                                        ("on", True, 2), ("off", False, 2), ("1", True, 1), ("0", False, 1)):
+        if len(word) >= shortest and spelling.startswith(word):
+            return meaning
+    raise _Refused('invalid input syntax for type boolean: "%s"' % text)
+
+
+def _setup_refusal(config):
+    """The checks of sh_setup, in its order, without a database: raises _Refused with the message the
+    database would give. The database has the last word all the same: rehearse the finished file on a
+    scratch database (init-db --file)."""
+    def refuse(text):
+        raise _Refused("sh_setup: " + text)
+
+    def text(key, default=None):        # coalesce(p_config ->> key, default)
+        value = _text(config.get(key))
+        return default if value is None else value
+
+    def listed(key):                    # coalesce(p_config -> key, '[]') is a list: -> keeps a null
+        return key not in config or isinstance(config[key], list)
+
+    down_after = _int(text("down_after", "1"))          # cast where sh_setup declares it: before every check
+    if not re.match(r"https?://[^/: \t\n\r\v\f]", text("site", "").rstrip("/")):
+        refuse('"site" must be an absolute http(s) address, got %s' % text("site", "nothing"))
+    zone = text("time_zone", "")
+    if not zone:
+        refuse('"time_zone" is required: the time zone of the site\'s customers, such as Asia/Jerusalem')
+    known = available_timezones()
+    if known and zone not in known:     # a machine that knows no time zone at all leaves it to the database
+        refuse('unknown "time_zone" %s' % zone)
+    platform = text("platform", "other")
+    if platform not in ("woocommerce", "shopify", "other"):
+        refuse('"platform" must be woocommerce, shopify or other, got %s' % platform)
+    if down_after < 1:
+        refuse('"down_after" must be 1 or more, got %d' % down_after)
+    morning = text("morning", "07:30")
+    if not re.fullmatch(r"([01][0-9]|2[0-3]):[0-5][0-9]", morning):
+        refuse('"morning" must be a time such as 07:30, got %s' % morning)
+    if not listed("live_hosts") or not listed("path_labels"):
+        refuse('"live_hosts" and "path_labels" must be lists')
+    keep_days = text("keep_days", "100")
+    if not re.fullmatch(r"[3-9][0-9]|[1-3][0-9][0-9]|400", keep_days):
+        refuse('"keep_days" must be a whole number of days from 30 to 400, got %s' % keep_days)
+    if not listed("rum_hosts") or not listed("private_paths"):
+        refuse('"rum_hosts" and "private_paths" must be lists')
+    rum_hosts, private = config.get("rum_hosts", []), config.get("private_paths", [])
+    if any(not isinstance(host, str) or not re.fullmatch(r"[a-z0-9.-]+", host) for host in rum_hosts):
+        refuse('"rum_hosts" takes host names in lower case, such as staging.example.co.il, got %s' % _jsonb(rum_hosts))
+    if any(not isinstance(part, str) or not re.fullmatch(r"[^/?#\s]+", part) for part in private):
+        refuse('"private_paths" takes single path segments, such as checkout or its translated slug, got %s'
+               % _jsonb(private))
+    if not all(listed(key) for key in ("extra_hosts", "off", "hide", "nav", "links")):
+        refuse('"extra_hosts", "off", "hide", "nav" and "links" must be lists')
+    extra, off, hide = config.get("extra_hosts", []), config.get("off", []), config.get("hide", [])
+    if any(not isinstance(host, str) or not re.fullmatch(r"[a-z0-9.-]+", host) for host in extra):
+        refuse('"extra_hosts" takes host names in lower case, such as shop.example.co.il, got %s' % _jsonb(extra))
+    if any(part not in ("sitemap", "real_users", "catalogue", "cert") for part in off):
+        refuse('"off" takes sitemap, real_users, catalogue or cert, got %s' % _jsonb(off))
+    if any(not isinstance(card, str) for card in hide):
+        refuse('"hide" takes the ids of cards of the screen, such as slowCard, got %s' % _jsonb(hide))
+    if not isinstance(config.get("pages"), list):
+        refuse('"pages" must be a list of pages')
+
+    pages = []                          # (name, url, probe, core, home), as ->> and ::boolean read them
+    for page in config["pages"]:
+        page = page if isinstance(page, dict) else {}
+        pages.append((_text(page.get("name")), _text(page.get("url")),
+                      _bool(page.get("probe")), _bool(page.get("core")), _bool(page.get("home"))))
+    names = [name for name, *_ in pages if name is not None]
+    if len([name for name in names if name != ""]) < len(pages):
+        refuse('every page needs a "name"')
+    if len(set(names)) < len(pages):
+        refuse("page names must be unique")
+    bad = [name for name, url, *_ in pages if url is None or not re.match(r"https?://[^/\s]", url)]
+    if bad:
+        refuse('the "url" of a page must be an absolute http(s) address: %s' % ", ".join(bad))
+    homes = [page for page in pages if page[4]]
     if len(homes) != 1:
-        return 'exactly one page must have "home": true, found %d' % len(homes)
-    if not (homes[0].get("probe") is True and homes[0].get("core") is True):
-        return "the home page must be a probe page and a core page"
+        refuse('exactly one page must have "home": true, found %d' % len(homes))
+    if not any(page[2] for page in pages):
+        refuse('at least one page must have "probe": true')
+    if not homes[0][2]:
+        refuse("the home page must be a probe page")
+    if not homes[0][3]:
+        refuse("the home page must be a core page")
+    for name, url, *_ in pages:         # stored through sh_url, into a column that takes no null
+        if not re.match(r"[A-Za-z][A-Za-z0-9+.-]*://[^/?#\s]", url.strip(" ")):
+            raise _Refused('null value in column "url" of relation "sh_pages" violates not-null constraint')
+
+
+def _config_problem(config):
+    """The message sh_setup would refuse the configuration with, or None."""
+    try:
+        _setup_refusal(config)
+    except _Refused as refusal:
+        return str(refusal)
     return None
 
 
@@ -8509,7 +8910,7 @@ def install_sql(args):
     """One file for the SQL editor of the database: nothing here connects anywhere or holds a secret."""
     config = _config_file(args.config)
     problem = _config_problem(config)
-    if problem:
+    if problem:                                 # the database's own words, and nothing is written
         sys.exit("%s: %s" % (args.config, problem))
     text = json.dumps(config, ensure_ascii=False, indent=1)
     quote = "$sh_config$"                       # dollar quoting: the JSON goes in as it is, whatever it holds
@@ -8535,7 +8936,16 @@ def install_sql(args):
     ]
     out = pathlib.Path(args.out)
     body = "\n".join(parts)
-    out.write_text(body, encoding="utf-8")
+    part = out.with_name(out.name + ".part")    # written beside it, then put in its place: never half a file
+    try:
+        part.write_text(body, encoding="utf-8")
+        os.replace(part, out)
+    except OSError as e:
+        try:
+            part.unlink(missing_ok=True)
+        except OSError:
+            pass
+        sys.exit("%s cannot be written: %s" % (out, e.strerror or e))
     print("wrote %s: schema.sql, functions.sql and the configuration of %s (%d lines, %d KB, no secret in it)"
           % (out, config["site"], body.count("\n"), len(body.encode("utf-8")) // 1024 + 1))
     print("Rehearse it on a scratch database, twice:  DATABASE_URL=<a scratch database> python3 manage.py init-db "
@@ -8752,7 +9162,7 @@ psycopg[binary]==3.3.9
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/reference/schema.sql sha256=3d5c21fb9fa4cb76bbf902a64a60af1b29e54c8a3a622f71c5b6477a8279ecf9 -->
+<!-- FILE: site-health-kit/reference/schema.sql sha256=63f215f559793652d3c49d4f646b9df7dae073ce6864ed06aadc1f26555434f1 -->
 ~~~~~~~~sql
 -- Site Health: tables, indexes, privileges.
 -- Plain PostgreSQL 15+, no extensions. Safe to run again: nothing here drops or rewrites data.
@@ -8836,10 +9246,12 @@ create table if not exists sh_site_pages (
   last_measured_at timestamptz
 );
 
--- One real-user page view: about 150 bytes with its index. No IP, no cookie and no user agent
--- are stored, and no query string; the ingest also drops a path that looks as if it carries an
--- e-mail address or a token (spec §7.7). sh_rum_add stops storing once the last 24 hours hold
--- 30,000 rows, so a flood of forged views cannot fill the database.
+-- One real-user page view. Measured on Postgres 16 with its index: about 120 bytes for a path of
+-- 40 characters, and at most 296 (a site name of 100 characters, a path of 120). No IP, no
+-- cookie and no user agent are stored, and no query string; the path is cut at 120 characters,
+-- and the ingest drops a path that looks as if it carries an e-mail address or a token (spec
+-- §7.7). sh_rum_add stops storing once the last 24 hours hold 30,000 rows, so a flood of forged
+-- views cannot fill the database.
 create table if not exists sh_rum (
   created_at timestamptz not null default now(),
   site       text not null,
@@ -8982,7 +9394,7 @@ end $$;
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/reference/server.py sha256=1600113e8c403b5f6fc0313a22906cf660b41e42df31238e5360b7fc68b65a76 -->
+<!-- FILE: site-health-kit/reference/server.py sha256=12ca975c9ac85b8b645066682f260db5e605eb5b47ef00d3ddf7e868aaf40caa -->
 ~~~~~~~~python
 """Site Health server: sign-in, roles, the screen and its data calls (spec §5 and §8).
 
@@ -8992,8 +9404,9 @@ this file decides who may see what and turns failures into the statuses of spec 
     uvicorn server:app --host 0.0.0.0 --port 8000 --no-access-log     # one worker: each would start its own collectors
 
 The share token travels in the query string (spec §8.2), hence --no-access-log. If the flag is forgotten,
-this file still keeps query strings out of uvicorn's access log. Under another server program, turn its
-access log off.
+this file still keeps query strings out of uvicorn's access log, an encoded "?" (%3F) included. Never run
+a live service with --log-level trace: uvicorn then prints every request whole, outside the access log.
+Under another server program, turn its access log off.
 
 Environment: SH_PASS_OWNER (without it nobody can sign in), SH_PASS_STAFF, SH_PASS_VENDOR_<NAME>,
 SH_VENDOR_NOALERTS, SH_SHARE_TOKEN, SH_PROXY_HOPS, SH_SCREEN, SH_RUM_PER_MINUTE, SH_RUM_PER_DAY,
@@ -9041,11 +9454,14 @@ OPEN_PATHS = {"/login", "/logout", "/health", "/m"}          # answered before a
 DATA_PATHS = {"/api/site", "/api/site/now", "/api/site/drill"}
 OUTSIDER_PATHS = DATA_PATHS | {"/site", "/status"}           # all an outsider may GET; nothing else, no other method
 SITE_ALERT_KINDS = {"down", "slow", "silent", "cert"}        # the only alerts an outsider sees
+# Keys of SH_CONFIG that an outsider's page never carries: the menu and the extra buttons hold the
+# addresses of the owner's other screens, and the page source is the outsider's to read.
+OWNER_ONLY = ("nav", "links")
 
 MAX_FAILURES, FAILURE_WINDOW = 8, 600                        # wrong passwords and share tokens of one address, in seconds
 PROBE_FLOW = "בודק זמינות האתר"                              # the flow whose last run is "the last check"
 
-RUM_MAX_BYTES, RUM_MAX_PATH, RUM_PER_ADDRESS, RUM_BATCH, RUM_QUEUE = 1024, 300, 60, 50, 1000
+RUM_MAX_BYTES, RUM_MAX_PATH, RUM_PER_ADDRESS, RUM_BATCH, RUM_QUEUE = 1024, 120, 60, 50, 1000
 RUM_PER_MINUTE, RUM_PER_DAY = 300, 20000                     # rows stored for all addresses together, unless
                                                              # SH_RUM_PER_MINUTE / SH_RUM_PER_DAY say otherwise
 # Path segments that name an account, checkout, order or admin page: such a view is never stored.
@@ -9061,6 +9477,13 @@ RUM_CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 RUM_RUN = re.compile(r"[A-Za-z0-9_]+")
 RUM_HEX = re.compile(r"[0-9A-Fa-f]{16,}")
 RUM_UUID = re.compile(r"[0-9A-Fa-f]{8}(-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}")
+# A longer path is cut at RUM_MAX_PATH characters (a Hebrew slug, percent-encoded, is six characters a
+# letter). Then the end of the cut loses half an escape ("%D" or "%"), and the escapes of a character
+# whose UTF-8 bytes were cut off (a lead byte without all of its continuation bytes).
+RUM_ASCII = "".join(map(chr, range(0x21, 0x7f)))             # what a path keeps as it is; the rest is encoded
+RUM_HALF_ESCAPE = re.compile(r"%[0-9A-Fa-f]?\Z")
+RUM_HALF_CHARACTER = re.compile(r"(%[CDcd][0-9A-Fa-f]|%[Ee][0-9A-Fa-f](%[89ABab][0-9A-Fa-f])?"
+                                r"|%[Ff][0-7](%[89ABab][0-9A-Fa-f]){0,2})\Z")
 BUCKET = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}( [0-9]{2}:00)?")       # a day or an hour, as the charts name them
 
 TEXT_WRONG = "סיסמה שגויה"
@@ -9246,7 +9669,9 @@ def _client_ip(request):
     is SH_PROXY_HOPS entries from the right: 1 (the default) for one proxy, 2 where the host has two (its
     documentation says), 0 for no proxy at all, which uses the socket peer. Entries further left are
     whatever the client sent; counting by them would let anybody dodge the limits. An entry that is not
-    an IP address is not believed either: the socket peer is used. Never longer than 45 characters."""
+    an IP address is not believed either: the socket peer is used. When the peer is no IP address
+    either (a Unix socket; or uvicorn, which takes the peer from X-Forwarded-For when the request comes
+    from 127.0.0.1), the answer is "?": the text of a header is never stored or counted by."""
     hops = os.environ.get("SH_PROXY_HOPS", "1").strip()
     hops = int(hops) if hops.isascii() and hops.isdigit() else 1
     forwarded = [entry.strip() for entry in request.headers.get("x-forwarded-for", "").split(",") if entry.strip()]
@@ -9254,8 +9679,7 @@ def _client_ip(request):
         address = _address(forwarded[-min(hops, len(forwarded))])
         if address:
             return address
-    peer = request.client.host if request.client else "?"
-    return _address(peer) or peer[:45]
+    return _address(request.client.host if request.client and request.client.host else "") or "?"
 
 
 def _counted_as(ip):
@@ -9339,7 +9763,11 @@ def _screen_state():
 
 
 def _screen(config, viewer):
-    """The screen file, with this site's configuration and the viewer's role written in at the marker."""
+    """The screen file, with this site's configuration and the viewer's role written in at the marker.
+    An outsider's copy leaves out OWNER_ONLY: hiding the menu on the screen would not keep its
+    addresses out of the page source."""
+    if viewer.outsider:
+        config = {key: value for key, value in config.items() if key not in OWNER_ONLY}
     head, tail = _screen_parts()
     script = "<script>window.SH_CONFIG=%s;window.SH_ROLE=%s;</script>" % (
         _inline_json(config), _inline_json(viewer.screen_role))
@@ -9465,11 +9893,15 @@ def _start_collectors():
 
 class _NoQueryStrings(logging.Filter):
     """Cuts the query string off the request line that uvicorn's access log prints. The share token
-    travels in the query string (/status?k=...), and a secret does not belong in the host's log."""
+    travels in the query string (/status?k=...), and a secret does not belong in the host's log. The
+    line is cut at an encoded "?" as well: uvicorn prints the path encoded again, so "/status%3Fk=..."
+    (which the router reads as the path "/status?k=...") reaches the log as "/status%3Fk%3D...".
+    This covers the access log only: uvicorn's --log-level trace prints every request whole."""
+    QUERY = re.compile(r"\?|%3[Ff]")
 
     def filter(self, record):
         if isinstance(record.args, tuple):
-            record.args = tuple(arg.split("?", 1)[0] if isinstance(arg, str) else arg for arg in record.args)
+            record.args = tuple(self.QUERY.split(arg, 1)[0] if isinstance(arg, str) else arg for arg in record.args)
         return True
 
 
@@ -9723,14 +10155,17 @@ async def api_drill(request: Request):
         return _json({"error": "what?"}, 400)
     # A required parameter that is missing or malformed, and a bucket that is not a bucket, match nothing
     # (spec §5.4): the answer is known without asking the database. An id is a number that fits a bigint.
-    usable = {"fails": True, "bucket": bucket is not None, "runs": bool(url),
+    # A page or an address with a control character names nothing either, and the database could not
+    # even take it as a parameter (a NUL).
+    page = q.get("page") or None
+    usable = {"fails": page is None or _storable(page), "bucket": bucket is not None,
+              "runs": bool(url) and _storable(url),
               "alert": alert_id.isascii() and alert_id.isdigit() and len(alert_id) <= 18}[what]
     if not usable or (bucket and what != "alert" and not _is_bucket(bucket)):
         return _json({"rows": []})
     if what == "fails":
         p_from, p_to, _ = await _window(request)
-        rows = await rpc("sh_drill_fails", {"p_from": p_from, "p_to": p_to, "p_page": q.get("page") or None,
-                                            "p_bucket": bucket})
+        rows = await rpc("sh_drill_fails", {"p_from": p_from, "p_to": p_to, "p_page": page, "p_bucket": bucket})
     elif what == "bucket":
         rows = await rpc("sh_drill_bucket", {"p_bucket": bucket})
     elif what == "runs":
@@ -9831,14 +10266,26 @@ def _may_name_someone(decoded):
                for run in RUM_RUN.findall(decoded))
 
 
-def _storable(path):
-    """Whether the database can store the text: no control character (a NUL fails the whole batch it
-    travels in) and nothing that cannot be written as UTF-8 (half of a surrogate pair)."""
+def _storable(text):
+    """Whether the database can store the text, or take it as a parameter: no control character (a
+    NUL fails the whole batch it travels in) and nothing that cannot be written as UTF-8 (half of a
+    surrogate pair)."""
     try:
-        path.encode("utf-8")
+        text.encode("utf-8")
     except UnicodeError:
         return False
-    return not RUM_CONTROL.search(path)
+    return not RUM_CONTROL.search(text)
+
+
+def _cut_path(path):
+    """The path as it is stored: in the form a browser sends (a character outside printable ASCII
+    percent-encoded, so a row's path is never more bytes than characters), and at most RUM_MAX_PATH
+    characters. A cut never ends inside a "%XX" escape or inside a character that the escapes before
+    it begin; sh_rum_add cuts the same way."""
+    path = urllib.parse.quote(path, safe=RUM_ASCII)
+    if len(path) <= RUM_MAX_PATH:
+        return path
+    return RUM_HALF_CHARACTER.sub("", RUM_HALF_ESCAPE.sub("", path[:RUM_MAX_PATH]))
 
 
 async def _rum_row(request):
@@ -9870,8 +10317,9 @@ async def _rum_row(request):
     if name not in site.names and name.removeprefix("www.") not in site.hosts:
         return None
     path = re.split("[?#]", path, maxsplit=1)[0]
-    if len(path) > RUM_MAX_PATH or not _storable(path):
+    if not _storable(path):
         return None
+    # Judged whole, before the cut: what lies beyond the stored part may name a person or a private page.
     decoded = urllib.parse.unquote(path)         # compared decoded: a translated slug arrives percent-encoded
     if site.private.intersection(decoded.lower().split("/")) or not _storable(decoded) or _may_name_someone(decoded):
         return None
@@ -9879,7 +10327,7 @@ async def _rum_row(request):
         return None
     if not _rum_within_budget():                 # last: only a row that would be stored uses the budget up
         return None
-    return {"site": name, "path": path, "lcp_ms": round(lcp), "is_test": beacon.get("test") is True}
+    return {"site": name, "path": _cut_path(path), "lcp_ms": round(lcp), "is_test": beacon.get("test") is True}
 
 
 async def _rum_store(row):
@@ -9940,7 +10388,7 @@ async def health():
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/reference/site_health.config.example.json sha256=7243d05e5faf4089dca3fdc9fb6a934f5ee0757248c4e71f38672e02dbfaf977 -->
+<!-- FILE: site-health-kit/reference/site_health.config.example.json sha256=69a507dadc81fb3fa09fc11bdd868ed6a1736e19872f3a719e50e0a8e88e139c -->
 ~~~~~~~~json
 {
   "site": "https://example.co.il",
@@ -9951,7 +10399,7 @@ async def health():
   "down_after": 1,
   "morning": "07:30",
   "pages": [
-    {"name": "בית", "url": "https://example.co.il/", "home": true, "probe": true, "core": true},
+    {"name": "בית", "url": "https://example.co.il/", "home": true, "probe": true, "core": true, "expect": "ברוכים הבאים"},
     {"name": "קטגוריה", "url": "https://example.co.il/product-category/sofas/", "probe": true, "core": true},
     {"name": "מוצר", "url": "https://example.co.il/product/sample-sofa/", "probe": true, "core": true, "expect": "הוספה לסל"},
     {"name": "סל", "url": "https://example.co.il/cart/", "probe": true, "core": true},
@@ -10224,10 +10672,11 @@ if __name__ == "__main__":
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/reference/rum/site-health-rum.js sha256=b28adf76abf71c47670d03d9ed4b42e031f42ef361c747d25069157f428576e4 -->
+<!-- FILE: site-health-kit/reference/rum/site-health-rum.js sha256=8442d4ff4824985d4e849c5c67af2ee552bab86fde57e73f50144db0d93973c7 -->
 ~~~~~~~~javascript
 /* Site Health RUM: one beacon per page view, from the visitor's browser to the Site Health dashboard.
-   What is sent: the page's path (never the query string), the time until its main content was painted (LCP),
+   What is sent: the page's path (never the query string; at most 300 characters, of which the dashboard
+   keeps the first 120), the time until its main content was painted (LCP),
    the time until the first byte, how the page was opened, and whether the address carried ?sh_test=1.
    Where to: cfg.endpoint, and nowhere else. No cookie and no id; the dashboard stores no address of the visitor.
    Nothing is sent from cart, checkout, account and order pages, nor from a path that holds an "@" or
@@ -10495,7 +10944,7 @@ JS;
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/reference/tests/conftest.py sha256=52704f5bb5817b77797af78d616822423b68ab48b7ab9446c3db1ebdae55ec5e -->
+<!-- FILE: site-health-kit/reference/tests/conftest.py sha256=c46057190641177d059964a746238722e52f476ab48040870e6c157cddd0f14e -->
 ~~~~~~~~python
 """What every test file shares: where the kit's own files are, and a scratch database with
 schema.sql and functions.sql applied.
@@ -10508,8 +10957,8 @@ is put on sys.path, so "import mock_server" works in every test file.
 
 The database. The admin connection comes from SH_TEST_ADMIN_URL (default: the local server). The
 scratch database gets a random name and is dropped at the end; no other database is touched. When
-no Postgres answers there, the whole run ends with one line that says so, without the address's
-password.
+no Postgres answers there, or it refuses the sign-in, the whole run ends with one line that says
+so, without the address's password.
 """
 import datetime as dt
 import json
@@ -10571,9 +11020,9 @@ def connect(url, **options):
     try:
         return psycopg.connect(url, **options)
     except psycopg.Error:
-        failure = ("No Postgres answers at SH_TEST_ADMIN_URL (%s). Start one, or set SH_TEST_ADMIN_URL to a server "
-                   "where the tests may create and drop a scratch database; see \"Running the tests\" in "
-                   "reference/README.md." % _where(ADMIN_URL))
+        failure = ("No usable Postgres at SH_TEST_ADMIN_URL (%s): no answer, or the sign-in was refused. Start one, or "
+                   "set SH_TEST_ADMIN_URL to a server where the tests may create and drop a scratch database; see "
+                   "\"Running the tests\" in reference/README.md." % _where(ADMIN_URL))
     pytest.exit(failure, returncode=2)           # outside the except: no chained traceback with the address
 
 
@@ -10720,7 +11169,7 @@ def pytest_terminal_summary(terminalreporter):
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/reference/tests/fake_site.py sha256=75353ba103d045939f2bf7ff4b170a9eb4899c501ca1548c54527316892adf48 -->
+<!-- FILE: site-health-kit/reference/tests/fake_site.py sha256=b1ca6d9329bb072305c78c948463bfdbbaad6ae3c50677c478782542ade719bb -->
 ~~~~~~~~python
 """A small local website for the collector tests, and for trying the kit by hand.
 
@@ -10750,6 +11199,7 @@ Tests switch behaviour through the attributes of FakeSite. By hand:
 import argparse
 import gzip
 import json
+import sys
 import threading
 import time
 import urllib.parse
@@ -10765,6 +11215,7 @@ PAGES = {"/": "בית", "/product-category/sofas/": "קטגוריה", "/product/
 SHOPIFY_PAGES = {"/": "בית", "/collections/sofas": "קטגוריה", "/products/sample-sofa": "מוצר", "/cart": "סל",
                  "/pages/about": "אודות"}
 NOT_PROBED = "אודות"
+HOME_TEXT = "ברוכים הבאים"                   # on the home page only: the "expect" of the home page in config()
 CONTACT = "/%D7%A6%D7%95%D7%A8-%D7%A7%D7%A9%D7%A8/"                 # "/צור-קשר/", as a sitemap spells it
 SITEMAP_NS = 'xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"'
 IMAGE_NS = 'xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"'
@@ -10907,7 +11358,8 @@ class FakeSite:
         config = {"site": self.url, "label": "fake.example", "time_zone": "Asia/Jerusalem", "platform": self.platform,
                   "down_after": 1, "morning": "07:30",
                   "pages": [{"name": name, "url": self.url + path, "home": path == "/", "probe": name != NOT_PROBED,
-                             "core": True, **({"expect": "הוספה לסל"} if name == "מוצר" else {})}
+                             "core": True, **({"expect": "הוספה לסל"} if name == "מוצר" else
+                                              {"expect": HOME_TEXT} if path == "/" else {})}
                             for path, name in self.pages.items()]}
         config.update(changes)
         return config
@@ -11031,7 +11483,8 @@ class _Handler(BaseHTTPRequestHandler):
         if name:
             html = broken.get("body") or (
                 '<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>%s</title></head>'
-                "<body><h1>%s</h1><button>הוספה לסל</button></body></html>" % (name, name))
+                "<body><h1>%s</h1>%s<button>הוספה לסל</button></body></html>"
+                % (name, name, "<p>%s</p>" % HOME_TEXT if path == "/" else ""))
             return self._send(200, "text/html; charset=utf-8", html.encode("utf-8"), wait=broken.get("body_delay", 0))
         self._send(404, "text/html", b"<html><body>not found</body></html>")
 
@@ -11210,7 +11663,13 @@ def main(argv=None):
     parser.add_argument("config", nargs="?", help="where to write the site's configuration (JSON)")
     parser.add_argument("--platform", choices=["woocommerce", "shopify"], default="woocommerce")
     args = parser.parse_args(argv)
-    site = FakeSite(args.port, args.platform)
+    try:                                        # bind first: nothing is printed or written for a port that is not ours
+        site = FakeSite(args.port, args.platform)
+    except (OSError, OverflowError) as e:
+        again = " ".join(["python3 tests/fake_site.py", str(args.port + 1 if args.port < 65535 else 8900)] + ([args.config] if args.config else [])
+                         + (["--platform", "shopify"] if args.platform == "shopify" else []))
+        sys.exit("port %d cannot be opened (%s). Another program may be using it: try another one, such as  %s"
+                 % (args.port, getattr(e, "strerror", None) or e, again))
     config = json.dumps(site.config(), ensure_ascii=False, indent=2)
     if args.config:
         Path(args.config).write_text(config + "\n", encoding="utf-8")
@@ -11352,7 +11811,7 @@ def _run(url, page, strategy, source, lcp, salt):
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/reference/tests/test_collectors.py sha256=3807251bb501f33cd2d27c2346eb1274ab60a8273f2e5f0cfd56e5c507dafb09 -->
+<!-- FILE: site-health-kit/reference/tests/test_collectors.py sha256=f946fc7f6c754db07d52b2b6408502f05218a4cb6604f7dfd0850f0afe25fd4b -->
 ~~~~~~~~python
 """Tests of collectors.py, manage.py and watchdog.py.
 
@@ -11396,7 +11855,7 @@ import conftest  # noqa: E402
 import db  # noqa: E402
 import manage  # noqa: E402
 import watchdog  # noqa: E402
-from fake_site import PAGES, PSI_ERRORS, SHOPIFY_PAGES, FakeSite, sitemap_index, urlset  # noqa: E402
+from fake_site import HOME_TEXT, PAGES, PSI_ERRORS, SHOPIFY_PAGES, FakeSite, sitemap_index, urlset  # noqa: E402
 
 UTC = timezone.utc
 ZONE = ZoneInfo("Asia/Jerusalem")                 # the time zone of the fake site's configuration
@@ -12339,11 +12798,12 @@ def test_several_sitemap_lines_and_a_line_for_another_host(site):
      "declares entities"),
     (lambda site: site.files.update({"/page-sitemap.xml": ("application/xml", "<urlset/>".encode("utf-16"))}),
      "not UTF-8"),
-    # UTF-16 without its byte-order mark is valid UTF-8 (with a NUL in every pair), and the bytes
-    # "<!ENTITY" are not in it: only the NUL test refuses this entity bomb before the parser sees it
+    # UTF-16 without its byte-order mark: the bytes "<!ENTITY" are not in it, and the declaration is seen all the same
     (lambda site: site.files.update({"/page-sitemap.xml": ("application/xml", (
         '<?xml version="1.0" encoding="UTF-16LE"?><!DOCTYPE urlset [<!ENTITY a "aaaaaaaaaa"><!ENTITY b "&a;&a;&a;&a;">]>'
-        '<urlset><url><loc>&b;</loc></url></urlset>').encode("utf-16-le"))}), "not UTF-8"),
+        '<urlset><url><loc>&b;</loc></url></urlset>').encode("utf-16-le"))}), "declares entities"),
+    (lambda site: site.files.update({"/page-sitemap.xml": ("application/xml", "<urlset><url/></urlset>".encode("utf-16-le"))}),
+     "not UTF-8"),
     (lambda site: site.files.update({"/product-sitemap.xml": ("application/xml", b"\x1f\x8b\x08 not gzip")}),
      "gzip file that cannot be opened"),
     (lambda site: site.files.update({"/sitemap_index.xml": sitemap_index(
@@ -12358,6 +12818,35 @@ def test_one_file_that_fails_aborts_the_whole_load(sql, site, break_it, message)
         collectors.sitemap_job(collectors.read_config(), T0)
     assert sql.sql("select url from sh_site_pages where active order by url") == [(url,) for url in sorted(known)]
     assert last_run(sql, SITEMAP_FLOW) is None                            # yesterday's list, and no proof of life
+
+
+BOMB = '<!DOCTYPE urlset [<!ENTITY a "aaaaaaaaaa"><!ENTITY b "&a;&a;&a;&a;&a;&a;&a;&a;">]><urlset><url><loc>&b;</loc></url></urlset>'
+
+
+@pytest.mark.parametrize("raw, declares", [
+    (BOMB.encode("utf-8"), True),
+    (BOMB.encode("utf-16"), True),                                        # with its byte-order mark
+    (('<?xml version="1.0" encoding="UTF-16"?>' + BOMB).encode("utf-16-le"), True),       # without one
+    (('<?xml version="1.0" encoding="UTF-16"?>' + BOMB).encode("utf-16-be"), True),
+    (('<?xml version="1.0" encoding="windows-1255"?>' + BOMB).encode("cp1255"), True),
+    (b'<!DOCTYPE urlset [<!ENTITY % p "x">]><urlset/>', True),          # a parameter entity
+    (b'<!DOCTYPE urlset [<!ENTITY e SYSTEM "file:///etc/passwd">]><urlset><url><loc>&e;</loc></url></urlset>', True),
+    (b'<!DOCTYPE urlset [<!NOTATION n SYSTEM "x"><!ENTITY e SYSTEM "y" NDATA n>]><urlset/>', True),
+    (urlset("https://example.co.il", "/a/")[1], False),
+    (b'<!DOCTYPE urlset><urlset><url><loc>https://example.co.il/a&amp;b/</loc></url></urlset>', False),
+    (b"<urlset><!-- <!ENTITY a 'b'> is only words here --></urlset>", False),
+    (b"<urlset><url><loc><![CDATA[<!ENTITY a 'b'>]]></loc></url></urlset>", False),
+    (b"<html><body>Just a moment...</body></html>", False), (b"not xml at all", False), (b"", False),
+])
+def test_an_entity_declaration_is_seen_in_any_encoding(raw, declares):
+    assert collectors._declares_entities(raw) is declares
+
+
+def test_the_words_of_an_entity_declaration_in_a_comment_are_no_declaration(site):
+    """Only a real declaration is refused: the bytes "<!ENTITY" in a comment declare nothing."""
+    body = urlset(site.url, "/a/")[1].replace(b"<url>", b"<!-- <!ENTITY x 'y'> --><url>", 1)
+    site.files["/page-sitemap.xml"] = ("application/xml", body)
+    assert "/a/" in paths(site, collectors.sitemap_load(site.url))
 
 
 def test_a_file_larger_than_the_limit_is_refused(site, monkeypatch):
@@ -13211,7 +13700,8 @@ def everywhere(monkeypatch, site):
     ("http://example.co.il/cart/", "http://www.example.co.il/about/", (), True),             # with www: the same site
     ("http://www.example.co.il/cart/", "http://example.co.il/about/", (), True),
     ("http://EXAMPLE.co.il/cart/", "http://example.co.il./about/", (), True),
-    ("http://example.co.il/cart/", "http://example.co.il:8080/about/", (), True),            # the host is what counts
+    ("http://example.co.il/cart/", "http://example.co.il:80/about/", (), True),              # the same port, spelled out
+    ("http://example.co.il/cart/", "http://example.co.il:8080/about/", (), False),           # another service of the host
     ("http://example.co.il/cart/", "http://someone@example.co.il/about/", (), True),
     ("http://example.co.il/cart/", "http://shop.example.co.il/about/", (), False),           # a host of its own
     ("http://example.co.il/cart/", "http://shop.example.co.il/about/", ("shop.example.co.il",), True),
@@ -13229,6 +13719,51 @@ def test_which_redirects_are_followed(site, monkeypatch, start, target, hosts, f
     answer = collectors.fetch(start, timeout=2, hosts=hosts, public=True)
     assert (answer.status, answer.elsewhere) == ((200, False) if followed else (302, True))
     assert [path for _, path, _ in site.hits] == (["/cart/", "/about/"] if followed else ["/cart/"])
+
+
+@pytest.mark.parametrize("current, target, why", [
+    ("http://example.co.il/a", "https://example.co.il/b", ""),                     # up to https: the usual move
+    ("http://example.co.il:80/a", "https://www.example.co.il:443/b", ""),
+    ("https://example.co.il/a", "https://www.example.co.il/b", ""),
+    ("http://example.co.il:8080/a", "http://example.co.il:8080/b", ""),           # a site on a port of its own stays there
+    ("http://example.co.il/a", "http://shop.example.co.il/b", "to another host"),
+    ("http://example.co.il/a", "http://pay.example.co.il:8080/b", ""),            # a host of extra_hosts, on its own port
+    ("https://example.co.il/a", "https://pay.example.co.il:8443/b", ""),
+    ("https://example.co.il/a", "http://example.co.il/b", "from https to http"),   # never down to clear text
+    ("https://example.co.il/a", "http://example.co.il:443/b", "from https to http"),
+    ("https://example.co.il/a", "http://pay.example.co.il/b", "from https to http"),     # an extra host, too
+    ("https://example.co.il/a", "https://example.co.il:8443/b", "to another port"),
+    ("http://example.co.il/a", "http://example.co.il:8080/b", "to another port"),
+    ("http://example.co.il/a", "https://example.co.il:8443/b", "to another port"),
+    ("http://example.co.il:8080/a", "https://example.co.il/b", "to another port"),
+    ("http://example.co.il/a", "http://example.co.il:x/b", "to another port"),
+    ("http://example.co.il/a", "ftp://example.co.il/b", "to an address that is not http(s)"),
+    ("http://example.co.il/a", "javascript:alert(1)", "to an address that is not http(s)"),
+])
+def test_why_a_redirect_is_not_followed(current, target, why):
+    assert collectors._redirect_refused(current, target, {"example.co.il", "pay.example.co.il"}) == why
+
+
+def test_a_redirect_from_https_down_to_http_or_to_another_port_is_not_followed(site, https_site, monkeypatch):
+    port, certificate = https_site
+    monkeypatch.setattr(collectors, "_TLS", ssl.create_default_context(cafile=str(certificate)))
+    with socket.socket() as other:                                        # a second service of this machine
+        other.bind(("127.0.0.1", 0))
+        other.listen()
+        for target, why in ((site.url + "/cart/", "from https to http"),
+                            ("http://127.0.0.1:%d/cart/" % port, "from https to http"),      # even on the same port
+                            ("https://127.0.0.1:%d/cart/" % other.getsockname()[1], "to another port")):
+            page = {"name": "סל", "url": "https://127.0.0.1:%d/cart/?to=%s" % (port, urllib.parse.quote(target, safe=""))}
+            row = collectors.probe_check(page, 5)
+            assert (row["ok"], row["fail"], row["status"], row["err"]) == (False, "http", 302, "redirected " + why)
+        other.settimeout(0.2)
+        with pytest.raises(socket.timeout):
+            other.accept()                                                # it never heard of the request
+    assert site.hits == []                                                # nor did the plain http server
+    same = "https://127.0.0.1:%d/" % port                                 # the same scheme and port: followed
+    row = collectors.probe_check({"name": "סל", "url": "https://127.0.0.1:%d/cart/?to=%s" % (
+        port, urllib.parse.quote(same, safe="")), "expect": "הוספה לסל"}, 5)
+    assert (row["ok"], row["status"]) == (True, 200)
 
 
 def test_a_redirect_from_http_to_https_of_the_same_host_is_followed(site, monkeypatch):
@@ -13403,6 +13938,13 @@ def https_site(tmp_path):
 
     class Page(http.server.BaseHTTPRequestHandler):
         def do_GET(self):
+            moved = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query).get("to")
+            if moved:                                                     # ?to=<address>: a redirect there
+                self.send_response(302)
+                self.send_header("Location", moved[0])
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
             body = "<html><body><button>הוספה לסל</button></body></html>".encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -13640,6 +14182,25 @@ def test_the_configuration_of_the_fake_has_a_public_fifth_page(site):
         ("בית", "/", True, True), ("קטגוריה", "/product-category/sofas/", True, True),
         ("מוצר", "/product/sample-sofa/", True, True), ("סל", "/cart/", True, True), ("אודות", "/about/", False, True)]
     assert all(collectors.probe_check(p, 2)["ok"] for p in pages)         # every one of them opens for anybody
+    # the home page has an "expect" (START-HERE asks for one), and it is on the home page only
+    assert [p.get("expect") for p in pages] == [HOME_TEXT, None, "הוספה לסל", None, None]
+    for page in site.use("shopify").config()["pages"][1:]:
+        assert collectors.probe_check(dict(page, expect=HOME_TEXT), 2)["fail"] == "content"
+
+
+def test_the_fake_site_on_a_port_that_is_taken_says_so_in_one_line(tmp_path):
+    config = tmp_path / "site_health.config.json"
+    with socket.socket() as taken:
+        taken.bind(("127.0.0.1", 0))
+        taken.listen()
+        port = taken.getsockname()[1]
+        done = subprocess.run([sys.executable, str(REFERENCE / "tests" / "fake_site.py"), str(port), str(config),
+                               "--platform", "shopify"], capture_output=True, encoding="utf-8", timeout=60)
+    assert (done.returncode, done.stdout) == (1, "") and "Traceback" not in done.stderr
+    assert done.stderr.splitlines() == [
+        "port %d cannot be opened (Address already in use). Another program may be using it: try another one, such as "
+        " python3 tests/fake_site.py %d %s --platform shopify" % (port, port + 1, config)]
+    assert not config.exists()                                            # nothing is written for a port that is not ours
 
 
 # ================================================================ 12. manage.py: the files for the owner
@@ -13697,20 +14258,43 @@ def test_install_sql_writes_one_file_that_installs_an_empty_database_and_runs_tw
             admin.execute('drop database if exists "%s" with (force)' % name)
 
 
-@pytest.mark.parametrize("change, message", [
-    ({"time_zone": None}, '"time_zone" is required: the time zone of the site\'s customers, such as Asia/Jerusalem'),
-    ({"time_zone": "Mars/Olympus"}, 'unknown "time_zone" Mars/Olympus'),
-    ({"site": "example.co.il"}, '"site" must be an absolute http(s) address'),
-    ({"pages": "all of them"}, '"pages" must be a list of pages'),
-    ({"pages": []}, 'exactly one page must have "home": true, found 0'),
+@pytest.mark.parametrize("change, message", [            # every case, against the database: test_sql.py
+    ({"time_zone": None}, 'sh_setup: "time_zone" is required: the time zone of the site\'s customers, such as '
+                          'Asia/Jerusalem'),
+    ({"time_zone": "Mars/Olympus"}, 'sh_setup: unknown "time_zone" Mars/Olympus'),
+    ({"site": "example.co.il"}, 'sh_setup: "site" must be an absolute http(s) address, got example.co.il'),
+    ({"off": ["sitemap", "speed"]}, 'sh_setup: "off" takes sitemap, real_users, catalogue or cert, got ["sitemap", "speed"]'),
+    ({"down_after": "2.5"}, 'invalid input syntax for type integer: "2.5"'),
+    ({"pages": "all of them"}, 'sh_setup: "pages" must be a list of pages'),
+    ({"pages": []}, 'sh_setup: exactly one page must have "home": true, found 0'),
     ({"pages": [{"name": "בית", "url": "https://example.co.il/", "home": True, "probe": True}]},
-     "the home page must be a probe page and a core page"),
+     "sh_setup: the home page must be a core page"),
+    ({"pages": [{"name": "בית", "url": "https://example.co.il/", "home": True, "core": True},
+                {"name": "סל", "url": "https://example.co.il/cart/", "probe": True}]},
+     "sh_setup: the home page must be a probe page"),
 ])
 def test_install_sql_refuses_a_configuration_the_database_would_refuse(site, tmp_path, change, message):
     source, out = tmp_path / "site_health.config.json", tmp_path / "install.sql"
     source.write_text(json.dumps(site.config(**change), ensure_ascii=False), encoding="utf-8")
     assert run_manage("install-sql", "--config", str(source), "--out", str(out)) == "%s: %s" % (source, message)
-    assert not out.exists()
+    assert sorted(path.name for path in tmp_path.iterdir()) == ["site_health.config.json"]       # nothing was written
+
+
+def test_install_sql_never_leaves_half_a_file(site, tmp_path, monkeypatch):
+    source, out = tmp_path / "site_health.config.json", tmp_path / "install.sql"
+    source.write_text(json.dumps(site.config(), ensure_ascii=False), encoding="utf-8")
+    out.write_text("the file of the last run\n", encoding="utf-8")
+    written = Path.write_text
+
+    def cut_short(path, text, *args, **kwargs):                           # the disk fills up halfway
+        written(path, text[: len(text) // 2], *args, **kwargs)
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(Path, "write_text", cut_short)
+    assert run_manage("install-sql", "--config", str(source), "--out", str(out)) == (
+        "%s cannot be written: No space left on device" % out)
+    assert out.read_text(encoding="utf-8") == "the file of the last run\n"         # the old file, whole
+    assert sorted(path.name for path in tmp_path.iterdir()) == ["install.sql", "site_health.config.json"]
 
 
 def test_install_sql_says_what_is_wrong_with_the_file_itself(tmp_path):
@@ -14141,7 +14725,7 @@ server.listen(PORT, async () => {
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/reference/tests/test_server.py sha256=b6b9d223df72307d8fd959e292e11045de0b6585fb566d718077f4430a32078d -->
+<!-- FILE: site-health-kit/reference/tests/test_server.py sha256=4fe1b1a62e2df5d94e363ebee72beef6b15d32a48265e644d98f9fef301dc2a2 -->
 ~~~~~~~~python
 """Tests of server.py: access rules (spec §8), the data contract (spec §5), the page, the real-user
 ingest (POST /m, spec §7.7) and /health; of db.py; of tools/check_access.py; and of conftest.py.
@@ -14153,6 +14737,7 @@ transport; skipped otherwise). The kit's own files are found as conftest.py says
 
     cd reference && python3 -m pytest -q tests/test_server.py
 """
+import contextlib
 import copy
 import hmac
 import json
@@ -14204,6 +14789,10 @@ SCREEN_CONFIG = {"siteLabel": "example.co.il", "brand": "", "homePage": "בית"
                  "downAfter": 1, "liveHosts": ["live"],
                  "pathLabels": [["/product-category/", "קטגוריה: "], ["/product/", "מוצר: "]], "bucketNote": "",
                  "hide": [], "nav": [], "links": []}
+# What an outsider's page carries: no menu and no extra buttons, which hold the addresses of the owner's other screens
+OUTSIDER_SCREEN = {key: value for key, value in SCREEN_CONFIG.items() if key not in ("nav", "links")}
+MENU = {"nav": [["g", "פנימי"], ["a", "https://intranet.example.co.il/sales-secret-dashboard", "מכירות"]],
+        "links": [{"href": "https://intranet.example.co.il/reports", "label": "דוחות", "title": "הורדת דוחות"}]}
 CONFIG = {"site": "https://example.co.il", "host": "example.co.il", "label": "example.co.il", "brand": "",
           "time_zone": "Asia/Jerusalem", "platform": "woocommerce", "down_after": 1, "morning": "07:30",
           "keep_days": 100, "off": [], "hide": [], "nav": [], "links": [], "extra_hosts": [], "rum_hosts": [],
@@ -14606,7 +15195,7 @@ def test_the_share_page_is_served_for_the_right_token_only(visit):
     client = visit(None)
     page = client.get("/status", params={"k": TOKEN})
     assert page.status_code == 200 and "set-cookie" not in page.headers
-    assert injected(page.text) == (dict(SCREEN_CONFIG, shareKey=TOKEN), {"share": True})
+    assert injected(page.text) == (dict(OUTSIDER_SCREEN, shareKey=TOKEN), {"share": True})
     for k in ("wrong", TOKEN + "x", TOKEN[:-1], TOKEN.upper(), ""):
         refused = client.get("/status", params={"k": k})
         assert refused.status_code == 403 and server.TEXT_BAD_LINK in refused.text and "SH_CONFIG" not in refused.text
@@ -14965,9 +15554,8 @@ def test_every_attempt_is_logged(fake, visit):
     assert fake.params("sh_login_log_add") == {"p_ip": "203.0.113.9", "p_ok": True, "p_who": "AGENCY",
                                                "p_ua": ("Phone/1.0 " + "x" * 300)[:200]}
     fake.calls.clear()
-    sign_in(visit(None), PASSWORDS["owner"])
-    assert fake.params("sh_login_log_add") == {"p_ip": "testclient", "p_ok": True, "p_who": "owner",
-                                               "p_ua": "testclient"}
+    sign_in(visit(None), PASSWORDS["owner"])                   # the test client's peer is the text "testclient"
+    assert fake.params("sh_login_log_add") == {"p_ip": "?", "p_ok": True, "p_who": "owner", "p_ua": "testclient"}
 
 
 @pytest.mark.parametrize("hops, forwarded, address", [
@@ -14977,13 +15565,14 @@ def test_every_attempt_is_logged(fake, visit):
     ("1", "6.6.6.6, 7.7.7.7, 198.51.100.7", "198.51.100.7"),
     ("2", "6.6.6.6, 198.51.100.7, 172.70.1.1", "198.51.100.7"),          # two proxies: the last but one
     ("2", "198.51.100.7", "198.51.100.7"),                     # fewer entries than proxies: the oldest there is
-    ("0", "6.6.6.6, 198.51.100.7", "testclient"),              # no proxy: the header is the client's word, not used
+    ("0", "6.6.6.6, 198.51.100.7", "?"),                       # no proxy: the header is the client's word, not used
     ("", "6.6.6.6, 198.51.100.7", "198.51.100.7"), ("many", "6.6.6.6, 198.51.100.7", "198.51.100.7"),
     ("-1", "6.6.6.6, 198.51.100.7", "198.51.100.7"),           # not a count: the default
-    (None, "", "testclient"), (None, None, "testclient"),
-    # the entry must be an address; anything else is not believed, and the socket peer is used
-    (None, "6.6.6.6, not-an-address", "testclient"), (None, "198.51.100.7.evil", "testclient"),
-    (None, "9.9.9.9, " + "B" * 6000 + "<script>alert(1)</script>", "testclient"),
+    (None, "", "?"), (None, None, "?"),
+    # the entry must be an address; anything else is not believed, and the socket peer is used. The peer
+    # of the test client is the text "testclient", no address either: "?", never the text
+    (None, "6.6.6.6, not-an-address", "?"), (None, "198.51.100.7.evil", "?"),
+    (None, "9.9.9.9, " + "B" * 6000 + "<script>alert(1)</script>", "?"),
     (None, "203.0.113.9:4711", "203.0.113.9"), (None, "[2001:DB8::1]:443", "2001:db8::1"),      # some hosts add the port
     (None, "2001:0db8:0000:0000:0000:0000:0000:0001", "2001:db8::1"),                           # one spelling per address
     (None, "::ffff:203.0.113.9", "203.0.113.9"), (None, "fe80::1%eth0", "fe80::1"),
@@ -15008,8 +15597,12 @@ def test_the_address_in_the_login_log_is_never_longer_than_45_characters():
     def request(peer, forwarded=""):
         return types.SimpleNamespace(headers={"x-forwarded-for": forwarded}, client=types.SimpleNamespace(host=peer))
 
-    assert server._client_ip(request("unix-socket-" + "x" * 100)) == ("unix-socket-" + "x" * 100)[:45]
+    assert server._client_ip(request("unix-socket-" + "x" * 100)) == "?"          # a peer that is no address
     assert server._client_ip(request("10.0.0.1", "y" * 5000)) == "10.0.0.1"
+    # what uvicorn makes of a request from 127.0.0.1: the peer is the header's last entry, whatever it holds
+    garbage = "B" * 6000 + "<script>alert(1)</script>"
+    assert server._client_ip(request(garbage, "9.9.9.9, " + garbage)) == "?"
+    assert server._client_ip(request("", "")) == "?" and server._client_ip(request(None, "")) == "?"
     longest = "0123:4567:89ab:cdef:0123:4567:89ab:cdef"
     assert server._client_ip(request("10.0.0.1", longest)) == "123:4567:89ab:cdef:123:4567:89ab:cdef"
     assert server._client_ip(types.SimpleNamespace(headers={}, client=None)) == "?"
@@ -15025,7 +15618,7 @@ def test_the_addresses_of_one_ipv6_network_count_as_one(fake, visit):
     assert logged[:3] == ["2001:db8:1:2::1", "2001:db8:1:2::2", "2001:db8:1:2::3"]      # the log keeps the address itself
     assert sign_in(visit(None), PASSWORDS["owner"], **{"X-Forwarded-For": "2001:db8:1:3::1"}).status_code == 303
     assert server._counted_as("2001:db8:1:2::1") == "2001:db8:1:2::/64"
-    assert server._counted_as("198.51.100.7") == "198.51.100.7" and server._counted_as("testclient") == "testclient"
+    assert server._counted_as("198.51.100.7") == "198.51.100.7" and server._counted_as("?") == "?"
 
 
 def test_signing_in_works_while_the_database_is_down(fake, visit):
@@ -15313,6 +15906,10 @@ def test_drill_passes_the_parameters_through(fake, visit):
     {"what": "bucket", "bucket": "٢٠٢٦-١١-١٣"}, {"what": "bucket", "bucket": "0000-01-01"},
     {"what": "bucket", "bucket": "2026-11-13'; drop table sh_probe; --"},
     {"what": "fails", "bucket": "last hour"}, {"what": "fails", "page": "סל", "bucket": "2026-11-13 09"},
+    # a page or an address with a control character: a NUL the database could not even take as a parameter
+    {"what": "fails", "page": "\x00"}, {"what": "fails", "page": "סל\x00"}, {"what": "fails", "page": "סל\n"},
+    {"what": "fails", "page": "\x7f", "bucket": "2026-11-13"},
+    {"what": "runs", "url": "https://example.co.il/\x00"}, {"what": "runs", "url": "https://example.co.il/\t"},
 ])
 def test_drill_with_a_missing_or_malformed_parameter_has_no_rows_and_asks_nothing(query, fake, visit):
     fake.failing.update(["sh_config", "sh_drill_fails", "sh_drill_bucket", "sh_drill_runs", "sh_drill_alert"])
@@ -15447,7 +16044,22 @@ def test_the_page_carries_the_role_of_the_viewer(role, visit):
     path = "/status" if role == "share" else "/site"
     config, screen_role = injected(send(visit, role, "GET", path).text)
     assert screen_role == SCREEN_ROLE[role]
-    assert config == (dict(SCREEN_CONFIG, shareKey=TOKEN) if role == "share" else SCREEN_CONFIG)
+    assert config == (dict(OUTSIDER_SCREEN, shareKey=TOKEN) if role == "share" else
+                      OUTSIDER_SCREEN if role in ("vendor", "noalerts") else SCREEN_CONFIG)
+
+
+@pytest.mark.parametrize("role", ["owner", "staff", "vendor", "noalerts", "share"])
+def test_the_owners_other_screens_never_reach_an_outsiders_page(role, fake, visit):
+    """The screen hides the menu from an outsider, but hiding is not enough: the page source is theirs to read."""
+    fake.answers["sh_config"] = dict(CONFIG, screen=dict(SCREEN_CONFIG, **MENU))
+    page = send(visit, role, "GET", "/status" if role == "share" else "/site").text
+    config, _ = injected(page)
+    if role in ("owner", "staff"):
+        assert (config["nav"], config["links"]) == (MENU["nav"], MENU["links"])
+    else:
+        assert "nav" not in config and "links" not in config
+        assert "intranet.example.co.il" not in page and "sales-secret-dashboard" not in page and "דוחות" not in page
+        assert {key: value for key, value in config.items() if key != "shareKey"} == OUTSIDER_SCREEN       # the rest is all there
 
 
 HOSTILE = {"siteLabel": 'x</script><script>alert("1")</script>', "brand": "a'b\"c\\d</SCRIPT >",
@@ -15455,24 +16067,31 @@ HOSTILE = {"siteLabel": 'x</script><script>alert("1")</script>', "brand": "a'b\"
            "nav": [["a", "/x", "]]>;window.SH_ROLE={};"]]}
 
 
-def test_a_hostile_configuration_value_cannot_leave_the_script(fake, visit):
+# the owner's page carries the hostile menu entry too; a vendor's carries everything but the menu
+HOSTILE_SEEN = {"owner": (HOSTILE, {}),
+                "vendor": ({key: value for key, value in HOSTILE.items() if key != "nav"}, {"readonly": True})}
+
+
+@pytest.mark.parametrize("role", HOSTILE_SEEN)
+def test_a_hostile_configuration_value_cannot_leave_the_script(role, fake, visit):
     fake.answers["sh_config"] = dict(CONFIG, screen=HOSTILE)
     plain = Scripts(SCREEN.read_text(encoding="utf-8")).found
-    page = visit("vendor").get("/site").text
+    page = visit(role).get("/site").text
     scripts = Scripts(page).found
     assert len(scripts) == len(plain) + 1 and scripts[1:] == plain          # one script more, the screen's own intact
     assert not re.search("[<\u2028\u2029]", scripts[0])                     # nothing that can end or break the script
-    assert injected(page) == (HOSTILE, {"readonly": True})                  # and the values arrive unchanged
+    assert injected(page) == HOSTILE_SEEN[role]                             # and the values arrive unchanged
     assert "<script>alert" not in page and page.count("</script>") == len(plain) + 1
 
 
 @pytest.mark.skipif(not shutil.which("node"), reason="needs node")
-def test_the_injected_script_is_javascript_that_yields_the_same_values(fake, visit):
+@pytest.mark.parametrize("role", HOSTILE_SEEN)
+def test_the_injected_script_is_javascript_that_yields_the_same_values(role, fake, visit):
     fake.answers["sh_config"] = dict(CONFIG, screen=HOSTILE)
-    script = Scripts(visit("vendor").get("/site").text).found[0]
+    script = Scripts(visit(role).get("/site").text).found[0]
     program = "var window = {};%s;process.stdout.write(JSON.stringify([window.SH_CONFIG, window.SH_ROLE]))" % script
     done = subprocess.run(["node", "-e", program], capture_output=True, encoding="utf-8", timeout=60, check=True)
-    assert json.loads(done.stdout) == [HOSTILE, {"readonly": True}]
+    assert json.loads(done.stdout) == list(HOSTILE_SEEN[role])
 
 
 def test_the_configuration_is_read_once_a_minute(fake, clock, visit):
@@ -15645,9 +16264,22 @@ def test_the_configured_host_may_be_written_with_www(fake, visit):
     ({"test": True}, {"is_test": True}), ({"test": "yes"}, {"is_test": False}),
     ({"site": "example.co.il"}, {"site": "example.co.il"}),                              # the site's host by its name
     ({"site": "www.example.co.il"}, {"site": "www.example.co.il"}),
-    ({"path": "/" + "x" * 299}, {"path": "/" + "x" * 299}),                              # 300 characters
-    ({"path": "/" + "ס" * 100 + "x" * 199}, {"path": "/" + "ס" * 100 + "x" * 199}),      # characters, not bytes
-    ({"path": "/" + "x" * 299 + "?utm_source=" + "y" * 200}, {"path": "/" + "x" * 299}), # the query string does not count
+    ({"path": "/" + "x" * 119}, {"path": "/" + "x" * 119}),                              # 120 characters: whole
+    ({"path": "/" + "x" * 299}, {"path": "/" + "x" * 119}),                              # longer: cut at 120
+    ({"path": "/" + "x" * 299 + "?utm_source=" + "y" * 200}, {"path": "/" + "x" * 119}), # the query string does not count
+    # a cut never ends inside an escape, nor inside a character whose escapes were cut off
+    ({"path": "/" + "x" * 117 + "%D7%A1"}, {"path": "/" + "x" * 117}),                   # "%D" would be left: not kept
+    ({"path": "/" + "x" * 118 + "%2F"}, {"path": "/" + "x" * 118}),                      # "%"
+    ({"path": "/" + "x" * 116 + "%D7%A1%D7%A4"}, {"path": "/" + "x" * 116}),             # "%D7": half a Hebrew letter
+    ({"path": "/" + "x" * 113 + "%E2%80%99abc"}, {"path": "/" + "x" * 113}),             # two thirds of a character
+    ({"path": "/" + "x" * 110 + "%F0%9F%98%80" + "z" * 20}, {"path": "/" + "x" * 110}),  # three quarters of one
+    ({"path": "/" + "x" * 113 + "%D7%A1zz"}, {"path": "/" + "x" * 113 + "%D7%A1"}),      # a whole one stays
+    ({"path": "/product/" + "%D7%A1%D7%A4%D7%94-" * 10},                                 # a long Hebrew slug, as sent
+     {"path": "/product/" + "%D7%A1%D7%A4%D7%94-" * 5 + "%D7%A1%D7%A4"}),
+    # stored in the form a browser sends: never more bytes than characters
+    ({"path": "/ספה/"}, {"path": "/%D7%A1%D7%A4%D7%94/"}), ({"path": "/a b/"}, {"path": "/a%20b/"}),
+    ({"path": "/" + "ס" * 100 + "x" * 199}, {"path": "/" + "%D7%A1" * 19}),
+    ({"path": "/" + "\U0001D400" * 50}, {"path": "/" + "%F0%9D%90%80" * 9}),            # 201 bytes: 109 characters
     ({"path": "/%D7%A7%D7%95%D7%A4%D7%94/"}, {"path": "/%D7%A7%D7%95%D7%A4%D7%94/"}),    # private only where configured
     ({"v": 1, "ttfb": 180, "nav": "navigate", "anything": {"else": [1]}}, {}),            # unknown fields are ignored
     # ordinary addresses that only look a little like an identifier
@@ -15671,7 +16303,6 @@ def test_what_is_stored(change, row, fake, visit):
     {"path": "/checkout/order-pay/77/"}, {"path": "/my-account/view-order/77/"}, {"path": "/12345/orders/abcdef"},
     {"path": "/wp-admin/index.php"}, {"path": "/admin"}, {"path": "/wp-login.php"},
     {"path": "/my-account/lost-password/"}, {"path": "/%63heckout/"}, {"path": "/shop/CHECKOUT%2Fpay"},
-    {"path": "/" + "x" * 300}, {"path": "/" + "ס" * 100 + "x" * 200},                    # 301 characters
     {"path": "product/sofa/"}, {"path": "https://example.co.il/x"}, {"path": ""}, {"path": None}, {"path": 7},
     {"lcp": 0}, {"lcp": 0.4}, {"lcp": 60001}, {"lcp": -5}, {"lcp": "2345"}, {"lcp": None}, {"lcp": True}, {"lcp": [1]},
     {"site": ""}, {"site": None}, {"site": "Live Site"}, {"site": "a" * 101}, {"site": "live\n"}, {"site": ["live"]},
@@ -15686,6 +16317,9 @@ def test_what_is_stored(change, row, fake, visit):
     {"path": "/t/aB3dE5gH7jK9mN1pQ3sT5vW7/"},                                            # 24 letters and digits
     {"path": "/t/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.abc/"},
     {"path": "/t/%61B3dE5gH7jK9mN1pQ3sT5vW7/"},                                          # the same, partly encoded
+    # judged whole: what lies beyond the 120 characters that would be kept counts all the same
+    {"path": "/" + "x" * 130 + "/someone@example.com/"}, {"path": "/" + "x" * 125 + "/checkout/"},
+    {"path": "/" + "x" * 125 + "/5f2a9c1e7b3d4a6f/"},
     # a path the database could not store, or that is no address of a page
     {"path": "/batch/1\x00"}, {"path": "/a\nb/"}, {"path": "/a\x7fb/"}, {"path": "/a\x1fb/"}, {"path": "/a%00b/"},
     {"path": "/half/\ud83d/"},                                                          # half a surrogate pair
@@ -15705,7 +16339,7 @@ def test_what_is_dropped(change, fake, visit):
 def test_the_private_paths_of_the_configuration_are_never_stored(path, kept, fake, visit):
     fake.answers["sh_config"] = dict(CONFIG, private_paths=["קופה", "My-Cart"])
     beacon(visit(None), dict(BEACON, path=path), **ORIGIN)
-    assert [row["path"] for row in stored(fake)] == [path] * kept
+    assert [row["path"] for row in stored(fake)] == [urllib.parse.quote(path)] * kept     # stored as a browser sends it
 
 
 @pytest.mark.parametrize("body", [b"", b"not json", b"[1]", b"null", b'"x"', b'{"site":"live","path":"/","lcp":NaN}',
@@ -16138,7 +16772,7 @@ def test_db_without_configuration(monkeypatch):
         REAL_RPC("sh_ping")
 
 
-def test_db_over_a_postgres_connection(request, monkeypatch):
+def test_db_over_a_postgres_connection(request, monkeypatch, caplog):
     try:
         url = request.getfixturevalue("database")              # conftest.py: a scratch database with the kit's SQL
     except (Exception, pytest.exit.Exception) as e:            # this file alone needs no Postgres: skip, do not stop
@@ -16168,6 +16802,12 @@ def test_db_over_a_postgres_connection(request, monkeypatch):
         with pytest.raises(db.DbError) as error:                           # a NUL: the database refuses this data
             REAL_RPC("sh_rum_add", {"p_rows": [{"site": "live", "path": "/a\x00", "lcp_ms": 5, "is_test": False}]})
         assert error.value.answered is True and "\x00" not in str(error.value)
+        with caplog.at_level(logging.DEBUG), pytest.raises(db.DbError) as error:      # a NUL in a plain parameter:
+            REAL_RPC("sh_drill_fails", dict(span, p_page="סל\x00", p_bucket=None))     # the driver refuses to send it
+        assert str(error.value) == ("database call failed (DataError): the call carried a value the database cannot "
+                                    "store") and error.value.answered is True
+        assert "DATABASE_URL" not in str(error.value) and "DATABASE_URL" not in caplog.text       # not the address's fault
+        assert REAL_RPC("sh_ping") == "ok" and db._thread.conn is conn     # nor the connection's
 
         class Dropped:                                                     # a kept connection the server has closed
             closed = False
@@ -16232,12 +16872,16 @@ def test_the_access_log_never_holds_a_query_string():
         access.info('%s - "%s %s HTTP/%s" %d', "203.0.113.9:4711", "GET", "/status?k=" + TOKEN, "1.1", 200)
         access.info('%s - "%s %s HTTP/%s" %d', "203.0.113.9:4711", "GET", "/api/site/now?h=24&k=%s&x=?" % TOKEN, "1.1", 200)
         access.info('%s - "%s %s HTTP/%s" %d', "203.0.113.9:4711", "GET", "/site", "1.1", 303)
+        # "/status%3Fk=..." is the path "/status?k=..." to the router, and uvicorn prints it encoded again
+        access.info('%s - "%s %s HTTP/%s" %d', "203.0.113.9:4711", "GET", "/status%3Fk%3D" + TOKEN, "1.1", 303)
+        access.info('%s - "%s %s HTTP/%s" %d', "203.0.113.9:4711", "GET", "/status%3fk%3d" + TOKEN, "1.1", 303)
     finally:
         access.removeHandler(handler)
         access.setLevel(level)
     assert [record.getMessage() for record in records] == [
         '203.0.113.9:4711 - "GET /status HTTP/1.1" 200', '203.0.113.9:4711 - "GET /api/site/now HTTP/1.1" 200',
-        '203.0.113.9:4711 - "GET /site HTTP/1.1" 303']
+        '203.0.113.9:4711 - "GET /site HTTP/1.1" 303', '203.0.113.9:4711 - "GET /status HTTP/1.1" 303',
+        '203.0.113.9:4711 - "GET /status HTTP/1.1" 303']
     assert len([f for f in access.filters if isinstance(f, server._NoQueryStrings)]) == 1
     with TestClient(server.app):                               # starting the server does not add it twice
         pass
@@ -16264,12 +16908,13 @@ def test_the_plain_start_command_keeps_the_share_token_out_of_the_log(tmp_path):
                     assert process.poll() is None and time.time() < deadline, "the server did not start"
                     time.sleep(0.1)
             seen = [status_of(base + path) for path in (
-                "/status?k=" + TOKEN, "/api/site/now?h=24&k=" + TOKEN, "/site?k=" + TOKEN, "/status?k=wrong-" + TOKEN)]
+                "/status?k=" + TOKEN, "/api/site/now?h=24&k=" + TOKEN, "/site?k=" + TOKEN, "/status?k=wrong-" + TOKEN,
+                "/status%3Fk=" + TOKEN, "/status%3fk%3d" + TOKEN)]          # an encoded "?": no route, and no token in the log
         finally:
             process.terminate()
             process.wait(30)
     log = log_file.read_text(encoding="utf-8", errors="replace")
-    assert seen == [502, 502, 303, 403]                        # no database here: the right token gets as far as that
+    assert seen == [502, 502, 303, 403, 303, 303]              # no database here: the right token gets as far as that
     assert '"GET /status HTTP/1.1" 502' in log and '"GET /api/site/now HTTP/1.1" 502' in log     # the log is on,
     assert '"GET /site HTTP/1.1" 303' in log and '"GET /status HTTP/1.1" 403' in log
     assert TOKEN not in log and "k=" not in log                                                  # without the token
@@ -16284,28 +16929,48 @@ CHECK_ENV = {"SH_PASS_VENDOR_CHECK": PASSWORDS["vendor"], "SH_PASS_VENDOR_CHECK_
              "SH_SHARE_TOKEN": TOKEN, "SH_PASS_OWNER": PASSWORDS["owner"]}
 
 
-@pytest.fixture
-def live(fake):
+@contextlib.contextmanager
+def serving(**options):
     """The reference server on a real socket, inside this process: its database is the fake of these tests.
-    Yields its address."""
+    Yields its address. `options`: settings of uvicorn.Config."""
     import uvicorn
 
     listener = socket.socket()
     listener.bind(("127.0.0.1", 0))
-    # proxy_headers off: for a client on 127.0.0.1 uvicorn would otherwise take the client's address from
-    # X-Forwarded-For by itself, and "no proxy in front" could not be told from "one proxy in front"
-    running = uvicorn.Server(uvicorn.Config(server.app, log_config=None, access_log=False, lifespan="off",
-                                            proxy_headers=False))
+    running = uvicorn.Server(uvicorn.Config(server.app, log_config=None, access_log=False, lifespan="off", **options))
     thread = threading.Thread(target=running.run, kwargs={"sockets": [listener]}, daemon=True)
     thread.start()
-    deadline = time.time() + 30
-    while not running.started:
-        assert time.time() < deadline and thread.is_alive(), "the server did not start"
-        time.sleep(0.01)
-    yield "http://127.0.0.1:%d" % listener.getsockname()[1]
-    running.should_exit = True
-    thread.join(30)
-    listener.close()
+    try:
+        deadline = time.time() + 30
+        while not running.started:
+            assert time.time() < deadline and thread.is_alive(), "the server did not start"
+            time.sleep(0.01)
+        yield "http://127.0.0.1:%d" % listener.getsockname()[1]
+    finally:
+        running.should_exit = True
+        thread.join(30)
+        listener.close()
+
+
+@pytest.fixture
+def live(fake):
+    # proxy_headers off: for a client on 127.0.0.1 uvicorn would otherwise take the client's address from
+    # X-Forwarded-For by itself, and "no proxy in front" could not be told from "one proxy in front"
+    with serving(proxy_headers=False) as address:
+        yield address
+
+
+def test_an_entry_that_uvicorn_believes_is_never_stored_as_an_address(fake):
+    """uvicorn's default start believes X-Forwarded-For from 127.0.0.1 (a proxy on the same machine): the
+    peer the server sees is then the header's last entry, whatever it holds. The login log gets "?"."""
+    garbage = "B" * 6000 + "<script>alert(1)</script>"
+    with serving() as base:
+        request = urllib.request.Request(base + "/login", data=b"p=a-guess", headers={
+            "X-Forwarded-For": "9.9.9.9, " + garbage, "Content-Type": "application/x-www-form-urlencoded"})
+        with pytest.raises(urllib.error.HTTPError) as refused:
+            urllib.request.build_opener(urllib.request.ProxyHandler({})).open(request, timeout=20)
+    assert refused.value.code == 401
+    assert [params["p_ip"] for fn, params in fake.calls if fn == "sh_login_log_add"] == ["?"]
 
 
 def check_access(base, *flags, **env):
@@ -16327,6 +16992,7 @@ def replace_route(path, handler, monkeypatch):
 
 def test_check_access_passes_against_the_reference_server(live, fake):
     assert fake.answer("sh_drill_alert", {"p_id": 41})[0]["sent"]          # there is something to hide
+    fake.answers["sh_config"] = dict(CONFIG, screen=dict(SCREEN_CONFIG, **MENU))      # and a menu of other screens
     code, output = check_access(live, **CHECK_ENV)
     assert code == 0, output
     assert failures(output) == [] and re.search(r"\n\d\d passed, 0 failed\n", output)
@@ -16343,8 +17009,12 @@ def test_check_access_passes_against_the_reference_server(live, fake):
                  "ok    share link: a wrong token answers 403 and shows nothing",
                  "ok    vendor without alerts: both alert lists are empty",
                  "ok    vendor: sees none of the alerts of other kinds that the owner sees",
-                 "ok    share link: with the token even the owner gets what the link shows, not more"):
+                 "ok    share link: with the token even the owner gets what the link shows, not more",
+                 "ok    vendor: the page carries no nav and no links (the owner's other screens)",
+                 "ok    vendor without alerts: the page carries no nav and no links (the owner's other screens)",
+                 "ok    share link: the page carries no nav and no links (the owner's other screens)"):
         assert line in output.splitlines(), line
+    assert "note  the owner's page has no menu" not in output              # the check was seen at work
     assert "sh_alert_ack" not in fake.names() and "sh_rum_add" not in fake.names()       # it changed nothing
     assert len(server._failures) == 2                          # one wrong password, one wrong token
     for secret in (*PASSWORDS.values(), TOKEN, TOKEN[:-1], "sh_session=", server._token("agency-pass-03", expiry(30))):
@@ -16364,6 +17034,8 @@ def test_check_access_takes_ready_cookies(live, visit):
     code, output = check_access(live, SH_SHARE_TOKEN=TOKEN, **cookies)
     assert code == 0, output
     assert "the session cookie is HttpOnly" not in output      # no sign-in was seen, so there is nothing to say of it
+    assert ("note  the owner's page has no menu (nav) and no extra buttons (links) either, so \"carries no nav and no "
+            "links\" could not be seen at work") in output.splitlines()     # this site has no other screens
 
 
 @pytest.mark.parametrize("flags, env, said", [
@@ -16435,6 +17107,10 @@ BROKEN = {
                                       "nobody: POST /m answers 204 with an empty body (not a beacon)"),
     "/health asks for a session": (lambda m: m.setattr(server, "OPEN_PATHS", server.OPEN_PATHS - {"/health"}),
                                    "nobody: GET /health answers 200 with ok, db and last_probe_age_sec"),
+    "outsiders get the owner's menu": (
+        lambda m: (m.setattr(server, "OWNER_ONLY", ()),
+                   m.setitem(db.rpc.answers, "sh_config", dict(CONFIG, screen=dict(SCREEN_CONFIG, **MENU)))),
+        "vendor: the page carries no nav and no links (the owner's other screens)"),
     "an answer without the headers": (
         lambda m: m.setattr(server, "SECURITY_HEADERS", {"X-Robots-Tag": "noindex"}),
         "headers: GET /api/site carries X-Robots-Tag, Referrer-Policy, X-Frame-Options and X-Content-Type-Options"),
@@ -16540,17 +17216,42 @@ def test_without_the_kit_the_run_ends_with_one_line_that_names_sh_kit_dir(reposi
     assert code == 2 and "were not found in %s. Set SH_KIT_DIR" % (tmp_path / "nowhere") in output
 
 
+def _refused_by_the_scratch_server(**changes):
+    """SH_TEST_ADMIN_URL with `changes` (a wrong password, a database that is not there), when the server of
+    these tests answers and refuses it; else None (no server here, or one that lets anybody in)."""
+    from psycopg.conninfo import make_conninfo
+    import psycopg
+
+    address = make_conninfo(conftest.ADMIN_URL, **changes)
+    try:
+        psycopg.connect(conftest.ADMIN_URL, connect_timeout=5).close()
+    except psycopg.Error:
+        return None
+    try:
+        psycopg.connect(address, connect_timeout=5).close()
+    except psycopg.Error:
+        return address
+    return None
+
+
 @pytest.mark.parametrize("address, where", [
     ("postgresql://postgres:TopSecretPw@127.0.0.1:9/postgres", "127.0.0.1:9"),
     ("postgresql://postgres:TopSecretPw@127.0.0.1:9/postgres?connect_timeout=2", "127.0.0.1:9"),
     ("postgresql://postgres:My%TopSecretPw@127.0.0.1:9/postgres", "an address that is not a connection string"),
+    # a server answers there, and refuses: the same one line
+    (lambda: _refused_by_the_scratch_server(password="TopSecretPw-wrong"), None),
+    (lambda: _refused_by_the_scratch_server(dbname="sh_no_such_database"), None),
 ])
 def test_without_a_postgres_the_run_ends_with_one_line_and_no_password(address, where):
+    if callable(address):
+        address, where = address(), conftest._where(conftest.ADMIN_URL)
+        if address is None:
+            pytest.skip("no scratch Postgres here that refuses a wrong password")
     code, output = run_pytest(REFERENCE, "tests/test_sql.py", SH_TEST_ADMIN_URL=address)
     assert code == 2, output[-2000:]
-    assert ("No Postgres answers at SH_TEST_ADMIN_URL (%s). Start one, or set SH_TEST_ADMIN_URL to a server where the "
-            "tests may create and drop a scratch database; see \"Running the tests\" in reference/README.md." % where
-            ) in output
+    assert ("No usable Postgres at SH_TEST_ADMIN_URL (%s): no answer, or the sign-in was refused. Start one, or set "
+            "SH_TEST_ADMIN_URL to a server where the tests may create and drop a scratch database; see \"Running the "
+            "tests\" in reference/README.md." % where) in output
     assert "TopSecretPw" not in output and "Traceback" not in output and "password" not in output
     assert len(output.strip().splitlines()) <= 3               # not one traceback per test
 
@@ -16559,12 +17260,12 @@ def test_the_server_tests_alone_need_no_postgres():
     code, output = run_pytest(REFERENCE, "tests/test_server.py", "-k", "test_db_over_a_postgres_connection or test_health",
                               "-rs", SH_TEST_ADMIN_URL="postgresql://postgres:TopSecretPw@127.0.0.1:9/postgres")
     assert code == 0 and re.search(r"\n\d+ passed, 1 skipped", output), output[-2000:]
-    assert "no scratch Postgres database: No Postgres answers at SH_TEST_ADMIN_URL (127.0.0.1:9)" in output
+    assert "no scratch Postgres database: No usable Postgres at SH_TEST_ADMIN_URL (127.0.0.1:9)" in output
     assert "TopSecretPw" not in output
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/reference/tests/test_sql.py sha256=991cf70ef40ecb12f6c4508ead1cf89e63512ee6e981b7a44a89e8c021883d22 -->
+<!-- FILE: site-health-kit/reference/tests/test_sql.py sha256=76bf635fc83f75629c13cb3c5b666f8f3db050e2a59eca0c00687cb653f6f3d3 -->
 ~~~~~~~~python
 """Tests of schema.sql and functions.sql: the rules of spec §7.2, §7.3, §7.4 and §7.8, with exact values.
 And of deadman.sql, against stand-ins for the three Supabase extensions it needs.
@@ -16681,7 +17382,7 @@ def test_setup_loads_the_example_configuration(db):
         "off": [], "extra_hosts": [], "hide": [], "nav": [], "links": []}
     assert set(config) - {"host", "screen"} == set(example_config())      # every key of the file, as it was loaded
     assert config["pages"] == [
-        {"name": "בית", "url": URL["בית"], "probe": True, "core": True, "home": True, "expect": None},
+        {"name": "בית", "url": URL["בית"], "probe": True, "core": True, "home": True, "expect": "ברוכים הבאים"},
         {"name": "קטגוריה", "url": URL["קטגוריה"], "probe": True, "core": True, "home": False, "expect": None},
         {"name": "מוצר", "url": URL["מוצר"], "probe": True, "core": True, "home": False, "expect": "הוספה לסל"},
         {"name": "סל", "url": URL["סל"], "probe": True, "core": True, "home": False, "expect": None},
@@ -16729,7 +17430,8 @@ def test_setup_switches_off_the_parts_that_do_not_apply_to_the_site(db):
 
     db.rpc("sh_sitemap_set", p_urls=[SITE + "/a/", SITE + "/b/"])
     config = db.setup(off=["real_users", "sitemap"])                      # answered in a fixed order
-    assert config["off"] == ["sitemap", "real_users"] and config["screen"]["hide"] == ["slowCard"]
+    # without real-user measurements the "עכשיו" row has no tile for them: nothing reads "no data" for good
+    assert config["off"] == ["sitemap", "real_users"] and config["screen"]["hide"] == ["slowCard", "nowRum"]
     assert _enabled(db) == [PROBE_FLOW, CORE_FLOW, CERT_FLOW, CATALOGUE_FLOW]
     assert [r["flow_name"] for r in db.rpc("sh_health")] == _enabled(db)   # the screen lists what is measured
     assert db.rpc("sh_rotation_next", p_n=5) == []                         # and no page takes a turn in the rotation
@@ -16745,6 +17447,10 @@ def test_setup_switches_off_the_parts_that_do_not_apply_to_the_site(db):
     assert config["off"] == ["sitemap", "catalogue", "cert"]
     assert config["screen"]["hide"] == ["slowCard", "issuesCard", "certCard"]
     assert _enabled(db) == [PROBE_FLOW, CORE_FLOW, RUM_FLOW]
+    config = db.rpc("sh_setup", p_config=dict(plain, off=["sitemap", "real_users"], hide=["nowRum", "myCard"]))
+    assert config["screen"]["hide"] == ["nowRum", "myCard", "slowCard", "issuesCard", "certCard"]      # each card once
+    assert _enabled(db) == [PROBE_FLOW, CORE_FLOW]
+    config = db.rpc("sh_setup", p_config=plain)
     assert db.rpc("sh_config") == config
 
     assert db.setup()["off"] == [] and _enabled(db) == everything          # the entry left the file: on again
@@ -16875,7 +17581,7 @@ def _page(name="בית", url=SITE + "/", **flags):
 HOME = _page(home=True, probe=True, core=True)
 
 
-@pytest.mark.parametrize("change, message", [
+SETUP_REFUSALS = [
     ({"site": "example.co.il"}, '"site" must be an absolute http\\(s\\) address, got example.co.il'),
     ({"site": None}, '"site" must be an absolute http\\(s\\) address, got nothing'),
     ({"time_zone": "Mars/Olympus"}, 'unknown "time_zone" Mars/Olympus'),
@@ -16930,11 +17636,57 @@ HOME = _page(home=True, probe=True, core=True)
     ({"pages": [HOME, _page("ב", url="/cart/")]}, "absolute http\\(s\\) address: ב"),
     ({"pages": [HOME, _page("ב", url="ftp://example.co.il/")]}, "absolute http\\(s\\) address: ב"),
     ({"pages": [HOME, {"name": "ב"}]}, "absolute http\\(s\\) address: ב"),
-])
+]
+
+
+@pytest.mark.parametrize("change, message", SETUP_REFUSALS)
 def test_setup_refuses_a_bad_configuration_and_keeps_the_old_one(db, change, message):
     before = db.setup()
     fails_with(db, psycopg.errors.RaiseException, "sh_setup: .*" + message, "sh_setup", p_config=example_config(**change))
     assert db.rpc("sh_config") == before
+
+
+# More configurations whose fate is not plain: a value that Postgres must convert first (it refuses some with
+# its own words, before sh_setup's checks), the spellings of true and false it accepts, null where a list goes.
+LOOKS_ODD = [
+    {"down_after": "2.5"}, {"down_after": 2.0}, {"down_after": True}, {"down_after": [2]},
+    {"down_after": "99999999999"}, {"down_after": " 2 "}, {"down_after": "+3"}, {"down_after": "2", "site": None},
+    {"site": 5}, {"site": ""}, {"site": "HTTPS://example.co.il"}, {"site": ["https://example.co.il"]},
+    {"site": "https://example.co.il///"}, {"site": "https://:80/"},
+    {"time_zone": 7}, {"time_zone": ["Asia/Jerusalem"]}, {"time_zone": "asia/jerusalem"}, {"time_zone": "UTC"},
+    {"platform": ""}, {"platform": None}, {"morning": "07:30\n"}, {"morning": None}, {"morning": "23:59"},
+    {"keep_days": "100 "}, {"keep_days": None}, {"keep_days": "030"}, {"keep_days": 400},
+    {"live_hosts": None}, {"path_labels": None}, {"rum_hosts": None}, {"private_paths": None},
+    {"extra_hosts": None}, {"off": None}, {"hide": None}, {"nav": None}, {"links": None},
+    {"rum_hosts": ["a b"]}, {"private_paths": ["a\tb"]}, {"off": ["sitemap", 5]}, {"hide": [None]},
+    {"extra_hosts": ["shop.example.co.il", {"b": 1, "aa": [2, "x"], "ccc": None}]},
+    {"pages": [dict(HOME, probe="yes", core="ON", home=" t ")]}, {"pages": [dict(HOME, home=1)]},
+    {"pages": [dict(HOME, core="maybe")]}, {"pages": [dict(HOME, probe="o")]}, {"pages": [dict(HOME, home="of")]},
+    {"pages": [dict(HOME, home=1.0)]}, {"pages": [dict(HOME, probe="")]}, {"pages": [dict(HOME, core=[True])]},
+    {"pages": [HOME, 7]}, {"pages": [HOME, ["x"]]}, {"pages": [dict(HOME, name=5)]},
+    {"pages": [HOME, _page("ב", url="https://?x")]}, {"pages": [HOME, _page("ב", url=" https://example.co.il/x")]},
+    {"pages": [HOME, _page("ב", url="https:// x")]}, {"pages": [HOME, _page("ב", url="https://example.co.il/ב")]},
+    {"pages": [HOME, _page("ב", probe=True), _page("ג", url=5)]},
+    {"pages": [_page(home=True, core=True), _page("ב", home=False, probe="false")]},
+]
+
+
+@pytest.mark.parametrize("change", [change for change, _ in SETUP_REFUSALS] + LOOKS_ODD)
+def test_install_sql_refuses_with_the_words_of_the_database(db, change):
+    """manage.py install-sql checks a configuration before it writes the file: whatever sh_setup refuses, it
+    refuses with the very message the database gives, and what sh_setup takes it takes."""
+    if str(REFERENCE) not in sys.path:
+        sys.path.insert(0, str(REFERENCE))
+    import manage
+
+    config = example_config(**change)
+    try:
+        with db.conn.transaction():
+            db.rpc("sh_setup", p_config=config)
+        said = None
+    except psycopg.Error as e:
+        said = e.diag.message_primary
+    assert manage._config_problem(config) == said
 
 
 # ================================================================ availability (spec §7.3)
@@ -18303,7 +19055,7 @@ def test_cleanup_before_the_site_is_set_up_uses_the_default(db):
 
 def test_rum_add_drops_what_is_outside_the_limits_of_the_ingest(db):
     db.setup()
-    long = "/" + "x" * 299                                                # 300 characters: the longest path kept
+    long = "/" + "x" * 299
     assert db.rpc("sh_rum_add", p_rows=[{"site": "live", "path": "/", "lcp_ms": 0},
                                         {"site": "live", "path": "/", "lcp_ms": 60001},
                                         {"path": "/", "lcp_ms": 1000}, {"site": "live", "lcp_ms": 1000},
@@ -18311,17 +19063,42 @@ def test_rum_add_drops_what_is_outside_the_limits_of_the_ingest(db):
                                         {"site": "", "path": "/", "lcp_ms": 1000},
                                         {"site": "a" * 101, "path": "/", "lcp_ms": 1000},
                                         {"site": "live\n", "path": "/", "lcp_ms": 1000},
-                                        {"site": "live", "path": long + "x", "lcp_ms": 1000}]) == {"n": 0}
+                                        # more than 120 bytes, also once cut: not sent as a browser sends it
+                                        {"site": "live", "path": "/" + "ס" * 60, "lcp_ms": 1000},
+                                        {"site": "live", "path": "/" + "\U0001D400" * 300, "lcp_ms": 1000}]) == {"n": 0}
     assert flow(db, RUM_FLOW)["status"] == "אין נתון"
     assert db.rpc("sh_rum_add", p_rows=[
         {"site": "live", "path": "/product/sofa/?email=a@b.co&utm=x#top", "lcp_ms": 1, "is_test": True},
         {"site": "dev.example.co.il", "path": "/cart/", "lcp_ms": 60000},
-        {"site": "a" * 100, "path": long + "?" + "q" * 500, "lcp_ms": 300},      # the query string does not count
-        {"site": "live", "path": "/", "lcp_ms": 2400.4}]) == {"n": 4}
+        {"site": "a" * 100, "path": long + "?" + "q" * 500, "lcp_ms": 300},      # cut at 120; the query string goes first
+        {"site": "live", "path": "/" + "ס" * 59, "lcp_ms": 301},                # 119 bytes: kept as it came
+        {"site": "live", "path": "/", "lcp_ms": 2400.4}]) == {"n": 5}
     assert db.sql("select site, path, lcp_ms, is_test, created_at = now() from sh_rum order by lcp_ms") == [
-        ("live", "/product/sofa/", 1, True, True), ("a" * 100, long, 300, False, True),
+        ("live", "/product/sofa/", 1, True, True), ("a" * 100, "/" + "x" * 119, 300, False, True),
+        ("live", "/" + "ס" * 59, 301, False, True),
         ("live", "/", 2400, False, True), ("dev.example.co.il", "/cart/", 60000, False, True)]
     assert flow(db, RUM_FLOW)["status"] == "תקין"
+
+
+# Paths of more than 120 characters, cut by sh_rum_add as the server cuts them before it sends them
+CUTS = ["/" + "x" * 119, "/" + "x" * 299, "/" + "x" * 117 + "%D7%A1", "/" + "x" * 118 + "%2F", "/" + "x" * 119 + "%2",
+        "/" + "x" * 116 + "%D7%A1%D7%A4", "/" + "x" * 116 + "%d7%a1%d7%a4", "/" + "x" * 113 + "%E2%80%99abc",
+        "/" + "x" * 110 + "%F0%9F%98%80" + "z" * 20, "/" + "x" * 111 + "%F0%9F%98%80", "/" + "x" * 113 + "%D7%A1zz",
+        "/product/" + "%D7%A1%D7%A4%D7%94-" * 10, "/" + "%D7%A1" * 30 + "?q=" + "y" * 200, "/" + "x" * 118 + "%"]
+
+
+def test_rum_add_cuts_a_long_path_exactly_as_the_server_does(db):
+    if str(REFERENCE) not in sys.path:
+        sys.path.insert(0, str(REFERENCE))
+    import server
+
+    db.setup()
+    rows = [{"site": "live", "path": path, "lcp_ms": n + 1} for n, path in enumerate(CUTS)]
+    assert db.rpc("sh_rum_add", p_rows=rows) == {"n": len(CUTS)}
+    stored = [path for (path,) in db.sql("select path from sh_rum order by lcp_ms")]
+    assert stored == [server._cut_path(re.split("[?#]", path, maxsplit=1)[0]) for path in CUTS]
+    assert all(len(path) <= 120 for path in stored) and stored[:4] == [
+        "/" + "x" * 119, "/" + "x" * 119, "/" + "x" * 117, "/" + "x" * 118]
 
 
 def test_rum_add_stores_nothing_once_a_day_holds_30000_rows(db):
@@ -19754,7 +20531,7 @@ def test_reads_over_90_days_take_less_than_2_seconds(db):
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/tools/check_access.py sha256=adaf5f49559765fee7b4af0499de34bc980c3fbcd237ebc565835b40dc5418b3 -->
+<!-- FILE: site-health-kit/tools/check_access.py sha256=229c5ce55f1752007063b0ec47ef942e7ee2879faf88d9541bd7b824cdaadc61 -->
 ~~~~~~~~python
 #!/usr/bin/env python3
 """Black-box check of the access rules (spec §8) and of the public routes of a running Site Health server.
@@ -19914,6 +20691,15 @@ def injected(page):
         return None, None
 
 
+def no_menu(who, config):
+    """An outsider's page carries no menu (nav) and no extra buttons (links): they hold the addresses of the
+    owner's other screens, and hiding them on the screen does not keep them out of the page source."""
+    check("%s: the page carries no nav and no links (the owner's other screens)" % who,
+          isinstance(config, dict) and not config.get("nav") and not config.get("links"),
+          "nav %r, links %r" % ((config or {}).get("nav"), (config or {}).get("links")) if isinstance(config, dict)
+          else "no SH_CONFIG in the page")
+
+
 def sign_in(call, password, who):
     answer = call("POST", "/login", body=urllib.parse.urlencode({"p": password}).encode("utf-8"),
                   kind="application/x-www-form-urlencoded")
@@ -20028,10 +20814,12 @@ def vendor(call, cookie, attributes, https):
               and age is not None and age <= VENDOR_DAYS * 86400,
               sorted(a for a in attributes if not a.startswith("expires")))
     page = call("GET", "/site", cookie)
-    role = injected(page.text)[1] or {}
+    config, role = injected(page.text)
+    role = role or {}
     check("vendor: GET /site answers 200 and the page says read-only",
           page.status == 200 and role.get("readonly") is True and not role.get("share"),
           "status %d, role %r" % (page.status, role))
+    no_menu("vendor", config)
     site = see_site(call, "vendor", cookie)
     no_push_list(call, "vendor", site, cookie)
     check("vendor: GET /api/messages answers 403 {\"error\": \"auth\"}",
@@ -20051,9 +20839,11 @@ def vendor(call, cookie, attributes, https):
 
 
 def quiet(call, cookie, known_ids):
-    role = injected(call("GET", "/site", cookie).text)[1] or {}
+    config, role = injected(call("GET", "/site", cookie).text)
+    role = role or {}
     check("vendor without alerts: the page says so (noAlerts)",
           role.get("noAlerts") is True and role.get("readonly") is True, "role %r" % role)
+    no_menu("vendor without alerts", config)
     site = call("GET", "/api/site?h=168", cookie).json or {}
     check("vendor without alerts: both alert lists are empty",
           site.get("alerts_open") == [] and site.get("alerts_recent") == [],
@@ -20077,6 +20867,7 @@ def share(call, token):
           "status %d, role %r" % (page.status, role))
     check("share link: the page carries the token for its data calls (shareKey)",
           (config or {}).get("shareKey") == token)
+    no_menu("share link", config)
     site = see_site(call, "share link", k=token)
     no_push_list(call, "share link", site, k=token)
     check("share link: GET /api/messages answers 401", refused(call("GET", "/api/messages" + k), 401))
@@ -20105,6 +20896,10 @@ def wrong_token(call, wrong, vendor_cookie):
 
 
 def owner(call, cookie, outsiders, token):
+    config = injected(call("GET", "/site", cookie).text)[0] or {}
+    if not (config.get("nav") or config.get("links")):
+        notes.append("the owner's page has no menu (nav) and no extra buttons (links) either, so \"carries no nav and "
+                     "no links\" could not be seen at work")
     messages = call("GET", "/api/messages", cookie)
     check("owner: GET /api/messages answers 200 with rows",
           messages.status == 200 and isinstance((messages.json or {}).get("rows"), list), "status %d" % messages.status)
@@ -20200,7 +20995,7 @@ if __name__ == "__main__":
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/tools/check_template.py sha256=57451c252c9d534e961b8ac3523ed1e5172777cf797d1ab7c46464d002beb794 -->
+<!-- FILE: site-health-kit/tools/check_template.py sha256=9e7e37b6b010fb75c960f74fb7d20bbffb8b39ed2c03d02ae1f74515629c526d -->
 ~~~~~~~~python
 #!/usr/bin/env python3
 """Proves that a deployed screen file is still the kit's screen and not a rewrite.
@@ -20251,9 +21046,13 @@ def main(path):
     for needle, why in (("window.SH_CONFIG", "the SH_CONFIG block"), ("function render(d)", "the render function"),
                         ("function drillRuns(", "the drill-down sheets"), ("@media print", "the print stylesheet"),
                         ("prefers-color-scheme:dark", "dark mode"),
-                        (".shham[hidden]{display:none}", "the rule that hides the menu button when there is no menu")):
+                        (".shham[hidden]{display:none}", "the rule that hides the menu button when there is no menu"),
+                        ("indexOf('nowRum')", "the switch that leaves out the real-user tile of \"עכשיו\" (SH_CONFIG.hide: nowRum)")):
         if needle not in got:
             bad.append("missing " + why)
+    if got.count('id="nowRumTxt"') != 1:
+        bad.append('the explanation of "עכשיו" lost its <span id="nowRumTxt">: with hide nowRum the sentence about '
+                   "real users would stay on a site that does not measure them")
     # the parts of the explanation sentences that the script fills from SH_CONFIG (spec §6.9)
     for key, times in (("pages", 2), ("probed", 1), ("downRule", 1)):
         if got.count('data-txt="%s"' % key) != times:

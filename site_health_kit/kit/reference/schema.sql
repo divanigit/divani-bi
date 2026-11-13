@@ -80,10 +80,12 @@ create table if not exists sh_site_pages (
   last_measured_at timestamptz
 );
 
--- One real-user page view: about 150 bytes with its index. No IP, no cookie and no user agent
--- are stored, and no query string; the ingest also drops a path that looks as if it carries an
--- e-mail address or a token (spec §7.7). sh_rum_add stops storing once the last 24 hours hold
--- 30,000 rows, so a flood of forged views cannot fill the database.
+-- One real-user page view. Measured on Postgres 16 with its index: about 120 bytes for a path of
+-- 40 characters, and at most 296 (a site name of 100 characters, a path of 120). No IP, no
+-- cookie and no user agent are stored, and no query string; the path is cut at 120 characters,
+-- and the ingest drops a path that looks as if it carries an e-mail address or a token (spec
+-- §7.7). sh_rum_add stops storing once the last 24 hours hold 30,000 rows, so a flood of forged
+-- views cannot fill the database.
 create table if not exists sh_rum (
   created_at timestamptz not null default now(),
   site       text not null,

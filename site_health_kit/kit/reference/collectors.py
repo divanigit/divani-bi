@@ -39,6 +39,7 @@ import threading
 import time
 import urllib.parse
 import xml.etree.ElementTree as ElementTree
+import xml.parsers.expat
 import zlib
 from collections import deque
 from datetime import datetime, time as clock_time, timedelta, timezone
@@ -177,7 +178,8 @@ class Answer(NamedTuple):
     headers: http.client.HTTPMessage
     body: bytes             # at most the bytes that were asked for
     waited: float           # seconds from the start until the headers of the final response arrived
-    elsewhere: bool = False             # the answer is a redirect to another host, and it was not followed
+    elsewhere: bool = False             # the answer is a redirect that was not followed (see fetch)
+    refused: str = ""                   # and why, such as "to another host" (see _redirect_refused)
 
 
 def user_agent():
@@ -249,11 +251,14 @@ def fetch(url, *, timeout, read=0, method="GET", headers=None, data=None, redire
     redirects followed, and one deadline of `timeout` seconds for all of it, the body included.
     At most `read` bytes of the body are read; the rest is never downloaded.
 
-    A redirect is followed only to the host the request started on (with or without "www.", on http
-    or https) or to one of `hosts`. Any other redirect is the answer, with `elsewhere` set: what a
-    site answers must never choose which machine this one talks to. With `public`, every hop
-    connects to an address of the public internet only (see _open). Every request to the monitored
-    site passes both; the services named in the environment pass `public` False.
+    A redirect is followed only to the host the request started on (with or without "www.") or to
+    one of `hosts`, and only on the same footing (_redirect_refused): never from https down to
+    http, and never to another port of the same host, except the step up from http on port 80 to
+    https on 443. Any other redirect is the answer, with `elsewhere` set and `refused` saying why:
+    what a site answers must never choose which machine, or which service of a machine, this one
+    talks to. With `public`, every hop connects to an address of the public internet only (see
+    _open). Every request to the monitored site passes both; the services named in the environment
+    pass `public` False.
 
     Raises TimeoutError when the deadline passes, another OSError (NotPublic among them) or
     http.client.HTTPException when the connection fails (name resolution, TLS, reset), ValueError
@@ -286,8 +291,9 @@ def fetch(url, *, timeout, read=0, method="GET", headers=None, data=None, redire
             location = response.getheader("Location")
             if response.status in (301, 302, 303, 307, 308) and location and hop < redirects:
                 target = urllib.parse.urljoin(url, location)
-                if _bare(urllib.parse.urlsplit(target).hostname) not in allowed:
-                    return Answer(response.status, response.headers, b"", waited, True)
+                refused = _redirect_refused(url, target, allowed)
+                if refused:
+                    return Answer(response.status, response.headers, b"", waited, True, refused)
                 url = target
                 continue
             chunks, size = [], 0
@@ -301,6 +307,30 @@ def fetch(url, *, timeout, read=0, method="GET", headers=None, data=None, redire
             return Answer(response.status, response.headers, b"".join(chunks), waited)
         finally:
             connection.close()
+
+
+DEFAULT_PORTS = {"http": 80, "https": 443}
+
+
+def _redirect_refused(current, target, allowed):
+    """Why a redirect from `current` to `target` is not followed, or "" when it may be. `allowed`:
+    the hosts it may lead to, without "www.". The port is compared on the same host only: a host of
+    extra_hosts may live on a port of its own."""
+    here, there = urllib.parse.urlsplit(current), urllib.parse.urlsplit(target)
+    if there.scheme not in DEFAULT_PORTS:
+        return "to an address that is not http(s)"
+    if _bare(there.hostname) not in allowed:
+        return "to another host"
+    if here.scheme == "https" and there.scheme == "http":
+        return "from https to http"
+    try:
+        ports = (here.port or DEFAULT_PORTS[here.scheme], there.port or DEFAULT_PORTS[there.scheme])
+    except ValueError:                                         # a port that is no number, or out of range
+        return "to another port"
+    same_host = _bare(here.hostname) == _bare(there.hostname)
+    if same_host and ports[0] != ports[1] and (here.scheme, there.scheme, *ports) != ("http", "https", 80, 443):
+        return "to another port"
+    return ""
 
 
 def _left(deadline):
@@ -342,7 +372,7 @@ def probe_check(page, timeout, hosts=()):
     else:
         row.update(status=answer.status, ms=round(answer.waited * 1000))
         if answer.status != 200:                # 200 and nothing else: a 204 or a 206 is not the page
-            row.update(fail="http", err="redirected to another host" if answer.elsewhere
+            row.update(fail="http", err="redirected " + answer.refused if answer.elsewhere
                        else "redirected more than %d times, or to nowhere" % REDIRECTS
                        if 300 <= answer.status < 400 else None)
         elif expect and expect not in _page_text(answer):
@@ -631,21 +661,21 @@ def _sitemap_read(address, hosts=()):
     answer = fetch(address, timeout=60, read=limit + 1, hosts=hosts, public=True,
                    headers={"Accept": "application/xml,text/xml,*/*;q=0.8"})
     if answer.elsewhere:                        # a file of another host is not ours to fetch, however we got there
-        raise CollectorError("redirected to another host: %s" % address[:200])
+        raise CollectorError("redirected %s: %s" % (answer.refused, address[:200]))
     if answer.status != 200:
         raise CollectorError("HTTP %d for %s" % (answer.status, address[:200]))
     raw = _unzip(answer.body, limit)
     if len(raw) > limit:
         raise CollectorError("a sitemap file of more than %s (SH_SITEMAP_MB raises the limit): %s"
                              % (_size(limit), address[:200]))
+    if _declares_entities(raw):                 # the parser would expand them
+        raise CollectorError("a sitemap that declares entities is refused: %s" % address[:200])
     try:
-        raw.decode("utf-8")                     # the protocol says UTF-8; it also keeps the next test honest
+        raw.decode("utf-8")                     # the protocol says UTF-8
     except UnicodeDecodeError:
         raise CollectorError("a sitemap that is not UTF-8: %s" % address[:200]) from None
     if b"\x00" in raw:                          # UTF-16 without its mark passes as UTF-8, with a NUL in every pair
         raise CollectorError("a sitemap that is not UTF-8: %s" % address[:200])
-    if b"<!ENTITY" in raw:                      # the parser would expand them
-        raise CollectorError("a sitemap that declares entities is refused: %s" % address[:200])
     try:
         root = ElementTree.fromstring(raw)
     except ElementTree.ParseError as e:         # a firewall's page is not a sitemap
@@ -664,6 +694,40 @@ def _sitemap_read(address, hosts=()):
         if text and text.strip():
             addresses.append(text.strip())
     return kind, addresses
+
+
+class _Seen(Exception):
+    """Raised from inside expat, to stop its reading: what _declares_entities looks for was found, or
+    can no longer come."""
+
+    def __init__(self, declared):
+        super().__init__()
+        self.declared = declared
+
+
+def _declares_entities(raw):
+    """Whether the document declares an entity, in any form (general or parameter, internal or
+    external, parsed or not). expat reads the document as the document says it is encoded (UTF-16
+    without its byte order mark too), so no spelling of the bytes can hide a declaration from this
+    look; a search for "<!ENTITY" in the bytes could be dodged that way. Declarations live in the
+    DOCTYPE, before the first element, so the reading stops at the first element. A document that
+    expat cannot read is not this function's business: the parse that follows says what is wrong."""
+    def declared(*args):
+        raise _Seen(True)
+
+    def first_element(*args):
+        raise _Seen(False)
+
+    parser = xml.parsers.expat.ParserCreate()
+    parser.EntityDeclHandler = parser.UnparsedEntityDeclHandler = declared
+    parser.StartElementHandler = first_element
+    try:
+        parser.Parse(raw, True)
+    except _Seen as seen:
+        return seen.declared
+    except (xml.parsers.expat.ExpatError, ValueError):
+        pass
+    return False
 
 
 def _page_url(home, address, private):
@@ -689,7 +753,7 @@ def _catalogue_page(address, hosts=()):
     answer = fetch(address, timeout=60, read=CATALOGUE_BYTES + 1, hosts=hosts, public=True,
                    headers={"Accept": "application/json"})
     if answer.elsewhere:
-        raise CollectorError("the catalogue redirects to another host")
+        raise CollectorError("the catalogue redirects " + answer.refused)
     if answer.status != 200:
         raise CollectorError("HTTP %d from the catalogue" % answer.status)
     if "json" not in (answer.headers.get("Content-Type") or "").lower():

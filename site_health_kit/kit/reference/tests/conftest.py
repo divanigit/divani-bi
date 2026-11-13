@@ -9,8 +9,8 @@ is put on sys.path, so "import mock_server" works in every test file.
 
 The database. The admin connection comes from SH_TEST_ADMIN_URL (default: the local server). The
 scratch database gets a random name and is dropped at the end; no other database is touched. When
-no Postgres answers there, the whole run ends with one line that says so, without the address's
-password.
+no Postgres answers there, or it refuses the sign-in, the whole run ends with one line that says
+so, without the address's password.
 """
 import datetime as dt
 import json
@@ -72,9 +72,9 @@ def connect(url, **options):
     try:
         return psycopg.connect(url, **options)
     except psycopg.Error:
-        failure = ("No Postgres answers at SH_TEST_ADMIN_URL (%s). Start one, or set SH_TEST_ADMIN_URL to a server "
-                   "where the tests may create and drop a scratch database; see \"Running the tests\" in "
-                   "reference/README.md." % _where(ADMIN_URL))
+        failure = ("No usable Postgres at SH_TEST_ADMIN_URL (%s): no answer, or the sign-in was refused. Start one, or "
+                   "set SH_TEST_ADMIN_URL to a server where the tests may create and drop a scratch database; see "
+                   "\"Running the tests\" in reference/README.md." % _where(ADMIN_URL))
     pytest.exit(failure, returncode=2)           # outside the except: no chained traceback with the address
 
 
