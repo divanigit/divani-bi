@@ -72,7 +72,8 @@ SITEMAP_GUESSES = ("/sitemap_index.xml", "/wp-sitemap.xml", "/sitemap.xml")
 # real ones are added from the configuration ("private_paths").
 PRIVATE_PATHS = {"cart", "checkout", "checkouts", "my-account", "account", "search", "feed", "tag", "product-tag",
                  "author", "wp-admin", "wp-json", "wp-login.php"}
-NOT_A_PAGE = re.compile(r"\.(xml|gz|pdf|jpe?g|png|gif|webp|avif|svg|ico|css|js|json|txt|csv|zip|mp[34]|webm|docx?|xlsx?)$")
+NOT_A_PAGE = re.compile(
+    r"\.(xml|gz|pdf|jpe?g|png|gif|webp|avif|svg|ico|css|js|json|txt|csv|zip|mp[34]|webm|docx?|xlsx?)$")
 PAGINATED = re.compile(r"/page/\d+/?$")
 CATALOGUE_BYTES = 30_000_000                     # one page of the catalogue (100 products with descriptions)
 CATALOGUE_PAGES = 1000
@@ -81,7 +82,7 @@ SHOPIFY_PAUSE = 0.5                              # seconds between two pages: th
 # Pushes (§7.9)
 PUSH_TIMEOUT = 10
 PUSHES_PER_HOUR = 30
-PUSH_SECONDS = 45                # no push starts later than this after its round: a tick ends inside its two-minute claim
+PUSH_SECONDS = 45                # no push starts later than this after its round: well inside the two-minute claim
 TITLE_MAX, MESSAGE_MAX = 199, 1499               # characters; ntfy counts bytes and a Hebrew letter takes two
 
 # Daily jobs: the local time from which each is owed. The morning message has its time in the configuration.
@@ -337,15 +338,17 @@ def speed_row(answer):
         ttfb = _number(_dict(items[0]).get("timeToFirstByte")) if isinstance(items, list) and items else None
     # Real-user data is optional, and on origin_fallback it describes the whole site, not this page.
     field = _dict(answer.get("loadingExperience"))
-    field_lcp = {} if field.get("origin_fallback") else _dict(_dict(field.get("metrics")).get("LARGEST_CONTENTFUL_PAINT_MS"))
+    field_lcp = _dict(_dict(field.get("metrics")).get("LARGEST_CONTENTFUL_PAINT_MS"))
+    category = None if field.get("origin_fallback") else field_lcp.get("category")
+    percentile = None if field.get("origin_fallback") else _number(field_lcp.get("percentile"))
     version = lighthouse.get("lighthouseVersion")
     return {
         "ok": True, "err": None,
         "score": _rounded(None if score is None else score * 100), "lcp_ms": round(lcp),
         "cls": _rounded(value("cumulative-layout-shift"), 3), "ttfb_ms": _rounded(ttfb),
         "bytes": _rounded(value("total-byte-weight")),
-        "crux_category": field_lcp.get("category") if field_lcp.get("category") in ("FAST", "AVERAGE", "SLOW") else None,
-        "crux_lcp_ms": _rounded(_number(field_lcp.get("percentile"))),
+        "crux_category": category if category in ("FAST", "AVERAGE", "SLOW") else None,
+        "crux_lcp_ms": _rounded(percentile),
         "opps": _opps(audits), "lh_version": version[:20] if isinstance(version, str) else None}
 
 
@@ -448,7 +451,8 @@ def sitemap_load(site, private=frozenset(PRIVATE_PATHS)):
             waiting = [site + guess]
             break
         else:
-            raise CollectorError("no sitemap: robots.txt names none, and none of %s is one" % ", ".join(SITEMAP_GUESSES))
+            raise CollectorError("no sitemap: robots.txt names none, and none of %s is one"
+                                 % ", ".join(SITEMAP_GUESSES))
     seen, pages = set(), {}
     while waiting:
         address = waiting.pop(0)
@@ -499,7 +503,8 @@ def _robots_sitemaps(site):
 
 def _sitemap_read(address):
     """One sitemap file: ("sitemapindex" | "urlset", the addresses it lists)."""
-    answer = fetch(address, timeout=60, read=SITEMAP_BYTES + 1, headers={"Accept": "application/xml,text/xml,*/*;q=0.8"})
+    answer = fetch(address, timeout=60, read=SITEMAP_BYTES + 1,
+                   headers={"Accept": "application/xml,text/xml,*/*;q=0.8"})
     if answer.status != 200:
         raise CollectorError("HTTP %d for %s" % (answer.status, address[:200]))
     raw = _unzip(answer.body, SITEMAP_BYTES)
@@ -656,8 +661,9 @@ def cert_row(host, certificate, now):
                              for field in ("notBefore", "notAfter"))
     issuer = " ".join(value for part in certificate.get("issuer", ()) for name, value in part
                       if name in ("organizationName", "commonName"))
-    return {"host": host, "issuer": issuer[:120], "not_before": not_before.isoformat(), "not_after": not_after.isoformat(),
-            "days_left": (not_after - now).days, "ok": True, "err": None, "checked_at": now.isoformat()}
+    return {"host": host, "issuer": issuer[:120], "not_before": not_before.isoformat(),
+            "not_after": not_after.isoformat(), "days_left": (not_after - now).days, "ok": True, "err": None,
+            "checked_at": now.isoformat()}
 
 
 def cert_check(host, now, port=443):
@@ -906,7 +912,8 @@ def _config():
             _site["read_at"] = time.monotonic()
             try:
                 _site["config"] = read_config()
-                problem = None if _site["config"] else "the site is not configured: load its configuration with manage.py setup"
+                problem = None if _site["config"] else (
+                    "the site is not configured: load its configuration with manage.py setup")
             except Exception as e:
                 problem = "the configuration could not be read (%s)" % _brief(e)
             if problem != _site["said"]:        # said once, not every half minute
@@ -992,7 +999,8 @@ def start():
     if not env["NTFY_TOPIC"]:
         log.warning("collectors: NTFY_TOPIC is not set, alerts are logged and nothing is pushed")
     for name, step, every in loops:
-        thread = threading.Thread(target=_loop, args=(name, step, every), name="sh-" + name.replace(" ", "-"), daemon=True)
+        thread = threading.Thread(target=_loop, args=(name, step, every), name="sh-" + name.replace(" ", "-"),
+                                  daemon=True)
         thread.start()
         _threads.append(thread)
     log.info("collectors: %s are running (heartbeat ping: %s)", ", ".join(name for name, _, _ in loops),

@@ -25,8 +25,8 @@ HERE = pathlib.Path(__file__).resolve().parent
 ENVIRONMENT = (
     ("the database", ("SUPABASE_URL", "SUPABASE_SECRET_KEY", "DATABASE_URL")),
     ("the collectors", ("PAGESPEED_KEY", "NTFY_TOPIC", "NTFY_URL", "NTFY_TOKEN", "DASHBOARD_URL", "HEARTBEAT_URL")),
-    ("the server", ("SH_PASS_OWNER", "SH_PASS_STAFF", "SH_SHARE_TOKEN", "SH_VENDOR_NOALERTS", "SH_PROXY_HOPS", "SH_SCREEN",
-                    "COLLECTORS")),
+    ("the server", ("SH_PASS_OWNER", "SH_PASS_STAFF", "SH_SHARE_TOKEN", "SH_VENDOR_NOALERTS", "SH_PROXY_HOPS",
+                    "SH_SCREEN", "COLLECTORS")),
 )
 TEST_PUSH = ("בדיקה: בריאות האתר", "זו הודעת בדיקה של מערכת בריאות האתר. אין שום תקלה, ואין צורך לעשות דבר.")
 
@@ -63,10 +63,10 @@ def setup(args):
 
 def check(args):
     for group, names in ENVIRONMENT:
-        vendors = sorted(name for name in os.environ if name.startswith("SH_PASS_VENDOR_")) if group == "the server" else []
+        if group == "the server":               # one password variable per vendor
+            names += tuple(sorted(name for name in os.environ if name.startswith("SH_PASS_VENDOR_")))
         print("%s: %s" % (group, ", ".join(
-            "%s %s" % (name, "is set" if os.environ.get(name, "").strip() else "is NOT set")
-            for name in (*names, *vendors))))
+            "%s %s" % (name, "is set" if os.environ.get(name, "").strip() else "is NOT set") for name in names)))
     try:
         db.rpc("sh_ping")
         config = collectors.read_config()
@@ -115,7 +115,7 @@ def run_once(args):
 def test_push(args):
     if not os.environ.get("NTFY_TOPIC", "").strip():
         sys.exit("NTFY_TOPIC is not set: there is nowhere to push to.")
-    status = collectors.Pusher().publish(*TEST_PUSH, priority=3, tags=["bell"])      # straight to ntfy: no row is stored
+    status = collectors.Pusher().publish(*TEST_PUSH, priority=3, tags=["bell"])      # straight to ntfy: no row stored
     print("ntfy answered %d: %s" % (status, "accepted. That is not yet proof that a phone showed it: look at the phone."
                                     if status == 200 else "NOT accepted."))
     sys.exit(0 if status == 200 else 1)

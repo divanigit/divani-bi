@@ -7,7 +7,7 @@ One HTTP server on 127.0.0.1 that plays every outside party the collectors talk 
     /wp-json/wc/store/v1/products                                              a WooCommerce catalogue
     /products.json                                                             a Shopify catalogue
     /pagespeedonline/v5/runPagespeed                                           Google PageSpeed Insights
-    /ntfy/                                                                     the ntfy server (NTFY_URL = <address>/ntfy)
+    /ntfy/                                                                     ntfy (NTFY_URL = <address>/ntfy)
     /hb                                                                        a heartbeat service (HEARTBEAT_URL)
 
 Tests switch behaviour through the attributes of FakeSite. By hand:
@@ -81,7 +81,8 @@ def shopify_products():
     def product(pid, title, images=1, **variants):
         variants = variants or {"a": ("129.00", True)}
         return {"id": pid, "title": title, "handle": "p-%d" % pid,
-                "images": [{"id": pid * 10 + i, "src": "https://cdn.example/%d-%d.jpg" % (pid, i)} for i in range(images)],
+                "images": [{"id": pid * 10 + i, "src": "https://cdn.example/%d-%d.jpg" % (pid, i)}
+                           for i in range(images)],
                 "variants": [{"id": pid * 100 + i, "title": name, "price": price, "available": available}
                              for i, (name, (price, available)) in enumerate(variants.items())]}
 
@@ -220,7 +221,7 @@ class _Handler(BaseHTTPRequestHandler):
             return self._send(broken["status"], "text/html", b"<html><body>broken</body></html>")
         hop = int(query.get("hop", ["0"])[0])
         if hop < broken.get("redirects", 0):
-            return self._send(302, "text/html", b"", {"Location": "%s?hop=%d" % (path, hop + 1)})     # a relative address
+            return self._send(302, "text/html", b"", {"Location": "%s?hop=%d" % (path, hop + 1)})    # a relative one
 
         if path.startswith("/ntfy") and method == "POST":
             return self._ntfy(path, body)
@@ -292,7 +293,7 @@ class _Handler(BaseHTTPRequestHandler):
         name = "psi_lighthouse12.json" if mode == "lighthouse12" else "psi_lighthouse13.json"
         answer = json.loads((FIXTURES / name).read_text(encoding="utf-8"))
         answer["id"] = answer["lighthouseResult"]["requestedUrl"] = call["url"]
-        if mode == "origin_fallback":                           # too little traffic on the page: the whole site's numbers
+        if mode == "origin_fallback":                           # too little traffic on the page: the site's numbers
             answer["loadingExperience"]["origin_fallback"] = True
         elif mode == "no_field_data":
             answer["loadingExperience"] = {"initial_url": call["url"]}
