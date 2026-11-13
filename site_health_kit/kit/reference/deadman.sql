@@ -6,11 +6,13 @@
 -- pushes it straight to ntfy with pg_net. The alert is an ordinary row of sh_alerts with an
 -- ordinary row of sh_messages, so the screen and the message log show it like any other.
 --
--- THE KIT'S TESTS DO NOT EXECUTE THIS FILE. It needs pg_cron, pg_net and Vault, which the test
--- database does not have. It was written from the documentation of the three (pg_net: the
--- request leaves only after the transaction commits; the answer arrives later in
--- net._http_response; the body must be JSON; the default timeout differs between versions, so it
--- is always passed). Verify it on the real project with the steps at the end of this comment.
+-- THE KIT'S TESTS RUN THIS FILE ONLY AGAINST STAND-INS. It needs pg_cron, pg_net and Vault, which
+-- the test database does not have: tests/test_sql.py puts empty look-alikes in their place and
+-- checks what sh_deadman() decides and hands to pg_net, not that anything is really scheduled or
+-- sent. The calls were written from the documentation of the three (pg_net: the request leaves
+-- only after the transaction commits; the answer arrives later in net._http_response; the body
+-- must be JSON; the default timeout differs between versions, so it is always passed). Verify
+-- it on the real project with the steps at the end of this comment.
 --
 -- What it guarantees, and how
 --   * One open alert at most: it takes the same lock as sh_alerts_check and inserts only when no
@@ -30,7 +32,8 @@
 --
 -- Before running this file
 --   1. Dashboard > Integrations: enable Cron (pg_cron). Dashboard > Database > Extensions: pg_net.
---      (The two "create extension" lines below do the same.)
+--      (The lines below the header repeat Supabase's own install commands for the two, the two
+--      grants on the cron schema included; they change nothing when the dashboard already did it.)
 --   2. Dashboard > Project Settings > Vault: add the secrets. Never write their values into a
 --      file of the repository.
 --        sh_ntfy_topic      the topic, the same value as NTFY_TOPIC of the worker   (required)
@@ -47,13 +50,16 @@
 --      shows two active jobs.
 --   b. select name from vault.decrypted_secrets where name like 'sh\_%';     -- the names only
 --   c. While the worker runs:  select sh_deadman();   answers {"opened": null, "closed": null, "published": 0}.
---   d. Stop the worker for 12 minutes (go-live checklist, item 3). Within 15 minutes of the stop
---      the phone gets "המדידה נעצרה: בודק זמינות האתר" and the screen shows the alert. Then:
+--   d. Stop the worker for 16 minutes (go-live checklist, item 3). The job runs every 5 minutes
+--      and opens the alert once the newest round is older than 10 minutes, so the push comes 10
+--      to 15 minutes after the stop; a worker that is started again earlier can hide it. The
+--      phone gets "המדידה נעצרה: בודק זמינות האתר" and the screen shows the alert. Then:
 --        select id, status_code, timed_out, error_msg from net._http_response order by created desc limit 3;
 --      shows status_code 200, and after the next run (5 minutes):
 --        select title, event, status, attempts from sh_messages order by id desc limit 3;
 --      shows status 200 for the "open" message.
---   e. Start the worker. Within a minute the alert closes and the phone gets "חזר לתקין".
+--   e. Start the worker. Within a minute the alert closes and the phone gets
+--      "חזר לתקין: בודק זמינות האתר".
 --   f. select status, return_message, start_time from cron.job_run_details
 --      where jobid = (select jobid from cron.job where jobname = 'sh-deadman') order by start_time desc limit 5;
 --      shows "succeeded" every 5 minutes.
@@ -62,6 +68,8 @@
 -- Safe to run again: the function is replaced and a job with the same name is replaced.
 
 create extension if not exists pg_cron with schema pg_catalog;
+grant usage on schema cron to postgres;
+grant all privileges on all tables in schema cron to postgres;
 create extension if not exists pg_net with schema extensions;
 
 -- The pg_net request of each push this function published, until its answer has been read.
@@ -123,7 +131,7 @@ begin
   if v_last < now() - interval '10 minutes' and v_alert.id is null then
     insert into sh_alerts (key, kind, title, body)
     values (c_key, 'silent', 'המדידה נעצרה: ' || c_flow,
-            'אין מדידה כבר ' || floor(extract(epoch from now() - v_last) / 60) || ' דקות')
+            'אין מדידה כבר ' || sh_span(floor(extract(epoch from now() - v_last) / 60)))
     returning id into v_opened;
     insert into sh_messages (alert_id, event, kind, title, msg, priority)
     select id, 'open', 'התראה', title, body, 4 from sh_alerts where id = v_opened;
@@ -131,8 +139,8 @@ begin
     -- it ran again: a full round that is newer than the alert
     update sh_alerts set closed_at = now() where id = v_alert.id;
     insert into sh_messages (alert_id, event, kind, title, msg, priority)
-    values (v_alert.id, 'close', 'חזר לתקין', v_alert.title,
-            'נמשך ' || floor(extract(epoch from now() - v_alert.opened_at) / 60) || ' דקות', 2);
+    values (v_alert.id, 'close', 'חזר לתקין', 'חזר לתקין: ' || c_flow,
+            v_alert.title || E'\n' || 'נמשך ' || sh_span(sh_minutes(v_alert.opened_at, now())), 2);
     v_closed := v_alert.id;
   end if;
 
@@ -153,7 +161,7 @@ begin
     from sh_alerts a
     where a.id = m.alert_id and a.key = c_key and m.status is null
       and (m.claimed_at is null or m.claimed_at <= now() - interval '2 minutes')
-    returning m.id, m.event, m.kind, m.title, m.msg, m.priority
+    returning m.id, m.event, m.title, m.msg, m.priority
   loop
     if coalesce(btrim(v_topic), '') = '' then
       perform sh_message_sent(r.id, 0);          -- pushing is not configured: logged, not sent
@@ -163,8 +171,8 @@ begin
         url := v_url,
         body := jsonb_strip_nulls(jsonb_build_object(
           'topic', btrim(v_topic),
-          -- as the worker writes it: a recovery carries its label in front of the alert's title
-          'title', left(case when r.event = 'close' then r.kind || ': ' || r.title else r.title end, 199),
+          -- title and text as they are stored, as the worker sends them
+          'title', left(r.title, 199),
           'message', left(coalesce(r.msg, r.title), 1499),
           'priority', r.priority,
           'tags', jsonb_build_array(case when r.event = 'close' then 'white_check_mark' else 'rotating_light' end),
@@ -182,14 +190,16 @@ begin
   return jsonb_build_object('opened', v_opened, 'closed', v_closed, 'published', v_published);
 end $$;
 
--- Private, like every other sh_* table and function: only the owner (the role pg_cron runs the
--- job as) gets in. The service role does not need this function.
+-- Private, more so than the other sh_* tables and functions: only the owner (the role pg_cron
+-- runs the job as) gets in. The service role does not need this function or its table, so it
+-- loses what the platform's default privileges gave it, and schema.sql and functions.sql leave
+-- the two out of their grants: applying those files again later (an upgrade) changes nothing here.
 do $$
 declare
   r text;
 begin
   revoke all on function sh_deadman() from public;
-  foreach r in array array['anon', 'authenticated'] loop
+  foreach r in array array['anon', 'authenticated', 'service_role'] loop
     if exists (select 1 from pg_roles where rolname = r) then
       execute format('revoke all on function sh_deadman() from %I', r);
       execute format('revoke all on table sh_deadman_push from %I', r);

@@ -50,6 +50,7 @@ body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--font);-webk
 /* ---------- שורת התפריט ---------- */
 .shbar{display:flex;align-items:center;gap:11px;margin:0 0 12px}
 .shham{width:46px;height:46px;flex:none;border:1px solid var(--line);border-radius:13px;background:var(--surface);color:var(--tx);display:grid;place-items:center;cursor:pointer}
+.shham[hidden]{display:none}
 .shham svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round}
 .shnow{min-width:0;display:flex;flex-direction:column;line-height:1.25}
 .shnow .v{font-size:18px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -88,7 +89,7 @@ body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--font);-webk
 .alertbar .arow>div{flex:1;min-width:0}
 .alertbar .arow .at{font-size:13.5px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .alertbar .ax{flex:none;width:30px;height:30px;border:1px solid var(--dfg);border-radius:8px;background:transparent;color:var(--dfg);font:inherit;font-weight:700;cursor:pointer;line-height:1}
-/* מחיקה קבוצתית (12.11.2026): תיבת סימון בכל שורה, ושורת פעולה מעל הרשימה שלא נגללת איתה */
+/* מחיקה קבוצתית: תיבת סימון בכל שורה, ושורת פעולה מעל הרשימה שלא נגללת איתה */
 .alertbar .acb{flex:none;display:flex;align-items:center;justify-content:center;width:30px;height:30px;cursor:pointer}
 .alertbar input[type=checkbox]{width:20px;height:20px;margin:0;accent-color:var(--dfg);cursor:pointer}
 .abulk{display:flex;align-items:center;gap:10px;margin-top:10px;padding-bottom:10px;border-bottom:1px solid var(--dfg);font-weight:400;font-size:13.5px}
@@ -125,7 +126,7 @@ h2{font-size:16px;font-weight:800;margin:0 0 4px}
 .explain{display:none;font-size:13px;color:var(--tx2);background:var(--bg);border:1px dashed var(--line2);border-radius:10px;padding:9px 11px;margin:8px 0 0;line-height:1.6}
 body.explain-on .explain{display:block}
 
-/* ---------- עכשיו (דורון 18.9.2026, שאלות 44–47) ---------- */
+/* ---------- עכשיו ---------- */
 .now{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 .nbox{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 13px;min-height:84px}
 .nbox .k{font-size:12px;color:var(--tx2);margin:0 0 4px}
@@ -138,7 +139,7 @@ body.explain-on .explain{display:block}
 
 /* ---------- שורה תחתונה ---------- */
 .verdict{display:flex;flex-wrap:wrap;gap:10px}
-.vbox{flex:1 1 150px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 13px;min-height:84px;cursor:pointer;text-align:start;font:inherit;color:var(--tx)}
+.vbox{flex:1 1 150px;min-width:0;overflow-wrap:anywhere;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 13px;min-height:84px;cursor:pointer;text-align:start;font:inherit;color:var(--tx)}
 .vbox:hover{border-color:var(--line2)}
 .vbox .k{font-size:12px;color:var(--tx2);margin:0 0 4px}
 .vbox .v{font-size:26px;font-weight:800;line-height:1.1;letter-spacing:-.01em}
@@ -163,6 +164,8 @@ td a{color:var(--tx);text-decoration:none;border-bottom:1px dotted var(--tx3)}
 .muted{color:var(--tx3);font-size:13px;overflow-wrap:anywhere;word-break:break-word}
 .empty{color:var(--tx2);font-size:13.5px;padding:8px 0}
 .more{font-size:12px;color:var(--tx3);margin:6px 0 0}
+/* שורות שמעבר לתקרת התצוגה: על המסך מוסתרות, ב-PDF מודפסות כולן */
+tr.xrow{display:none}
 
 /* ---------- גרפים ---------- */
 .chart{width:100%;height:auto;display:block;margin-top:6px}
@@ -231,9 +234,13 @@ html,body{overflow-x:hidden}
 @media print{
   @page{size:A4 landscape;margin:10mm}
   :root{--bg:#fff!important;--surface:#fff!important;--line:#cfcfcf!important;--line2:#bcbcbc!important;
-        --tx:#111!important;--tx2:#3a3a3a!important;--tx3:#6a6a6a!important;--shadow:none!important}
+        --tx:#111!important;--tx2:#3a3a3a!important;--tx3:#6a6a6a!important;--shadow:none!important;
+        /* גם צבעי המצב חוזרים לבהירים: PDF שיוצא ממכשיר במצב כהה חייב להיות קריא על דף לבן */
+        --brand:#0d9668!important;--okbg:#e3f3ec!important;--okfg:#0b6e4f!important;--wbg:#fbf0da!important;--wfg:#8f5f08!important;
+        --dbg:#fbe6e4!important;--dfg:#a3271f!important;--down:#a3271f!important}
   body{background:#fff!important;color:#111!important}
-  .shbar,.loadbar,.loadpill,.stale,.explain{display:none!important}
+  .shbar,.hdr .out,.loadbar,.loadpill,.stale,.explain,.scronly{display:none!important}
+  tr.xrow{display:table-row!important}
   #ctlCard{display:none!important}
   .seg,.dates,.foldchev,.ahead .chev,.alertbar .ax,.alertbar .acb,.abulk{display:none!important}
   .shov,.dov{display:none!important}
@@ -284,7 +291,7 @@ html,body{overflow-x:hidden}
     <div class="now" id="now"><div class="nbox"><div class="k">האתר עכשיו</div><div class="v"><span class="dot n"></span>טוען…</div></div></div>
     <div class="npages" id="nowpages"></div>
     <p class="nowtick" id="nowtick"></p>
-    <p class="explain">"עכשיו" = סבב הבדיקה האחרון של המערכת, כל דקה, <span data-cfg="probeCount">4</span> עמודים. "תגובת שרת" = כמה זמן עובר מהבקשה עד שהשרת מתחיל לענות: ירוק עד 0.5 שנ', צהוב עד 1.5, אדום מעל או כשעמוד לא עונה. "מהירות אצל לקוחות" = מה שגולשים אמיתיים חוו בשעה האחרונה, זמן עד תוכן ראשי, אחוזון 75, נמדד בדפדפן של הגולש על ידי קוד מדידה קטן שמותקן באתר. מתחת למספר כתוב מאיזה אתר הגיעו המדידות. מתרענן לבד כל 60 שניות.</p>
+    <p class="explain">"עכשיו" = סבב הבדיקה האחרון של המערכת, כל דקה, <span data-txt="pages">4 עמודים</span>. "תגובת שרת" = כמה זמן עובר מהבקשה עד שהשרת מתחיל לענות: ירוק עד 0.5 שנ', צהוב עד 1.5, אדום מעל או כשעמוד לא עונה. "מהירות אצל לקוחות" = מה שגולשים אמיתיים חוו בשעה האחרונה, זמן עד תוכן ראשי, אחוזון 75, נמדד בדפדפן של הגולש על ידי קוד מדידה קטן שמותקן באתר. מתחת למספר כתוב מאיזה אתר הגיעו המדידות. מתרענן לבד כל 60 שניות.</p>
   </section>
 
   <section class="card" id="ctlCard">
@@ -312,7 +319,7 @@ html,body{overflow-x:hidden}
   <section class="card" id="verdictCard">
     <h2>שורה תחתונה</h2>
     <div class="verdict" id="verdict"></div>
-    <p class="explain">"מהירות" = כמה זמן עד שהתוכן העיקרי בעמוד הבית מוצג בטלפון. עד 2 שניות: מצוין. עד 2.5: מהיר (הסף של גוגל). עד 4: בינוני. מעל 4: איטי. "זמינות" = כמה מהבדיקות (כל דקה, <span data-cfg="probeCount">4</span> עמודים) ענו תקין.</p>
+    <p class="explain">"מהירות" = כמה זמן עד שהתוכן העיקרי בעמוד הבית מוצג בטלפון. עד 2 שניות: מצוין. עד 2.5: מהיר (הסף של גוגל). עד 4: בינוני. מעל 4: איטי. "זמינות" = כמה מהבדיקות (כל דקה, <span data-txt="pages">4 עמודים</span>) ענו תקין.</p>
   </section>
 
   <section class="card" id="availCard">
@@ -321,7 +328,7 @@ html,body{overflow-x:hidden}
     <div id="outages"></div>
     <div id="availChart"></div>
     <p class="hint">לחיצה על שורה: הכשלים של העמוד. לחיצה על עמודה אדומה: הכשלים באותה שעה/יום. לחיצה על הקו הירוק: זמן התגובה לפי עמוד.</p>
-    <p class="explain">כל דקה נבדקים <span data-cfg="probeCount">4</span> עמודים. "נפילה" = 3 דקות רצופות שבהן אף עמוד לא ענה. בגרף: עמודות אדומות = בדיקות שנכשלו; קו ירוק = זמן תגובת השרת החציוני. הבודק הוא לקוח בודד מהענן: הוא רואה שהשרת עונה, לא כמה מהר האתר נטען אצל לקוח.</p>
+    <p class="explain">כל דקה <span data-txt="probed">נבדקים 4 עמודים</span>. "נפילה" = 3 דקות רצופות שבהן אף עמוד לא ענה. בגרף: עמודות אדומות = בדיקות שנכשלו; קו ירוק = זמן תגובת השרת החציוני. הבודק הוא לקוח בודד מהענן: הוא רואה שהשרת עונה, לא כמה מהר האתר נטען אצל לקוח.</p>
   </section>
 
   <section class="card" id="speedCard">
@@ -360,7 +367,7 @@ html,body{overflow-x:hidden}
   <section class="card foldcard collapsed" id="alertsCard">
     <h2 class="foldhead">התראות<span class="foldn" id="alertsN"></span><span class="foldchev">▾</span></h2>
     <div id="alertsList" class="foldbody"></div>
-    <p class="explain">התראה נפתחת ברגע שבדיקת זמינות אחת נכשלת, כשעמוד עיקרי איטי (מעל 4 שניות) פעמיים ברצף, כשהמדידה עצמה נעצרה, או כשתעודת האבטחה עומדת לפוג. נסגרת לבד כשהמצב חוזר לתקין. ההודעות מגיעות לטלפון של כל מי שמנוי לערוץ. לחיצה: מה בדיוק קרה. ✕ בפס האדום = "ראיתי": מסתיר לכולם עד שההתראה תיסגר ותיפתח מחדש. בטלפון, הודעות ישנות נמחקות מתוך אפליקציית ntfy (החלקה או "נקה הכל").</p>
+    <p class="explain">התראה נפתחת <span data-txt="downRule">ברגע שבדיקת זמינות אחת נכשלת</span>, כשעמוד עיקרי איטי (מעל 4 שניות) פעמיים ברצף, כשהמדידה עצמה נעצרה, או כשתעודת האבטחה עומדת לפוג. נסגרת לבד כשהמצב חוזר לתקין. ההודעות מגיעות לטלפון של כל מי שמנוי לערוץ. לחיצה: מה בדיוק קרה. ✕ בפס האדום = "ראיתי": מסתיר לכולם עד שההתראה תיסגר ותיפתח מחדש. בטלפון, הודעות ישנות נמחקות מתוך אפליקציית ntfy (החלקה או "נקה הכל").</p>
   </section>
 
   <section class="card foldcard collapsed" id="msgCard">
@@ -409,6 +416,7 @@ var CFG = (function(){
     homePage: 'בית',             // הערך של השדה page בעמוד הבית, בדיוק כפי שהשרת מחזיר אותו
     probeCount: 4,               // כמה עמודים בודק הזמינות (לטקסטי ההסבר בלבד)
     coreCount: 5,                // כמה עמודי ליבה נמדדים במהירות (לטקסטי ההסבר בלבד)
+    downAfter: 1,                // אחרי כמה בדיקות זמינות שנכשלו ברצף נשלחת התראה (לטקסטי ההסבר בלבד). 1 = כל כשל בודד
     liveHosts: [],               // ערכי המקור שנחשבים "האתר החי" במדידות אצל לקוחות. ריק = ['live', siteLabel, 'www.' + siteLabel]
     pathLabels: [['/product-category/', 'קטגוריה: '], ['/product/', 'מוצר: ']],  // קיצור כתובת לשם קריא
     bucketNote: '',              // הערה בתחתית חלון "זמן תגובת השרת". ריק = בלי
@@ -419,11 +427,12 @@ var CFG = (function(){
     loginPath: '/login',
     logoutPath: '/logout',
     shareKey: '',                // טוקן של קישור שיתוף; מצורף לכל קריאת נתונים כ-k=
-    hide: []                     // כרטיסים שלא רלוונטיים לאתר הזה, לפי מזהה: 'issuesCard' (אתר בלי חנות), 'slowCard'
+    hide: []                     // כרטיסים שלא רלוונטיים לאתר הזה, לפי מזהה: 'issuesCard' (אתר בלי חנות), 'slowCard', 'certCard'
   };
   var o = window.SH_CONFIG || {};
   Object.keys(o).forEach(function(k){ d[k] = o[k]; });
   if (!d.liveHosts || !d.liveHosts.length) d.liveHosts = ['live', d.siteLabel, 'www.' + d.siteLabel];
+  d.downAfter = Math.max(1, Math.round(+d.downAfter) || 1);
   return d;
 })();
 /* תפקיד הצופה. השרת מזריק באותה תגית:  window.SH_ROLE = {readonly: true}
@@ -441,7 +450,14 @@ if (ROLE.share) ROLE.readonly = true;
   document.title = 'בריאות האתר — ' + CFG.siteLabel;
   document.getElementById('brandTxt').textContent = CFG.brand || '';
   document.getElementById('outLink').setAttribute('href', CFG.logoutPath);
-  Array.prototype.forEach.call(document.querySelectorAll('[data-cfg]'), function(el){ var v = CFG[el.getAttribute('data-cfg')]; if (v != null) el.textContent = v; });
+  /* משפטי הסבר שתלויים בהגדרות: כמה עמודים נבדקים, ואחרי כמה כשלים ברצף נשלחת התראה */
+  var one = +CFG.probeCount === 1, da = CFG.downAfter;
+  var TXT = {
+    pages: one ? 'עמוד אחד' : CFG.probeCount + ' עמודים',
+    probed: one ? 'נבדק עמוד אחד' : 'נבדקים ' + CFG.probeCount + ' עמודים',
+    downRule: da === 1 ? 'ברגע שבדיקת זמינות אחת נכשלת' : da === 2 ? 'כששתי בדיקות זמינות נכשלות ברצף' : 'כש-' + da + ' בדיקות זמינות נכשלות ברצף'
+  };
+  Array.prototype.forEach.call(document.querySelectorAll('[data-txt]'), function(el){ var v = TXT[el.getAttribute('data-txt')]; if (v != null) el.textContent = v; });
   document.getElementById('xlinks').innerHTML = (ROLE.readonly ? [] : CFG.links).map(function(l){ return '<a class="shxls" href="' + esc0(l.href) + '" title="' + esc0(l.title || '') + '" style="text-decoration:none">' + esc0(l.label) + '</a>'; }).join('');
   /* תפריט: רק כשיש מסכים נוספים, ורק למי שאינו צופה חיצוני */
   var nav = ROLE.readonly ? [] : CFG.nav, h = '', pend = null;
@@ -467,12 +483,21 @@ function api(path){ var u = CFG.api + path; if (CFG.shareKey) u += (u.indexOf('?
 
 /* ---------- עזרים ---------- */
 var $ = function(id){ return document.getElementById(id); };
-var state = { h: 24, f: '', t: '', s: 'mobile', hidden: {}, seq: 0, data: null };
+var state = { h: 24, f: '', t: '', s: 'mobile', hidden: {}, seq: 0, data: null, fails: 0, nowFails: 0 };
 var COLORS = ['#0d9668', '#4a3aa7', '#c2410c', '#0369a1', '#7c3aed', '#be185d'];
 var NF = new Intl.NumberFormat('he-IL');
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
 function sec(ms){ return ms == null ? '—' : (ms / 1000).toFixed(1); }
 function n(v){ return v == null ? '—' : NF.format(v); }
+/* מספר + שם עצם בעברית תקינה: cnt(1, 'מדידה אחת', 'מדידות') = "מדידה אחת", cnt(5, …) = "5 מדידות" */
+function cnt(v, one, many){ return +v === 1 ? one : v + ' ' + many; }
+/* כתובת לקישור: רק http או https. כל דבר אחר (javascript: וכדומה) לא הופך לקישור */
+function linkUrl(u){ return /^https?:\/\//i.test(String(u == null ? '' : u)) ? esc(u) : ''; }
+/* נתון שלא הגיע: חלק שהשרת החזיר כ-{error: …}, או קריאה שנכשלה כולה.
+   לא מציגים במקומו 0 או "אין": קריאה שנכשלה היא לא חדשות טובות. */
+var NA = 'הנתון לא זמין כרגע';
+function naP(){ return '<p class="empty">' + NA + '.</p>'; }
+function today(){ var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
 function lcpTag(ms){
   if (ms == null) return '<span class="tag n">אין</span>';
   if (ms <= 2000) return '<span class="tag ok">מצוין</span>';
@@ -549,12 +574,26 @@ function load(){
   $('sub').textContent = CFG.siteLabel + ' · טוען…';
   $('rangeTxt').textContent = 'מוצג: ' + periodTxt();
   fetch(api('/site?strategy=' + state.s + qs()), { cache: 'no-store' })
-    .then(function(r){ if (r.status === 401) { if (ROLE.share) throw new Error('הקישור אינו תקין או שפג.'); location.href = CFG.loginPath; throw new Error('auth'); } return r.json(); })
-    .then(function(d){ if (seq !== state.seq) return; state.data = d; render(d); document.body.classList.remove('loading'); loadMessages(); })
-    .catch(function(e){ if (seq === state.seq) { document.body.classList.remove('loading'); $('sub').textContent = 'לא הצלחתי לטעון את הנתונים. ' + e; } });
+    .then(function(r){
+      if (r.status === 401) { if (ROLE.share) throw new Error('הקישור אינו תקין או שפג תוקפו.'); location.href = CFG.loginPath; throw new Error('auth'); }
+      if (!r.ok) throw new Error('HTTP ' + r.status);   // 502, 403 וכל תשובה אחרת שאינה תקינה: כישלון, לא "אין נתונים"
+      return r.json();
+    })
+    .then(function(d){ if (seq !== state.seq) return; if (!d || d.error) throw new Error((d && d.error) || 'no data'); state.data = d; state.fails = 0; render(d); document.body.classList.remove('loading'); loadMessages(); })
+    .catch(function(e){
+      if (seq !== state.seq) return;
+      /* הקריאה נכשלה: כל כרטיס אומר שהנתון לא זמין. מספרים מהטעינה הקודמת לא נשארים על המסך כאילו הם עדכניים. */
+      document.body.classList.remove('loading'); state.data = null; render({});
+      var ml = $('msgList'), mn = $('msgN'); if (ml && !ROLE.readonly) { ml.innerHTML = naP(); if (mn) mn.textContent = ''; }
+      $('sub').textContent = 'לא הצלחתי לטעון את הנתונים. ' + e;
+      /* ניסיון נוסף אחד כעבור 5 שניות (טלפון שהתעורר משינה עדיין בלי רשת). אם גם הוא נכשל, ממשיכים בקצב הרגיל. */
+      if (++state.fails === 1) setTimeout(function(){ if (seq === state.seq && !dov.classList.contains('on')) load(); }, 5000);
+    });
 }
 
 function render(d){
+  /* כל חלק נבדק לחוד: חלק שאינו רשימה לא הגיע (הקריאה שלו נכשלה), והכרטיסים שתלויים בו אומרים זאת */
+  var avOk = Array.isArray(d.availability), spOk = Array.isArray(d.speed), openOk = Array.isArray(d.alerts_open), recentOk = Array.isArray(d.alerts_recent), healthOk = Array.isArray(d.health);
   var av = Array.isArray(d.availability) ? d.availability : [];
   var perPage = av.filter(function(r){ return r.section === 'לפי עמוד'; });
   var outages = av.filter(function(r){ return r.section !== 'לפי עמוד'; });
@@ -569,18 +608,19 @@ function render(d){
 
   /* פס אדום */
   var ab = $('alertbar');
-  /* מ-12.11.2026 (הבקשה): תיבת סימון בכל התראה + "לסמן הכול" + "מחק מסומנות", וגם ה-✕ הבודד.
+  /* תיבת סימון בכל התראה + "לסמן הכול" + "מחק מסומנות", וגם ה-✕ הבודד.
      המחיקה מיידית על המסך: השורה נעלמת בלי לטעון את כל הדף מחדש, והרשימה נשארת פתוחה.
-     קודם כל ✕ טען את כל המסך מחדש וקיפל את הרשימה, ולכן מחיקה של 11 התראות לקחה דקות. */
+     (אם כל ✕ טוען את כל המסך מחדש ומקפל את הרשימה, מחיקה של 11 התראות לוקחת דקות.) */
   var AB = window.__shAb || (window.__shAb = { open: false, sel: {} });
   var vis = open.filter(function(a){ return !a.acked; });
-  if (vis.length) {
+  if (!openOk) { /* רשימת ההתראות לא הגיעה: הפס נשאר כמו שהיה. להעלים אותו היה נראה כמו "אין התראות". */ }
+  else if (vis.length) {
     var live = {}; vis.forEach(function(a){ live[a.id] = 1; });
-    // קישור לעמוד שההתראה מדברת עליו (הבקשה, 12.11.2026). הכתובת יושבת בגוף ההתראה; התראה בלי כתובת — בלי קישור.
+    // קישור לעמוד שההתראה מדברת עליו. הכתובת יושבת בגוף ההתראה; התראה בלי כתובת — בלי קישור.
     var abLink = function(a){ var m = String(a.body || '').match(/https?:\/\/[^\s"'<>]+/); return m ? '<a class="alink" href="' + esc(m[0]) + '" target="_blank" rel="noopener">לפתוח את העמוד ↗</a>' : ''; };
     Object.keys(AB.sel).forEach(function(k){ if (!live[k]) delete AB.sel[k]; });
     var rows = vis.map(function(a){ return '<div class="arow" data-id="' + a.id + '"><label class="acb" title="לסמן למחיקה"><input type="checkbox" data-id="' + a.id + '"' + (AB.sel[a.id] ? ' checked' : '') + ' aria-label="לסמן למחיקה: ' + esc(a.title) + '"></label><div><span class="at">' + esc(a.title) + '</span><span class="sub">' + esc(niceBody(a.body || '', a.title)) + ' · מאז ' + esc(a.opened_il) + '</span>' + abLink(a) + '</div><button type="button" class="ax" data-id="' + a.id + '" title="למחוק את ההתראה הזו מהרשימה (תחזור אם הבעיה תיפתח מחדש)">✕</button></div>'; }).join('');
-    // מקופל כברירת מחדל (שאלה 97, 19.9.2026) — גם התראה אחת. אחרי שנפתח בהקשה הוא נשאר פתוח גם ברענון.
+    // מקופל כברירת מחדל — גם התראה אחת. אחרי שנפתח בהקשה הוא נשאר פתוח גם ברענון.
     var abWord = function(n){ return '⚠ ' + n + ' ' + (n === 1 ? 'התראה פעילה' : 'התראות פעילות'); };
     ab.innerHTML = '<div class="ahead"><span class="acount">' + abWord(vis.length) + '</span><span class="chev">▾</span></div>'
       + '<div class="abulk"><label><input type="checkbox" id="abAll"> לסמן הכול</label><button type="button" class="adel" id="abDel" disabled>מחק מסומנות</button></div>'
@@ -630,22 +670,26 @@ function render(d){
   var failed = perPage.reduce(function(a, r){ return a + (+r.failed || 0); }, 0);
   var upPct = checks ? (100 - 100 * failed / checks) : null;
   var outMin = outages.reduce(function(a, r){ return a + (+r.outage_minutes || 0); }, 0);
-  var vh = '';
-  vh += '<button type="button" class="vbox" data-drill="home"><div class="k">מהירות עמוד הבית בטלפון</div><div class="v">' + (bottom && bottom.lcp_p50 != null ? esc(bottom.verdict) : '<span class="est">אין נתונים</span>') + '</div><div class="m">' + (bottom && bottom.lcp_p50 != null ? sec(bottom.lcp_p50) + ' שניות עד התוכן · ' + bottom.checks + ' מדידות' : 'מדידת המהירות עדיין לא התחילה') + '</div></button>';
-  vh += '<button type="button" class="vbox" data-drill="fails"><div class="k">זמינות</div><div class="v">' + (upPct == null ? '<span class="est">—</span>' : upPct.toFixed(upPct < 99.95 ? 2 : 1) + '%') + '</div><div class="m">' + (checks ? n(failed) + ' כשלים מתוך ' + n(checks) + ' בדיקות' : 'אין בדיקות בתקופה') + '</div></button>';
-  vh += '<button type="button" class="vbox" data-drill="outages"><div class="k">נפילות</div><div class="v">' + (outages.length ? '<span style="color:var(--dfg)">' + outages.length + '</span>' : '0') + '</div><div class="m">' + (outages.length ? 'סה"כ ' + outMin + ' דקות' : 'האתר לא נפל בתקופה') + '</div></button>';
-  vh += '<button type="button" class="vbox" data-drill="alerts"><div class="k">התראות פתוחות</div><div class="v">' + (open.length ? '<span style="color:var(--dfg)">' + open.length + '</span>' : '0') + '</div><div class="m">' + (recent.length ? recent.length + ' בתקופה' : 'אין התראות בתקופה') + '</div></button>';
+  var vh = '', naV = '<span class="est">—</span>';
+  /* אחוז הזמינות: "100%" רק כשלא נכשלה אף בדיקה. כשל אחד מתוך אלפים לא מתעגל ל-100 */
+  var upTxt = upPct == null ? naV : (failed === 0 ? '100' : Math.min(upPct, 99.99).toFixed(2)) + '%';
+  vh += '<button type="button" class="vbox" data-drill="home"><div class="k">מהירות עמוד הבית בטלפון</div><div class="v">' + (!spOk ? naV : bottom && bottom.lcp_p50 != null ? esc(bottom.verdict) : '<span class="est">אין נתונים</span>') + '</div><div class="m">' + (!spOk ? NA : bottom && bottom.lcp_p50 != null ? sec(bottom.lcp_p50) + ' שניות עד התוכן · ' + cnt(bottom.checks, 'מדידה אחת', 'מדידות') : 'מדידת המהירות עדיין לא התחילה') + '</div></button>';
+  vh += '<button type="button" class="vbox" data-drill="fails"><div class="k">זמינות</div><div class="v">' + (!avOk ? naV : upTxt) + '</div><div class="m">' + (!avOk ? NA : checks ? cnt(n(failed), 'כשל אחד', 'כשלים') + ' מתוך ' + cnt(n(checks), 'בדיקה אחת', 'בדיקות') : 'אין בדיקות בתקופה') + '</div></button>';
+  vh += '<button type="button" class="vbox" data-drill="outages"><div class="k">נפילות</div><div class="v">' + (!avOk ? naV : outages.length ? '<span style="color:var(--dfg)">' + outages.length + '</span>' : '0') + '</div><div class="m">' + (!avOk ? NA : outages.length ? 'סה"כ ' + outMin + ' דקות' : 'האתר לא נפל בתקופה') + '</div></button>';
+  vh += '<button type="button" class="vbox" data-drill="alerts"><div class="k">התראות פתוחות</div><div class="v">' + (!openOk ? naV : open.length ? '<span style="color:var(--dfg)">' + open.length + '</span>' : '0') + '</div><div class="m">' + (!recentOk ? NA : recent.length ? recent.length + ' בתקופה' : 'אין התראות בתקופה') + '</div></button>';
   $('verdict').innerHTML = vh;
   Array.prototype.forEach.call($('verdict').querySelectorAll('.vbox'), function(b){ b.addEventListener('click', function(){
     var w = b.getAttribute('data-drill');
-    if (w === 'home') { if (bottom && bottom.url) drillRuns(bottom.url, CFG.homePage, null); else openSheet('מהירות עמוד הבית', '<p class="dsum">מדידת המהירות עדיין לא התחילה. היא מחכה למפתח מגוגל. ברגע שהוא יוכנס, כאן יופיעו המדידות של עמוד הבית כל רבע שעה.</p>'); }
-    else if (w === 'fails') drillFails(null, null, checks, failed, perPage);
-    else if (w === 'outages') drillOutages(outages);
+    if (w === 'home') { if (!spOk) openSheet('מהירות עמוד הבית', naP()); else if (bottom && bottom.url) drillRuns(bottom.url, CFG.homePage, null); else openSheet('מהירות עמוד הבית', '<p class="dsum">מדידת המהירות עדיין לא התחילה. היא מחכה למפתח מגוגל. ברגע שהוא יוכנס, כאן יופיעו המדידות של עמוד הבית כל רבע שעה.</p>'); }
+    else if (w === 'fails') { if (!avOk) openSheet('כל הכשלים', naP()); else drillFails(null, null, checks, failed, perPage); }
+    else if (w === 'outages') { if (!avOk) openSheet('נפילות', naP()); else drillOutages(outages); }
+    else if (!openOk || !recentOk) openSheet('התראות', naP());
     else drillAlerts(recent, open);
   }); });
 
   /* זמינות */
-  if (perPage.length) {
+  if (!avOk) $('availTbl').innerHTML = naP();
+  else if (perPage.length) {
     var t = '<div class="tblwrap"><table><thead><tr><th>עמוד</th><th class="num">בדיקות</th><th class="num">כשלים</th><th class="num">אחוז</th><th class="num">שרת p50</th><th class="num">שרת p95</th><th>כשל אחרון</th></tr></thead><tbody>';
     perPage.forEach(function(r, i){
       t += '<tr class="rowbtn" data-i="' + i + '"><td>' + esc(r.page) + '</td><td class="num">' + n(+r.checks) + '</td><td class="num">' + (r.failed > 0 ? '<b style="color:var(--dfg)">' + r.failed + '</b>' : '0') + '</td><td class="num">' + esc(r.fail_pct) + '%</td><td class="num">' + (r.p50_ms == null ? '—' : r.p50_ms + ' ms') + '</td><td class="num">' + (r.p95_ms == null ? '—' : r.p95_ms + ' ms') + '</td><td>' + esc(r.last_fail_il || '—') + '</td></tr>';
@@ -657,18 +701,19 @@ function render(d){
     ? '<p class="eyebrow" style="margin-top:12px">נפילות (3 דקות ומעלה שאף עמוד לא ענה)</p><ul class="list">' + outages.map(function(o, i){ return '<li class="rowbtn" data-i="' + i + '"><span class="tag d">' + o.outage_minutes + ' דק\'</span><span class="when">' + esc(o.outage_start_il) + ' → ' + esc(o.outage_end_il) + '</span></li>'; }).join('') + '</ul>'
     : '';
   Array.prototype.forEach.call($('outages').querySelectorAll('li.rowbtn'), function(li){ li.addEventListener('click', function(){ drillOutages([outages[+li.getAttribute('data-i')]]); }); });
-  var pser = Array.isArray(d.availability_series) ? d.availability_series : [];
-  $('availChart').innerHTML = availChart(pser);
+  var pserOk = Array.isArray(d.availability_series), pser = pserOk ? d.availability_series : [];
+  $('availChart').innerHTML = pserOk || !avOk ? availChart(pser) : naP();
   Array.prototype.forEach.call($('availChart').querySelectorAll('[data-bucket]'), function(el){ el.addEventListener('click', function(){
     var b = el.getAttribute('data-bucket'), row = pser.filter(function(r){ return r.bucket === b; })[0];
     if (el.classList.contains('bar')) drillFails(null, b, +row.checks, +row.failed, null); else drillBucket(b, row);
   }); });
 
   /* מהירות לאורך זמן */
-  var series = Array.isArray(d.speed_series) ? d.speed_series : [];
+  var serOk = Array.isArray(d.speed_series), series = serOk ? d.speed_series : [];
   $('legend').innerHTML = '';
   $('speedHint').hidden = !series.length;
-  if (series.length) {
+  if (!serOk) $('speedChart').innerHTML = naP();
+  else if (series.length) {
     var pages = []; series.forEach(function(r){ if (pages.indexOf(r.page) < 0) pages.push(r.page); });
     $('legend').innerHTML = pages.map(function(p, i){ return '<button type="button" data-p="' + esc(p) + '" aria-pressed="' + (state.hidden[p] ? 'false' : 'true') + '"><i style="background:' + COLORS[i % COLORS.length] + '"></i>' + esc(p) + '</button>'; }).join('');
     Array.prototype.forEach.call($('legend').querySelectorAll('button'), function(b){ b.addEventListener('click', function(){ var p = b.getAttribute('data-p'); state.hidden[p] = !state.hidden[p]; b.setAttribute('aria-pressed', state.hidden[p] ? 'false' : 'true'); drawSpeed(series, pages); }); });
@@ -676,18 +721,21 @@ function render(d){
   } else $('speedChart').innerHTML = '<p class="empty">' + (state.s === 'desktop' ? 'אין עדיין מדידות מחשב בתקופה (נמדד פעם בשעה).' : 'מדידת המהירות עדיין לא התחילה.') + '</p>';
 
   /* עמודי ליבה */
-  if (core.length) {
+  if (!spOk) $('coreTbl').innerHTML = naP();
+  else if (core.length) {
     var c = '<div class="tblwrap"><table><thead><tr><th>עמוד</th><th>מצב</th><th class="num">ציון</th><th class="num">LCP p50</th><th class="num">LCP p95</th><th class="num">קפיצות</th><th class="num">שרת</th><th class="num">איטי</th><th>גולשים אמיתיים</th></tr></thead><tbody>';
     core.forEach(function(r, i){
-      c += '<tr class="rowbtn" data-i="' + i + '"><td>' + esc(r.page) + '</td><td>' + lcpTag(r.lcp_p50) + '</td><td class="num">' + (r.score_med == null ? '—' : r.score_med) + '</td><td class="num">' + sec(r.lcp_p50) + ' ש\'</td><td class="num">' + sec(r.lcp_p95) + ' ש\'</td><td class="num">' + (r.cls_med == null ? '—' : r.cls_med) + '</td><td class="num">' + (r.ttfb_p50 == null ? '—' : r.ttfb_p50 + ' ms') + '</td><td class="num">' + r.slow_runs + '/' + r.checks + '</td><td>' + cruxTag(r.crux_category) + (r.crux_lcp ? ' <span class="muted">' + sec(r.crux_lcp) + ' ש\'</span>' : '') + '</td></tr>';
+      c += '<tr class="rowbtn" data-i="' + i + '"><td>' + esc(r.page) + '</td><td>' + lcpTag(r.lcp_p50) + '</td><td class="num">' + (r.score_med == null ? '—' : r.score_med) + '</td><td class="num">' + sec(r.lcp_p50) + ' ש\'</td><td class="num">' + sec(r.lcp_p95) + ' ש\'</td><td class="num">' + (r.cls_med == null ? '—' : esc(r.cls_med)) + '</td><td class="num">' + (r.ttfb_p50 == null ? '—' : r.ttfb_p50 + ' ms') + '</td><td class="num">' + r.slow_runs + '/' + r.checks + '</td><td>' + cruxTag(r.crux_category) + (r.crux_lcp ? ' <span class="muted">' + sec(r.crux_lcp) + ' ש\'</span>' : '') + '</td></tr>';
     });
     $('coreTbl').innerHTML = c + '</tbody></table></div>';
     Array.prototype.forEach.call($('coreTbl').querySelectorAll('tr.rowbtn'), function(tr){ tr.addEventListener('click', function(){ var r = core[+tr.getAttribute('data-i')]; drillRuns(r.url, r.page, null); }); });
   } else $('coreTbl').innerHTML = '<p class="empty">אין מדידות ' + (state.s === 'desktop' ? 'מחשב' : 'טלפון') + ' בתקופה.</p>';
 
   /* הכבדים */
-  $('coverage').textContent = cover ? 'נדגמו ' + cover.checks + ' מתוך ' + cover.slow_runs + ' עמודי האתר בתקופה.' : '';
-  if (slow.length) {
+  /* שורת הכיסוי מוצגת רק כשהסבב כבר מכיר עמודים (אחרי טעינת מפת האתר הראשונה) */
+  $('coverage').textContent = cover && +cover.slow_runs ? (+cover.checks === 1 ? 'נדגם עמוד אחד מתוך ' : 'נדגמו ' + cover.checks + ' מתוך ') + cover.slow_runs + ' עמודי האתר בתקופה.' : '';
+  if (!spOk) $('slowTbl').innerHTML = naP();
+  else if (slow.length) {
     var s = '<div class="tblwrap"><table><thead><tr><th>עמוד</th><th>מצב</th><th class="num">LCP p50</th><th class="num">ציון</th><th class="num">מדידות</th><th>אחרונה</th></tr></thead><tbody>';
     slow.forEach(function(r, i){
       s += '<tr class="rowbtn" data-i="' + i + '"><td>' + esc(short(r.page)) + '</td><td>' + lcpTag(r.lcp_p50) + '</td><td class="num">' + sec(r.lcp_p50) + ' ש\'</td><td class="num">' + (r.score_med == null ? '—' : r.score_med) + '</td><td class="num">' + r.checks + '</td><td>' + esc(r.last_il) + '</td></tr>';
@@ -700,28 +748,29 @@ function render(d){
   var iss = Array.isArray(d.product_issues) ? d.product_issues : [];
   if (iss.length) {
     var byI = {}; iss.forEach(function(r){ (byI[r.issue] = byI[r.issue] || []).push(r); });
-    var ih = '<p class="muted">' + Object.keys(byI).map(function(k){ return k + ': ' + byI[k].length; }).join(' · ') + ' · לפי צילום ' + esc(iss[0].snap_date) + '</p>';
+    var ih = '<p class="muted">' + Object.keys(byI).map(function(k){ return esc(k) + ': ' + byI[k].length; }).join(' · ') + ' · לפי צילום ' + esc(iss[0].snap_date) + '</p>';
     ih += '<div class="tblwrap"><table><thead><tr><th>מה</th><th>מוצר</th></tr></thead><tbody>';
-    iss.slice(0, 60).forEach(function(r){ ih += '<tr><td><span class="tag ' + (r.issue === 'לא במלאי' ? 'w' : 'd') + '">' + esc(r.issue) + '</span></td><td><a href="' + esc(r.url) + '" target="_blank" rel="noopener">' + esc(r.name) + '</a></td></tr>'; });
-    $('issuesTbl').innerHTML = ih + '</tbody></table></div>' + (iss.length > 60 ? '<p class="muted">מוצגים 60 מתוך ' + iss.length + '.</p>' : '');
-  } else $('issuesTbl').innerHTML = '<p class="empty">' + (d.product_issues && d.product_issues.error ? 'הבדיקה לא זמינה.' : 'לא נמצאו מוצרים שבורים בצילום האחרון.') + '</p>';
+    /* על המסך 60 הראשונים; השאר נכנסים רק ל-PDF (שורות xrow) */
+    iss.forEach(function(r, i){ var hu = linkUrl(r.url); ih += '<tr' + (i >= 60 ? ' class="xrow"' : '') + '><td><span class="tag ' + (r.issue === 'לא במלאי' ? 'w' : 'd') + '">' + esc(r.issue) + '</span></td><td>' + (hu ? '<a href="' + hu + '" target="_blank" rel="noopener">' + esc(r.name) + '</a>' : esc(r.name)) + '</td></tr>'; });
+    $('issuesTbl').innerHTML = ih + '</tbody></table></div>' + (iss.length > 60 ? '<p class="muted scronly">מוצגים 60 מתוך ' + iss.length + '.</p>' : '');
+  } else $('issuesTbl').innerHTML = '<p class="empty">' + (Array.isArray(d.product_issues) ? 'לא נמצאו מוצרים שבורים בצילום האחרון.' : 'הבדיקה לא זמינה.') + '</p>';
 
   /* תעודה */
   var ce = d.cert;
   if (ce && ce.host) {
     var dl = ce.days_left, cls = !ce.ok ? 'd' : dl < 14 ? 'd' : dl < 30 ? 'w' : 'ok';
-    $('certBox').innerHTML = '<div class="verdict"><div class="vbox" style="cursor:default"><div class="k">תוקף</div><div class="v">' + (ce.ok ? dl + ' ימים' : 'הבדיקה נכשלה') + '</div><div class="m">' + (ce.ok ? 'עד ' + new Date(ce.not_after).toLocaleDateString('he-IL') + ' · ' + esc(ce.issuer || '') : esc(ce.err || '')) + '</div></div><div class="vbox" style="cursor:default"><div class="k">מצב</div><div class="v"><span class="tag ' + cls + '">' + (!ce.ok ? 'לא ידוע' : dl < 14 ? 'לחדש עכשיו' : dl < 30 ? 'לשים לב' : 'תקין') + '</span></div><div class="m">נבדק ' + new Date(ce.checked_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + '</div></div></div>';
-  } else $('certBox').innerHTML = '<p class="empty">עדיין לא נבדק (הבדיקה הראשונה ב-04:00).</p>';
+    $('certBox').innerHTML = '<div class="verdict"><div class="vbox" style="cursor:default"><div class="k">תוקף</div><div class="v">' + (ce.ok ? cnt(esc(dl), 'יום אחד', 'ימים') : 'הבדיקה נכשלה') + '</div><div class="m">' + (ce.ok ? 'עד ' + new Date(ce.not_after).toLocaleDateString('he-IL') + ' · ' + esc(ce.issuer || '') : esc(ce.err || '')) + '</div></div><div class="vbox" style="cursor:default"><div class="k">מצב</div><div class="v"><span class="tag ' + cls + '">' + (!ce.ok ? 'לא ידוע' : dl < 14 ? 'לחדש עכשיו' : dl < 30 ? 'לשים לב' : 'תקין') + '</span></div><div class="m">נבדק ' + new Date(ce.checked_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + '</div></div></div>';
+  } else $('certBox').innerHTML = ce === undefined || (ce && ce.error) ? naP() : '<p class="empty">עדיין לא נבדק (הבדיקה הראשונה ב-04:00).</p>';
 
   /* התראות */
-  $('alertsList').innerHTML = recent.length
+  $('alertsList').innerHTML = !recentOk ? naP() : recent.length
     ? '<ul class="list">' + recent.map(function(a){ return '<li class="rowbtn" data-id="' + a.id + '"><span class="tag ' + (a.open ? 'd' : 'n') + '">' + (a.open ? 'פתוחה' : 'נסגרה') + '</span><b>' + esc(a.title) + '</b><span class="muted">' + esc(niceBody(a.body || '', a.title)) + '</span><span class="when">' + esc(a.opened_il) + (a.closed_il ? ' → ' + esc(a.closed_il) : '') + ' · ' + a.minutes + ' דק\'</span></li>'; }).join('') + '</ul>'
     : '<p class="empty">אין התראות בתקופה. זה טוב.</p>';
-  var _an = $('alertsN'); if (_an) _an.textContent = ' · ' + recent.length;
+  var _an = $('alertsN'); if (_an) _an.textContent = recentOk ? ' · ' + recent.length : '';
   Array.prototype.forEach.call($('alertsList').querySelectorAll('li.rowbtn'), function(li){ li.addEventListener('click', function(){ drillAlert(+li.getAttribute('data-id')); }); });
 
   /* המדידה עצמה */
-  $('healthTbl').innerHTML = health.length
+  $('healthTbl').innerHTML = !healthOk ? naP() : health.length
     ? '<ul class="list">' + health.map(function(r, i){ var cls = r.status === 'תקין' ? 'ok' : r.status === 'מתעכב' ? 'w' : r.status === 'שקט' ? 'd' : 'n'; return '<li class="rowbtn" data-i="' + i + '"><span class="tag ' + cls + '">' + esc(r.status) + '</span>' + esc(r.flow_name) + '<span class="muted">' + esc(r.cadence || '') + (r.silent_txt ? ' · ' + esc(r.silent_txt) : '') + '</span></li>'; }).join('') + '</ul>'
     : '<p class="empty">אין נתוני מדידה.</p>';
   Array.prototype.forEach.call($('healthTbl').querySelectorAll('li.rowbtn'), function(li){ li.addEventListener('click', function(){ drillHealth(health[+li.getAttribute('data-i')]); }); });
@@ -740,6 +789,8 @@ function speedChart(series, pages){
   var maxV = 5000; series.forEach(function(r){ if (vis.indexOf(r.page) >= 0 && r.lcp_p50 > maxV) maxV = r.lcp_p50; }); maxV = Math.ceil(maxV / 1000) * 1000;
   var x = function(i){ return buckets.length < 2 ? (L + (W - L - R) / 2) : L + (W - L - R) * i / (buckets.length - 1); };
   var y = function(v){ return T + (H - T - B) * (1 - v / maxV); };
+  /* רדיוס אזור הלחיצה לא גדול מחצי המרווח בין נקודות: בתקופה ארוכה נקודה לא מכסה את השכנה שלה */
+  var hr = Math.max(1, Math.min(7, (W - L - R) / Math.max(1, buckets.length - 1) / 2));
   var s = '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="מהירות לאורך זמן">';
   for (var g = 0; g <= maxV; g += 1000) s += '<line class="grid" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(g) + '" y2="' + y(g) + '"/><text x="' + (L - 4) + '" y="' + (y(g) + 4) + '" text-anchor="end">' + (g / 1000) + '</text>';
   [[2500, 'גוגל 2.5'], [4000, 'איטי 4']].forEach(function(rf){ if (rf[0] <= maxV) s += '<line class="ref" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(rf[0]) + '" y2="' + y(rf[0]) + '"/><text class="reft" x="' + (W - R - 2) + '" y="' + (y(rf[0]) - 3) + '" text-anchor="end">' + rf[1] + '</text>'; });
@@ -751,7 +802,7 @@ function speedChart(series, pages){
     buckets.forEach(function(b, i){ var r = series.filter(function(q){ return q.page === p && q.bucket === b; })[0]; if (r && r.lcp_p50 != null) { url = r.url; pts.push([x(i), y(Math.min(r.lcp_p50, maxV)), b, r]); } });
     if (!pts.length) return;
     s += '<path class="ln" stroke="' + COLORS[pi % COLORS.length] + '" d="M' + pts.map(function(q){ return q[0].toFixed(1) + ' ' + q[1].toFixed(1); }).join(' L') + '"/>';
-    pts.forEach(function(q){ s += '<circle class="pt" data-url="' + esc(url) + '" data-page="' + esc(p) + '" data-bucket="' + esc(q[2]) + '" cx="' + q[0].toFixed(1) + '" cy="' + q[1].toFixed(1) + '" r="7" fill="' + COLORS[pi % COLORS.length] + '" fill-opacity="0.15"><title>' + esc(p) + ' ' + xlabel(q[2]) + ': ' + sec(q[3].lcp_p50) + ' ש\'</title></circle><circle cx="' + q[0].toFixed(1) + '" cy="' + q[1].toFixed(1) + '" r="2.6" fill="' + COLORS[pi % COLORS.length] + '" pointer-events="none"/>'; });
+    pts.forEach(function(q){ s += '<circle class="pt" data-url="' + esc(url) + '" data-page="' + esc(p) + '" data-bucket="' + esc(q[2]) + '" cx="' + q[0].toFixed(1) + '" cy="' + q[1].toFixed(1) + '" r="' + hr.toFixed(1) + '" fill="' + COLORS[pi % COLORS.length] + '" fill-opacity="0.15"><title>' + esc(p) + ' ' + xlabel(q[2]) + ': ' + sec(q[3].lcp_p50) + ' ש\'</title></circle><circle cx="' + q[0].toFixed(1) + '" cy="' + q[1].toFixed(1) + '" r="2.6" fill="' + COLORS[pi % COLORS.length] + '" pointer-events="none"/>'; });
   });
   return s + '</svg>';
 }
@@ -760,7 +811,7 @@ function availChart(rows){
   var W = 720, H = 160, L = 34, R = 40, T = 12, B = 28;
   var maxF = 1; rows.forEach(function(r){ if (+r.failed > maxF) maxF = +r.failed; });
   var maxMs = 500; rows.forEach(function(r){ if (+r.ms_p50 > maxMs) maxMs = +r.ms_p50; }); maxMs = Math.ceil(maxMs / 250) * 250;
-  var n = rows.length, bw = Math.max(3, (W - L - R) / n - 2);
+  var n = rows.length, bw = Math.max(3, (W - L - R) / n - 2), hr = Math.max(1, Math.min(9, (W - L - R) / n / 2));
   var x = function(i){ return L + (W - L - R) * (i + 0.5) / n; };
   var yf = function(v){ return T + (H - T - B) * (1 - v / maxF); };
   var ym = function(v){ return T + (H - T - B) * (1 - v / maxMs); };
@@ -770,12 +821,12 @@ function availChart(rows){
   s += '<text x="' + (W - R + 4) + '" y="' + (T + 4) + '">' + maxMs + 'ms</text>';
   var step = Math.max(1, Math.ceil(n / 8));
   rows.forEach(function(r, i){
-    if (+r.failed > 0) s += '<rect class="bar" data-bucket="' + esc(r.bucket) + '" x="' + (x(i) - bw / 2) + '" y="' + yf(+r.failed) + '" width="' + bw + '" height="' + (H - B - yf(+r.failed)) + '"><title>' + esc(r.bucket) + ': ' + r.failed + ' כשלים מתוך ' + r.checks + '</title></rect>';
+    if (+r.failed > 0) s += '<rect class="bar" data-bucket="' + esc(r.bucket) + '" x="' + (x(i) - bw / 2) + '" y="' + yf(+r.failed) + '" width="' + bw + '" height="' + (H - B - yf(+r.failed)) + '"><title>' + esc(r.bucket) + ': ' + cnt(r.failed, 'כשל אחד', 'כשלים') + ' מתוך ' + r.checks + '</title></rect>';
     if (i % step === 0 || i === n - 1) s += '<text x="' + x(i) + '" y="' + (H - 8) + '" text-anchor="middle">' + xlabel(r.bucket) + '</text>';
   });
   var pts = rows.map(function(r, i){ return r.ms_p50 == null ? null : x(i).toFixed(1) + ' ' + ym(+r.ms_p50).toFixed(1); }).filter(Boolean);
   if (pts.length > 1) s += '<path class="ms" d="M' + pts.join(' L') + '"/>';
-  rows.forEach(function(r, i){ if (r.ms_p50 != null) s += '<circle class="hit" data-bucket="' + esc(r.bucket) + '" cx="' + x(i).toFixed(1) + '" cy="' + ym(+r.ms_p50).toFixed(1) + '" r="9"><title>' + esc(r.bucket) + ': שרת ' + r.ms_p50 + ' ms</title></circle>'; });
+  rows.forEach(function(r, i){ if (r.ms_p50 != null) s += '<circle class="hit" data-bucket="' + esc(r.bucket) + '" cx="' + x(i).toFixed(1) + '" cy="' + ym(+r.ms_p50).toFixed(1) + '" r="' + hr.toFixed(1) + '"><title>' + esc(r.bucket) + ': שרת ' + r.ms_p50 + ' ms</title></circle>'; });
   return s + '</svg>';
 }
 
@@ -795,7 +846,7 @@ function drillFails(page, bucket, checks, failed, perPage){
   loading(title);
   drill('what=fails&page=' + encodeURIComponent(page || '') + '&bucket=' + encodeURIComponent(bucket || '')).then(function(rows){
     var h = '';
-    if (checks) h += '<p class="dsum"><b>' + n(failed) + '</b> בדיקות נכשלו מתוך <b>' + n(checks) + '</b> (' + (100 * failed / checks).toFixed(2) + ' אחוז). ' + (failed === 0 ? 'הכל ענה.' : failed <= 3 ? 'כשל בודד פה ושם הוא רעש רגיל של רשת, לא תקלה.' : 'זה מעבר לרעש רגיל. כדאי לראות אם הכשלים מקובצים בשעה אחת (אירוע) או מפוזרים (עומס).') + '</p>';
+    if (checks) h += '<p class="dsum">' + (failed === 1 ? 'בדיקה <b>אחת</b> נכשלה' : '<b>' + n(failed) + '</b> בדיקות נכשלו') + ' מתוך <b>' + n(checks) + '</b> (' + (100 * failed / checks).toFixed(2) + ' אחוז). ' + (failed === 0 ? 'הכל ענה.' : failed <= 3 ? 'כשל בודד פה ושם הוא רעש רגיל של רשת, לא תקלה.' : 'זה מעבר לרעש רגיל. כדאי לראות אם הכשלים מקובצים בשעה אחת (אירוע) או מפוזרים (עומס).') + '</p>';
     var kinds = {}; rows.forEach(function(r){ kinds[r.kind] = (kinds[r.kind] || 0) + 1; });
     if (rows.length) h += '<div class="dwhat">מה קרה: ' + Object.keys(kinds).map(function(k){ return esc(k) + ' × ' + kinds[k]; }).join(' · ') + '</div>';
     if (!page && perPage && perPage.length > 1) h += '<h3>לפי עמוד</h3><ul class="list">' + perPage.map(function(r){ return '<li><b>' + esc(r.page) + '</b> ' + r.failed + ' מתוך ' + n(+r.checks) + '</li>'; }).join('') + '</ul>';
@@ -807,18 +858,18 @@ function drillFails(page, bucket, checks, failed, perPage){
 function drillBucket(b, row){
   loading('זמן תגובת השרת ' + bucketTxt(b));
   drill('what=bucket&bucket=' + encodeURIComponent(b)).then(function(rows){
-    var h = '<p class="dsum">חציון זמן התגובה: <b>' + row.ms_p50 + ' ms</b>. הכי איטי (95 אחוז): <b>' + row.ms_p95 + ' ms</b>. ' + (row.ms_p50 <= 800 ? 'השרת ענה מהר (הסף של גוגל: 800).' : row.ms_p50 <= 1500 ? 'השרת ענה לאט מהרצוי. אם זה חוזר בשעות מסוימות, זה עומס.' : 'השרת ענה לאט מאוד. זה לפני שהעמוד בכלל מתחיל להיטען אצל הלקוח.') + '</p>';
+    var h = '<p class="dsum">חציון זמן התגובה: <b>' + row.ms_p50 + ' ms</b>. הכי איטי (95 אחוז): <b>' + (row.ms_p95 == null ? '—' : row.ms_p95 + ' ms') + '</b>. ' + (row.ms_p50 <= 800 ? 'השרת ענה מהר (הסף של גוגל: 800).' : row.ms_p50 <= 1500 ? 'השרת ענה לאט מהרצוי. אם זה חוזר בשעות מסוימות, זה עומס.' : 'השרת ענה לאט מאוד. זה לפני שהעמוד בכלל מתחיל להיטען אצל הלקוח.') + '</p>';
     h += '<div class="tblwrap"><table><thead><tr><th>עמוד</th><th class="num">בדיקות</th><th class="num">כשלים</th><th class="num">חציון</th><th class="num">הכי איטי</th><th>מתי</th></tr></thead><tbody>' + rows.map(function(r){ return '<tr><td>' + esc(r.page) + '</td><td class="num">' + r.checks + '</td><td class="num">' + r.failed + '</td><td class="num">' + (r.ms_p50 == null ? '—' : r.ms_p50 + ' ms') + '</td><td class="num">' + (r.ms_max == null ? '—' : r.ms_max + ' ms') + '</td><td>' + esc(r.worst_il || '') + '</td></tr>'; }).join('') + '</tbody></table></div>';
     if (CFG.bucketNote) h += '<div class="dwhat">' + esc(CFG.bucketNote) + '</div>';
     $('dbody').innerHTML = h;
   }).catch(fail);
 }
 function drillOutages(list){
-  var h = list.length ? '<p class="dsum">' + (list.length === 1 ? 'נפילה אחת' : list.length + ' נפילות') + ' בתקופה. נפילה = 3 דקות רצופות שבהן אף אחד מ-' + CFG.probeCount + ' העמודים לא ענה. סך הכל <b>' + list.reduce(function(a, r){ return a + (+r.outage_minutes || 0); }, 0) + ' דקות</b> שבהן לקוח לא יכול היה להיכנס.</p><ul class="list">' + list.map(function(o){ return '<li><span class="tag d">' + o.outage_minutes + ' דק\'</span><span class="when">' + esc(o.outage_start_il) + ' → ' + esc(o.outage_end_il) + '</span></li>'; }).join('') + '</ul><div class="dwhat">לראות מה קרה בדיוק: לחיצה על העמודה האדומה של אותה שעה בגרף הזמינות.</div>' : '<p class="dsum">האתר לא נפל בתקופה. כשל של דקה אחת בעמוד אחד נספר בזמינות, לא כאן.</p>';
+  var h = list.length ? '<p class="dsum">' + (list.length === 1 ? 'נפילה אחת' : list.length + ' נפילות') + ' בתקופה. נפילה = 3 דקות רצופות שבהן ' + (+CFG.probeCount === 1 ? 'העמוד' : 'אף אחד מ-' + CFG.probeCount + ' העמודים') + ' לא ענה. סך הכל <b>' + list.reduce(function(a, r){ return a + (+r.outage_minutes || 0); }, 0) + ' דקות</b> שבהן לקוח לא יכול היה להיכנס.</p><ul class="list">' + list.map(function(o){ return '<li><span class="tag d">' + o.outage_minutes + ' דק\'</span><span class="when">' + esc(o.outage_start_il) + ' → ' + esc(o.outage_end_il) + '</span></li>'; }).join('') + '</ul><div class="dwhat">לראות מה קרה בדיוק: לחיצה על העמודה האדומה של אותה שעה בגרף הזמינות.</div>' : '<p class="dsum">האתר לא נפל בתקופה. כשל של דקה אחת בעמוד אחד נספר בזמינות, לא כאן.</p>';
   openSheet('נפילות', h);
 }
 function drillAlerts(recent, open){
-  var h = '<p class="dsum">' + (open.length ? '<b>' + open.length + '</b> התראות פתוחות עכשיו.' : 'אין התראה פתוחה עכשיו.') + ' ' + (recent.length ? recent.length + ' התראות בתקופה.' : 'לא היו התראות בתקופה.') + '</p>';
+  var h = '<p class="dsum">' + (open.length === 1 ? 'התראה פתוחה <b>אחת</b> עכשיו.' : open.length ? '<b>' + open.length + '</b> התראות פתוחות עכשיו.' : 'אין התראה פתוחה עכשיו.') + ' ' + (recent.length ? cnt(recent.length, 'התראה אחת', 'התראות') + ' בתקופה.' : 'לא היו התראות בתקופה.') + '</p>';
   h += recent.length ? '<ul class="list">' + recent.map(function(a){ return '<li class="rowbtn" data-id="' + a.id + '"><span class="tag ' + (a.open ? 'd' : 'n') + '">' + (a.open ? 'פתוחה' : 'נסגרה') + '</span><b>' + esc(a.title) + '</b><span class="when">' + esc(a.opened_il) + ' · ' + a.minutes + ' דק\'</span></li>'; }).join('') + '</ul>' : '';
   openSheet('התראות', h);
   Array.prototype.forEach.call($('dbody').querySelectorAll('li.rowbtn'), function(li){ li.addEventListener('click', function(){ drillAlert(+li.getAttribute('data-id')); }); });
@@ -828,8 +879,10 @@ function drillAlert(id){
   drill('what=alert&id=' + id).then(function(rows){
     var a = rows[0]; if (!a) { $('dbody').innerHTML = '<p class="empty">לא נמצאה.</p>'; return; }
     $('dttl').textContent = a.title;
-    var h = '<p class="dsum">' + (a.open ? 'עדיין פתוחה, ' : 'נסגרה. ') + 'נפתחה ב-<b>' + esc(a.opened_il) + '</b>' + (a.closed_il ? ', נסגרה ב-<b>' + esc(a.closed_il) + '</b>' : '') + ', סך הכל <b>' + a.minutes + ' דקות</b>.<br>' + esc(niceBody(a.body || '', a.title)) + '</p>';
-    var what = { down: 'בדיקת זמינות נכשלה. הכלל: כל כשל בודד מתריע, גם של שנייה. כשל אחד ויחיד הוא לרוב רעש רשת; שניים-שלושה ברצף הם תקלה אמיתית.', slow: 'עמוד עיקרי נמדד איטי (מעל 4 שניות עד התוכן) פעמיים ברצף. אם זה קורה בשעות עומס בלבד, זה השרת. אם תמיד, זה העמוד עצמו (תמונות, תוספים).', silent: 'הבודק עצמו הפסיק לרוץ. עד שהוא חוזר, המספרים במסך ישנים.', cert: 'תעודת האבטחה עומדת לפוג. צריך לחדש אצל חברת האחסון או להפעיל חידוש אוטומטי.' };
+    var h = '<p class="dsum">' + (a.open ? 'עדיין פתוחה, ' : 'נסגרה. ') + 'נפתחה ב-<b>' + esc(a.opened_il) + '</b>' + (a.closed_il ? ', נסגרה ב-<b>' + esc(a.closed_il) + '</b>' : '') + ', סך הכל <b>' + cnt(esc(a.minutes), 'דקה אחת', 'דקות') + '</b>.<br>' + esc(niceBody(a.body || '', a.title)) + '</p>';
+    /* הכלל של התראת "האתר לא עונה" לפי ההגדרה downAfter: כל כשל בודד, או רק כמה כשלים ברצף */
+    var da = CFG.downAfter, daN = da === 2 ? 'שתי' : da;
+    var what = { down: da === 1 ? 'בדיקת זמינות נכשלה. הכלל: כל כשל בודד מתריע, גם של שנייה. כשל אחד ויחיד הוא לרוב רעש רשת; שניים-שלושה ברצף הם תקלה אמיתית.' : 'בדיקת זמינות נכשלה ' + (da === 2 ? 'פעמיים' : da + ' פעמים') + ' ברצף. הכלל: התראה נשלחת רק אחרי ' + daN + ' בדיקות רצופות שנכשלו. כשל אחד ויחיד לא מתריע, כי לרוב הוא רעש רשת.', slow: 'עמוד עיקרי נמדד איטי (מעל 4 שניות עד התוכן) פעמיים ברצף. אם זה קורה בשעות עומס בלבד, זה השרת. אם תמיד, זה העמוד עצמו (תמונות, תוספים).', silent: 'הבודק עצמו הפסיק לרוץ. עד שהוא חוזר, המספרים במסך ישנים.', cert: 'תעודת האבטחה עומדת לפוג. צריך לחדש אצל חברת האחסון או להפעיל חידוש אוטומטי.' };
     h += '<div class="dwhat">' + (what[a.kind] || '') + '</div>';
     if (a.fails && a.fails.length) h += '<h3>הבדיקות שנכשלו מאחורי ההתראה</h3><div class="tblwrap"><table><thead><tr><th>מתי</th><th>עמוד</th><th>מה</th></tr></thead><tbody>' + a.fails.map(function(f){ return '<tr><td>' + esc(f.at) + '</td><td>' + esc(f.page) + '</td><td>' + esc(f.status ? 'קוד ' + f.status : (f.err || '')) + '</td></tr>'; }).join('') + '</tbody></table></div>';
     if (a.sent && a.sent.length) h += '<h3>הודעות שנשלחו לטלפון</h3><ul class="list">' + a.sent.map(function(s){ return '<li><span class="tag ' + (s.status >= 200 && s.status < 300 ? 'ok' : 'd') + '">' + (s.status >= 200 && s.status < 300 ? 'נשלחה' : 'נכשלה') + '</span>' + (s.event === 'open' ? 'פתיחה' : s.event === 'close' ? 'חזר לתקין' : esc(s.event)) + '<span class="when">' + esc(s.at) + '</span></li>'; }).join('') + '</ul>';
@@ -841,31 +894,31 @@ function drillRuns(url, page, bucket){
   loading(title);
   drill('what=runs&url=' + encodeURIComponent(url) + '&strategy=' + state.s + '&bucket=' + encodeURIComponent(bucket || '')).then(function(rows){
     var ok = rows.filter(function(r){ return r.ok; });
-    if (!ok.length) { $('dbody').innerHTML = '<p class="empty">אין מדידות תקינות' + (rows.length ? ' (' + rows.length + ' ניסיונות נכשלו: ' + esc(rows[0].err || '') + ')' : '') + '.</p>'; return; }
+    if (!ok.length) { $('dbody').innerHTML = '<p class="empty">אין מדידות תקינות' + (rows.length ? ' (' + (rows.length === 1 ? 'ניסיון אחד נכשל' : rows.length + ' ניסיונות נכשלו') + ': ' + esc(rows[0].err || '') + ')' : '') + '.</p>'; return; }
     var lcps = ok.map(function(r){ return r.lcp_ms; }).filter(function(v){ return v != null; }).sort(function(a, b){ return a - b; });
     var med = lcps[Math.floor(lcps.length / 2)], worst = ok.reduce(function(a, r){ return (r.lcp_ms || 0) > (a.lcp_ms || 0) ? r : a; }, ok[0]), best = ok.reduce(function(a, r){ return (r.lcp_ms || 1e9) < (a.lcp_ms || 1e9) ? r : a; }, ok[0]);
-    var h = '<p class="dsum"><b>' + ok.length + '</b> מדידות ב' + (state.s === 'desktop' ? 'מחשב' : 'טלפון') + '. חציון <b>' + sec(med) + ' שניות</b> עד התוכן העיקרי: <b>' + lcpWord(med) + '</b>. הכי איטית ' + sec(worst.lcp_ms) + ' ש\' (' + esc(worst.at_il) + '), הכי מהירה ' + sec(best.lcp_ms) + ' ש\' (' + esc(best.at_il) + ').' + (ok[0].crux_category ? ' אצל גולשים אמיתיים גוגל מודדת: <b>' + (ok[0].crux_category === 'FAST' ? 'מהיר' : ok[0].crux_category === 'AVERAGE' ? 'בינוני' : 'איטי') + '</b>' + (ok[0].crux_lcp_ms ? ' (' + sec(ok[0].crux_lcp_ms) + ' ש\')' : '') + '.' : '') + '</p>';
+    var h = '<p class="dsum">' + (ok.length === 1 ? '<b>מדידה אחת</b>' : '<b>' + ok.length + '</b> מדידות') + ' ב' + (state.s === 'desktop' ? 'מחשב' : 'טלפון') + '. חציון <b>' + sec(med) + ' שניות</b> עד התוכן העיקרי: <b>' + lcpWord(med) + '</b>. הכי איטית ' + sec(worst.lcp_ms) + ' ש\' (' + esc(worst.at_il) + '), הכי מהירה ' + sec(best.lcp_ms) + ' ש\' (' + esc(best.at_il) + ').' + (ok[0].crux_category ? ' אצל גולשים אמיתיים גוגל מודדת: <b>' + (ok[0].crux_category === 'FAST' ? 'מהיר' : ok[0].crux_category === 'AVERAGE' ? 'בינוני' : 'איטי') + '</b>' + (ok[0].crux_lcp_ms ? ' (' + sec(ok[0].crux_lcp_ms) + ' ש\')' : '') + '.' : '') + '</p>';
     /* מה מאט: ממוצע החיסכון לכל סיבה על פני המדידות */
     var agg = {}; ok.forEach(function(r){ (r.opps || []).forEach(function(o){ var k = o.id; agg[k] = agg[k] || { id: k, title: o.title, sum: 0, cnt: 0 }; agg[k].sum += +o.ms || 0; agg[k].cnt++; }); });
     var opps = Object.keys(agg).map(function(k){ return agg[k]; }).sort(function(a, b){ return b.sum / b.cnt - a.sum / a.cnt; }).slice(0, 6);
     if (opps.length) h += '<h3>מה מאט את העמוד (לפי גוגל)</h3><ul class="list">' + opps.map(function(o){ return '<li><b>' + sec(o.sum / o.cnt) + ' ש\'</b> ' + esc(oppName(o)) + '</li>'; }).join('') + '</ul><div class="dwhat">המספר = כמה זמן אפשר לחסוך אם מטפלים בסיבה הזאת, לפי ההערכה של גוגל. הסיבות הראשונות הן כמעט תמיד תמונות: לדחוס, להקטין לגודל התצוגה, ולטעון רק כשגוללים.</div>';
-    h += '<h3>המדידות</h3><div class="tblwrap"><table><thead><tr><th>מתי</th><th>מצב</th><th class="num">ציון</th><th class="num">תוכן (LCP)</th><th class="num">שרת</th><th class="num">משקל</th><th class="num">קפיצות</th></tr></thead><tbody>' + ok.slice(0, 100).map(function(r){ return '<tr><td>' + esc(r.at_il) + '</td><td>' + lcpTag(r.lcp_ms) + '</td><td class="num">' + (r.score == null ? '—' : r.score) + '</td><td class="num">' + sec(r.lcp_ms) + ' ש\'</td><td class="num">' + (r.ttfb_ms == null ? '—' : r.ttfb_ms + ' ms') + '</td><td class="num">' + (r.bytes == null ? '—' : (r.bytes / 1048576).toFixed(1) + ' MB') + '</td><td class="num">' + (r.cls == null ? '—' : r.cls) + '</td></tr>'; }).join('') + '</tbody></table></div>' + (ok.length > 100 ? '<p class="more">מוצגות 100 מתוך ' + ok.length + '.</p>' : '');
-    h += '<p class="more"><a href="' + esc(url) + '" target="_blank" rel="noopener">לפתוח את העמוד באתר</a></p>';
+    h += '<h3>המדידות</h3><div class="tblwrap"><table><thead><tr><th>מתי</th><th>מצב</th><th class="num">ציון</th><th class="num">תוכן (LCP)</th><th class="num">שרת</th><th class="num">משקל</th><th class="num">קפיצות</th></tr></thead><tbody>' + ok.slice(0, 100).map(function(r){ return '<tr><td>' + esc(r.at_il) + '</td><td>' + lcpTag(r.lcp_ms) + '</td><td class="num">' + (r.score == null ? '—' : r.score) + '</td><td class="num">' + sec(r.lcp_ms) + ' ש\'</td><td class="num">' + (r.ttfb_ms == null ? '—' : r.ttfb_ms + ' ms') + '</td><td class="num">' + (r.bytes == null ? '—' : (r.bytes / 1048576).toFixed(1) + ' MB') + '</td><td class="num">' + (r.cls == null ? '—' : esc(r.cls)) + '</td></tr>'; }).join('') + '</tbody></table></div>' + (ok.length > 100 ? '<p class="more">מוצגות 100 מתוך ' + ok.length + '.</p>' : '');
+    var hu = linkUrl(url); if (hu) h += '<p class="more"><a href="' + hu + '" target="_blank" rel="noopener">לפתוח את העמוד באתר</a></p>';
     $('dbody').innerHTML = h;
   }).catch(fail);
 }
 function drillHealth(r){
   /* הסבר לכל שורה. שורה שאין לה הסבר כאן מציגה את השדה note שהשרת שולח. */
   var what = {
-    'בודק זמינות האתר': 'כל דקה הבודק פונה ל-' + CFG.probeCount + ' עמודים באתר ורושם אם ענו ותוך כמה זמן. אם השורה הזאת שקטה, הבודק עצמו נעצר ואף אחד לא בודק את האתר.',
-    'מדידת מהירות — עמודי ליבה': 'כל רבע שעה גוגל מודדת עבורנו את ' + CFG.coreCount + ' העמודים העיקריים בטלפון (ופעם בשעה במחשב). דורש מפתח מגוגל. אם השורה שקטה, המדידה נעצרה או שהמפתח חסר.',
+    'בודק זמינות האתר': 'כל דקה הבודק פונה ' + (+CFG.probeCount === 1 ? 'לעמוד אחד באתר ורושם אם ענה' : 'ל-' + CFG.probeCount + ' עמודים באתר ורושם אם ענו') + ' ותוך כמה זמן. אם השורה הזאת שקטה, הבודק עצמו נעצר ואף אחד לא בודק את האתר.',
+    'מדידת מהירות — עמודי ליבה': 'כל רבע שעה גוגל מודדת עבורנו את ' + (+CFG.coreCount === 1 ? 'העמוד העיקרי' : CFG.coreCount + ' העמודים העיקריים') + ' בטלפון (ופעם בשעה במחשב). דורש מפתח מגוגל. אם השורה שקטה, המדידה נעצרה או שהמפתח חסר.',
     'מדידת מהירות — סבב כל האתר': 'כל 5 דקות נמדדים 2 עמודים מכל האתר, כך שכל עמוד נמדד בערך פעם ביום.',
     'טעינת מפת האתר': 'פעם בלילה נטענת רשימת כל העמודים באתר (מוצרים, קטגוריות) כדי שהסבב יכיר עמודים חדשים.',
     'בדיקת תעודת האבטחה': 'פעם ביום נבדק מתי תעודת האבטחה של האתר פגה.',
     'בדיקת מוצרים שבורים': 'פעם ביום ב-04:00 נקרא כל הקטלוג הציבורי של האתר ונבדק אם יש מוצר בלי מחיר, בלי תמונה, לא במלאי או שאי אפשר להוסיף לסל.',
     'מהירות אצל לקוחות': 'קוד מדידה קטן באתר שולח מכל צפייה בעמוד כמה זמן לקח עד שהתוכן העיקרי הוצג. אם השורה שקטה, הקוד הוסר מהאתר או שהמדידות לא מגיעות.'
   };
-  var status = r.status === 'תקין' ? 'רץ כמו שצריך.' : r.status === 'מתעכב' ? 'מאחר. אם זה לא חוזר לתקין תוך שעה, יש בעיה.' : r.status === 'שקט' ? 'נעצר. המספרים שתלויים בו ישנים.' : r.status === 'אין נתון' ? 'עדיין לא רץ אף פעם.' : r.status;
+  var status = r.status === 'תקין' ? 'רץ כמו שצריך.' : r.status === 'מתעכב' ? 'מאחר. אם זה לא חוזר לתקין תוך שעה, יש בעיה.' : r.status === 'שקט' ? 'נעצר. המספרים שתלויים בו ישנים.' : r.status === 'אין נתון' ? 'עדיין לא רץ אף פעם.' : esc(r.status);
   openSheet(r.flow_name, '<p class="dsum"><b>' + esc(r.status) + '</b>: ' + status + (r.last_at ? ' הריצה האחרונה: ' + new Date(r.last_at).toLocaleString('he-IL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + '.' : '') + '</p><div class="dwhat">' + (what[r.flow_name] || esc(r.note || '')) + '</div><p class="muted">קצב: ' + esc(r.cadence || '') + ' · סף איחור: ' + r.warn_minutes + ' דק\' · סף שתיקה: ' + r.late_minutes + ' דק\'</p>');
 }
 
@@ -874,7 +927,7 @@ function setPreset(h){ state.h = h; state.f = ''; state.t = ''; $('dFrom').value
 Array.prototype.forEach.call(document.querySelectorAll('#segH button'), function(b){ b.addEventListener('click', function(){ setPreset(+b.getAttribute('data-h')); }); });
 Array.prototype.forEach.call(document.querySelectorAll('#segS button'), function(b){ b.addEventListener('click', function(){ state.s = b.getAttribute('data-s'); Array.prototype.forEach.call(document.querySelectorAll('#segS button'), function(o){ o.setAttribute('aria-pressed', o === b ? 'true' : 'false'); }); load(); }); });
 $('dGo').addEventListener('click', function(){
-  var f = $('dFrom').value, t = $('dTo').value || new Date().toISOString().slice(0, 10);
+  var f = $('dFrom').value, t = $('dTo').value || today();
   if (!f) { $('dFrom').focus(); return; }
   if (t < f) { var x = f; f = t; t = x; }
   state.f = f; state.t = t; $('dTo').value = t;
@@ -896,34 +949,40 @@ function rumSrc(s){
   /* קוד המדידה כותב site = 'live' באתר החי; כל ערך אחר (סביבת פיתוח) מוצג בצבע אזהרה */
   var live = function(h){ return CFG.liveHosts.indexOf(h) >= 0; };
   var other = s.hosts.filter(function(x){ return !live(x.host); });
-  var t = s.test ? ' · מתוכן ' + s.test + ' מדידות בדיקה' : '';
-  if (!other.length) return '<br>מקור: האתר החי · כל ' + s.n + ' המדידות האחרונות' + t;
-  return '<br><span style="color:var(--warn,#b26a00)">מקור: ' + s.hosts.map(function(x){ return esc(x.host) + ' ' + x.n; }).join(' · ') + ' (מתוך ' + s.n + ' המדידות האחרונות)' + t + '</span>';
+  var t = s.test ? ' · מתוכן ' + cnt(s.test, 'מדידת בדיקה אחת', 'מדידות בדיקה') : '';
+  if (!other.length) return '<br>מקור: האתר החי · ' + (+s.n === 1 ? 'מדידה אחת' : 'כל ' + s.n + ' המדידות האחרונות') + t;
+  return '<br><span style="color:var(--warn,#b26a00)">מקור: ' + s.hosts.map(function(x){ return esc(x.host) + ' ' + x.n; }).join(' · ') + ' (מתוך ' + (+s.n === 1 ? 'מדידה אחת' : s.n + ' המדידות האחרונות') + ')' + t + '</span>';
 }
 function renderNow(d){
   var pages = Array.isArray(d.pages) ? d.pages : [];
   var age = d.age_sec == null ? null : Math.max(0, d.age_sec);
-  var ageTxt = age == null ? 'אין בדיקה ב־15 הדקות האחרונות' : ('נבדק לפני ' + (age < 90 ? age + ' שניות' : Math.round(age / 60) + ' דקות'));
+  var ageTxt = age == null ? 'אין בדיקה ב-15 הדקות האחרונות' : ('נבדק לפני ' + (age < 90 ? cnt(age, 'שנייה', 'שניות') : Math.round(age / 60) + ' דקות'));
   var okN = pages.filter(function(p){ return p.ok; }).length;
   /* זמינות: מהסבב האחרון מכל סוג (מלא כל דקה, קל כל 30 שניות). תגובת שרת: מהסבב המלא האחרון בלבד. */
   var latest = Array.isArray(d.latest) ? d.latest : pages; var okL = latest.filter(function(p){ return p.ok; }).length;
   var lightTxt = d.light ? ' · בדיקה קלה' : '';
-  var site = !latest.length ? ['n', 'אין נתון', ageTxt] : d.all_ok ? ['ok', 'פעיל', ageTxt + lightTxt + ' · ' + okL + ' מתוך ' + latest.length + ' עמודים עונים'] : d.any_ok ? ['w', 'חלקי', ageTxt + lightTxt + ' · ' + okL + ' מתוך ' + latest.length + ' עונים'] : ['d', 'נפל', ageTxt + lightTxt + ' · אף עמוד לא עונה'];
+  var site = !latest.length ? ['n', 'אין נתון', ageTxt] : d.all_ok ? ['ok', 'פעיל', ageTxt + lightTxt + ' · ' + (latest.length === 1 ? 'העמוד עונה' : okL + ' מתוך ' + latest.length + ' עמודים עונים')] : d.any_ok ? ['w', 'חלקי', ageTxt + lightTxt + ' · ' + okL + ' מתוך ' + latest.length + ' עונים'] : ['d', 'נפל', ageTxt + lightTxt + (latest.length === 1 ? ' · העמוד לא עונה' : ' · אף עמוד לא עונה')];
   var home = pages.filter(function(p){ return p.page === CFG.homePage; })[0];
   var slowest = pages.slice().sort(function(a, b){ return (b.ms || 0) - (a.ms || 0); })[0];
   var srv = home && home.ok ? ['' + nowColorMs(home.ms), nowSec(home.ms), 'דף הבית' + (slowest && slowest.page !== CFG.homePage ? ' · הכי איטי כרגע: ' + esc(slowest.page) + ' ' + nowSec(slowest.ms) : '')] : home ? ['d', 'לא עונה', 'דף הבית'] : ['n', '—', 'אין נתון'];   /* בלי סבב בדיקה בכלל: "אין נתון", לא "לא עונה" */
-  var rum = d.rum || {}; var rumBox = rum.n ? [nowColorMs(rum.p75_ms <= 2500 ? 400 : rum.p75_ms <= 4000 ? 1000 : 2000), nowSec(rum.p75_ms), rum.n + ' צפיות בשעה האחרונה · אחוזון 75' + rumSrc(d.rum_src)] : ['n', '—', 'אין מדידות בשעה האחרונה' + rumSrc(d.rum_src)];
+  var rum = d.rum || {}; var rumBox = rum.n ? [nowColorMs(rum.p75_ms <= 2500 ? 400 : rum.p75_ms <= 4000 ? 1000 : 2000), nowSec(rum.p75_ms), cnt(rum.n, 'צפייה אחת', 'צפיות') + ' בשעה האחרונה · אחוזון 75' + rumSrc(d.rum_src)] : ['n', '—', 'אין מדידות בשעה האחרונה' + rumSrc(d.rum_src)];
   var sp = d.speed || {}; var spT = sp.checked_at ? new Date(sp.checked_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) : '—';
   var lab = sp.lcp_ms ? [sp.lcp_ms <= 2500 ? 'ok' : sp.lcp_ms <= 4000 ? 'w' : 'd', (sp.lcp_ms / 1000).toFixed(1) + ' שנ\'', 'דף הבית בטלפון, ' + spT + ' · ציון ' + (sp.score == null ? '—' : sp.score) + ' · יעד 2.5'] : ['n', '—', 'אין מדידה'];
   function box(k, c){ return '<div class="nbox"><div class="k">' + k + '</div><div class="v"><span class="dot ' + c[0] + '"></span>' + c[1] + '</div><div class="m">' + c[2] + '</div></div>'; }
   $('now').innerHTML = box('האתר עכשיו', site) + box('תגובת שרת עכשיו', srv) + box('מהירות אצל לקוחות, שעה אחרונה', rumBox) + box('מעבדה, מדידה אחרונה', lab);
-  $('nowpages').innerHTML = pages.map(function(p){ var c = p.ok ? nowColorMs(p.ms) : 'd'; return '<span class="tag ' + (c === 'ok' ? 'ok' : c === 'w' ? 'w' : 'd') + '" title="' + esc(p.url || '') + '">' + esc(p.page) + ' ' + (p.ok ? nowSec(p.ms) : 'לא עונה' + (p.status ? ' (' + p.status + ')' : '')) + '</span>'; }).join('');
+  $('nowpages').innerHTML = pages.map(function(p){ var c = p.ok ? nowColorMs(p.ms) : 'd'; return '<span class="tag ' + (c === 'ok' ? 'ok' : c === 'w' ? 'w' : 'd') + '" title="' + esc(p.url || '') + '">' + esc(p.page) + ' ' + (p.ok ? nowSec(p.ms) : 'לא עונה' + (p.status ? ' (' + esc(p.status) + ')' : '')) + '</span>'; }).join('');
   var al = +d.alerts_open || 0;
-  $('nowtick').textContent = 'עודכן ' + new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' · רענון אוטומטי כל 60 שניות' + (al ? ' · ' + al + ' התראות פתוחות' : '');
+  $('nowtick').textContent = 'עודכן ' + new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' · רענון אוטומטי כל 60 שניות' + (al ? ' · ' + cnt(al, 'התראה פתוחה אחת', 'התראות פתוחות') : '');
 }
 function loadNow(){
-  fetch(api('/site/now'), { cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(d){ if (!d || d.error) throw new Error(d && d.error || 'no data'); renderNow(d); })
-    .catch(function(e){ $('nowtick').textContent = 'לא הצלחתי לטעון את "עכשיו": ' + e; });
+  fetch(api('/site/now'), { cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(d){ if (!d || d.error) throw new Error(d && d.error || 'no data'); state.nowFails = 0; renderNow(d); })
+    .catch(function(e){
+      /* נכשל: אריח אפור אחד במקום "טוען…" או במקום "פעיל" מהדקה הקודמת */
+      $('now').innerHTML = '<div class="nbox"><div class="k">האתר עכשיו</div><div class="v"><span class="dot n"></span>—</div><div class="m">' + NA + '</div></div>';
+      $('nowpages').innerHTML = '';
+      $('nowtick').textContent = 'לא הצלחתי לטעון את "עכשיו": ' + e;
+      if (++state.nowFails === 1) setTimeout(loadNow, 5000);   // ניסיון נוסף אחד, כמו בטעינת המסך
+    });
 }
 loadNow(); setInterval(loadNow, 60000);
 
@@ -933,11 +992,14 @@ document.addEventListener('click', function(e){ var h = e.target.closest && e.ta
 /* ---------- יומן הודעות ---------- */
 function loadMessages(){
   var el = $('msgList'); if (!el || ROLE.readonly) return;
-  fetch(api('/messages?' + qs().replace(/^&/, '')), { cache: 'no-store' }).then(function(r){ return r.json(); }).then(function(d){
-    var rows = Array.isArray(d.rows) ? d.rows : [];
+  var seq = state.seq;
+  fetch(api('/messages?' + qs().replace(/^&/, '')), { cache: 'no-store' }).then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }).then(function(d){
+    if (seq !== state.seq) return;
+    if (!d || d.error || !Array.isArray(d.rows)) throw new Error('no rows');   // יומן שלא הגיע אינו "לא נשלחו הודעות"
+    var rows = d.rows;
     el.innerHTML = rows.length ? '<ul class="list">' + rows.map(function(m){ return '<li><span class="tag ' + (m.kind === 'התראה' ? 'd' : m.kind === 'חזר לתקין' ? 'ok' : 'n') + '">' + esc(m.kind) + '</span><b>' + esc(m.title || '') + '</b><span class="muted" style="white-space:pre-line;flex-basis:100%">' + esc(niceBody(m.msg || '', m.title)) + '</span><span class="when">' + esc(m.at_il) + (m.sent ? '' : ' · לא נשלחה') + '</span></li>'; }).join('') + '</ul>' : '<p class="empty">לא נשלחו הודעות בתקופה.</p>';
     var _mn = $('msgN'); if (_mn) _mn.textContent = ' · ' + rows.length;
-  }).catch(function(){ el.innerHTML = '<p class="empty">לא הצלחתי לטעון את ההודעות.</p>'; });
+  }).catch(function(){ if (seq !== state.seq) return; el.innerHTML = '<p class="empty">לא הצלחתי לטעון את ההודעות.</p>'; var _mn = $('msgN'); if (_mn) _mn.textContent = ''; });
 }
 </script>
 </body>

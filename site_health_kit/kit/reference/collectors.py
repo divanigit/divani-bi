@@ -15,10 +15,18 @@ comes from sh_config() and is re-read every few minutes. The environment holds s
     DASHBOARD_URL    this dashboard's public address: named in the User-Agent, opened by a tap on a push
     HEARTBEAT_URL    optional: requested after every full probe round, for an outside dead-man switch
 
+and three switches that are no secrets, for a rehearsal on one machine or an unusual site:
+
+    PAGESPEED_URL    another address for the PageSpeed API (default: Google's); tests/fake_site.py prints one
+    SH_ALLOW_PRIVATE 1: the site may live on a private or local address (127.0.0.1, 10.x, ...). Without it
+                     every request to the site goes to a public address only (§7.5)
+    SH_SITEMAP_MB    the largest sitemap file that is read, in MB after decompression (default 10, at most 50)
+
 Nothing here logs a key, a token, the topic or the heartbeat address.
 """
 import html
 import http.client
+import ipaddress
 import json
 import logging
 import math
@@ -51,13 +59,14 @@ STUCK_GRACE = 2                                  # seconds a round waits beyond 
 EXPECT_BYTES = 200_000                           # how much of a page is searched for its "expect" text
 
 # Lab speed (§7.6)
-PSI_URL = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
+PSI_URL = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"       # unless PAGESPEED_URL names another
 PSI_CONNECT, PSI_READ = 10, 120                  # seconds; one call takes 10-60
 PSI_BYTES = 30_000_000                           # an answer is 0.5-2 MB (it embeds screenshots)
 PSI_WAITS = (5, 10)                              # seconds before the second and the third try of one call
 OPPS = 6                                         # reasons kept per run: what the screen shows
-ROTATION_PAGES = 2                               # per 5 minutes = 576 pages a day; up to 6 for a larger site (§7.7)
+ROTATION_PAGES = 2                               # per 5 minutes: up to 576 pages a day; up to 6 for a larger site (§7.7)
 QUOTA_ZONE = ZoneInfo("America/Los_Angeles")     # Google's daily quotas start again at midnight Pacific time
+KEY_RETRY = timedelta(hours=1)                   # after PageSpeed refused the key: one call an hour asks again
 # Audits that are the measurement itself, not a reason for it. "largest-contentful-paint-element"
 # (Lighthouse 10-12) reports the whole distance between the LCP and its target as a "saving".
 METRIC_AUDITS = {"first-contentful-paint", "largest-contentful-paint", "first-meaningful-paint", "speed-index",
@@ -65,7 +74,9 @@ METRIC_AUDITS = {"first-contentful-paint", "largest-contentful-paint", "first-me
                  "interaction-to-next-paint", "largest-contentful-paint-element"}
 
 # Sitemap and catalogue (§7.7)
-SITEMAP_FILES, SITEMAP_BYTES = 500, 50 * 1024 * 1024
+SITEMAP_FILES = 500
+SITEMAP_BYTES = 10 * 1024 * 1024                 # one file, opened; SH_SITEMAP_MB raises it, up to the protocol's 50 MB.
+SITEMAP_BYTES_MAX = 50 * 1024 * 1024             # Parsing a file takes about five times its size in memory
 SITEMAP_PAGES = 50_000                           # one call hands the whole list to the database
 SITEMAP_GUESSES = ("/sitemap_index.xml", "/wp-sitemap.xml", "/sitemap.xml")
 # First path segments that are never a page to measure. Shop slugs are often translated: the site's
@@ -75,7 +86,8 @@ PRIVATE_PATHS = {"cart", "checkout", "checkouts", "my-account", "account", "sear
 NOT_A_PAGE = re.compile(
     r"\.(xml|gz|pdf|jpe?g|png|gif|webp|avif|svg|ico|css|js|json|txt|csv|zip|mp[34]|webm|docx?|xlsx?)$")
 PAGINATED = re.compile(r"/page/\d+/?$")
-CATALOGUE_BYTES = 30_000_000                     # one page of the catalogue (100 products with descriptions)
+CATALOGUE_BYTES = 10 * 1024 * 1024               # one page of the catalogue (100 products with descriptions: 0.3-2 MB)
+CATALOGUE_JOB_BYTES = 300 * 1024 * 1024          # all the pages of one read together
 CATALOGUE_PAGES = 1000
 SHOPIFY_PAUSE = 0.5                              # seconds between two pages: the storefront throttles
 
@@ -88,12 +100,20 @@ TITLE_MAX, MESSAGE_MAX = 199, 1499               # characters; ntfy counts bytes
 # Daily jobs: the local time from which each is owed. The morning message has its time in the configuration.
 DAILY_TIMES = {"sitemap": (3, 0), "cleanup": (3, 30), "catalogue": (4, 0), "cert": (4, 0)}   # the screen says the certificate is first checked at 04:00
 DAILY_RETRY = timedelta(minutes=10)              # a failed daily job waits this long before its next try
+DAILY_RETRIES = 3                                # tries after the first failure; then the job waits for the next day
 
 _TLS = ssl.create_default_context()              # normal verification, everywhere
 
 
 class CollectorError(Exception):
     """A collector could not do its work. The text is for the log."""
+
+
+class NotPublic(OSError):
+    """The name leads to a private or local network. The collectors do not go there (§7.5)."""
+
+
+NOT_PUBLIC = "not a public address (a private or local network; SH_ALLOW_PRIVATE=1 allows it)"
 
 
 class SpeedStopped(Exception):
@@ -124,6 +144,13 @@ class Config(NamedTuple):
     probe: list             # the pages checked every minute: [{name, url, expect}]
     core: list              # the pages whose speed is measured every 15 minutes
     private: frozenset      # first path segments the sitemap load drops
+    hosts: frozenset = frozenset()      # where a request to the site may be redirected: its own host and "extra_hosts"
+    off: frozenset = frozenset()        # the parts this site has no use for: sitemap, real_users, catalogue, cert
+
+
+def _bare(host):
+    """A host name as it is compared: lower case, without "www." and without a closing dot."""
+    return str(host or "").lower().rstrip(".").removeprefix("www.")
 
 
 def read_config():
@@ -138,7 +165,9 @@ def read_config():
         platform=config.get("platform") or "other", morning=(int(hour), int(minute)),
         probe=[page for page in config["pages"] if page.get("probe")],
         core=[page for page in config["pages"] if page.get("core")],
-        private=frozenset(PRIVATE_PATHS | {str(slug).strip("/").lower() for slug in extra or []}))
+        private=frozenset(PRIVATE_PATHS | {str(slug).strip("/").lower() for slug in extra or []}),
+        hosts=frozenset(_bare(host) for host in [config["host"], *(config.get("extra_hosts") or [])]),
+        off=frozenset(str(part) for part in config.get("off") or []))
 
 
 # ---------------------------------------------------------------- one HTTP exchange
@@ -148,6 +177,7 @@ class Answer(NamedTuple):
     headers: http.client.HTTPMessage
     body: bytes             # at most the bytes that were asked for
     waited: float           # seconds from the start until the headers of the final response arrived
+    elsewhere: bool = False             # the answer is a redirect to another host, and it was not followed
 
 
 def user_agent():
@@ -155,25 +185,93 @@ def user_agent():
     return "SiteHealthProbe/1.0 (+%s)" % dashboard if dashboard else "SiteHealthProbe/1.0"
 
 
-def fetch(url, *, timeout, read=0, method="GET", headers=None, data=None, redirects=REDIRECTS, connect=None):
+def private_allowed():
+    """SH_ALLOW_PRIVATE=1: the site may live on a private or local address (a rehearsal on one machine)."""
+    return os.environ.get("SH_ALLOW_PRIVATE", "").strip() == "1"
+
+
+def _is_public(address):
+    """Whether an address, as getaddrinfo spells it, is one of the public internet."""
+    try:
+        ip = ipaddress.ip_address(address.split("%")[0])        # "fe80::1%eth0"
+    except ValueError:
+        return False
+    ip = getattr(ip, "ipv4_mapped", None) or ip                 # "::ffff:127.0.0.1" is 127.0.0.1
+    return ip.is_global and not ip.is_multicast
+
+
+def _open(host, port, timeout, public):
+    """A TCP connection to host:port. With `public`, only to an address of the public internet: the
+    name is resolved here and the connection goes to the address that was checked, so a name that
+    answers differently a moment later (DNS rebinding) gains nothing. Raises NotPublic when the
+    name has no such address."""
+    if not public or private_allowed():
+        return socket.create_connection((host, port), timeout)
+    failure = None
+    for family, kind, protocol, _, address in socket.getaddrinfo(host, port, type=socket.SOCK_STREAM):
+        if not _is_public(address[0]):
+            failure = failure or NotPublic(NOT_PUBLIC)
+            continue
+        link = socket.socket(family, kind, protocol)
+        try:
+            link.settimeout(timeout)
+            link.connect(address)
+            return link
+        except OSError as e:
+            link.close()
+            failure = e
+    raise failure or OSError("the name has no address")
+
+
+class _Http(http.client.HTTPConnection):
+    """An HTTP connection that _open opens."""
+    public = False
+
+    def connect(self):
+        self.sock = _open(self.host, self.port, self.timeout, self.public)
+
+
+class _Https(http.client.HTTPSConnection):
+    public = False
+
+    def connect(self):
+        link = _open(self.host, self.port, self.timeout, self.public)
+        try:
+            self.sock = _TLS.wrap_socket(link, server_hostname=self.host)    # verified against the name, as always
+        except BaseException:
+            link.close()
+            raise
+
+
+def fetch(url, *, timeout, read=0, method="GET", headers=None, data=None, redirects=REDIRECTS, connect=None,
+          hosts=(), public=False):
     """One request, as a plain and polite client: a fresh connection for every hop, at most `redirects`
     redirects followed, and one deadline of `timeout` seconds for all of it, the body included.
     At most `read` bytes of the body are read; the rest is never downloaded.
 
-    Raises TimeoutError when the deadline passes, another OSError or http.client.HTTPException when
-    the connection fails (name resolution, TLS, reset), ValueError for an address that is not http(s)."""
+    A redirect is followed only to the host the request started on (with or without "www.", on http
+    or https) or to one of `hosts`. Any other redirect is the answer, with `elsewhere` set: what a
+    site answers must never choose which machine this one talks to. With `public`, every hop
+    connects to an address of the public internet only (see _open). Every request to the monitored
+    site passes both; the services named in the environment pass `public` False.
+
+    Raises TimeoutError when the deadline passes, another OSError (NotPublic among them) or
+    http.client.HTTPException when the connection fails (name resolution, TLS, reset), ValueError
+    for an address that is not http(s)."""
     started = time.monotonic()
     deadline = started + timeout
     sent = {"User-Agent": user_agent(), "Accept-Encoding": "identity", "Connection": "close", **(headers or {})}
+    allowed = {_bare(urllib.parse.urlsplit(url).hostname), *(_bare(host) for host in hosts)}
     for hop in range(redirects + 1):
         parts = urllib.parse.urlsplit(url)
         if parts.scheme not in ("http", "https") or not parts.hostname:
             raise ValueError("not an http(s) address")
         patience = min(_left(deadline), connect or timeout)
         if parts.scheme == "https":
-            connection = http.client.HTTPSConnection(parts.hostname, parts.port, timeout=patience, context=_TLS)
+            connection = _Https(parts.hostname, parts.port, timeout=patience, context=_TLS)
         else:
-            connection = http.client.HTTPConnection(parts.hostname, parts.port, timeout=patience)
+            connection = _Http(parts.hostname, parts.port, timeout=patience)
+        connection.public = public
         try:
             connection.connect()
             link = connection.sock              # kept: http.client lets go of it once the answer says "close"
@@ -187,7 +285,10 @@ def fetch(url, *, timeout, read=0, method="GET", headers=None, data=None, redire
             waited = time.monotonic() - started
             location = response.getheader("Location")
             if response.status in (301, 302, 303, 307, 308) and location and hop < redirects:
-                url = urllib.parse.urljoin(url, location)
+                target = urllib.parse.urljoin(url, location)
+                if _bare(urllib.parse.urlsplit(target).hostname) not in allowed:
+                    return Answer(response.status, response.headers, b"", waited, True)
+                url = target
                 continue
             chunks, size = [], 0
             while size < read and not response.isclosed():      # closed: the whole body has been read
@@ -224,14 +325,15 @@ def _unzip(raw, limit):
 
 # ---------------------------------------------------------------- availability probe (§7.5)
 
-def probe_check(page, timeout):
+def probe_check(page, timeout, hosts=()):
     """One check of one page: the row sh_probe_add stores. ms is the time until the headers of the
-    final response, which is what a new visitor's first request waits for."""
+    final response, which is what a new visitor's first request waits for. `hosts`: where the page
+    may redirect to, besides its own host (Config.hosts)."""
     row = {"page": page["name"], "url": page["url"], "ok": False, "status": None, "ms": None, "fail": None, "err": None}
     expect = page.get("expect")
     started = time.monotonic()
     try:
-        answer = fetch(page["url"], timeout=timeout, read=EXPECT_BYTES if expect else 0,
+        answer = fetch(page["url"], timeout=timeout, read=EXPECT_BYTES if expect else 0, hosts=hosts, public=True,
                        headers={"Accept": "text/html,*/*;q=0.8", "Cache-Control": "no-cache"})
     except TimeoutError:
         row.update(fail="timeout", err="no answer within %g seconds" % timeout)
@@ -239,8 +341,9 @@ def probe_check(page, timeout):
         row.update(fail="connect", err=_brief(e))
     else:
         row.update(status=answer.status, ms=round(answer.waited * 1000))
-        if answer.status != 200:
-            row.update(fail="http", err="redirected more than %d times, or to nowhere" % REDIRECTS
+        if answer.status != 200:                # 200 and nothing else: a 204 or a 206 is not the page
+            row.update(fail="http", err="redirected to another host" if answer.elsewhere
+                       else "redirected more than %d times, or to nowhere" % REDIRECTS
                        if 300 <= answer.status < 400 else None)
         elif expect and expect not in _page_text(answer):
             row.update(fail="content", err="the expected text is not on the page")
@@ -264,7 +367,7 @@ def _page_text(answer):
         return body.decode("utf-8", "replace")
 
 
-def probe_round(pages, kind, at, timeout=None):
+def probe_round(pages, kind, at, timeout=None, hosts=()):
     """One round: every probe page at the same moment, stored under `at`, the scheduled second.
     kind is "full" (counted in availability) or "light" (the half-minute look: no response time).
     Returns {"rows", "stored"}; stored is 0 when another worker already stored this round."""
@@ -272,7 +375,7 @@ def probe_round(pages, kind, at, timeout=None):
     rows = [None] * len(pages)
 
     def check(i):
-        rows[i] = probe_check(pages[i], timeout)
+        rows[i] = probe_check(pages[i], timeout, hosts)
 
     threads = [threading.Thread(target=check, args=(i,), daemon=True) for i in range(len(pages))]
     for thread in threads:
@@ -383,6 +486,11 @@ def _opps(audits):
     return found[:OPPS]
 
 
+def psi_url():
+    """Where PageSpeed is asked: Google, unless PAGESPEED_URL names a stand-in (tests/fake_site.py)."""
+    return os.environ.get("PAGESPEED_URL", "").strip() or PSI_URL
+
+
 def speed_measure(url, strategy, key):
     """One PageSpeed run of one page: the measured columns of its sh_speed row, also when the run
     failed. Raises SpeedStopped when no call can succeed for now (daily quota, refused key)."""
@@ -391,7 +499,7 @@ def speed_measure(url, strategy, key):
     for wait in (*PSI_WAITS, None):
         status, message, answer = 0, "", None
         try:
-            reply = fetch(PSI_URL + "?" + query, timeout=PSI_CONNECT + PSI_READ, connect=PSI_CONNECT,
+            reply = fetch(psi_url() + "?" + query, timeout=PSI_CONNECT + PSI_READ, connect=PSI_CONNECT,
                           read=PSI_BYTES, redirects=0, headers={"Accept": "application/json"})
             status = reply.status
             answer = json.loads(reply.body)
@@ -436,16 +544,30 @@ def speed_rotation(count, at, key):
 
 # ---------------------------------------------------------------- sitemap (§7.7)
 
-def sitemap_load(site, private=frozenset(PRIVATE_PATHS)):
+def sitemap_bytes():
+    """The largest sitemap file that is read, opened: SITEMAP_BYTES, or what SH_SITEMAP_MB says."""
+    text = os.environ.get("SH_SITEMAP_MB", "").strip()
+    if text.isascii() and text.isdigit() and int(text) > 0:
+        return min(int(text) * 1024 * 1024, SITEMAP_BYTES_MAX)
+    return SITEMAP_BYTES
+
+
+def _size(count):
+    return "%d MB" % (count // 2 ** 20) if count >= 2 ** 20 else "%d bytes" % count
+
+
+def sitemap_load(site, private=frozenset(PRIVATE_PATHS), hosts=()):
     """Every page of the site, from its sitemap, the home page first. Any file that fails to load
     or to parse raises, and so does a sitemap without pages: a partial list is never stored."""
     home = urllib.parse.urlsplit(site)
     parsed = {}
-    waiting = [address for address in _robots_sitemaps(site) if _same_host(address, home)]
+    waiting = [address for address in _robots_sitemaps(site, hosts) if _same_host(address, home)]
     if not waiting:
         for guess in SITEMAP_GUESSES:           # the first one that really is a sitemap
             try:
-                parsed[site + guess] = _sitemap_read(site + guess)
+                parsed[site + guess] = _sitemap_read(site + guess, hosts)
+            except NotPublic:                   # not "no sitemap": the site itself is out of bounds
+                raise
             except (CollectorError, OSError, http.client.HTTPException):
                 continue
             waiting = [site + guess]
@@ -461,7 +583,7 @@ def sitemap_load(site, private=frozenset(PRIVATE_PATHS)):
         seen.add(address)
         if len(seen) > SITEMAP_FILES:
             raise CollectorError("more than %d sitemap files" % SITEMAP_FILES)
-        kind, addresses = parsed.pop(address, None) or _sitemap_read(address)
+        kind, addresses = parsed.pop(address, None) or _sitemap_read(address, hosts)
         if kind == "sitemapindex":
             foreign = [child for child in addresses if not _same_host(child, home)]
             if foreign:                         # fetching whatever a file points at is not ours to do
@@ -485,10 +607,12 @@ def _same_host(address, home):
             and (parts.hostname or "").lower().removeprefix("www.") == home.hostname.lower().removeprefix("www."))
 
 
-def _robots_sitemaps(site):
+def _robots_sitemaps(site, hosts=()):
     """The address of every "Sitemap:" line of robots.txt; none when there is no robots.txt."""
     try:
-        answer = fetch(site + "/robots.txt", timeout=15, read=500_000)
+        answer = fetch(site + "/robots.txt", timeout=15, read=500_000, hosts=hosts, public=True)
+    except NotPublic:
+        raise
     except (OSError, http.client.HTTPException):
         return []
     if answer.status != 200:
@@ -501,19 +625,25 @@ def _robots_sitemaps(site):
     return found
 
 
-def _sitemap_read(address):
+def _sitemap_read(address, hosts=()):
     """One sitemap file: ("sitemapindex" | "urlset", the addresses it lists)."""
-    answer = fetch(address, timeout=60, read=SITEMAP_BYTES + 1,
+    limit = sitemap_bytes()
+    answer = fetch(address, timeout=60, read=limit + 1, hosts=hosts, public=True,
                    headers={"Accept": "application/xml,text/xml,*/*;q=0.8"})
+    if answer.elsewhere:                        # a file of another host is not ours to fetch, however we got there
+        raise CollectorError("redirected to another host: %s" % address[:200])
     if answer.status != 200:
         raise CollectorError("HTTP %d for %s" % (answer.status, address[:200]))
-    raw = _unzip(answer.body, SITEMAP_BYTES)
-    if len(raw) > SITEMAP_BYTES:
-        raise CollectorError("a sitemap file of more than 50 MB: %s" % address[:200])
+    raw = _unzip(answer.body, limit)
+    if len(raw) > limit:
+        raise CollectorError("a sitemap file of more than %s (SH_SITEMAP_MB raises the limit): %s"
+                             % (_size(limit), address[:200]))
     try:
         raw.decode("utf-8")                     # the protocol says UTF-8; it also keeps the next test honest
     except UnicodeDecodeError:
         raise CollectorError("a sitemap that is not UTF-8: %s" % address[:200]) from None
+    if b"\x00" in raw:                          # UTF-16 without its mark passes as UTF-8, with a NUL in every pair
+        raise CollectorError("a sitemap that is not UTF-8: %s" % address[:200])
     if b"<!ENTITY" in raw:                      # the parser would expand them
         raise CollectorError("a sitemap that declares entities is refused: %s" % address[:200])
     try:
@@ -552,30 +682,77 @@ def _page_url(home, address, private):
 
 # ---------------------------------------------------------------- broken products (§7.7)
 
-def _catalogue_page(address):
-    """One page of a public catalogue: (parsed JSON, headers). Anything but a 200 with a JSON
-    content type is a failed read: a firewall's challenge page must never count as "no products"."""
-    answer = fetch(address, timeout=60, read=CATALOGUE_BYTES + 1, headers={"Accept": "application/json"})
+def _catalogue_page(address, hosts=()):
+    """One page of a public catalogue: (parsed JSON, headers, its size in bytes). Anything but a 200
+    with a JSON content type is a failed read: a firewall's challenge page must never count as
+    "no products"."""
+    answer = fetch(address, timeout=60, read=CATALOGUE_BYTES + 1, hosts=hosts, public=True,
+                   headers={"Accept": "application/json"})
+    if answer.elsewhere:
+        raise CollectorError("the catalogue redirects to another host")
     if answer.status != 200:
         raise CollectorError("HTTP %d from the catalogue" % answer.status)
     if "json" not in (answer.headers.get("Content-Type") or "").lower():
         raise CollectorError("the catalogue did not answer with JSON (a firewall or a login page?)")
     body = _unzip(answer.body, CATALOGUE_BYTES)
     if len(body) > CATALOGUE_BYTES:
-        raise CollectorError("a catalogue page of more than %d bytes" % CATALOGUE_BYTES)
+        raise CollectorError("a catalogue page of more than %s" % _size(CATALOGUE_BYTES))
     try:
-        return json.loads(body), answer.headers
-    except ValueError:
+        return json.loads(body), answer.headers, len(body)
+    except (ValueError, RecursionError):        # RecursionError: a body of a thousand brackets
         raise CollectorError("the catalogue's answer is not JSON") from None
 
 
+def _within_budget(spent):
+    """A catalogue is read page by page into memory, inside the process that also serves the
+    screen: one read never takes more than CATALOGUE_JOB_BYTES from the site."""
+    if spent > CATALOGUE_JOB_BYTES:
+        raise CollectorError("the catalogue is larger than %s: the read was stopped" % _size(CATALOGUE_JOB_BYTES))
+
+
+def _list(value):
+    return value if isinstance(value, list) else []
+
+
+def _text(value, limit):
+    return value[:limit] if isinstance(value, str) else None
+
+
+def _woo_slim(product):
+    """What the rules read of one WooCommerce product, and nothing else: the catalogue is held in
+    memory until it is proven complete, and a product arrives with its whole description.
+    None for an entry that is no product."""
+    if not isinstance(product, dict) or "id" not in product:
+        return None
+    return {"id": str(product["id"])[:40], "name": _text(product.get("name"), 2000),
+            "url": _text(product.get("permalink"), 2000),
+            "priced": _priced(_dict(product.get("prices")).get("price")),
+            "pictured": product.get("images") != [],
+            "in_stock": product.get("is_in_stock") is not False,
+            "buyable": product.get("is_purchasable") is not False,
+            "by_design": product.get("type") in ("external", "grouped")}    # never purchasable, by design
+
+
+def _shopify_slim(product):
+    """The same for a product of Shopify's /products.json."""
+    if not isinstance(product, dict) or "id" not in product:
+        return None
+    variants = [variant for variant in _list(product.get("variants")) if isinstance(variant, dict)]
+    return {"id": str(product["id"])[:40], "name": _text(product.get("title"), 2000),
+            "handle": _text(product.get("handle"), 500) or "",
+            "priced": any(_priced(variant.get("price")) for variant in variants),
+            "pictured": bool(product.get("images")),
+            "in_stock": any(variant.get("available") for variant in variants)}
+
+
 def _complete(products, declared):
-    """Never a partial snapshot: a read that lost products looks exactly like products that vanished."""
-    if not products or not all(isinstance(product, dict) and "id" in product for product in products):
+    """Never a partial snapshot: a read that lost products looks exactly like products that vanished.
+    `products` are the slim entries; None stands for an entry that was no product."""
+    if not products or any(product is None for product in products):
         raise CollectorError("the catalogue lists no products")
     if declared is not None and len(products) != declared:
         raise CollectorError("the shop declared %d products and %d were read" % (declared, len(products)))
-    if len({str(product["id"]) for product in products}) != len(products):
+    if len({product["id"] for product in products}) != len(products):
         raise CollectorError("a product was read twice: the catalogue changed while it was read")
 
 
@@ -593,63 +770,63 @@ def _issue(product_id, issue, name, url):
             "url": url and url.split("?")[0].split("#")[0][:500]}
 
 
-def catalogue_woocommerce(site):
+def catalogue_woocommerce(site, hosts=()):
     """The broken products of a WooCommerce shop, read from its public Store API: the rows of
     sh_issues_set. Raises unless the whole catalogue was read."""
-    products, declared = [], None
+    products, declared, spent = [], None, 0
     for page in range(1, CATALOGUE_PAGES + 1):
         # 100 is the API's maximum, and the fixed order keeps the pages stable while the shop changes
-        batch, headers = _catalogue_page(
-            "%s/wp-json/wc/store/v1/products?per_page=100&page=%d&orderby=id&order=asc" % (site, page))
+        batch, headers, size = _catalogue_page(
+            "%s/wp-json/wc/store/v1/products?per_page=100&page=%d&orderby=id&order=asc" % (site, page), hosts)
+        spent += size
+        _within_budget(spent)
         total = headers.get("X-WP-Total") or ""
         if not (total.isascii() and total.isdigit()) or not isinstance(batch, list):
             raise CollectorError("the catalogue declares no total (X-WP-Total): its completeness cannot be proven")
         if declared not in (None, int(total)):
             raise CollectorError("the catalogue changed while it was read")
         declared = int(total)
-        products += batch
+        products += [_woo_slim(product) for product in batch]
         if not batch or len(products) >= declared:
             break
     _complete(products, declared)
     rows = []
     for product in products:
-        priced = _priced(_dict(product.get("prices")).get("price"))
-        buyable, in_stock = product.get("is_purchasable") is not False, product.get("is_in_stock") is not False
+        buyable, in_stock, priced = product["buyable"], product["in_stock"], product["priced"]
         issues = [("בלי מחיר", not priced and not buyable),
-                  ("בלי תמונה", product.get("images") == []),
+                  ("בלי תמונה", not product["pictured"]),
                   ("לא במלאי", not in_stock),
-                  # external and grouped products are never purchasable, by design
-                  ("אי אפשר להוסיף לסל", not buyable and in_stock and priced
-                   and product.get("type") not in ("external", "grouped"))]
-        name = html.unescape(str(product.get("name") or ""))    # names arrive with HTML entities
-        rows += [_issue(product["id"], issue, name, product.get("permalink")) for issue, found in issues if found]
+                  ("אי אפשר להוסיף לסל", not buyable and in_stock and priced and not product["by_design"])]
+        name = html.unescape(product["name"] or "")             # names arrive with HTML entities
+        rows += [_issue(product["id"], issue, name, product["url"]) for issue, found in issues if found]
     return rows
 
 
-def catalogue_shopify(site, expected):
+def catalogue_shopify(site, expected, hosts=()):
     """The broken products of a Shopify shop, from /products.json. That endpoint declares no total,
-    so the count is checked against `expected`, the number of product pages in the sitemap."""
-    products = []
+    so the count is checked against `expected`, the number of product pages in the sitemap.
+    Written from the endpoint's known shape; it has never run against a real shop (§7.7)."""
+    products, spent = [], 0
     for page in range(1, CATALOGUE_PAGES + 1):
-        answer, _ = _catalogue_page("%s/products.json?limit=250&page=%d" % (site, page))
+        answer, _, size = _catalogue_page("%s/products.json?limit=250&page=%d" % (site, page), hosts)
+        spent += size
+        _within_budget(spent)
         batch = _dict(answer).get("products")
         if not isinstance(batch, list):
             raise CollectorError("the catalogue's answer has no product list")
         if not batch:                           # only an empty page ends the read
             break
-        products += batch
+        products += [_shopify_slim(product) for product in batch]
         time.sleep(SHOPIFY_PAUSE)
     _complete(products, None)
     if abs(len(products) - expected) > max(3, expected // 50):
         raise CollectorError("%d products were read and the sitemap lists %d" % (len(products), expected))
     rows = []
     for product in products:
-        variants = [variant for variant in product.get("variants") or [] if isinstance(variant, dict)]
-        issues = [("בלי מחיר", not any(_priced(variant.get("price")) for variant in variants)),
-                  ("בלי תמונה", not product.get("images")),
-                  ("לא במלאי", not any(variant.get("available") for variant in variants))]
-        address = "%s/products/%s" % (site, urllib.parse.quote(str(product.get("handle") or "")))
-        rows += [_issue(product["id"], issue, product.get("title"), address) for issue, found in issues if found]
+        issues = [("בלי מחיר", not product["priced"]), ("בלי תמונה", not product["pictured"]),
+                  ("לא במלאי", not product["in_stock"])]
+        address = "%s/products/%s" % (site, urllib.parse.quote(product["handle"]))
+        rows += [_issue(product["id"], issue, product["name"], address) for issue, found in issues if found]
     return rows
 
 
@@ -670,7 +847,7 @@ def cert_check(host, now, port=443):
     """Opens a TLS connection with normal verification and reads the certificate. A failed check
     is a row too: ok False and the reason."""
     try:
-        with socket.create_connection((host, port), timeout=20) as link:
+        with _open(host, port, 20, True) as link:
             with _TLS.wrap_socket(link, server_hostname=host) as secure:
                 return cert_row(host, secure.getpeercert(), now)
     except (OSError, ValueError, KeyError) as e:
@@ -703,11 +880,20 @@ class Pusher:
         if env.get("NTFY_TOKEN", "").strip():
             headers["Authorization"] = "Bearer " + env["NTFY_TOKEN"].strip()
         try:
-            return fetch((env.get("NTFY_URL", "").strip() or "https://ntfy.sh").rstrip("/") + "/", timeout=PUSH_TIMEOUT,
-                         method="POST", data=json.dumps(body).encode("utf-8"), headers=headers, redirects=0).status
+            answer = fetch((env.get("NTFY_URL", "").strip() or "https://ntfy.sh").rstrip("/") + "/",
+                           timeout=PUSH_TIMEOUT, method="POST", data=json.dumps(body).encode("utf-8"),
+                           headers=headers, redirects=0, read=2000)
         except (OSError, http.client.HTTPException, ValueError) as e:
             log.warning("push: ntfy could not be reached (%s)", type(e).__name__)
             return 599
+        if not 200 <= answer.status < 300:      # a wrong token, a reserved topic, too many pushes: say which
+            try:
+                reason = str(_dict(json.loads(answer.body)).get("error") or "")
+            except ValueError:
+                reason = ""
+            log.warning("push: ntfy refused the push (HTTP %d%s)", answer.status,       # never the topic
+                        ": " + reason.replace(body["topic"], "(topic)")[:100] if reason else "")
+        return answer.status
 
     def push(self, owed, deadline):
         """Sends the messages sh_alerts_check handed over and reports every result with
@@ -749,11 +935,9 @@ class Pusher:
 
 
 def _as_push(message):
-    """(title, text, priority, tags) of a queued message. The phone must tell a recovery from an
-    alarm at a glance, so a "close" carries its label in front of the alert's title."""
+    """(title, text, priority, tags) of a queued message. Title and text go out as they are stored:
+    sh_alerts_check already wrote them for the phone (a recovery is titled "חזר לתקין: <name>")."""
     title, event = str(message.get("title") or ""), message.get("event")
-    if event == "close":
-        title = "%s: %s" % (message.get("kind"), title)
     tag = {"close": "white_check_mark", "morning": "sunrise"}.get(
         event, "rotating_light" if message.get("priority") == 4 else "warning")
     return title, str(message.get("msg") or title), message.get("priority"), [tag]
@@ -768,7 +952,7 @@ def alert_tick(pusher, deadline=None):
 # ---------------------------------------------------------------- daily jobs
 
 def sitemap_job(config, now):
-    pages = sitemap_load(config.site, config.private)
+    pages = sitemap_load(config.site, config.private, config.hosts)
     moment = now.isoformat()
     coverage = [row for row in db.rpc("sh_speed", {"p_from": moment, "p_to": moment}) or []
                 if row.get("section") == "כיסוי"]
@@ -780,10 +964,10 @@ def sitemap_job(config, now):
 
 def catalogue_job(config, now):
     if config.platform == "shopify":
-        listed = sum(1 for page in sitemap_load(config.site, config.private) if "/products/" in page)
-        rows = catalogue_shopify(config.site, listed)
+        listed = sum(1 for page in sitemap_load(config.site, config.private, config.hosts) if "/products/" in page)
+        rows = catalogue_shopify(config.site, listed, config.hosts)
     else:
-        rows = catalogue_woocommerce(config.site)
+        rows = catalogue_woocommerce(config.site, config.hosts)
     day = now.astimezone(config.zone).date().isoformat()
     return dict(db.rpc("sh_issues_set", {"p_snap_date": day, "p_rows": rows}), snap_date=day)
 
@@ -797,7 +981,9 @@ def cert_job(config, now):
 
 
 def morning_job(config, now):
-    """Queues the morning message; the next alert tick pushes it."""
+    """Queues the morning message; the next alert tick pushes it. On a new installation, whose
+    oldest probe round is not yet six hours old, sh_morning queues nothing and says "skipped":
+    the day still counts as done, so the first push an owner ever gets is not "nothing was measured"."""
     return db.rpc("sh_morning", {"p_day": now.astimezone(config.zone).date().isoformat()})
 
 
@@ -809,11 +995,24 @@ DAILY_JOBS = (("sitemap", sitemap_job), ("cleanup", cleanup_job), ("catalogue", 
               ("morning", morning_job))
 
 
+def job_off(job, config):
+    """Why this site has no use for a job (a collector's name, as manage.py run-once takes it), or
+    None when it runs. What is off comes from sh_config(): the configuration's "off" list, plus
+    what follows from the platform ("other" has no catalogue) and from the address (http has no
+    certificate). A job that is off never runs: not on schedule, and not by hand."""
+    part = {"sitemap": "sitemap", "speed-rotation": "sitemap", "catalogue": "catalogue", "cert": "cert"}.get(job)
+    if job == "cert" and not config.site.startswith("https://"):
+        return "the site is not https: there is no certificate to check"
+    if job == "catalogue" and config.platform not in ("woocommerce", "shopify"):
+        return 'the platform is "other": there is no catalogue to check'
+    if part in config.off:
+        return 'the configuration switches it off ("off": ["%s"])' % part
+    return None
+
+
 def daily_time(job, config):
     """The local (hour, minute) from which a daily job is owed, or None when this site has no use for it."""
-    if job == "catalogue" and config.platform not in ("woocommerce", "shopify"):
-        return None
-    if job == "cert" and not config.site.startswith("https://"):
+    if job_off(job, config):
         return None
     return config.morning if job == "morning" else DAILY_TIMES[job]
 
@@ -821,12 +1020,18 @@ def daily_time(job, config):
 class DailySchedule:
     """Runs each daily job once per local day, from its hour on. "Done for this day" lives in the
     database (sh_job_due / sh_job_mark), so a restart does not run a job again; it is marked only
-    after the job succeeded, so a failure is tried again; and every job has its own guard."""
+    after the job succeeded, so a failure is tried again; and every job has its own guard.
+
+    A job that failed is tried again DAILY_RETRY later, DAILY_RETRIES times at the most, and then
+    waits for the next day: a fault that lasts (a site without a sitemap, a catalogue behind a
+    firewall) must not be asked about all day long. The flow then goes late and silent on the
+    screen, which is the truth. The count is kept in memory: a restart starts it again."""
 
     def __init__(self, jobs=DAILY_JOBS):
         self.jobs = jobs
         self.done = {}                  # job -> the local day this process knows to be done: spares the database
         self.again = {}                 # job -> not before this moment, after a failure
+        self.failed = {}                # job -> (the local day, how many runs failed on it)
 
     def step(self, config, now):
         """Runs what is owed at `now` (an aware datetime). Returns the names of the jobs that ran and succeeded."""
@@ -837,17 +1042,34 @@ class DailySchedule:
             if (start is None or (local.hour, local.minute) < start or self.done.get(job) == today
                     or now < self.again.get(job, now)):
                 continue
+            marker = {"p_job": job, "p_day": today.isoformat()}
             try:
-                marker = {"p_job": job, "p_day": today.isoformat()}
-                if db.rpc("sh_job_due", marker):
-                    result = run(config, now)
-                    db.rpc("sh_job_mark", marker)
-                    ran.append(job)
-                    log.info("daily job %s: done (%s)", job, json.dumps(result, ensure_ascii=False, default=str)[:300])
-                self.done[job] = today
-            except Exception as e:
+                due = db.rpc("sh_job_due", marker)
+            except Exception as e:      # the job did not run: asked again later, and not counted as its failure
                 self.again[job] = now + DAILY_RETRY
-                log.error("daily job %s failed and will be tried again: %s", job, _brief(e))
+                log.error("daily job %s: the database could not be asked, trying again later: %s", job, _brief(e))
+                continue
+            if not due:
+                self.done[job] = today
+                continue
+            try:
+                result = run(config, now)
+                db.rpc("sh_job_mark", marker)
+            except Exception as e:
+                day, failures = self.failed.get(job, (today, 0))
+                failures = failures + 1 if day == today else 1
+                self.failed[job] = (today, failures)
+                if failures > DAILY_RETRIES:
+                    self.done[job] = today              # in memory only: the database still says "owed"
+                    log.error("daily job %s failed %d times today and waits for tomorrow: %s", job, failures, _brief(e))
+                else:
+                    self.again[job] = now + DAILY_RETRY
+                    log.error("daily job %s failed and will be tried again: %s", job, _brief(e))
+                continue
+            self.done[job] = today
+            ran.append(job)
+            log.info("daily job %s: %s (%s)", job, "skipped today" if _dict(result).get("skipped") else "done",
+                     json.dumps(result, ensure_ascii=False, default=str)[:300])
         return ran
 
 
@@ -856,7 +1078,9 @@ class DailySchedule:
 class SpeedSchedule:
     """Phone runs of the core pages every 15 minutes, desktop runs every hour, two pages of the
     rotation every 5 minutes: one call at a time, the core pages first. Each round is stored under
-    the start of its slot, so the same round measured twice (two workers during a deploy) is one set of rows."""
+    the start of its slot, so the same round measured twice (two workers during a deploy) is one set of rows.
+    A slot whose turn passed while an earlier round was still measuring is not made up for, so the
+    figures of a day are "up to". No rotation where the sitemap is switched off."""
 
     ROUNDS = (("core pages, phone", 900, lambda config, at, key: speed_core(config.core, "mobile", at, key)),
               ("core pages, desktop", 3600, lambda config, at, key: speed_core(config.core, "desktop", at, key)),
@@ -865,17 +1089,17 @@ class SpeedSchedule:
     def __init__(self, key, clock=_now):
         self.key, self.clock = key, clock
         self.done = {}                  # round -> the slot it last ran in
-        self.resume = None              # after the daily quota ran out: not before this moment
+        self.resume = None              # after the daily quota ran out, or the key was refused: not before this moment
 
     def step(self, config):
         """Runs the rounds whose slot has not been run yet. Returns their names."""
         ran = []
         for name, period, run in self.ROUNDS:
             now = self.clock()          # read again: the round before may have taken minutes
-            if self.key is None or (self.resume and now < self.resume):
+            if self.resume and now < self.resume:
                 break
             slot = now.timestamp() // period * period
-            if self.done.get(name) == slot:
+            if self.done.get(name) == slot or (name == "rotation" and job_off("speed-rotation", config)):
                 continue
             self.done[name] = slot
             try:
@@ -887,10 +1111,11 @@ class SpeedSchedule:
                     self.resume = datetime.combine(local.date() + timedelta(days=1), clock_time(0), QUOTA_ZONE)
                     log.warning("speed: the daily PageSpeed quota is used up, measuring again after %s (%s)",
                                 self.resume.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"), e)
-                else:                   # a configuration error: asking again cannot help
-                    self.key = None
-                    log.error("speed: PageSpeed does not accept the key, the speed collectors are OFF until "
-                              "PAGESPEED_KEY is fixed and the worker restarts (%s)", e)
+                else:                   # a configuration error: one call an hour asks whether it was repaired
+                    self.resume = now + KEY_RETRY
+                    log.error("speed: PageSpeed does not accept the key, nothing is measured; asking again in an "
+                              "hour. Repair the key or enable the API in Google's console (a new value of "
+                              "PAGESPEED_KEY needs a restart) (%s)", e)
             except Exception as e:
                 log.error("speed: %s failed: %s", name, _brief(e))
         return ran
@@ -953,7 +1178,7 @@ def _probe_step(ticks):
     config = _config()
     if config is None:
         return
-    probe_round(config.probe, kind, datetime.fromtimestamp(at, timezone.utc))
+    probe_round(config.probe, kind, datetime.fromtimestamp(at, timezone.utc), hosts=config.hosts)
     if kind == "full":
         ticks.put(at)
 
@@ -998,6 +1223,9 @@ def start():
         log.warning("collectors: PAGESPEED_KEY is not set, the speed collectors do not run")
     if not env["NTFY_TOPIC"]:
         log.warning("collectors: NTFY_TOPIC is not set, alerts are logged and nothing is pushed")
+    if private_allowed():
+        log.warning("collectors: SH_ALLOW_PRIVATE=1, requests to the site may go to private and local addresses "
+                    "(meant for a rehearsal on one machine)")
     for name, step, every in loops:
         thread = threading.Thread(target=_loop, args=(name, step, every), name="sh-" + name.replace(" ", "-"),
                                   daemon=True)

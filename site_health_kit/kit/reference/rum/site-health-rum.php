@@ -1,14 +1,20 @@
 <?php
 /**
  * Plugin Name: Site Health RUM
- * Description: Sends one anonymous speed measurement per page view (time until the main content is painted) to the site-health dashboard. No cookies, no personal data.
- * Version: 1.1.0
+ * Description: Measures how fast the pages load for real visitors. On every page view the visitor's browser sends the page's path and its loading time to the Site Health dashboard of this site. No cookies, and nothing that identifies the visitor is stored.
+ * Version: 1.2.0
  *
- * Install: copy this ONE file to wp-content/mu-plugins/ (always on) or to wp-content/plugins/ and activate it.
- * Then add to wp-config.php:
- *   define('SITE_HEALTH_RUM_ENDPOINT', 'https://collector.example.com/m');
- *   define('SITE_HEALTH_RUM_LIVE_HOST', 'example.com');   // production host, without www
- * and purge the page cache / CDN so cached pages pick the script up.
+ * Install. Nobody edits wp-config.php, and nobody copies files onto the server:
+ *   1. python3 manage.py rum-plugin --endpoint https://<the dashboard>/m --out site-health-rum.zip
+ *      puts this file into a ZIP, with the two values below filled in.
+ *   2. In the site's admin: Plugins > Add new > Upload plugin > choose the ZIP > Install now > Activate.
+ *   3. Purge the page cache / CDN so that cached pages pick the script up, and exclude the script
+ *      "site-health-rum" from any "delay JavaScript" optimisation (or only visitors who interact are measured).
+ *   4. Open a page of the site with ?sh_test=1 at the end of its address, leave the page, and look at
+ *      "מהירות אצל לקוחות" on the Site Health screen within a minute.
+ * If nothing arrives: a site that sends a Content-Security-Policy header must allow the dashboard's
+ * host in connect-src and this inline script in script-src; otherwise the browser sends nothing.
+ * A site that defines the two constants in wp-config.php already keeps its own values.
  */
 if (!defined('ABSPATH')) { exit; }
 
@@ -31,13 +37,25 @@ add_action('wp_footer', function () {
         'liveHost' => SITE_HEALTH_RUM_LIVE_HOST,
         'sample'   => (float) SITE_HEALTH_RUM_SAMPLE,
     ));
+    // The code of site-health-rum.js, without its comments. Change the three copies together.
     $js = <<<'JS'
 (function () {
 var cfg = window.SiteHealthRum || {};
 if (!cfg.endpoint || !window.PerformanceObserver || !navigator.sendBeacon) return;
-if ((PerformanceObserver.supportedEntryTypes || []).indexOf('largest-contentful-paint') < 0) return; // Safari < 26.2, Firefox < 122
+if ((PerformanceObserver.supportedEntryTypes || []).indexOf('largest-contentful-paint') < 0) return;
 var skip = cfg.skip || /\/(checkout|cart|my-account|account|orders?|order-received|wp-admin|wp-login\.php)(\/|$)/i;
-if (skip.test(location.pathname)) return;
+function named(path) {
+var p = path, runs, i;
+try { p = decodeURIComponent(path); } catch (err) {}
+if (/[@\x00-\x1f\x7f]/.test(p) || /[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}/i.test(p)) return true;
+runs = p.match(/[A-Za-z0-9_]+/g) || [];
+for (i = 0; i < runs.length; i++) {
+if (/^[0-9a-f]{16,}$/i.test(runs[i])) return true;
+if (runs[i].length >= 24 && /[A-Za-z]/.test(runs[i]) && /[0-9]/.test(runs[i])) return true;
+}
+return false;
+}
+if (skip.test(location.pathname) || named(location.pathname)) return;
 if (Math.random() >= (cfg.sample == null ? 1 : +cfg.sample)) return;
 function start() {
 if (document.visibilityState === 'hidden') return;

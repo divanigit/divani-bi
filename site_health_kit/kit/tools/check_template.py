@@ -46,9 +46,15 @@ def main(path):
                    "First missing lines: %s" % (100 * kept, 100 * MIN_KEPT, " | ".join(m[:70] for m in missing)))
     for needle, why in (("window.SH_CONFIG", "the SH_CONFIG block"), ("function render(d)", "the render function"),
                         ("function drillRuns(", "the drill-down sheets"), ("@media print", "the print stylesheet"),
-                        ("prefers-color-scheme:dark", "dark mode")):
+                        ("prefers-color-scheme:dark", "dark mode"),
+                        (".shham[hidden]{display:none}", "the rule that hides the menu button when there is no menu")):
         if needle not in got:
             bad.append("missing " + why)
+    # the parts of the explanation sentences that the script fills from SH_CONFIG (spec §6.9)
+    for key, times in (("pages", 2), ("probed", 1), ("downRule", 1)):
+        if got.count('data-txt="%s"' % key) != times:
+            bad.append('an explanation sentence lost its <span data-txt="%s"> (expected %d): the text would no longer '
+                       "follow probeCount / downAfter" % (key, times))
     return bad
 
 

@@ -5,11 +5,12 @@ description: Build the Site Health screen ("בריאות האתר") for a websit
 
 # Site Health kit
 
-Everything is in this folder. Read `START-HERE.md` completely, to its last line
-(`<!-- EOF START-HERE.md -->`), before doing anything else, and follow it. It lists the other
-files to read and the rules of the work.
+Everything is in this folder, and nothing in it is edited. Read `START-HERE.md` completely, to its
+last line (`<!-- EOF START-HERE.md -->`), before doing anything else, and follow it. It lists the
+other files to read (each ends with its own `<!-- EOF <path> -->` line) and the rules of the work.
 
-Never retype `site_health.html`; copy it. Run the scripts and tests in this folder instead of
-rewriting them.
+Never retype `site_health.html`; copy it. The backend is a copy of `reference/` that you adapt
+outside this folder. Run the scripts and tests of the kit instead of rewriting them. You never
+hold a production secret: `OWNER-STEPS.md` says what the owner does and how you confirm it.
 
 <!-- EOF SKILL.md -->

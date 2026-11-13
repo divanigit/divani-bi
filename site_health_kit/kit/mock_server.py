@@ -13,7 +13,11 @@ in exactly the shapes described in spec/05-api-contract.md. Use it to:
 
 Roles (what the real server injects):  /site  owner ·  /site?role=vendor  read-only
   /site?role=noalerts  read-only without alerts ·  /status?k=demo-share-token  share link
-Scenarios: incident (default) · ok · empty (fresh install, no data) · error (data source down).
+Sessions: opening /site sets a mock session cookie. A data call without that cookie and without
+  a valid k= answers 401, as a real server does (so a share page that forgets its token gets no data).
+Scenarios: incident (default) · ok · empty (fresh install, no data) · error (data source down)
+  · hostile (the incident data with HTML and a javascript: address in every text field: the screen
+  must show it as text and never build an element, a link or a script from it).
 Switch while running:  GET /__scenario?name=empty
 
 This file is a test double. Nothing in it is a design for the real backend.
@@ -24,6 +28,7 @@ import hashlib
 import json
 import os
 import re
+import sys
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from zoneinfo import ZoneInfo
@@ -33,9 +38,17 @@ TZ = ZoneInfo("Asia/Jerusalem")          # the site's local time zone: every *_i
 SITE = "https://example.co.il"
 SHARE_TOKEN = "demo-share-token"
 PROBE = [("בית", "/"), ("קטגוריה", "/product-category/sofas/"), ("מוצר", "/product/sample-sofa/"), ("סל", "/cart/")]
-CORE = PROBE + [("קופה", "/checkout/")]
+CORE = PROBE + [("אודות", "/about/")]    # core pages open without signing in and without a filled cart
 SITE_ALERT_KINDS = {"down", "slow", "silent", "cert"}
+SCENARIOS = ("incident", "ok", "empty", "error", "hostile")
 STATE = {"scenario": "incident", "acked": set(), "html": os.path.join(HERE, "site_health.html")}
+ERR = {"error": "HTTP Error 503: Service Unavailable"}
+BUCKET_RE = re.compile(r"^\d{4}-\d{2}-\d{2}( \d{2}:00)?$")
+
+
+def incident():
+    """The 'hostile' scenario is the incident data, wrapped on its way out (see hostile())."""
+    return STATE["scenario"] in ("incident", "hostile")
 
 
 def rnd(*key):
@@ -89,7 +102,7 @@ def buckets(d0, d1, hours):
 
 def bad_hour(b):
     """In the 'incident' scenario a few hours are bad: that is where failures and slow pages cluster."""
-    return STATE["scenario"] == "incident" and rnd("bad", b.strftime("%Y-%m-%d %H")) < 0.06
+    return incident() and rnd("bad", b.strftime("%Y-%m-%d %H")) < 0.06
 
 
 def pct(vals, p):
@@ -98,7 +111,7 @@ def pct(vals, p):
 
 
 def lcp_for(page, when, strategy):
-    base = {"בית": 2300, "קטגוריה": 3300, "מוצר": 2800, "סל": 2100, "קופה": 2500}.get(page, 3000)
+    base = {"בית": 2300, "קטגוריה": 3300, "מוצר": 2800, "סל": 2100, "אודות": 2500}.get(page, 3000)
     if strategy == "desktop":
         base *= 0.45
     v = base * (0.85 + 0.4 * rnd("lcp", page, strategy, when.strftime("%Y-%m-%d %H")))
@@ -117,27 +130,46 @@ def crux(ms):
 
 # ---------------------------------------------------------------- alerts
 
+def span_he(minutes):
+    """A length of time in the words a person would say, by the rule of sh_span in reference/functions.sql
+    (spec §7.3): the nearest minute, never less than one; minutes under two hours, whole hours under two
+    days, whole days from there on: דקה, שתי דקות, 5 דקות, שעה, שעתיים, 7 שעות, יום, יומיים, 4 ימים."""
+    m = max(1, int(minutes + 0.5))
+    if m in (1, 2, 60, 1440):
+        return {1: "דקה", 2: "שתי דקות", 60: "שעה", 1440: "יום"}[m]
+    if m < 120:
+        return "%d דקות" % m
+    if m < 180:
+        return "שעתיים"
+    if m < 2880:
+        return "%d שעות" % (m // 60)
+    return "יומיים" if m < 4320 else "%d ימים" % (m // 1440)
+
+
 def alerts():
-    if STATE["scenario"] in ("ok", "empty", "error"):
+    if not incident():
         return []
     n = now()
-    rows = [
-        dict(id=41, kind="down", title="האתר לא עונה: סל", body="קוד 502\n%s/cart/" % SITE,
+    rows = [   # name = the page or the flow the alert is about; the recovery push is titled "חזר לתקין: <name>"
+        dict(id=41, kind="down", title="האתר לא עונה: סל", name="סל", body="קוד 502\n%s/cart/" % SITE,
              opened=n - dt.timedelta(minutes=14), closed=None),
-        dict(id=40, kind="slow", title="עמוד איטי: קטגוריה", body="4.6 שניות עד התוכן, פעמיים ברצף\n%s/product-category/sofas/" % SITE,
+        dict(id=40, kind="slow", title="עמוד איטי: קטגוריה", name="קטגוריה",
+             body="4.6 שניות עד התוכן, פעמיים ברצף\n%s/product-category/sofas/" % SITE,
              opened=n - dt.timedelta(hours=2, minutes=5), closed=None),
-        dict(id=39, kind="ops", title="רשימת הבוקר", body="3 הזמנות חסרות", opened=n - dt.timedelta(hours=5), closed=None),
-        dict(id=38, kind="down", title="האתר לא עונה: בית", body="לא ענה בזמן\n%s/" % SITE,
+        dict(id=39, kind="ops", title="רשימת הבוקר", name="רשימת הבוקר", body="3 הזמנות חסרות",
+             opened=n - dt.timedelta(hours=5), closed=None),
+        dict(id=38, kind="down", title="האתר לא עונה: בית", name="בית", body="לא ענה בזמן\n%s/" % SITE,
              opened=n - dt.timedelta(hours=9, minutes=40), closed=n - dt.timedelta(hours=9, minutes=33)),
-        dict(id=37, kind="cert", title="תעודת האבטחה פגה בעוד 13 ימים", body="example.co.il",
+        dict(id=37, kind="cert", title="תעודת האבטחה פגה בעוד 13 ימים", name="תעודת האבטחה", body="example.co.il",
              opened=n - dt.timedelta(days=2, hours=3), closed=n - dt.timedelta(days=1, hours=20)),
-        dict(id=36, kind="silent", title="המדידה נעצרה: מדידת מהירות — עמודי ליבה", body="אין מדידה כבר 95 דקות",
-             opened=n - dt.timedelta(days=3, hours=1), closed=n - dt.timedelta(days=3)),
+        dict(id=36, kind="silent", title="המדידה נעצרה: מדידת מהירות — עמודי ליבה", name="מדידת מהירות — עמודי ליבה",
+             body="אין מדידה כבר 95 דקות", opened=n - dt.timedelta(days=3, hours=1), closed=n - dt.timedelta(days=3)),
     ]
     for a in rows:
         end = a["closed"] or n
         a.update(open=a["closed"] is None, opened_il=il(a["opened"]), closed_il=il(a["closed"]) if a["closed"] else None,
-                 minutes=int((end - a["opened"]).total_seconds() // 60), acked=a["id"] in STATE["acked"])
+                 minutes=max(1, int(round((end - a["opened"]).total_seconds() / 60))),   # nearest minute, at least 1
+                 acked=a["id"] in STATE["acked"])
     return rows
 
 
@@ -160,14 +192,14 @@ def api_site(q, role):
     strategy = "desktop" if q.get("strategy") == "desktop" else "mobile"
     out = {"hours": hours, "from": d0.isoformat(), "to": d1.isoformat(), "strategy": strategy}
     sc = STATE["scenario"]
-    if sc == "error":
-        err = {"error": "HTTP Error 503: Service Unavailable"}
-        out.update({k: err for k in ("availability", "availability_series", "speed", "speed_series", "alerts_open",
-                                     "alerts_recent", "health", "product_issues")})
-        out["cert"] = err
+    if sc == "error":       # each of the nine parts failed alone: its key holds {"error": ...}, the answer is still 200
+        out.update({k: dict(ERR) for k in ("availability", "availability_series", "speed", "speed_series", "alerts_open",
+                                           "alerts_recent", "health", "product_issues", "cert")})
         return out
-    if sc == "empty":
-        out.update(availability=[], availability_series=[], speed=[], speed_series=[], alerts_open=[], alerts_recent=[],
+    if sc == "empty":       # a fresh install: the bottom-line row and the coverage row exist even before the first run
+        out.update(availability=[], availability_series=[], speed_series=[], alerts_open=[], alerts_recent=[],
+                   speed=[dict(section="שורה תחתונה", page="בית", url=SITE + "/", lcp_p50=None, checks=0, verdict=None),
+                          dict(section="כיסוי", checks=0, slow_runs=0)],
                    product_issues=[], cert=None,
                    health=[dict(flow_name=f, status="אין נתון", cadence=c, silent_txt=None,
                                 last_at=None, warn_minutes=w, late_minutes=l, note=None) for f, c, w, l in FLOWS])
@@ -202,7 +234,7 @@ def api_site(q, role):
                fail_pct="%.2f" % (100.0 * v["failed"] / v["checks"]) if v["checks"] else "0.00",
                p50_ms=pct(v["ms"], .5), p95_ms=int(pct(v["ms"], .95) * 1.5) if v["ms"] else None,
                last_fail_il=il(v["last"]) if v["last"] else None) for p, v in per.items()]
-    if sc == "incident" and hours >= 12:
+    if incident() and hours >= 12:
         s = now() - dt.timedelta(hours=9, minutes=40)
         if s > d0:
             av.append(dict(section="נפילות", outage_minutes=7, outage_start_il=il(s), outage_end_il=il(s + dt.timedelta(minutes=7))))
@@ -217,8 +249,8 @@ def api_site(q, role):
             sp.append(dict(section="ליבה", strategy=strat, page=p, url=SITE + path, lcp_p50=med, lcp_p95=pct(vals, .95),
                            score_med=max(18, min(99, int(118 - med / 45))), cls_med=round(0.02 + 0.1 * rnd("cls", p), 2),
                            ttfb_p50=int(240 + 500 * rnd("ttfb", p)), slow_runs=sum(1 for v in vals if v > 4000) * 4,
-                           checks=len(vals) * 4, crux_category=crux(int(med * 0.8)) if p != "קופה" else None,
-                           crux_lcp=int(med * 0.8) if p != "קופה" else None))
+                           checks=len(vals) * 4, crux_category=crux(int(med * 0.8)) if p != "אודות" else None,
+                           crux_lcp=int(med * 0.8) if p != "אודות" else None))   # a page with too little traffic
             if strat == strategy:
                 ss += [dict(page=p, url=SITE + path, bucket=name, lcp_p50=lcp_for(p, b0, strat)) for name, b0, _ in bks]
     home = [r for r in sp if r["page"] == "בית" and r["strategy"] == "mobile"][0]
@@ -240,21 +272,23 @@ def api_site(q, role):
     # --- health of the measurement itself
     n = now()
     stat = {"מדידת מהירות — סבב כל האתר": ("מתעכב", 22, "מאחר ב-2 דקות"), "טעינת מפת האתר": ("שקט", 4320, "שקט כבר 3 ימים"),
-            "מהירות אצל לקוחות": ("מתעכב", 400, "מאחר ב-40 דקות")} if sc == "incident" else {}
+            "מהירות אצל לקוחות": ("מתעכב", 400, "מאחר ב-40 דקות")} if incident() else {}
     out["health"] = [dict(flow_name=f, status=stat.get(f, ("תקין",))[0], cadence=c,
                           silent_txt=stat[f][2] if f in stat else None,
                           last_at=(n - dt.timedelta(minutes=stat[f][1] if f in stat else int(1 + w * 0.3))).isoformat(),
                           warn_minutes=w, late_minutes=l, note=None) for f, c, w, l in FLOWS]
     # --- broken products
     snap = n.strftime("%Y-%m-%d")
-    out["product_issues"] = [] if sc == "ok" else [
+    issues = [] if sc == "ok" else [
         dict(issue="בלי מחיר", name="שולחן אוכל נפתח 160", url=SITE + "/product/table-160/", snap_date=snap),
         dict(issue="בלי תמונה", name="כורסת טלוויזיה אפורה", url=SITE + "/product/armchair-grey/", snap_date=snap),
         dict(issue="לא במלאי", name="ספה תלת מושבית בז'", url=SITE + "/product/sofa-3-beige/", snap_date=snap),
         dict(issue="לא במלאי", name="מיטה זוגית 160 עם ארגז", url=SITE + "/product/bed-160/", snap_date=snap),
         dict(issue="אי אפשר להוסיף לסל", name="שידת לילה אלון", url=SITE + "/product/nightstand-oak/", snap_date=snap),
     ]
-    days = 23 if sc == "incident" else 71
+    # the order of spec §5.2: "לא במלאי" last, then by issue, then by name
+    out["product_issues"] = sorted(issues, key=lambda r: (r["issue"] == "לא במלאי", r["issue"], r["name"]))
+    days = 23 if incident() else 71
     out["cert"] = dict(host="example.co.il", issuer="Let's Encrypt R11", not_after=(n + dt.timedelta(days=days, hours=5)).isoformat(),
                        days_left=days, ok=True, err=None, checked_at=n.replace(hour=4, minute=3).isoformat())
     return out
@@ -283,7 +317,7 @@ def api_now(role):
     n = now()
     pages = []
     for p, path in PROBE:
-        ok = not (sc == "incident" and p == "סל")
+        ok = not (incident() and p == "סל")
         pages.append(dict(page=p, url=SITE + path, ok=ok, status=200 if ok else 502,
                           ms=int({"בית": 240, "מוצר": 310, "קטגוריה": 690, "סל": 1700}[p] * (0.9 + 0.3 * rnd("now", p, n.strftime("%H:%M")))) if ok else None))
     oks = [p["ok"] for p in pages]
@@ -299,7 +333,23 @@ def api_now(role):
 
 # ---------------------------------------------------------------- /api/site/drill
 
+def drill_request_ok(q):
+    """Spec §5.4: a missing or malformed parameter answers {"rows": []}. An empty value means "absent"."""
+    what, bucket = q.get("what"), q.get("bucket") or ""
+    if bucket and not BUCKET_RE.match(bucket):
+        return False
+    if what == "bucket":
+        return bool(bucket)
+    if what == "runs":
+        return bool(q.get("url"))
+    if what == "alert":
+        return (q.get("id") or "").isdigit()
+    return True
+
+
 def api_drill(q, role):
+    """The rows of one drill-down. The checks of the request itself (drill_request_ok, the error
+    scenario) are done by the HTTP handler, as a real server does them before it reads any data."""
     what = q.get("what", "")
     d0, d1, hours = window(q)
     n = now()
@@ -359,18 +409,46 @@ def api_drill(q, role):
 
 
 def api_messages(q):
-    if STATE["scenario"] in ("empty", "error", "ok"):
+    if not incident():
         return {"rows": []}
     rows = []
     for a in alerts():
         rows.append(dict(kind="התראה", title=a["title"], msg=a["body"], at_il=il(a["opened"]), sent=True, _t=a["opened"]))
         if a["closed"]:
-            rows.append(dict(kind="חזר לתקין", title=a["title"], msg="נמשך %d דקות" % a["minutes"], at_il=il(a["closed"]), sent=a["id"] != 37, _t=a["closed"]))
+            rows.append(dict(kind="חזר לתקין", title="חזר לתקין: " + a["name"],
+                             msg=a["title"] + "\nנמשך " + span_he(a["minutes"]),
+                             at_il=il(a["closed"]), sent=a["id"] != 37, _t=a["closed"]))
     n = now()
     rows.append(dict(kind="בוקר", title="בוקר טוב: האתר תקין", msg="זמינות 99.9% ב-24 שעות\nמהירות עמוד הבית: מהיר",
                      at_il=il(n.replace(hour=7, minute=30)), sent=True, _t=n.replace(hour=7, minute=30)))
     rows.sort(key=lambda r: r["_t"], reverse=True)
     return {"rows": [{k: v for k, v in r.items() if k != "_t"} for r in rows]}
+
+
+# ---------------------------------------------------------------- the "hostile" scenario
+
+PAYLOAD = '\'"><img class="xss" src="x" onerror="window.__xss=1"><b class="xss">x</b>&lt;'
+HOSTILE_URL = "javascript:window.__xss=1//" + PAYLOAD
+HOSTILE_KEEP = {"section", "bucket", "strategy", "from", "to"}     # what the screen sorts rows by; never shown
+HOSTILE_FILL = {"note", "silent_txt", "err"}                       # text fields that are usually null
+
+
+def hostile(v, key=None):
+    """Every text field of an answer, with markup in it. A screen that escapes its texts shows the
+    markup as text; one that does not builds an element with class "xss" and sets window.__xss."""
+    if isinstance(v, dict):
+        return {k: hostile(x, k) for k, x in v.items()}
+    if isinstance(v, list):
+        return [hostile(x, key) for x in v]
+    if key in HOSTILE_KEEP:
+        return v
+    if key == "url":
+        return HOSTILE_URL
+    if isinstance(v, str):
+        return v + PAYLOAD
+    if v is None and key in HOSTILE_FILL:
+        return PAYLOAD
+    return v
 
 
 # ---------------------------------------------------------------- http
@@ -380,38 +458,47 @@ class H(BaseHTTPRequestHandler):
         pass
 
     def _send(self, code, body, ctype="application/json; charset=utf-8", extra=None):
+        """One Cache-Control per answer (spec §5.7): no-store for data, no-cache for the HTML page."""
+        page = ctype.startswith("text/html")
+        if not page and not isinstance(body, (bytes, str)) and STATE["scenario"] == "hostile" and self.path.startswith("/api/"):
+            body = hostile(body)
         data = body if isinstance(body, bytes) else (body if isinstance(body, str) else json.dumps(body, ensure_ascii=False)).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(data)))
-        self.send_header("Cache-Control", "no-store")
+        self.send_header("Cache-Control", "no-cache, must-revalidate" if page else "no-store")
         for k, v in (extra or {}).items():
             self.send_header(k, v)
         self.end_headers()
         self.wfile.write(data)
 
     def _role(self, q):
-        """owner | vendor | noalerts | share. The real server derives it from the session cookie / share token."""
+        """owner | vendor | noalerts | share, or None = not signed in (the answer is then 401).
+        The real server derives it from the session cookie or from the share token."""
         if q.get("k"):
             return "share" if q["k"] == SHARE_TOKEN else None
-        m = re.search(r"mock_role=(\w+)", self.headers.get("Cookie", ""))
-        return m.group(1) if m else "owner"
+        m = re.search(r"mock_role=(owner|vendor|noalerts)\b", self.headers.get("Cookie", ""))
+        return m.group(1) if m else None
 
     def _page(self, role, share_key=""):
         html = open(STATE["html"], encoding="utf-8").read()
-        cfg = {"siteLabel": "example.co.il", "brand": "DEMO", "shareKey": share_key,
+        if "<!--SH_INJECT-->" not in html:
+            return None
+        cfg = {"siteLabel": "example.co.il", "brand": "DEMO", "shareKey": share_key, "downAfter": 1,
                "bucketNote": "עמוד הסל וקטגוריה תמיד איטיים יותר: הם לא נשמרים בזיכרון המטמון של האתר ונבנים מחדש בכל כניסה."}
         if role == "owner":
             cfg["links"] = [{"href": "#", "label": "מסך נוסף", "title": "דוגמה לכפתור נוסף"}]
             cfg["nav"] = [["g", "האתר"], ["a", "/site", "בריאות האתר"], ["a", "#", "מסך נוסף"]]
         r = {"owner": {}, "vendor": {"readonly": True}, "noalerts": {"readonly": True, "noAlerts": True}, "share": {"share": True}}[role]
         inject = "<script>window.SH_CONFIG=%s;window.SH_ROLE=%s;</script>" % (json.dumps(cfg, ensure_ascii=False), json.dumps(r))
-        if "<!--SH_INJECT-->" in html:
-            html = html.replace("<!--SH_INJECT-->", inject, 1)
-        else:   # a screen without the marker (for example the original it was derived from): old-style flags
-            old = "<script>window.OWL_ROLE={};%s</script>" % ("window.OWL_SHARE=1;" if role != "owner" else "")
-            html = html.replace("</head>", old + "</head>", 1)
-        return html
+        return html.replace("<!--SH_INJECT-->", inject, 1)
+
+    def _send_page(self, role, share_key="", cookie=None):
+        html = self._page(role, share_key)
+        if html is None:
+            return self._send(500, "the screen file has no <!--SH_INJECT--> marker in its <head>: %s" % STATE["html"],
+                              "text/plain; charset=utf-8")
+        return self._send(200, html, "text/html; charset=utf-8", {"Set-Cookie": cookie} if cookie else None)
 
     def do_GET(self):
         u = urllib.parse.urlsplit(self.path)
@@ -421,17 +508,17 @@ class H(BaseHTTPRequestHandler):
             role = q.get("role", "owner")
             if role not in ("owner", "vendor", "noalerts"):
                 role = "owner"
-            return self._send(200, self._page(role), "text/html; charset=utf-8",
-                              {"Set-Cookie": "mock_role=%s; Path=/; SameSite=Lax" % role, "Cache-Control": "no-cache, must-revalidate"})
+            return self._send_page(role, cookie="mock_role=%s; Path=/; SameSite=Lax" % role)     # the mock's session
         if path == "/status":
             if q.get("k") != SHARE_TOKEN:
-                return self._send(403, "<div dir='rtl' style='font-family:system-ui;padding:48px;text-align:center'>הקישור אינו תקין או שפג.</div>", "text/html; charset=utf-8")
-            return self._send(200, self._page("share", SHARE_TOKEN), "text/html; charset=utf-8")
+                return self._send(403, "<div dir='rtl' style='font-family:system-ui;padding:48px;text-align:center'>הקישור אינו תקין או שפג תוקפו.</div>", "text/html; charset=utf-8")
+            # a share page has no session: it lives on its token alone, so an earlier session is dropped here
+            return self._send_page("share", SHARE_TOKEN, cookie="mock_role=; Path=/; Max-Age=0; SameSite=Lax")
         if path == "/__scenario":
-            if q.get("name") in ("incident", "ok", "empty", "error"):
+            if q.get("name") in SCENARIOS:
                 STATE["scenario"] = q["name"]
                 STATE["acked"] = set()
-            return self._send(200, {"scenario": STATE["scenario"]})
+            return self._send(200, {"mock": "site-health-kit", "scenario": STATE["scenario"]})
         if path in ("/login", "/logout"):
             return self._send(200, "<div dir='rtl' style='font-family:system-ui;padding:48px'>דף הכניסה (דמה). <a href='/site'>חזרה</a></div>", "text/html; charset=utf-8")
         if not path.startswith("/api/"):
@@ -445,13 +532,20 @@ class H(BaseHTTPRequestHandler):
             d = api_now(role)
             return self._send(502 if "error" in d else 200, d)
         if path == "/api/site/drill":
-            d = api_drill(q, role)
-            return self._send(200, d) if d is not None else self._send(400, {"error": "what?"})
+            if q.get("what") not in ("fails", "bucket", "runs", "alert"):
+                return self._send(400, {"error": "what?"})
+            if STATE["scenario"] == "error":
+                return self._send(502, dict(ERR))
+            if not drill_request_ok(q):
+                return self._send(200, {"rows": []})
+            return self._send(200, api_drill(q, role))
         if path == "/api/messages":
             if q.get("k"):                     # the share token counts only on /status and the three data calls
                 return self._send(401, {"error": "auth"})
             if role != "owner":
                 return self._send(403, {"error": "auth"})
+            if STATE["scenario"] == "error":
+                return self._send(502, dict(ERR))
             return self._send(200, api_messages(q))
         return self._send(404, {"error": "not found"})
 
@@ -460,9 +554,10 @@ class H(BaseHTTPRequestHandler):
         q = {k: v[0] for k, v in urllib.parse.parse_qs(u.query).items()}
         if u.path != "/api/alerts/ack":
             return self._send(404, {"error": "not found"})
-        if q.get("k"):
+        role = self._role(q)
+        if q.get("k") or role is None:
             return self._send(401, {"error": "auth"})
-        if self._role(q) != "owner":
+        if role != "owner":
             return self._send(403, {"error": "auth"})
         try:
             body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
@@ -479,9 +574,18 @@ class H(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=8787)
-    ap.add_argument("--scenario", default="incident", choices=["incident", "ok", "empty", "error"])
+    ap.add_argument("--scenario", default="incident", choices=SCENARIOS)
     ap.add_argument("--html", default=STATE["html"], help="the screen file to serve (default: site_health.html next to this script)")
     a = ap.parse_args()
     STATE["scenario"], STATE["html"] = a.scenario, a.html
+    try:                                    # bind first: the address is printed only once it is really ours
+        httpd = ThreadingHTTPServer(("127.0.0.1", a.port), H)
+    except OSError as e:
+        print("port %d cannot be opened (%s). Another program is using it: try  python3 mock_server.py --port %d"
+              % (a.port, e.strerror or e, a.port + 1), file=sys.stderr)
+        sys.exit(1)
     print("mock site-health backend: http://localhost:%d/site   (scenario: %s)" % (a.port, a.scenario), flush=True)
-    ThreadingHTTPServer(("127.0.0.1", a.port), H).serve_forever()
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        pass

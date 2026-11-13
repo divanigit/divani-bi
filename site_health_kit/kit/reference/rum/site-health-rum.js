@@ -1,12 +1,30 @@
-/* Site Health RUM: one anonymous beacon per page view (LCP + TTFB). No cookies, no ids, no query strings.
-   Configure BEFORE this script: window.SiteHealthRum = { endpoint: 'https://collector.example.com/m', liveHost: 'example.com' };
-   Optional: sample (0..1, default 1), skip (RegExp of paths never measured). Add ?sh_test=1 to a URL to flag a test row. */
+/* Site Health RUM: one beacon per page view, from the visitor's browser to the Site Health dashboard.
+   What is sent: the page's path (never the query string), the time until its main content was painted (LCP),
+   the time until the first byte, how the page was opened, and whether the address carried ?sh_test=1.
+   Where to: cfg.endpoint, and nowhere else. No cookie and no id; the dashboard stores no address of the visitor.
+   Nothing is sent from cart, checkout, account and order pages, nor from a path that holds an "@" or
+   something that looks like a token (an unsubscribe link, an order-tracking page).
+   Configure BEFORE this script: window.SiteHealthRum = { endpoint: 'https://dashboard.example.com/m', liveHost: 'example.com' };
+   Optional: sample (0..1, default 1), skip (RegExp of paths never measured). Add ?sh_test=1 to a URL to flag a test row.
+   The same code is embedded in site-health-rum.php and site-health-rum.liquid: change all three together
+   (tests/test_rum_snippet.js compares them). */
 (function () {
   var cfg = window.SiteHealthRum || {};
   if (!cfg.endpoint || !window.PerformanceObserver || !navigator.sendBeacon) return;
   if ((PerformanceObserver.supportedEntryTypes || []).indexOf('largest-contentful-paint') < 0) return; // Safari < 26.2, Firefox < 122
   var skip = cfg.skip || /\/(checkout|cart|my-account|account|orders?|order-received|wp-admin|wp-login\.php)(\/|$)/i;
-  if (skip.test(location.pathname)) return;
+  function named(path) {                                                        // may the path name a person? (the server asks the same)
+    var p = path, runs, i;
+    try { p = decodeURIComponent(path); } catch (err) {}
+    if (/[@\x00-\x1f\x7f]/.test(p) || /[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}/i.test(p)) return true;   // an e-mail address, a UUID
+    runs = p.match(/[A-Za-z0-9_]+/g) || [];                                     // a hyphen ends a run: ordinary slugs survive
+    for (i = 0; i < runs.length; i++) {
+      if (/^[0-9a-f]{16,}$/i.test(runs[i])) return true;                        // 16 or more hexadecimal characters
+      if (runs[i].length >= 24 && /[A-Za-z]/.test(runs[i]) && /[0-9]/.test(runs[i])) return true;   // 24 or more, letters and digits mixed
+    }
+    return false;
+  }
+  if (skip.test(location.pathname) || named(location.pathname)) return;
   if (Math.random() >= (cfg.sample == null ? 1 : +cfg.sample)) return;          // sampling decided once per page view
 
   function start() {

@@ -1,22 +1,81 @@
-"""Fixtures for the SQL tests: a scratch database with schema.sql and functions.sql applied.
+"""What every test file shares: where the kit's own files are, and a scratch database with
+schema.sql and functions.sql applied.
 
-The admin connection comes from SH_TEST_ADMIN_URL (default: the local server). The scratch
-database gets a random name and is dropped at the end; no other database is touched.
+The kit. Some tests use two files of the unpacked kit, mock_server.py (the contract by example) and
+site_health.html (the screen). They are looked for in $SH_KIT_DIR; else in the parent folder of this
+backend (the tests run inside the kit); else in "site-health-kit" next to this backend (the backend
+was copied out of the kit: cp -r site-health-kit/reference site-health). The folder that is found
+is put on sys.path, so "import mock_server" works in every test file.
+
+The database. The admin connection comes from SH_TEST_ADMIN_URL (default: the local server). The
+scratch database gets a random name and is dropped at the end; no other database is touched. When
+no Postgres answers there, the whole run ends with one line that says so, without the address's
+password.
 """
 import datetime as dt
 import json
 import os
 import pathlib
 import secrets
+import sys
 
 import psycopg
 import pytest
-from psycopg.conninfo import make_conninfo
+from psycopg.conninfo import conninfo_to_dict, make_conninfo
 from psycopg.types.json import Jsonb
 
 REFERENCE = pathlib.Path(__file__).resolve().parent.parent
 ADMIN_URL = os.environ.get("SH_TEST_ADMIN_URL", "postgresql://postgres:shtest@127.0.0.1:5432/postgres")
 TIMINGS = []          # (label, seconds), filled by the performance test and printed in the summary
+
+
+def _find_kit():
+    named = os.environ.get("SH_KIT_DIR")
+    places = [pathlib.Path(named)] if named else [REFERENCE.parent, REFERENCE.parent / "site-health-kit"]
+    return next((place.resolve() for place in places
+                 if (place / "mock_server.py").is_file() and (place / "site_health.html").is_file()), None), places
+
+
+KIT, _KIT_PLACES = _find_kit()
+if KIT is not None:
+    sys.path.insert(0, str(KIT))
+
+
+def kit_dir():
+    """The folder of the unpacked kit. Without one the run ends here, with one line that says what to set."""
+    if KIT is None:
+        pytest.exit("The kit's own files (mock_server.py, site_health.html) were not found in %s. Set SH_KIT_DIR "
+                    "to the folder of the unpacked kit (site-health-kit) and run again."
+                    % " or ".join(str(place) for place in _KIT_PLACES), returncode=2)
+    return KIT
+
+
+def pytest_collectstart(collector):
+    # The two test files that import the kit's files. Asked here, before the file is imported: an exit
+    # from inside an import would be reported as a collection error, with a traceback for each file.
+    if isinstance(collector, pytest.Module) and collector.path.name in ("test_server.py", "test_sql.py"):
+        kit_dir()
+
+
+def _where(url):
+    """host:port of a connection string: all of it that a message may show."""
+    try:
+        info = conninfo_to_dict(url)
+    except psycopg.Error:
+        return "an address that is not a connection string"
+    return "%s:%s" % (info.get("host") or "localhost", info.get("port") or 5432)
+
+
+def connect(url, **options):
+    """psycopg.connect. When no server answers, the run ends with one line instead of one traceback per
+    test: a traceback of psycopg prints the connection string, and that holds the password."""
+    try:
+        return psycopg.connect(url, **options)
+    except psycopg.Error:
+        failure = ("No Postgres answers at SH_TEST_ADMIN_URL (%s). Start one, or set SH_TEST_ADMIN_URL to a server "
+                   "where the tests may create and drop a scratch database; see \"Running the tests\" in "
+                   "reference/README.md." % _where(ADMIN_URL))
+    pytest.exit(failure, returncode=2)           # outside the except: no chained traceback with the address
 
 
 def apply_sql(conn):
@@ -107,15 +166,15 @@ class Db:
 def database():
     """The connection string of a fresh scratch database."""
     name = "sh_test_" + secrets.token_hex(6)
-    with psycopg.connect(ADMIN_URL, autocommit=True) as admin:
+    with connect(ADMIN_URL, autocommit=True) as admin:
         admin.execute('create database "%s"' % name)
     url = make_conninfo(ADMIN_URL, dbname=name)
     try:
-        with psycopg.connect(url, autocommit=True) as conn:
+        with connect(url, autocommit=True) as conn:
             apply_sql(conn)
         yield url
     finally:
-        with psycopg.connect(ADMIN_URL, autocommit=True) as admin:
+        with connect(ADMIN_URL, autocommit=True) as admin:
             admin.execute('drop database if exists "%s" with (force)' % name)
 
 
@@ -126,7 +185,7 @@ def db(database):
     Every test starts with empty tables, and now() is the same instant for the whole test:
     a row written "ten minutes ago" is exactly ten minutes old when the test reads it back.
     """
-    conn = psycopg.connect(database)
+    conn = connect(database)
     try:
         empty(conn)               # also what another test committed; the rollback gives it back
         yield Db(conn)
@@ -139,15 +198,15 @@ def db(database):
 def committed(database):
     """A factory of Db objects that commit, for tests that need several sessions at once.
     The tables are emptied before and after."""
-    conns = [psycopg.connect(database, autocommit=True)]
+    conns = [connect(database, autocommit=True)]
     empty(conns[0])
 
-    def connect():
-        conns.append(psycopg.connect(database, autocommit=True))
+    def another():
+        conns.append(connect(database, autocommit=True))
         return Db(conns[-1])
 
     try:
-        yield connect
+        yield another
     finally:
         empty(conns[0])
         for conn in conns:

@@ -8,7 +8,8 @@ Part of the Site Health kit. The entry point and the rules of the work are in `S
 
 `site_health.html` implements all of this. The section exists so you can review a change against
 it, and so you know what must stay true if the target project forces you to move the screen into
-another framework. In that case port it one to one and make `check_screen.js` pass.
+another framework. In that case port it one to one and make `check_screen.js` pass: its group B
+feeds the page canned answers and checks the rules below one by one, against any server.
 
 ### 6.1 Layout, top to bottom
 
@@ -25,7 +26,7 @@ another framework. In that case port it one to one and make `check_screen.js` pa
 9. Card **מהירות לאורך זמן** — legend of pages (tap to hide/show a line), line chart of median LCP per bucket with dashed reference lines at 2.5 s and 4 s.
 10. Card **העמודים העיקריים** — table of the core pages for the chosen strategy.
 11. Card **העמודים הכבדים באתר** — coverage line + the 10 heaviest pages.
-12. Card **מוצרים שבורים באתר** — counts per issue + table (first 60).
+12. Card **מוצרים שבורים באתר** — counts per issue + table (the first 60 on the screen, all of them in print).
 13. Card **תעודת האבטחה (המנעול)** — days left + state.
 14. Card **התראות** — folded by default; the alerts of the period.
 15. Card **הודעות שנשלחו לטלפון** — folded by default; the push log.
@@ -46,6 +47,10 @@ explanation true: if you change a cadence or a rule, change its sentence.
 Below: one chip per probe page (`<page> <time>` or `<page> לא עונה (status)`), colored by the
 server-response thresholds; then `עודכן HH:MM:SS · רענון אוטומטי כל 60 שניות · N התראות פתוחות`.
 The card reloads every 60 seconds on its own timer, also while a drill-down is open.
+When `/api/site/now` fails, the tiles are replaced by one grey tile `הנתון לא זמין כרגע`.
+
+A count of one is written in singular Hebrew everywhere on the screen (`מדידה אחת`, `כשל אחד`,
+`התראה פתוחה אחת`, `יום אחד`, `נבדק לפני שנייה`), never "1 מדידות".
 
 ### 6.3 Interactions
 
@@ -73,6 +78,19 @@ The main screen reloads every 60 seconds, **except while a sheet is open**. A re
 after a newer one started is discarded (sequence guard). While loading, a thin progress bar and a
 pill "טוען נתונים…" show, and the cards dim.
 
+**A failed read is never shown as good news.** When `/api/site` fails (any status that is not 2xx
+except 401, or no answer), or one of its parts is `{"error": …}` (§5.2), every tile and card that
+depends on the missing data says `הנתון לא זמין כרגע` instead of 0, "אין התראות" or "עדיין לא
+נבדק"; the numbers of the previous load are removed; the red bar is left as it was. The empty-state
+texts ("אין התראות בתקופה. זה טוב.") appear only for data that arrived and is empty. After a failed
+read the screen (and likewise the "עכשיו" card) tries once more 5 seconds later, for a phone that
+woke up before its network did, and then goes back to the 60-second rhythm.
+
+The click area of a chart point is never wider than the distance to its neighbour, so in a long
+period (90 days, a 400-day range) a click on a point opens that day and not the next one.
+
+The uptime tile reads `100%` only when no check failed; otherwise two decimals, at most `99.99%`.
+
 ### 6.4 The red alert bar
 
 - Shown only for open alerts with `acked == false`. Text: `⚠ N התראות פעילות` (or `התראה פעילה`).
@@ -81,20 +99,25 @@ pill "טוען נתונים…" show, and the cards dim.
   title dropped) + `· מאז <opened_il>`, a link `לפתוח את העמוד ↗` when the body contains a URL, and ✕.
 - Above the list: `לסמן הכול` and `מחק מסומנות (N)`.
 - ✕ or bulk delete removes the rows **immediately**, without reloading the screen and without
-  folding the list; the request is sent in the background; on failure the rows come back.
+  folding the list; one request for all the marked rows is sent in the background; on failure the
+  rows come back.
 
 ### 6.5 Controls
 
 - A period button sets `h` and clears the custom dates. `הצג` needs a start date; an empty end
-  date means today; reversed dates are swapped.
+  date means today (the date on the viewer's own calendar, not the UTC date); reversed dates are
+  swapped.
 - `טלפון` / `מחשב` changes only the speed figures. Availability is the same for both.
 - `ייצא PDF` calls the browser's print. The print stylesheet (A4 landscape) hides the controls
-  and unfolds everything: all alerts, all table rows, folded cards open.
+  and the "יציאה" link and unfolds everything: all alerts, all table rows (also the broken
+  products beyond the first 60), folded cards open. It always prints dark text and the light
+  status colours on white, also from a device in dark mode.
 
 ### 6.6 Look
 
 - Hebrew, right to left. Numbers in tables are left-aligned, LTR, tabular figures.
-- Phone first: max width 900 px, cards with 14 px radius, touch targets at least 44 px high.
+- Phone first: max width 900 px, cards with 14 px radius. The period, strategy and date controls
+  are 44 px high; the other buttons are 30 to 38 px high.
 - Light and dark by `prefers-color-scheme`; the colors are CSS variables at the top of the file.
 - No element may cause horizontal scrolling on a phone; wide tables scroll inside their card.
 - System font stack. No web fonts, no external requests at all.
@@ -104,7 +127,7 @@ pill "טוען נתונים…" show, and the cards dim.
 | `SH_ROLE` | Effect |
 |---|---|
 | `{}` | everything |
-| `{readonly: true}` | no ✕, no checkboxes, no bulk delete, no message-log card, no menu, no extra links |
+| `{readonly: true}` | no ✕, no checkboxes, no bulk delete, no message-log card (and no call to `/api/messages`), no menu button, no extra links |
 | `{readonly: true, noAlerts: true}` | also no red bar, no alerts card, no `התראות פתוחות` tile |
 | `{share: true}` | as read-only, and no "יציאה" link |
 
@@ -117,7 +140,11 @@ PageSpeed results with `locale=he` so that fallback is Hebrew too (§7.6).
 ### 6.9 What you may change in `site_health.html`
 
 - Values of `SH_CONFIG` (or inject them from the server).
-- Explanation sentences, when a cadence or rule really differs on this site.
+- Explanation sentences, when a cadence or rule really differs on this site. Two things need no
+  edit, because they follow the configuration: the number of probe pages (`probeCount`), and the
+  rule of the "down" alert, both in the explanation of the alerts card and in the alert sheet
+  (`downAfter`: 1 = "כל כשל בודד מתריע", 2 = "רק אחרי שתי בדיקות רצופות שנכשלו"). When you edit
+  an explanation sentence, keep its `<span data-txt="…">` parts: the script fills them.
 - Entries of the `OPP` table and of the flow explanations in `drillHealth`.
 - The color variables, if the owner asks for their brand color (`--brand`).
 

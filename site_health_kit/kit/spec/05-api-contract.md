@@ -14,23 +14,31 @@ Conventions:
 
 - All `*_il` fields and `at` strings are **preformatted in the site's local time zone** by the
   backend, as `DD.MM HH:MM` (24-hour). The screen prints them unchanged.
+- The ISO 8601 fields (`from`, `to`, `last_at`, `not_after`, `checked_at`) must carry a UTC offset
+  (`+02:00` or `Z`). The screen shows them in the **viewer's** local time, so a viewer in another
+  country reads these few times on his own clock and the `*_il` times on the site's clock.
 - `bucket` is a local-time string: `YYYY-MM-DD HH:00` for hourly buckets, `YYYY-MM-DD` for daily
   buckets. Rule: a window of at most 72 whole hours (`to − from < 73 hours`, which covers the extra
   minute of §5.1) uses hourly buckets, a longer one daily buckets. The screen tells them apart by
   length (`> 10` = hourly) and reads characters 5–7 (month), 8–10 (day), 11–16 (time).
-- Durations are integers in **milliseconds** unless stated. `null` means "no value" and is always
-  tolerated; the screen prints `—`.
+- Durations are integers in **milliseconds** unless stated. `null` means "no value" and is
+  tolerated wherever a field is marked nullable below; the screen prints `—`. Never null: `checks`,
+  `failed`, `minutes`, `outage_minutes`, `warn_minutes`, `late_minutes` (the screen would print
+  the word "null").
 - Rows are displayed in the order the server sends them. Sort on the server as stated per list.
-- Counts, ids, durations and scores are JSON **numbers**. The screen escapes every text field but
-  writes numeric fields into the page as they are, so a numeric field must never carry text that
-  came from outside (a visitor's beacon, a page of the site).
+- Counts, ids, durations and scores are JSON **numbers**; so are the HTTP `status` of a page or of
+  a push, `cls` / `cls_med` and `days_left`. The screen escapes every text field but writes
+  numeric fields into the page as they are, so a numeric field must never carry text that came
+  from outside (a visitor's beacon, a page of the site).
+- Every `url` is an absolute `http://` or `https://` address. The screen makes a link only of
+  such an address; anything else is shown as plain text.
 - The Hebrew literals marked *(literal)* are compared by the screen character for character.
 
 ### 5.1 The time window (shared by all calls)
 
 Query parameters: either `h=<hours>` (integer; the screen sends 24, 168, 720 or 2160) or
 `f=<YYYY-MM-DD>&t=<YYYY-MM-DD>` (local dates, `t` inclusive: the window ends at the end of day `t`).
-Rules (`_range_args` in the production server):
+Rules (`window()` in `reference/server.py`):
 
 - With `f`: window = `[f 00:00 local, (t + 1 day) 00:00 local)`, by calendar days in the site's
   time zone (a day with a clock change is 23 or 25 hours long). Without `t`: until now. If the end
@@ -57,7 +65,8 @@ Rules (`_range_args` in the production server):
   ],
 
   "availability_series": [              // one row per bucket that has checks; sort: bucket ascending
-    { "bucket": "2026-11-13 09:00", "checks": 240, "failed": 1, "ms_p50": 310, "ms_p95": 900 }
+    { "bucket": "2026-11-13 09:00", "checks": 240, "failed": 1,
+      "ms_p50": 310, "ms_p95": 900 }    // null when no check of the bucket answered
   ],
 
   "speed": [
@@ -97,7 +106,7 @@ Rules (`_range_args` in the production server):
   "alerts_recent": [                    // alerts that were open at any time inside the window; sort: newest first
     { "id": 38, "kind": "down", "title": "…", "body": "…", "open": false,
       "opened_il": "13.11 01:20", "closed_il": "13.11 01:27",   // closed_il null while open
-      "minutes": 7 }                    // duration so far (open) or total (closed)
+      "minutes": 7 }                    // so far (open) or total (closed): nearest minute, at least 1
   ],
 
   "health": [                           // one row per measurement flow of §3; sort: the order of §3
@@ -122,10 +131,15 @@ Rules (`_range_args` in the production server):
 
 **Each part fails alone.** The eight lists and `cert` are nine parts, computed independently and
 in parallel; if one fails, its key holds `{"error": "<text>"}` instead of its value, and the rest
-of the answer is still returned with status 200. The screen treats a non-list as empty. Error
-texts must not contain host names, user names or keys.
+of the answer is still returned with status 200. The text is the database's own message for a
+database error and only the error's type name for anything else (§8.2). **A part that did not arrive is never shown as
+"nothing":** every tile and card that depends on it says `הנתון לא זמין כרגע` (the product card:
+`הבדיקה לא זמינה.`) instead of 0, "אין התראות" or "עדיין לא נבדק", and the red bar stays as it
+was. An empty list (`[]`) and `"cert": null` are the real "nothing" and get the empty-state texts.
+Error texts must not contain host names, user names or keys.
 
-Issue labels used in production: `בלי מחיר`, `בלי תמונה`, `לא במלאי`, `אי אפשר להוסיף לסל`.
+Issue labels of the reference collectors: `בלי מחיר`, `בלי תמונה`, `לא במלאי`, `אי אפשר להוסיף לסל`.
+A collector may use other labels; the screen escapes them like any text.
 
 ### 5.3 `GET /api/site/now` → the "עכשיו" card (refreshed every 60 s)
 
@@ -144,13 +158,14 @@ Issue labels used in production: `בלי מחיר`, `בלי תמונה`, `לא �
   "speed": { "lcp_ms": 2500, "score": 63, "checked_at": "<ISO 8601>" },   // latest successful lab run, home page, phone; {} if none
   "alerts_open": 3,        // count of open alerts, seen ones included (after role filtering)
   "rum_src": { "n": 1000,                           // the last 1000 real-user rows: where they came from
-               "hosts": [ { "host": "live", "n": 964 }, { "host": "staging.example.co.il", "n": 36 } ],
+               "hosts": [ { "host": "live", "n": 964 }, { "host": "staging.example.co.il", "n": 36 } ],   // largest first, at most 5
                "cols": ["created_at", "is_test", "lcp_ms", "path", "site"],   // diagnostic only
                "test": 12 }                         // how many of them are flagged as test. null when unavailable
 }
 ```
 
-On failure: status 502 with `{"error": "<text>"}`; the screen writes "לא הצלחתי לטעון את "עכשיו"".
+On failure: status 502 with `{"error": "<text>"}`; the screen writes "לא הצלחתי לטעון את "עכשיו""
+and replaces the tiles with one grey tile `הנתון לא זמין כרגע` (a "פעיל" of a minute ago does not stay).
 For a vendor or a share link `alerts_open` is recounted from the filtered list of open alerts
 (§8.2); if that second read fails the answer is 502, never a false 0.
 
@@ -163,21 +178,29 @@ For a vendor or a share link `alerts_open` is recounted from the filtered list o
 | `runs` | `url` (required), `strategy`, `bucket` (optional) | `{ "ok": true, "err": null, "at_il": "13.11 10:45", "lcp_ms": 2400, "score": 64, "ttfb_ms": 410, "bytes": 3400000, "cls": 0.03, "crux_category": "FAST", "crux_lcp_ms": 2100, "opps": [ { "id": "render-blocking-resources", "title": "…", "ms": 600 } ] }` — the individual lab runs of one page (every run of that URL and strategy in the window), **newest first**; a failed run is `{ok: false, err, at_il}`. `opps` = what slows the page, with the estimated saving in ms; it is filled only on the newest 100 successful runs and is `[]` on older ones (it is nine tenths of a run's size, and the sheet's "what slows the page" should describe the page as it is now). |
 | `alert` | `id` (required) | one row: the `alerts_recent` fields plus `"fails": [ { "at": "13.11 11:02", "page": "סל", "status": 502, "err": null } ]` (the failed checks behind a `down` alert, oldest first, at most 500; `status` is present only when the failure was an HTTP status, because the sheet prints "קוד <status>" whenever it is there; otherwise `err` carries the reason) and `"sent": [ { "event": "open", "status": 200, "at": "13.11 11:02" } ]` (pushes with a final result; `event` is `open` or `close`; `status` 200 = accepted by the push service). |
 
+The screen sends `page` and `bucket` on every `fails` call and `bucket` on every `runs` call,
+also when it has nothing to say: `what=fails&page=&bucket=&h=24`. **An empty value means the
+parameter is absent** (all pages, the whole window), not a malformed one.
+
 Unknown `what`: status 400 `{"error": "what?"}`. A missing or malformed parameter (`id` not a
-number, `url` empty, a required `bucket` missing, any `bucket` not in one of the two bucket
-formats): `{"rows": []}`, without touching the database.
-Backend failure: status 502 `{"error": "<text>"}`.
+number, `url` empty, a required `bucket` missing or empty, a non-empty `bucket` that is not in one
+of the two bucket formats): `{"rows": []}`, without touching the database.
+Backend failure: status 502 `{"error": "<text>"}`; the sheet then says "לא הצלחתי לטעון".
 
 ### 5.5 `GET /api/messages?(h | f,t)` → the push log; `{"rows": [...]}`, newest first
 
 `{ "kind": "התראה", "title": "…", "msg": "…", "at_il": "13.11 11:02", "sent": true }` — `kind` is
 `התראה` (shown red), `חזר לתקין` (green) or any other label such as `בוקר` (grey). `sent: false`
-adds "לא נשלחה".
+adds "לא נשלחה". A recovery row reads, for example, title `חזר לתקין: סל` and the two-line msg
+`האתר לא עונה: סל\nנמשך 7 דקות` (the alert's title, then how long it lasted; §7.8).
+Backend failure: status 502 `{"error": "<text>"}`; the card then says "לא הצלחתי לטעון את ההודעות",
+never "לא נשלחו הודעות בתקופה".
 
 ### 5.6 `POST /api/alerts/ack` → "ראיתי"
 
-Body `{"ids": [41, 40]}` or `{"id": 41}`. Ids may arrive as numbers or as digit strings; only the
-first 200 are processed. Marks each open, not yet seen alert as seen by the current user (the
+Body `{"ids": [41, 40]}` or `{"id": 41}`, sent with `Content-Type: application/json` (the screen
+does; any other type answers 400, §8.2). Ids may arrive as numbers or as digit strings; only the
+first 200 are processed, and a number above 2^63 − 1 is ignored like any unusable id. Marks each open, not yet seen alert as seen by the current user (the
 user's label is stored). Answer `{"ok": true, "n": <alerts actually marked>}`; a body without a
 usable id → 400 `{"error": "bad request"}`.
 The screen removes the rows at once and only reloads if the call fails.
@@ -187,6 +210,12 @@ The screen removes the rows at once and only reloads if the call fails.
 - Not logged in (and no valid share token): **401** `{"error": "auth"}` on every data call. The
   screen then goes to `loginPath` (or shows a message in share mode).
 - Role not allowed: **403** `{"error": "auth"}`.
+- A share-link call (`k=`) from an address that is blocked after too many wrong tokens or
+  passwords (§8.2): **429** `{"error": "too many attempts"}`. An unforeseen failure of the server:
+  **500** `{"error": "server error"}`. The screen treats both as a failed read.
+- Any other answer of `/api/site` that is not 2xx, or a 2xx answer that is `{"error": …}`, is a
+  failed read: the subtitle says "לא הצלחתי לטעון את הנתונים" and every card says
+  `הנתון לא זמין כרגע`. The numbers of the previous load do not stay on the screen.
 - Data answers: `Cache-Control: no-store`. The HTML page: `Cache-Control: no-cache, must-revalidate`.
 
 <!-- EOF spec/05-api-contract.md -->

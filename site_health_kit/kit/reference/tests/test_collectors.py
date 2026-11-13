@@ -1,22 +1,31 @@
-"""Tests of collectors.py and manage.py.
+"""Tests of collectors.py, manage.py and watchdog.py.
 
-Everything runs against a local fake website (fake_site.py: pages, sitemaps, a WooCommerce and a
-Shopify catalogue, a PageSpeed endpoint, an ntfy server) and a scratch database with schema.sql and
-functions.sql applied for real (conftest.py). The collectors reach that database through db.rpc and
-DATABASE_URL, exactly as in production. No test talks to anything outside this machine.
+Everything runs against a local fake website (fake_site.py: pages, sitemaps, a WooCommerce or a
+Shopify catalogue, a PageSpeed endpoint, an ntfy server, a heartbeat service) and a scratch database
+with schema.sql and functions.sql applied for real (conftest.py). The collectors reach that database
+through db.rpc and DATABASE_URL, exactly as in production. No test talks to anything outside this
+machine. The fake site lives on 127.0.0.1, so the fixtures set SH_ALLOW_PRIVATE=1; the tests of
+that very rule take it away again.
 
     cd reference && python3 -m pytest -q tests/test_collectors.py
 """
 import gzip
+import http.server
 import json
 import logging
+import os
 import queue
 import re
+import shutil
 import socket
+import ssl
+import subprocess
 import sys
 import threading
 import time
 import urllib.parse
+import urllib.request
+import zipfile
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -27,14 +36,17 @@ REFERENCE = Path(__file__).resolve().parent.parent
 sys.path[:0] = [str(REFERENCE), str(REFERENCE / "tests")]
 
 import collectors  # noqa: E402
+import conftest  # noqa: E402
 import db  # noqa: E402
 import manage  # noqa: E402
-from fake_site import PAGES, FakeSite, sitemap_index, urlset  # noqa: E402
+import watchdog  # noqa: E402
+from fake_site import PAGES, PSI_ERRORS, SHOPIFY_PAGES, FakeSite, sitemap_index, urlset  # noqa: E402
 
 UTC = timezone.utc
 ZONE = ZoneInfo("Asia/Jerusalem")                 # the time zone of the fake site's configuration
-ENVIRONMENT = ("PAGESPEED_KEY", "NTFY_TOPIC", "NTFY_URL", "NTFY_TOKEN", "DASHBOARD_URL", "HEARTBEAT_URL",
-               "SUPABASE_URL", "SUPABASE_SECRET_KEY", "DATABASE_URL")
+ENVIRONMENT = ("PAGESPEED_KEY", "PAGESPEED_URL", "NTFY_TOPIC", "NTFY_URL", "NTFY_TOKEN", "DASHBOARD_URL",
+               "HEARTBEAT_URL", "SH_ALLOW_PRIVATE", "SH_SITEMAP_MB", "SUPABASE_URL", "SUPABASE_SECRET_KEY",
+               "DATABASE_URL")
 TOPIC = "sh-TestTopic0123456789abcd"
 KEY = "AIzaTestKey-not-a-real-one"
 PROBE_FLOW, CORE_FLOW, ROTATION_FLOW = "בודק זמינות האתר", "מדידת מהירות — עמודי ליבה", "מדידת מהירות — סבב כל האתר"
@@ -57,7 +69,8 @@ def site(server, monkeypatch):
     server.reset()
     for name in ENVIRONMENT:
         monkeypatch.delenv(name, raising=False)
-    monkeypatch.setattr(collectors, "PSI_URL", server.url + "/pagespeedonline/v5/runPagespeed")
+    monkeypatch.setenv("SH_ALLOW_PRIVATE", "1")                           # the site under test is on 127.0.0.1
+    monkeypatch.setenv("PAGESPEED_URL", server.url + "/pagespeedonline/v5/runPagespeed")
     monkeypatch.setattr(collectors, "PSI_WAITS", (0.01, 0.01))
     monkeypatch.setattr(collectors, "SHOPIFY_PAUSE", 0)
     return server
@@ -100,6 +113,20 @@ def scheduler(monkeypatch):
 
 def page(site, path, **more):
     return {"name": PAGES[path], "url": site.url + path, **more}
+
+
+@pytest.fixture
+def inner():
+    """A second server on this machine: it stands for a service inside the dashboard host's own
+    network, which no answer of the monitored site may ever make the collectors talk to."""
+    service = FakeSite().start()
+    yield service
+    service.stop()
+
+
+def elsewhere(service, path="/admin/secret-panel"):
+    """An address of that service under another host name than the site's (which is 127.0.0.1)."""
+    return "http://localhost:%s%s" % (service.url.rsplit(":", 1)[1], path)
 
 
 def this_minute():
@@ -165,6 +192,8 @@ def test_a_page_that_answers_200_is_ok(site, monkeypatch):
 @pytest.mark.parametrize("broken, fail, status, err", [
     ({"status": 502}, "http", 502, None),
     ({"status": 404}, "http", 404, None),
+    ({"status": 204}, "http", 204, None),                                 # 200 and nothing else: not any 2xx
+    ({"status": 206}, "http", 206, None),
     ({"hang": 3}, "timeout", None, "no answer within 0.4 seconds"),
     ({"drop": True}, "connect", None, "RemoteDisconnected: Remote end closed connection without response"),
     ({"body": "<html><body>עמוד אחר לגמרי</body></html>"}, "content", 200, "the expected text is not on the page"),
@@ -213,6 +242,16 @@ def test_ms_is_the_time_until_the_headers_not_the_body(site):
     assert row["ok"] and 300 <= row["ms"] < 600
 
 
+def test_the_expected_text_is_looked_for_in_the_first_200_kb(site):
+    padding = "<!-- %s -->" % ("x" * 199_000)
+    site.broken["/product/sample-sofa/"] = {"body": "<html><body>%s<button>הוספה לסל</button></body></html>" % padding}
+    assert collectors.probe_check(page(site, "/product/sample-sofa/", expect="הוספה לסל"), 5)["ok"] is True
+    site.broken["/product/sample-sofa/"] = {"body": "<html><body>%s%s<button>הוספה לסל</button></body></html>"
+                                                    % (padding, "y" * 2000)}
+    row = collectors.probe_check(page(site, "/product/sample-sofa/", expect="הוספה לסל"), 5)
+    assert (row["ok"], row["fail"]) == (False, "content")                 # it is there, beyond what is read
+
+
 def test_a_body_that_does_not_arrive_in_time_is_a_timeout(site):
     site.broken["/product/sample-sofa/"] = {"body_delay": 2}
     row = collectors.probe_check(page(site, "/product/sample-sofa/", expect="הוספה לסל"), 0.4)
@@ -238,7 +277,7 @@ def _headers(values):
 
 def test_rounds_are_stored_with_their_kind_under_one_scheduled_moment(sql, site):
     config = collectors.read_config()
-    assert [p["name"] for p in config.probe] == ["בית", "קטגוריה", "מוצר", "סל"]         # the checkout is not probed
+    assert [p["name"] for p in config.probe] == ["בית", "קטגוריה", "מוצר", "סל"]         # the fifth core page is not probed
     at = this_minute() - minutes(2)
     site.broken["/cart/"] = {"status": 502}
 
@@ -277,7 +316,7 @@ def test_every_kind_of_failure_is_stored_with_its_code(sql, site):
 
 def test_the_two_timeouts_of_a_round(site, monkeypatch):
     seen = []
-    monkeypatch.setattr(collectors, "probe_check", lambda page, timeout: seen.append(timeout) or {"ms": 1})
+    monkeypatch.setattr(collectors, "probe_check", lambda page, timeout, hosts=(): seen.append(timeout) or {"ms": 1})
     monkeypatch.setattr(db, "rpc", lambda fn, params: {"n": 1})
     collectors.probe_round([page(site, "/")], "full", T0)
     collectors.probe_round([page(site, "/")], "light", T0)
@@ -287,8 +326,8 @@ def test_the_two_timeouts_of_a_round(site, monkeypatch):
 def test_a_round_ends_even_when_a_check_never_returns(sql, site, monkeypatch):
     real = collectors.probe_check
     monkeypatch.setattr(collectors, "STUCK_GRACE", 0.2)
-    monkeypatch.setattr(collectors, "probe_check",
-                        lambda page, timeout: time.sleep(5) if page["name"] == "סל" else real(page, timeout))
+    monkeypatch.setattr(collectors, "probe_check", lambda page, timeout, hosts=():
+                        time.sleep(5) if page["name"] == "סל" else real(page, timeout, hosts))
     started = time.monotonic()
     result = collectors.probe_round(collectors.read_config().probe, "full", this_minute(), timeout=0.3)
     assert time.monotonic() - started < 2
@@ -327,13 +366,13 @@ def test_a_failing_page_opens_one_alert_and_one_push_and_its_recovery_closes_it(
     done = collectors.alert_tick(pusher)
     assert sql.rpc("sh_alerts_open") == []
     assert sql.sql("select count(*) from sh_alerts where closed_at is not null") == [(1,)]
-    assert [(d["title"], d["status"]) for d in done] == [("האתר לא עונה: סל", 200)]
-    assert site.pushes[1]["json"] == {
-        "topic": TOPIC, "title": "חזר לתקין: האתר לא עונה: סל", "message": "נמשך 0 דקות", "priority": 2,
+    assert [(d["title"], d["status"]) for d in done] == [("חזר לתקין: סל", 200)]
+    assert site.pushes[1]["json"] == {                                    # title and text as the database wrote them
+        "topic": TOPIC, "title": "חזר לתקין: סל", "message": "האתר לא עונה: סל\nנמשך דקה", "priority": 2,
         "tags": ["white_check_mark"], "click": "https://dash.example/site"}
     window = {"p_from": now - minutes(5), "p_to": now + minutes(2)}
     assert [(m["kind"], m["title"], m["sent"]) for m in sql.rpc("sh_messages", **window)] == [
-        ("חזר לתקין", "האתר לא עונה: סל", True), ("התראה", "האתר לא עונה: סל", True)]
+        ("חזר לתקין", "חזר לתקין: סל", True), ("התראה", "האתר לא עונה: סל", True)]
     drill = sql.rpc("sh_drill_alert", p_id=alerts[0]["id"])[0]
     assert [(s["event"], s["status"]) for s in drill["sent"]] == [("open", 200), ("close", 200)]
 
@@ -432,6 +471,38 @@ def test_an_unreachable_push_service_is_a_failed_attempt_and_the_topic_is_never_
     assert "push: ntfy could not be reached (ConnectionRefusedError)" in caplog.text and TOPIC not in caplog.text
 
 
+def test_a_refused_push_is_logged_with_its_status_and_never_with_the_topic(sql, site, phone, caplog):
+    owe(sql, 2)
+    pusher = collectors.Pusher()
+    site.ntfy_status = 403
+    assert [d["status"] for d in collectors.alert_tick(pusher)] == [403, 403]
+    assert caplog.text.count("push: ntfy refused the push (HTTP 403: the fake ntfy was told to refuse)") == 2
+    assert [record.levelname for record in caplog.records if "refused the push" in record.message] == ["WARNING"] * 2
+    site.ntfy_status, site.ntfy_error = 429, "topic %s: too many requests" % TOPIC      # an answer that names the topic
+    lapse_claims(sql)
+    collectors.alert_tick(pusher)
+    assert "push: ntfy refused the push (HTTP 429: topic (topic): too many requests)" in caplog.text
+    assert TOPIC not in caplog.text
+    site.ntfy_status = 200                                                # an accepted push says nothing
+    lapse_claims(sql)
+    before = len(caplog.records)
+    assert [d["status"] for d in collectors.alert_tick(pusher)] == [200, 200] and len(caplog.records) == before
+
+
+def test_without_ntfy_url_the_push_goes_to_ntfy_sh(monkeypatch):
+    for name in ("NTFY_URL", "NTFY_TOKEN", "DASHBOARD_URL"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("NTFY_TOPIC", TOPIC)
+    asked = []
+    monkeypatch.setattr(collectors, "fetch", lambda url, **how: asked.append((url, how))
+                        or collectors.Answer(200, _headers({}), b"{}", 0.1))
+    assert collectors.Pusher().publish("כותרת", "גוף") == 200
+    url, how = asked[0]
+    assert url == "https://ntfy.sh/" and how["method"] == "POST" and how["redirects"] == 0
+    assert not how.get("public") and not how.get("hosts")                 # a service of the environment, not the site
+    assert json.loads(how["data"]) == {"topic": TOPIC, "title": "כותרת", "message": "גוף", "priority": 3, "tags": []}
+
+
 def test_without_a_topic_nothing_is_sent_and_every_message_is_settled_as_not_sent(sql, site, monkeypatch):
     monkeypatch.setenv("NTFY_URL", site.url + "/ntfy")                    # a server, and no topic
     config, now = collectors.read_config(), this_minute()
@@ -462,7 +533,7 @@ def test_the_push_of_each_kind_of_message():
 
     assert as_push("open", "התראה", 4) == ("כותרת", "גוף", 4, ["rotating_light"])        # down, silent
     assert as_push("open", "התראה", 3) == ("כותרת", "גוף", 3, ["warning"])               # slow, certificate
-    assert as_push("close", "חזר לתקין", 2) == ("חזר לתקין: כותרת", "גוף", 2, ["white_check_mark"])
+    assert as_push("close", "חזר לתקין", 2) == ("כותרת", "גוף", 2, ["white_check_mark"])     # no label is added
     assert as_push("morning", "בוקר", 2) == ("כותרת", "גוף", 2, ["sunrise"])
     assert collectors._as_push({"title": "כותרת", "msg": None, "priority": 3, "event": "open"})[1] == "כותרת"
 
@@ -658,6 +729,14 @@ def test_one_call_asks_for_the_phone_test_of_one_page_in_hebrew(site):
                                "category": "performance", "locale": "he", "key": KEY}]
 
 
+def test_pagespeed_is_asked_at_google_unless_the_environment_names_another_address(site, monkeypatch):
+    assert collectors.psi_url() == site.url + "/pagespeedonline/v5/runPagespeed"       # what the fixture set
+    monkeypatch.setenv("PAGESPEED_URL", "  ")
+    assert collectors.psi_url() == "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
+    monkeypatch.delenv("PAGESPEED_URL")
+    assert collectors.psi_url() == "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
+
+
 def test_a_lighthouse_failure_is_stored_as_a_failed_run_without_a_second_try(site):
     site.psi = "lighthouse_error"
     row = collectors.speed_measure("https://example.co.il/", "mobile", KEY)
@@ -687,7 +766,7 @@ def test_a_refusal_that_may_pass_is_tried_three_times_and_then_stored_as_a_faile
 
 
 def test_when_pagespeed_cannot_be_reached_the_run_fails_and_the_key_is_not_in_its_error(site, monkeypatch):
-    monkeypatch.setattr(collectors, "PSI_URL", "http://127.0.0.1:%d/run" % closed_port())
+    monkeypatch.setenv("PAGESPEED_URL", "http://127.0.0.1:%d/run" % closed_port())
     row = collectors.speed_measure("https://example.co.il/", "mobile", KEY)
     assert row["ok"] is False and row["err"].startswith("ConnectionRefusedError") and KEY not in row["err"]
 
@@ -702,6 +781,11 @@ def test_the_daily_quota_and_a_refused_key_stop_the_collector_without_a_second_t
         collectors.speed_measure("https://example.co.il/", "mobile", KEY)
     assert stopped.value.daily is False and str(stopped.value) == "API key not valid. Please pass a valid API key."
     assert len(site.psi_calls) == 2
+    site.psi = "api_disabled"                                             # a 403: the API is not enabled for the key
+    with pytest.raises(collectors.SpeedStopped) as stopped:
+        collectors.speed_measure("https://example.co.il/", "mobile", KEY)
+    assert PSI_ERRORS["api_disabled"][0] == 403 and stopped.value.daily is False
+    assert "has not been used in project" in str(stopped.value) and len(site.psi_calls) == 3      # one call, no retry
 
 
 def test_a_core_round_stores_one_run_per_core_page_under_the_rounds_time(sql, site):
@@ -807,18 +891,28 @@ def test_a_used_up_daily_quota_stops_the_measuring_until_the_quota_starts_again(
     assert sql.sql("select count(*) from sh_speed where ok") == [(10,)]
 
 
-def test_a_refused_key_is_not_tried_again_and_is_never_logged(sql, site, caplog):
+@pytest.mark.parametrize("refusal", ["bad_key", "api_disabled"])
+def test_a_refused_key_is_asked_about_once_an_hour_and_is_never_logged(sql, site, caplog, refusal):
     config, clock = collectors.read_config(), Clock(T0)
     speed = collectors.SpeedSchedule(KEY, clock)
-    site.psi = "bad_key"
-    assert speed.step(config) == [] and len(site.psi_calls) == 1
-    site.psi = "lighthouse13"                                            # even a repaired key needs a restart
-    for later in (minutes(15), timedelta(days=1), timedelta(days=30)):
+    site.psi = refusal
+    assert speed.step(config) == [] and len(site.psi_calls) == 1         # one refusal, and no round after it
+    for later in (minutes(5), minutes(15), minutes(59)):
         clock.at = T0 + later
         assert speed.step(config) == []
-    assert len(site.psi_calls) == 1 and sql.sql("select count(*) from sh_speed") == [(0,)]
-    assert caplog.text.count("PageSpeed does not accept the key") == 1 and KEY not in caplog.text
-    assert [record.levelname for record in caplog.records if "PageSpeed" in record.message] == ["ERROR"]
+    assert len(site.psi_calls) == 1                                       # nothing is asked within the hour
+    clock.at = T0 + minutes(60)
+    assert speed.step(config) == [] and len(site.psi_calls) == 2         # one call an hour asks again
+    clock.at = T0 + minutes(119)
+    assert speed.step(config) == [] and len(site.psi_calls) == 2
+    assert sql.sql("select count(*) from sh_speed") == [(0,)]
+    assert caplog.text.count("PageSpeed does not accept the key") == 2 and KEY not in caplog.text
+    assert {record.levelname for record in caplog.records if "PageSpeed" in record.message} == {"ERROR"}
+
+    site.psi = "lighthouse13"                                            # the API was enabled in Google's console:
+    clock.at = T0 + minutes(120)                                         # the measuring comes back by itself
+    assert speed.step(config) == ["core pages, phone", "core pages, desktop", "rotation"]
+    assert sql.sql("select count(*) from sh_speed where ok") == [(10,)]
 
 
 def test_one_failing_round_does_not_cost_the_others(sql, site, monkeypatch, caplog):
@@ -889,6 +983,11 @@ def test_several_sitemap_lines_and_a_line_for_another_host(site):
      "declares entities"),
     (lambda site: site.files.update({"/page-sitemap.xml": ("application/xml", "<urlset/>".encode("utf-16"))}),
      "not UTF-8"),
+    # UTF-16 without its byte-order mark is valid UTF-8 (with a NUL in every pair), and the bytes
+    # "<!ENTITY" are not in it: only the NUL test refuses this entity bomb before the parser sees it
+    (lambda site: site.files.update({"/page-sitemap.xml": ("application/xml", (
+        '<?xml version="1.0" encoding="UTF-16LE"?><!DOCTYPE urlset [<!ENTITY a "aaaaaaaaaa"><!ENTITY b "&a;&a;&a;&a;">]>'
+        '<urlset><url><loc>&b;</loc></url></urlset>').encode("utf-16-le"))}), "not UTF-8"),
     (lambda site: site.files.update({"/product-sitemap.xml": ("application/xml", b"\x1f\x8b\x08 not gzip")}),
      "gzip file that cannot be opened"),
     (lambda site: site.files.update({"/sitemap_index.xml": sitemap_index(
@@ -910,7 +1009,7 @@ def test_a_file_larger_than_the_limit_is_refused(site, monkeypatch):
     bomb = urlset(site.url, *("/page-%d/" % i for i in range(200)))[1]
     assert len(gzip.compress(bomb)) < 2000 < len(bomb)                    # small on the wire, large when opened
     site.files["/product-sitemap.xml"] = ("application/xml", gzip.compress(bomb))
-    with pytest.raises(collectors.CollectorError, match="more than 50 MB"):
+    with pytest.raises(collectors.CollectorError, match=r"a sitemap file of more than 2000 bytes \(SH_SITEMAP_MB"):
         collectors.sitemap_load(site.url)
 
 
@@ -951,6 +1050,7 @@ def test_the_sitemap_job_stores_the_list_in_one_call(sql, site):
     ("https://shop.example.co.il/about/", None), ("https://example.co.il.evil.example/", None),
     ("https://example.co.il/about/?utm=1", None), ("https://example.co.il/about/#top", None),
     ("https://example.co.il/Cart/", None), ("https://example.co.il/checkout/order-received/", None),
+    ("https://example.co.il/checkouts/c1/", None), ("https://example.co.il/account/login", None),     # Shopify's names
     ("https://example.co.il/my-account/orders/", None), ("https://example.co.il/search/", None),
     ("https://example.co.il/feed/", None), ("https://example.co.il/tag/sale/", None),
     ("https://example.co.il/author/dana/", None), ("https://example.co.il/page/2/", None),
@@ -1058,6 +1158,7 @@ def test_the_snapshot_carries_the_local_date(sql, site):
 
 
 def test_the_shopify_catalogue_and_its_labels(site):
+    site.use("shopify")
     rows = collectors.catalogue_shopify(site.url, 305)
     assert rows == [
         {"product_id": "2", "issue": "לא במלאי", "name": "Sold out chair", "url": site.url + "/products/p-2"},
@@ -1067,9 +1168,21 @@ def test_the_shopify_catalogue_and_its_labels(site):
 
 
 def test_a_shopify_read_is_checked_against_the_sitemap(sql, site):
+    site.use("shopify")
     assert len(collectors.catalogue_shopify(site.url, 300)) == 3          # within 2% of the sitemap's count
     with pytest.raises(collectors.CollectorError, match="305 products were read and the sitemap lists 400"):
         collectors.catalogue_shopify(site.url, 400)
+    # the tolerance: 2% of the sitemap's count, and never less than 3 products
+    assert len(collectors.catalogue_shopify(site.url, 311)) == 3          # 311 // 50 = 6 may be missing
+    with pytest.raises(collectors.CollectorError, match="the sitemap lists 312"):
+        collectors.catalogue_shopify(site.url, 312)
+    with pytest.raises(collectors.CollectorError, match="the sitemap lists 298"):
+        collectors.catalogue_shopify(site.url, 298)                       # 298 // 50 = 5, and 7 are too many
+    whole, site.shopify = site.shopify, site.shopify[:10]                # a small shop: 3 products of slack
+    assert len(collectors.catalogue_shopify(site.url, 13)) == 3
+    with pytest.raises(collectors.CollectorError, match="10 products were read and the sitemap lists 14"):
+        collectors.catalogue_shopify(site.url, 14)
+    site.shopify = whole
     site.shopify.append(dict(site.shopify[0]))
     with pytest.raises(collectors.CollectorError, match="a product was read twice"):
         collectors.catalogue_shopify(site.url, 306)
@@ -1079,12 +1192,15 @@ def test_a_shopify_read_is_checked_against_the_sitemap(sql, site):
 
 
 def test_the_shopify_job_counts_the_products_of_the_sitemap(sql, site):
-    sql.rpc("sh_setup", p_config=site.config(platform="shopify"))
-    site.files["/robots.txt"] = ("text/plain", ("Sitemap: %s/sitemap.xml\n" % site.url).encode())
-    site.files["/sitemap.xml"] = sitemap_index(site.url, "/sitemap_products_1.xml?from=1&to=1300", "/sitemap_pages_1.xml")
-    site.files["/sitemap_products_1.xml?from=1&to=1300"] = urlset(
-        site.url, "/", *("/products/%s" % p["handle"] for p in site.shopify))
-    site.files["/sitemap_pages_1.xml"] = urlset(site.url, "/pages/about")
+    site.use("shopify")                                                   # the fake as a Shopify shop: its sitemap
+    sql.rpc("sh_setup", p_config=site.config())                           # lists /products/ and /collections/
+    config = collectors.read_config()
+    assert config.platform == "shopify" and [p["url"].replace(site.url, "") for p in config.core] == list(SHOPIFY_PAGES)
+    pages = collectors.sitemap_load(site.url, config.private, config.hosts)
+    assert sum("/products/" in url for url in pages) == 305 and sum("/collections/" in url for url in pages) == 2
+    assert [path for _, path, _ in site.hits] == [
+        "/robots.txt", "/sitemap.xml", "/sitemap_products_1.xml?from=1&to=1300", "/sitemap_collections_1.xml",
+        "/sitemap_pages_1.xml"]
     assert collectors.catalogue_job(collectors.read_config(), T0) == {"n": 3, "snap_date": "2026-11-13"}
     assert [row["issue"] for row in sql.rpc("sh_product_issues")] == ["בלי מחיר", "בלי תמונה", "לא במלאי"]
 
@@ -1258,17 +1374,38 @@ def test_the_hour_that_happens_twice_and_the_hour_that_never_happens(sql, site):
 
 
 def test_which_jobs_a_site_has_use_for(sql, site):
+    jobs = [job for job, _ in collectors.DAILY_JOBS]
+    assert jobs == ["sitemap", "cleanup", "catalogue", "cert", "morning"]
     config = collectors.read_config()
     assert config.morning == (7, 30) and config.zone == ZONE and config.site == site.url
-    assert [collectors.daily_time(job, config) for job, _ in collectors.DAILY_JOBS] == [
-        (3, 0), (3, 30), (4, 0), None, (7, 30)]                           # no certificate on a site without https
-    secure = config._replace(site="https://example.co.il", platform="other", morning=(6, 15))
-    assert [collectors.daily_time(job, secure) for job, _ in collectors.DAILY_JOBS] == [
-        (3, 0), (3, 30), None, (4, 0), (6, 15)]                           # and no catalogue on a site that sells nothing
+    assert config.off == {"cert"}                                         # the fake site is http: sh_config says so
+    assert [collectors.daily_time(job, config) for job in jobs] == [(3, 0), (3, 30), (4, 0), None, (7, 30)]
+
+    # "off" in the configuration, and what the platform implies: all of it arrives through sh_config()
+    sql.rpc("sh_setup", p_config=site.config(platform="other", off=["sitemap"], morning="06:15"))
+    plain = collectors.read_config()
+    assert plain.off == {"sitemap", "catalogue", "cert"}
+    assert [collectors.daily_time(job, plain) for job in jobs] == [None, (3, 30), None, None, (6, 15)]
+    assert [collectors.job_off(job, plain) for job in ("sitemap", "speed-rotation", "catalogue", "cert")] == [
+        'the configuration switches it off ("off": ["sitemap"])', 'the configuration switches it off ("off": ["sitemap"])',
+        'the platform is "other": there is no catalogue to check', "the site is not https: there is no certificate to check"]
+    assert [collectors.job_off(job, plain) for job in ("probe", "alerts", "speed-core", "morning", "cleanup")] == [None] * 5
+
+    # an https shop with nothing switched off has use for all five
+    shop = plain._replace(site="https://example.co.il", platform="woocommerce", off=frozenset())
+    assert [collectors.daily_time(job, shop) for job in jobs] == [(3, 0), (3, 30), (4, 0), (4, 0), (6, 15)]
+    # each entry of "off" alone
+    for part, gone in (("sitemap", "sitemap"), ("catalogue", "catalogue"), ("cert", "cert"), ("real_users", None)):
+        times = {job: collectors.daily_time(job, shop._replace(off=frozenset({part}))) for job in jobs}
+        assert [job for job in jobs if times[job] is None] == ([gone] if gone else [])
+    # and a configuration that was stored before "off" existed still gets the two implied rules
+    assert collectors.daily_time("cert", shop._replace(site="http://example.co.il")) is None
+    assert collectors.daily_time("catalogue", shop._replace(platform="other")) is None
 
 
 def test_the_real_daily_jobs_run_once_and_leave_their_proof_of_life(sql, site, phone):
     config, pusher = collectors.read_config(), collectors.Pusher()
+    collectors.probe_round(config.probe, "full", this_minute() - timedelta(hours=7))     # not a new installation
     collectors.probe_round(config.probe, "full", this_minute())
     daily = collectors.DailySchedule()
     now = datetime.now(UTC)
@@ -1288,6 +1425,87 @@ def test_the_real_daily_jobs_run_once_and_leave_their_proof_of_life(sql, site, p
     assert (sent["title"], sent["priority"], sent["tags"]) == ("בוקר טוב: האתר תקין", 2, ["sunrise"])
     assert sent["message"].startswith("זמינות 100.0% ב-24 שעות")
     assert sql.sql("select event, kind, status from sh_messages") == [("morning", "בוקר", 200)]
+
+
+def test_a_new_installation_gets_no_morning_message_and_the_day_still_counts_as_done(sql, site, phone, caplog):
+    caplog.set_level(logging.INFO)
+    config, pusher = collectors.read_config()._replace(morning=(0, 0)), collectors.Pusher()
+    collectors.probe_round(config.probe, "full", this_minute())           # the first round ever, a moment ago
+    jobs = (("morning", collectors.morning_job),)
+    daily, now = collectors.DailySchedule(jobs), datetime.now(UTC)
+    assert daily.step(config, now) == ["morning"]                         # it ran, and decided to say nothing
+    assert ('daily job morning: skipped today ({"n": 0, "skipped": "the oldest probe round is less than 6 hours old"})'
+            in caplog.text)
+    assert sql.sql("select count(*) from sh_messages") == [(0,)]
+    assert collectors.alert_tick(pusher) == [] and site.pushes == []      # the owner's phone stays quiet
+    assert markers(sql) == [("morning", now.astimezone(ZONE).date())]     # done for today, in the database
+    assert daily.step(config, now) == [] and collectors.DailySchedule(jobs).step(config, now) == []      # also after a restart
+
+    sql.sql("update sh_probe set round_at = round_at - interval '7 hours'")           # the next morning
+    assert daily.step(config, now + timedelta(days=1)) == ["morning"]
+    assert [d["title"] for d in collectors.alert_tick(pusher)] == ["בוקר טוב: האתר תקין"]
+    assert 'daily job morning: done ({"n": 1})' in caplog.text
+
+
+def test_a_job_that_keeps_failing_is_tried_four_times_and_then_waits_for_the_next_day(sql, site, caplog):
+    calls, state = [], {"fail": True}
+
+    def lasting(config, now):
+        calls.append(now)
+        if state["fail"]:
+            raise collectors.CollectorError("no sitemap")
+        return {"n": 1}
+
+    daily = collectors.DailySchedule((("sitemap", lasting),))
+    config, start = collectors.read_config(), local(2026, 11, 13, 3)
+    for minute in range(21 * 60):                                         # every minute until midnight, as the loop asks
+        assert daily.step(config, start + minutes(minute)) == []
+    assert calls == [start + minutes(wait) for wait in (0, 10, 20, 30)]   # the first try and three more, 10 minutes apart
+    assert markers(sql) == []
+    assert caplog.text.count("daily job sitemap failed and will be tried again: CollectorError: no sitemap") == 3
+    assert caplog.text.count("daily job sitemap failed 4 times today and waits for tomorrow: CollectorError: no sitemap") == 1
+
+    assert daily.step(config, local(2026, 11, 14, 2, 59)) == [] and len(calls) == 4   # the next day, before its hour
+    assert daily.step(config, local(2026, 11, 14, 3)) == [] and len(calls) == 5       # owed again, with a new count
+    assert daily.step(config, local(2026, 11, 14, 3, 10)) == [] and len(calls) == 6
+    state["fail"] = False
+    assert daily.step(config, local(2026, 11, 14, 3, 20)) == ["sitemap"] and len(calls) == 7
+    assert markers(sql) == [("sitemap", date(2026, 11, 14))]
+
+
+def test_a_database_that_cannot_be_asked_does_not_use_up_the_tries_of_the_day(sql, site, monkeypatch, caplog):
+    calls = []
+    daily = collectors.DailySchedule((("sitemap", counting(calls)),))
+    config, start = collectors.read_config(), local(2026, 11, 13, 3)
+    real = db.rpc
+    monkeypatch.setattr(db, "rpc", lambda fn, params=None: (_ for _ in ()).throw(db.DbError("database unreachable")))
+    for wait in range(0, 90, 10):                                         # an hour and a half without a database
+        assert daily.step(config, start + minutes(wait)) == []
+    assert calls == [] and caplog.text.count("the database could not be asked, trying again later") == 9
+    monkeypatch.setattr(db, "rpc", real)
+    assert daily.step(config, start + minutes(90)) == ["sitemap"] and len(calls) == 1
+
+
+def test_a_part_that_is_switched_off_is_never_run(sql, site):
+    sql.rpc("sh_setup", p_config=site.config(off=["sitemap", "catalogue"]))
+    config = collectors.read_config()
+    assert config.off == {"sitemap", "catalogue", "cert"}                 # the certificate: the fake site is http
+    now = datetime.now(UTC)
+    evening = datetime.combine(now.astimezone(ZONE).date(), datetime.min.time(), ZONE).replace(hour=23, minute=50)
+    assert collectors.DailySchedule().step(config, evening.astimezone(UTC)) == ["cleanup", "morning"]
+    assert site.hits == []                                                # the site was not asked for anything
+    assert [job for job, _ in markers(sql)] == ["cleanup", "morning"]
+    assert sql.sql("select count(*) from sh_site_pages") == [(0,)] and sql.sql("select count(*) from sh_cert") == [(0,)]
+    assert sql.sql("select flow_name from sh_flows where not enabled order by sort") == [
+        (ROTATION_FLOW,), (SITEMAP_FLOW,), (CERT_FLOW,), (CATALOGUE_FLOW,)]
+
+
+def test_no_rotation_where_the_sitemap_is_switched_off(sql, site):
+    sql.rpc("sh_sitemap_set", p_urls=["%s/product/item-%d/" % (site.url, i) for i in range(1, 4)])    # known from before
+    sql.rpc("sh_setup", p_config=site.config(off=["sitemap"]))
+    speed = collectors.SpeedSchedule(KEY, Clock(T0))
+    assert speed.step(collectors.read_config()) == ["core pages, phone", "core pages, desktop"]
+    assert sql.sql("select distinct source from sh_speed") == [("core",)] and len(site.psi_calls) == 10
 
 
 # ================================================================ 8. the scheduler
@@ -1434,13 +1652,32 @@ def run_manage(*argv):
         return stop.code
 
 
-def test_new_secret_prints_a_fresh_topic_and_a_fresh_share_token(capsys):
-    assert run_manage("new-secret") is None
-    first = capsys.readouterr().out.splitlines()
-    assert re.fullmatch(r"NTFY_TOPIC=sh-[A-Za-z0-9]{24}", first[0])
-    assert re.fullmatch(r"SH_SHARE_TOKEN=[A-Za-z0-9_-]{32}", first[1]) and len(first) == 2
-    run_manage("new-secret")
-    assert capsys.readouterr().out.splitlines() != first
+def test_new_secret_writes_two_fresh_secrets_to_a_file_and_prints_neither(tmp_path, capsys):
+    message = run_manage("new-secret")                                    # without a file: nothing is made up
+    assert "--out <file>" in message and "never prints them" in message
+    assert capsys.readouterr().out == ""
+
+    first, second = tmp_path / "first.txt", tmp_path / "second.txt"
+    assert run_manage("new-secret", "--out", str(first)) is None
+    lines = first.read_text(encoding="utf-8").splitlines()
+    assert re.fullmatch(r"NTFY_TOPIC=sh-[A-Za-z0-9]{24}", lines[0])
+    assert re.fullmatch(r"SH_SHARE_TOKEN=[A-Za-z0-9_-]{32}", lines[1]) and len(lines) == 2
+    assert first.stat().st_mode & 0o777 == 0o600                         # for its owner's eyes only
+    printed = capsys.readouterr()
+    values = [line.split("=", 1)[1] for line in lines]
+    assert not any(value in printed.out + printed.err for value in values)             # a terminal is a transcript
+    assert "NTFY_TOPIC and SH_SHARE_TOKEN" in printed.out and str(first) in printed.out
+    assert "inside a git repository" not in printed.out
+
+    assert run_manage("new-secret", "--out", str(second)) is None
+    assert second.read_text(encoding="utf-8").splitlines() != lines       # fresh each time
+    assert "is not overwritten" in run_manage("new-secret", "--out", str(first))
+    assert first.read_text(encoding="utf-8").splitlines() == lines
+
+    (tmp_path / ".git").mkdir()                                           # a file that could be committed by mistake
+    capsys.readouterr()
+    assert run_manage("new-secret", "--out", str(tmp_path / "third.txt")) is None
+    assert "WARNING: that file is inside a git repository" in capsys.readouterr().out
 
 
 def test_setup_loads_a_configuration_file_and_check_reports_names_not_values(sql, site, tmp_path, monkeypatch, capsys):
@@ -1448,8 +1685,8 @@ def test_setup_loads_a_configuration_file_and_check_reports_names_not_values(sql
     path = tmp_path / "site_health.config.json"
     path.write_text(json.dumps(site.config(), ensure_ascii=False), encoding="utf-8")
     assert run_manage("setup", str(path)) is None
-    assert capsys.readouterr().out == (
-        "%s is set up: time zone Asia/Jerusalem, platform woocommerce, 4 probe pages, 5 core pages\n" % site.url)
+    assert capsys.readouterr().out == ("%s is set up: time zone Asia/Jerusalem, platform woocommerce, 4 probe pages, "
+                                       "5 core pages, switched off: cert\n" % site.url)       # an http site
 
     monkeypatch.setenv("NTFY_TOPIC", TOPIC)
     monkeypatch.setenv("PAGESPEED_KEY", KEY)
@@ -1462,6 +1699,8 @@ def test_setup_loads_a_configuration_file_and_check_reports_names_not_values(sql
     assert TOPIC not in out and KEY not in out and "dana-password" not in out and "postgresql://" not in out
     assert "database: reachable" in out and "time zone Asia/Jerusalem, platform woocommerce, morning message at 07:30" in out
     assert "probe pages (every minute): בית, קטגוריה, מוצר, סל" in out
+    assert "core pages (speed): בית, קטגוריה, מוצר, סל, אודות" in out and "switched off: cert" in out
+    assert "SH_ALLOW_PRIVATE is set" in out and "PAGESPEED_URL is set" in out and "SH_RUM_PER_DAY is NOT set" in out
     assert re.search(r"תקין\s+בודק זמינות האתר \(last run: 20", out)
     assert re.search(r"אין נתון\s+טעינת מפת האתר \(last run: never\)", out)
 
@@ -1493,9 +1732,17 @@ def test_run_once_runs_one_collector_and_prints_what_it_stored(sql, site, phone,
     assert json.loads(capsys.readouterr().out)["n"] == 9
     assert run_manage("run-once", "cleanup") is None
     assert json.loads(capsys.readouterr().out)["probe"] == 0
+    # a new installation: the oldest round is a minute old, and "nothing was measured" is no morning message
+    assert run_manage("run-once", "morning") is None
+    assert json.loads(capsys.readouterr().out) == {"n": 0, "skipped": "the oldest probe round is less than 6 hours old"}
+    assert sql.sql("select count(*) from sh_messages where event = 'morning'") == [(0,)]
+    assert markers(sql) == [("issues_snapshot", datetime.now(ZONE).date()), ("morning", datetime.now(ZONE).date())]
+    # the day after, with rounds that are old enough
+    sql.sql("update sh_probe set round_at = round_at - interval '7 hours'")
+    sql.sql("delete from sh_jobs where job = 'morning'")
     assert run_manage("run-once", "morning") is None
     assert json.loads(capsys.readouterr().out) == {"n": 1}
-    assert markers(sql) == [("issues_snapshot", datetime.now(ZONE).date()), ("morning", datetime.now(ZONE).date())]
+    assert sql.sql("select count(*) from sh_messages where event = 'morning'") == [(1,)]
 
     assert run_manage("run-once", "speed-core") == "PAGESPEED_KEY is not set: the speed collectors cannot run."
     site.catalogue = "html"
@@ -1541,3 +1788,891 @@ def test_init_db_applies_both_files_or_explains_what_to_do(sql, site, monkeypatc
     monkeypatch.setenv("SUPABASE_URL", "https://project.supabase.co")
     message = run_manage("init-db")
     assert "SQL editor" in message and message.index("schema.sql") < message.index("functions.sql")
+
+
+def test_run_once_of_a_part_that_is_off_says_skipped_and_stores_nothing(sql, site, capsys):
+    assert run_manage("run-once", "cert") is None                         # the fake site is http
+    assert capsys.readouterr().out == "skipped: the site is not https: there is no certificate to check\n"
+    assert sql.sql("select count(*) from sh_cert") == [(0,)]              # no failed check for the card to show
+
+    sql.rpc("sh_setup", p_config=site.config(off=["sitemap", "catalogue"]))
+    for collector in ("sitemap", "speed-rotation", "catalogue"):          # speed-rotation: also without a key
+        assert run_manage("run-once", collector) is None
+        part = "catalogue" if collector == "catalogue" else "sitemap"
+        assert capsys.readouterr().out == 'skipped: the configuration switches it off ("off": ["%s"])\n' % part
+    sql.rpc("sh_setup", p_config=site.config(platform="other"))
+    assert run_manage("run-once", "catalogue") is None
+    assert capsys.readouterr().out == 'skipped: the platform is "other": there is no catalogue to check\n'
+    assert site.hits == [] and sql.sql("select count(*) from sh_site_pages") == [(0,)]
+    assert sql.sql("select count(*) from sh_product_issues") == [(0,)]
+
+
+# ================================================================ 9. where a request to the site may go (§7.5, §7.7)
+
+def test_a_redirect_to_another_host_is_not_followed(site, inner):
+    site.broken["/cart/"] = {"to": elsewhere(inner)}
+    row = collectors.probe_check(page(site, "/cart/"), 2)
+    assert (row["ok"], row["fail"], row["status"], row["err"]) == (False, "http", 302, "redirected to another host")
+    assert type(row["ms"]) is int and inner.hits == []                    # the other machine never heard of it
+    assert "localhost" not in json.dumps(row)                             # and its address is not stored or shown
+
+
+def test_a_host_of_extra_hosts_may_be_redirected_to(sql, site, inner):
+    site.broken["/cart/"] = {"to": elsewhere(inner, "/cart/")}
+    config = collectors.read_config()
+    assert config.hosts == {"127.0.0.1"}
+    rows = collectors.probe_round(config.probe, "full", this_minute(), hosts=config.hosts)["rows"]
+    assert [(row["ok"], row["err"]) for row in rows][3] == (False, "redirected to another host") and inner.hits == []
+
+    sql.rpc("sh_setup", p_config=site.config(extra_hosts=["localhost", "www.pay.example.co.il"]))
+    config = collectors.read_config()
+    assert config.hosts == {"127.0.0.1", "localhost", "pay.example.co.il"}
+    rows = collectors.probe_round(config.probe, "light", this_minute(), hosts=config.hosts)["rows"]
+    assert [row["ok"] for row in rows] == [True] * 4 and [path for _, path, _ in inner.hits] == ["/cart/"]
+
+
+def test_the_scheduled_round_and_the_round_by_hand_use_the_configured_hosts(sql, site, inner, scheduler, monkeypatch, capsys):
+    sql.rpc("sh_setup", p_config=site.config(extra_hosts=["localhost"]))
+    site.broken["/cart/"] = {"to": elsewhere(inner, "/cart/")}
+    at = float(int(time.time())) - 120
+    monkeypatch.setattr(collectors, "next_round", lambda now: (at, "full"))
+    collectors._probe_step(queue.Queue())
+    assert sql.sql("select ok from sh_probe where page = 'סל'") == [(True,)]
+    assert run_manage("run-once", "probe") is None
+    assert [row["ok"] for row in json.loads(capsys.readouterr().out)["rows"]] == [True] * 4
+    assert [path for _, path, _ in inner.hits] == ["/cart/", "/cart/"]
+
+
+def everywhere(monkeypatch, site):
+    """Every host name leads to the fake site: a resolver of the test's own."""
+    port = int(site.url.rsplit(":", 1)[1])
+    monkeypatch.setattr(collectors, "_open",
+                        lambda host, wanted, timeout, public: socket.create_connection(("127.0.0.1", port), timeout))
+
+
+@pytest.mark.parametrize("start, target, hosts, followed", [
+    ("http://example.co.il/cart/", "/about/", (), True),
+    ("http://example.co.il/cart/", "http://www.example.co.il/about/", (), True),             # with www: the same site
+    ("http://www.example.co.il/cart/", "http://example.co.il/about/", (), True),
+    ("http://EXAMPLE.co.il/cart/", "http://example.co.il./about/", (), True),
+    ("http://example.co.il/cart/", "http://example.co.il:8080/about/", (), True),            # the host is what counts
+    ("http://example.co.il/cart/", "http://someone@example.co.il/about/", (), True),
+    ("http://example.co.il/cart/", "http://shop.example.co.il/about/", (), False),           # a host of its own
+    ("http://example.co.il/cart/", "http://shop.example.co.il/about/", ("shop.example.co.il",), True),
+    ("http://example.co.il/cart/", "http://shop.example.co.il/about/", ("WWW.shop.example.co.il",), True),
+    ("http://example.co.il/cart/", "http://example.co.il.evil.example/about/", (), False),
+    ("http://example.co.il/cart/", "http://example.co.il@evil.example/about/", (), False),
+    ("http://example.co.il/cart/", "//evil.example/about/", (), False),
+    ("http://example.co.il/cart/", "http://169.254.169.254/latest/meta-data/", (), False),
+    ("http://example.co.il/cart/", "http://localhost/about/", ("shop.example.co.il",), False),
+    ("http://example.co.il/cart/", "javascript:alert(1)", (), False),
+])
+def test_which_redirects_are_followed(site, monkeypatch, start, target, hosts, followed):
+    everywhere(monkeypatch, site)
+    site.broken["/cart/"] = {"to": target}
+    answer = collectors.fetch(start, timeout=2, hosts=hosts, public=True)
+    assert (answer.status, answer.elsewhere) == ((200, False) if followed else (302, True))
+    assert [path for _, path, _ in site.hits] == (["/cart/", "/about/"] if followed else ["/cart/"])
+
+
+def test_a_redirect_from_http_to_https_of_the_same_host_is_followed(site, monkeypatch):
+    everywhere(monkeypatch, site)
+    site.broken["/cart/"] = {"to": "https://www.example.co.il/cart/"}
+    with pytest.raises(ssl.SSLError):                                     # it went there: the fake speaks no TLS
+        collectors.fetch("http://example.co.il/cart/", timeout=2, public=True)
+
+
+@pytest.mark.parametrize("address, public", [
+    ("8.8.8.8", True), ("2606:4700:4700::1111", True), ("::ffff:8.8.8.8", True),
+    ("127.0.0.1", False), ("127.8.9.10", False), ("10.1.2.3", False), ("172.16.0.9", False), ("192.168.1.1", False),
+    ("169.254.169.254", False),                                           # where clouds keep their credentials
+    ("100.64.0.1", False), ("0.0.0.0", False), ("224.0.0.1", False), ("::1", False), ("::", False),
+    ("::ffff:127.0.0.1", False), ("::ffff:10.0.0.1", False), ("fe80::1%eth0", False), ("fd00::1", False),
+    ("not an address", False), ("", False),
+])
+def test_which_addresses_are_public(address, public):
+    assert collectors._is_public(address) is public
+
+
+def test_without_the_switch_nothing_connects_to_a_private_address(site, monkeypatch):
+    monkeypatch.delenv("SH_ALLOW_PRIVATE")
+    refusal = "NotPublic: not a public address (a private or local network; SH_ALLOW_PRIVATE=1 allows it)"
+    row = collectors.probe_check(page(site, "/"), 2)
+    assert (row["ok"], row["fail"], row["status"], row["err"]) == (False, "connect", None, refusal)
+    port = site.url.rsplit(":", 1)[1]
+    for address in ("http://localhost:%s/" % port, "http://[::1]:%s/" % port, "http://0.0.0.0:%s/" % port,
+                    "http://169.254.169.254/latest/meta-data/", "http://10.0.0.1/", "http://192.168.0.1/"):
+        started = time.monotonic()
+        row = collectors.probe_check({"name": "x", "url": address}, 2)
+        assert (row["fail"], row["err"]) == ("connect", refusal), address
+        assert time.monotonic() - started < 1                             # refused here, before a packet left
+    collectors.probe_check({"name": "x", "url": "http://2130706433:%s/" % port}, 2)    # 127.0.0.1, written as one number
+    assert site.hits == []
+    for value in ("0", "true", "yes", "11"):                              # the switch is the word 1, and nothing else
+        monkeypatch.setenv("SH_ALLOW_PRIVATE", value)
+        assert collectors.probe_check(page(site, "/"), 2)["err"] == refusal
+    monkeypatch.setenv("SH_ALLOW_PRIVATE", " 1 ")
+    assert collectors.probe_check(page(site, "/"), 2)["ok"] is True
+
+
+def test_the_connection_goes_to_the_address_that_was_checked(monkeypatch):
+    monkeypatch.delenv("SH_ALLOW_PRIVATE", raising=False)
+    answers = {"rebind.example": ["127.0.0.1"], "mixed.example": ["10.0.0.7", "93.184.216.34", "127.0.0.1"]}
+    asked, tried = [], []
+
+    def lookup(host, port, *args, **kwargs):
+        asked.append(host)
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (address, port)) for address in answers[host]]
+
+    class Link:                                                           # a socket that goes nowhere, and says where
+        def __init__(self, *args):
+            pass
+
+        def settimeout(self, seconds):
+            pass
+
+        def connect(self, address):
+            tried.append(address)
+            raise ConnectionRefusedError("refused")
+
+        def close(self):
+            pass
+
+    with monkeypatch.context() as patch:
+        patch.setattr(socket, "getaddrinfo", lookup)
+        patch.setattr(socket, "socket", Link)
+        hidden = collectors.probe_check({"name": "x", "url": "http://rebind.example:8080/"}, 2)
+        mixed = collectors.probe_check({"name": "x", "url": "http://mixed.example/"}, 2)
+    assert hidden["err"].startswith("NotPublic") and mixed["err"].startswith("ConnectionRefusedError")
+    assert tried == [("93.184.216.34", 80)]                               # the public one, and no other
+    assert asked == ["rebind.example", "mixed.example"]                   # one lookup each: no second answer to fall for
+
+
+def test_a_sitemap_file_that_redirects_to_another_host_is_refused_and_never_fetched(sql, site, inner):
+    inner.files["/internal/sitemap.xml"] = urlset(site.url, "/INTERNAL-ONLY-PATH/")
+    site.files["/robots.txt"] = ("text/plain", ("Sitemap: %s/sitemap-b.xml\n" % site.url).encode())
+    site.broken["/sitemap-b.xml"] = {"to": elsewhere(inner, "/internal/sitemap.xml")}
+    known = [site.url + "/", site.url + "/old-page/"]
+    sql.rpc("sh_sitemap_set", p_urls=known)
+    with pytest.raises(collectors.CollectorError, match="redirected to another host: %s/sitemap-b.xml" % site.url):
+        collectors.sitemap_job(collectors.read_config(), T0)
+    assert inner.hits == []
+    assert sql.sql("select url from sh_site_pages where active order by url") == [(url,) for url in sorted(known)]
+
+    # robots.txt itself sent elsewhere: its lines are not read there, and the usual addresses are tried here
+    inner.files["/robots.txt"] = ("text/plain", b"Sitemap: http://localhost/evil.xml\n")
+    site.reset()
+    site.broken["/robots.txt"] = {"to": elsewhere(inner, "/robots.txt")}
+    assert len(collectors.sitemap_load(site.url)) == 8 and inner.hits == []
+    assert [path for _, path, _ in site.hits][:2] == ["/robots.txt", "/sitemap_index.xml"]
+
+
+def test_a_catalogue_that_redirects_to_another_host_is_a_failed_read(site, inner):
+    site.broken["/wp-json/wc/store/v1/products"] = {"to": elsewhere(inner, "/wp-json/wc/store/v1/products")}
+    with pytest.raises(collectors.CollectorError, match="the catalogue redirects to another host"):
+        collectors.catalogue_woocommerce(site.url)
+    site.use("shopify")
+    site.broken["/products.json"] = {"to": elsewhere(inner, "/products.json")}
+    with pytest.raises(collectors.CollectorError, match="the catalogue redirects to another host"):
+        collectors.catalogue_shopify(site.url, 305)
+    assert inner.hits == []
+
+
+def test_the_daily_jobs_follow_a_redirect_to_a_host_of_extra_hosts(sql, site, inner):
+    sql.rpc("sh_setup", p_config=site.config(extra_hosts=["localhost"]))
+    config = collectors.read_config()
+    inner.files["/product-sitemap.xml"] = urlset(site.url, "/product/from-the-other-host/")
+    site.broken["/product-sitemap.xml"] = {"to": elsewhere(inner, "/product-sitemap.xml")}
+    assert collectors.sitemap_job(config, T0) == {"n": 6, "pages": 6}
+    assert sql.sql("select count(*) from sh_site_pages where url like '%%/product/from-the-other-host/'") == [(1,)]
+    site.broken = {"/wp-json/wc/store/v1/products": {"to": elsewhere(inner, "/wp-json/wc/store/v1/products")}}
+    site.hits.clear()
+    assert collectors.catalogue_job(config, T0)["n"] == 9                 # the same catalogue, read from the other host
+    assert len(site.hits) == 2 and len([hit for hit in inner.hits if "/wp-json/" in hit[1]]) == 2
+
+
+def test_a_site_on_a_private_address_is_said_plainly(sql, site, monkeypatch, capsys):
+    monkeypatch.delenv("SH_ALLOW_PRIVATE")
+    refusal = "not a public address (a private or local network; SH_ALLOW_PRIVATE=1 allows it)"
+    assert run_manage("run-once", "sitemap") == "sitemap failed: " + refusal          # not "no sitemap"
+    assert run_manage("run-once", "catalogue") == "catalogue failed: " + refusal
+    row = collectors.cert_check("127.0.0.1", T0, port=int(site.url.rsplit(":", 1)[1]))
+    assert (row["ok"], row["err"]) == (False, "NotPublic: " + refusal)
+    assert run_manage("run-once", "probe") is None
+    assert {row["err"] for row in json.loads(capsys.readouterr().out)["rows"]} == {"NotPublic: " + refusal}
+    with pytest.raises(collectors.NotPublic):                             # each request of the load on its own
+        collectors._sitemap_read(site.url + "/sitemap.xml")
+    monkeypatch.setattr(collectors, "_robots_sitemaps", lambda address, hosts=(): [])
+    with pytest.raises(collectors.NotPublic):                             # the guessed addresses: refused, not "no sitemap"
+        collectors.sitemap_load(site.url)
+    assert site.hits == []
+
+
+def test_the_services_named_in_the_environment_are_not_held_to_the_public_rule(site, phone, inner, monkeypatch):
+    monkeypatch.delenv("SH_ALLOW_PRIVATE")
+    monkeypatch.setenv("HEARTBEAT_URL", site.url + "/hb")
+    assert collectors.speed_measure("https://example.co.il/", "mobile", KEY)["ok"] is True
+    assert collectors.Pusher().publish("כותרת", "גוף") == 200
+    collectors.heartbeat()
+    assert len(site.pings) == 1
+    site.broken["/hb"] = {"to": elsewhere(inner, "/hb")}                  # but none of them is followed to another host
+    collectors.heartbeat()
+    assert len(site.pings) == 1 and inner.hits == [] and inner.pings == []
+
+
+def test_the_worker_says_at_its_start_that_private_addresses_are_allowed(site, scheduler, monkeypatch, caplog):
+    monkeypatch.setattr(db, "rpc", lambda fn, params=None: None)
+    collectors.start()
+    assert caplog.text.count("collectors: SH_ALLOW_PRIVATE=1, requests to the site may go to private and local") == 1
+
+
+def test_the_worker_says_nothing_about_private_addresses_when_the_switch_is_off(site, scheduler, monkeypatch, caplog):
+    monkeypatch.setattr(db, "rpc", lambda fn, params=None: None)
+    monkeypatch.delenv("SH_ALLOW_PRIVATE")
+    collectors.start()
+    assert "SH_ALLOW_PRIVATE" not in caplog.text
+
+
+@pytest.fixture
+def https_site(tmp_path):
+    """One page over https on this machine, with a certificate that nobody vouches for."""
+    if not shutil.which("openssl"):
+        pytest.skip("the openssl command is needed to make a certificate")
+    key, certificate = tmp_path / "key.pem", tmp_path / "cert.pem"
+    made = subprocess.run(["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", str(key), "-out",
+                           str(certificate), "-days", "2", "-subj", "/O=Site Health test/CN=localhost",
+                           "-addext", "subjectAltName=DNS:localhost,IP:127.0.0.1"], capture_output=True)
+    if made.returncode:
+        pytest.skip("this openssl cannot make the certificate (it needs OpenSSL 1.1.1 or newer)")
+
+    class Page(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            body = "<html><body><button>הוספה לסל</button></body></html>".encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *args):
+            pass
+
+    class Quiet(http.server.ThreadingHTTPServer):
+        def handle_error(self, request, client_address):                  # a client that only read the certificate
+            pass
+
+    server = Quiet(("127.0.0.1", 0), Page)
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.load_cert_chain(str(certificate), str(key))
+    server.socket = context.wrap_socket(server.socket, server_side=True)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    yield server.server_address[1], certificate
+    server.shutdown()
+    server.server_close()
+
+
+def test_a_page_over_https_is_checked_against_its_certificate(site, https_site, monkeypatch):
+    port, certificate = https_site
+    home = {"name": "בית", "url": "https://127.0.0.1:%d/" % port, "expect": "הוספה לסל"}
+    row = collectors.probe_check(home, 5)                                 # normal verification: nobody signed this one
+    assert (row["ok"], row["fail"], row["status"]) == (False, "connect", None)
+    assert "CERTIFICATE_VERIFY_FAILED" in row["err"]
+    failed = collectors.cert_check("127.0.0.1", T0, port=port)
+    assert failed["ok"] is False and "CERTIFICATE_VERIFY_FAILED" in failed["err"]
+
+    monkeypatch.setattr(collectors, "_TLS", ssl.create_default_context(cafile=str(certificate)))      # now somebody does
+    row = collectors.probe_check(home, 5)
+    assert (row["ok"], row["status"], row["fail"]) == (True, 200, None)
+    now = datetime.now(UTC)
+    read = collectors.cert_check("127.0.0.1", now, port=port)
+    assert (read["ok"], read["host"], read["issuer"], read["days_left"]) == (True, "127.0.0.1", "Site Health test localhost", 1)
+    # the name is part of the check: the same server under a name its certificate does not carry
+    monkeypatch.setattr(socket, "getaddrinfo", lambda host, wanted, *args, **kwargs: [
+        (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", wanted))])
+    other = collectors.probe_check(dict(home, url="https://shop.example:%d/" % port), 5)
+    assert other["fail"] == "connect" and "CERTIFICATE_VERIFY_FAILED" in other["err"]
+
+
+def test_the_numbers_the_spec_names():
+    megabyte = 1024 * 1024
+    assert (collectors.FULL_TIMEOUT, collectors.LIGHT_TIMEOUT, collectors.REDIRECTS, collectors.EXPECT_BYTES) == (
+        10, 5, 5, 200_000)                                                # §7.5
+    assert (collectors.PSI_CONNECT, collectors.PSI_READ, collectors.PSI_WAITS, collectors.OPPS) == (10, 120, (5, 10), 6)
+    assert collectors.ROTATION_PAGES == 2 and collectors.KEY_RETRY == timedelta(hours=1)          # §7.6
+    assert (collectors.SITEMAP_FILES, collectors.SITEMAP_PAGES) == (500, 50_000)                  # §7.7
+    assert (collectors.SITEMAP_BYTES, collectors.SITEMAP_BYTES_MAX) == (10 * megabyte, 50 * megabyte)
+    assert (collectors.CATALOGUE_BYTES, collectors.CATALOGUE_JOB_BYTES) == (10 * megabyte, 300 * megabyte)
+    assert [collectors._size(count) for count in (10 * megabyte, 300 * megabyte, 2000)] == ["10 MB", "300 MB", "2000 bytes"]
+    assert (collectors.PUSHES_PER_HOUR, collectors.TITLE_MAX, collectors.MESSAGE_MAX) == (30, 199, 1499)      # §7.9
+    assert collectors.DAILY_TIMES == {"sitemap": (3, 0), "cleanup": (3, 30), "catalogue": (4, 0), "cert": (4, 0)}
+    assert (collectors.DAILY_RETRY, collectors.DAILY_RETRIES) == (timedelta(minutes=10), 3)
+
+
+def test_the_morning_message_is_at_half_past_seven_unless_the_configuration_says_otherwise(monkeypatch):
+    stored = {"site": "https://example.co.il", "host": "example.co.il", "time_zone": "Asia/Jerusalem", "pages": []}
+    monkeypatch.setattr(db, "rpc", lambda fn, params=None: stored)
+    config = collectors.read_config()
+    assert (config.morning, config.platform, config.hosts, config.off) == ((7, 30), "other", {"example.co.il"}, frozenset())
+    stored.update(morning="06:05", host="www.Example.co.il", extra_hosts=["pay.example.co.il"], off=["cert"])
+    config = collectors.read_config()
+    assert (config.morning, config.hosts, config.off) == ((6, 5), {"example.co.il", "pay.example.co.il"}, {"cert"})
+
+
+# ================================================================ 10. what one read may take (§7.7)
+
+def test_only_what_the_rules_read_is_kept_of_a_product():
+    product = {"id": 7, "name": "ספה", "permalink": "https://example.co.il/product/sofa/", "type": "simple",
+               "description": "x" * 100_000, "short_description": "y" * 10_000, "prices": {"price": "100"},
+               "images": [{"src": "z" * 5000}], "is_in_stock": True, "is_purchasable": True, "attributes": [1] * 1000}
+    slim = collectors._woo_slim(product)
+    assert slim == {"id": "7", "name": "ספה", "url": "https://example.co.il/product/sofa/", "priced": True,
+                    "pictured": True, "in_stock": True, "buyable": True, "by_design": False}
+    assert len(json.dumps(slim)) < 250
+    assert collectors._woo_slim({"name": "בלי מזהה"}) is None and collectors._woo_slim("text") is None
+    assert len(collectors._woo_slim({"id": "9" * 500, "name": "א" * 5000})["name"]) == 2000
+
+    shop = collectors._shopify_slim({"id": 7, "title": "Sofa", "handle": "sofa", "body_html": "x" * 100_000,
+                                     "images": [{"src": "z"}], "variants": [{"price": "0.00", "available": False},
+                                                                            {"price": "99.00", "available": True}]})
+    assert shop == {"id": "7", "name": "Sofa", "handle": "sofa", "priced": True, "pictured": True, "in_stock": True}
+    hostile = collectors._shopify_slim({"id": 8, "title": 5, "handle": None, "images": "x", "variants": 5})
+    assert hostile == {"id": "8", "name": None, "handle": "", "priced": False, "pictured": True, "in_stock": False}
+
+
+def test_a_catalogue_is_read_within_a_budget_per_page_and_per_read(site, monkeypatch):
+    page_one = len(collectors.fetch(site.url + "/wp-json/wc/store/v1/products?per_page=100&page=1&orderby=id&order=asc",
+                                    timeout=5, read=10_000_000).body)
+    assert page_one > 50_000                                              # the fake's products carry a description
+    site.hits.clear()
+    monkeypatch.setattr(collectors, "CATALOGUE_JOB_BYTES", page_one + 10)             # room for one page, not for two
+    with pytest.raises(collectors.CollectorError, match="the catalogue is larger than %d bytes" % (page_one + 10)):
+        collectors.catalogue_woocommerce(site.url)
+    assert len(site.hits) == 2                                            # stopped at the page that went over
+    monkeypatch.setattr(collectors, "CATALOGUE_JOB_BYTES", 300 * 1024 * 1024)
+    monkeypatch.setattr(collectors, "CATALOGUE_BYTES", page_one - 1)
+    with pytest.raises(collectors.CollectorError, match="a catalogue page of more than %d bytes" % (page_one - 1)):
+        collectors.catalogue_woocommerce(site.url)
+
+    site.use("shopify")
+    monkeypatch.setattr(collectors, "CATALOGUE_BYTES", 10 * 1024 * 1024)
+    monkeypatch.setattr(collectors, "CATALOGUE_JOB_BYTES", 1000)
+    with pytest.raises(collectors.CollectorError, match="the catalogue is larger than 1000 bytes: the read was stopped"):
+        collectors.catalogue_shopify(site.url, 305)
+
+
+def test_the_largest_sitemap_file_is_10_mb_unless_the_environment_says_otherwise(site, monkeypatch):
+    megabyte = 1024 * 1024
+    assert collectors.sitemap_bytes() == 10 * megabyte
+    for text, limit in (("25", 25), ("1", 1), ("50", 50), ("80", 50), ("0", 10), ("-3", 10), ("many", 10), (" 20 ", 20)):
+        monkeypatch.setenv("SH_SITEMAP_MB", text)
+        assert collectors.sitemap_bytes() == limit * megabyte, text
+    monkeypatch.delenv("SH_SITEMAP_MB")
+    monkeypatch.setattr(collectors, "SITEMAP_BYTES", 2000)                # the limit, lowered for the test
+    site.files["/product-sitemap.xml"] = urlset(site.url, *("/page-%d/" % i for i in range(200)))
+    with pytest.raises(collectors.CollectorError, match="of more than 2000 bytes"):
+        collectors.sitemap_load(site.url)
+    monkeypatch.setenv("SH_SITEMAP_MB", "1")                              # raised by whoever runs the worker
+    assert len(collectors.sitemap_load(site.url)) == 205
+
+
+def test_more_files_or_more_pages_than_the_limit_abort_the_load(site, monkeypatch):
+    monkeypatch.setattr(collectors, "SITEMAP_FILES", 4)                   # the index and its three children
+    assert len(collectors.sitemap_load(site.url)) == 8
+    monkeypatch.setattr(collectors, "SITEMAP_FILES", 3)
+    with pytest.raises(collectors.CollectorError, match="more than 3 sitemap files"):
+        collectors.sitemap_load(site.url)
+    monkeypatch.setattr(collectors, "SITEMAP_FILES", 500)
+    monkeypatch.setattr(collectors, "SITEMAP_PAGES", 8)
+    assert len(collectors.sitemap_load(site.url)) == 8
+    monkeypatch.setattr(collectors, "SITEMAP_PAGES", 7)
+    with pytest.raises(collectors.CollectorError, match="more than 7 pages in the sitemap"):
+        collectors.sitemap_load(site.url)
+
+
+# ================================================================ 11. the fake site, by hand
+
+def fake(site, query=""):
+    """What a look at /__fake shows."""
+    return json.loads(collectors.fetch(site.url + "/__fake" + query, timeout=5, read=1_000_000).body)
+
+
+def test_only_the_catalogue_of_the_sites_own_platform_answers(site):
+    def status(path):
+        return collectors.fetch(site.url + path, timeout=5).status
+
+    assert status("/wp-json/wc/store/v1/products?per_page=1") == 200      # the intake's look, exactly as it is written
+    assert status("/products.json?limit=1") == 404
+    assert status("/wp-json/wc/store/v1/products?per_page=100&page=2") == 400         # a paged read names its order
+    assert status("/about/") == 200 and status("/product/p-101/") == 200              # pages of the sitemap and the shop
+    answer = collectors.fetch(site.url + "/checkout/", timeout=5, redirects=0)
+    assert (answer.status, answer.headers["Location"]) == (302, "/cart/")             # an empty checkout is no page
+    site.use("shopify")
+    assert status("/products.json?limit=1") == 200 and status("/wp-json/wc/store/v1/products?per_page=1") == 404
+    assert [status(path) for path in SHOPIFY_PAGES] == [200] * 5 and status("/product/sample-sofa/") == 404
+
+
+def test_the_fake_as_a_shopify_shop_passes_every_collector(sql, site, capsys):
+    site.use("shopify")
+    sql.rpc("sh_setup", p_config=site.config())
+    assert run_manage("run-once", "probe") is None
+    assert [(row["page"], row["ok"]) for row in json.loads(capsys.readouterr().out)["rows"]] == [
+        ("בית", True), ("קטגוריה", True), ("מוצר", True), ("סל", True)]
+    assert run_manage("run-once", "sitemap") is None
+    assert json.loads(capsys.readouterr().out) == {"n": 310, "pages": 310}            # home, 305 products, 2 + 2 others
+    assert run_manage("run-once", "catalogue") is None                    # the count of the sitemap is its proof
+    assert json.loads(capsys.readouterr().out)["n"] == 3
+    assert [row["url"] for row in sql.rpc("sh_product_issues")] == [site.url + "/products/p-%d" % n for n in (4, 3, 2)]
+
+
+def test_the_fake_shows_what_arrived_and_never_a_topic(site, phone, monkeypatch):
+    monkeypatch.setenv("HEARTBEAT_URL", site.url + "/hb")
+    monkeypatch.setenv("NTFY_TOKEN", "tk_secret_token")
+    collectors.heartbeat()
+    collectors.heartbeat()
+    assert collectors.Pusher().publish("כותרת", "גוף") == 200
+    shown = fake(site)
+    assert shown["heartbeat_pings"] == 2 and shown["last_heartbeat"].startswith("20")             # the pings are counted
+    assert [(push["json"]["title"], push["json"]["topic"], push["auth"], push["accepted"]) for push in shown["pushes"]] == [
+        ("כותרת", "(topic)", "(token)", True)]
+    assert TOPIC not in json.dumps(shown) and "tk_secret_token" not in json.dumps(shown)
+    assert site.pushes[0]["json"]["topic"] == TOPIC                       # the tests themselves see what was sent
+
+    # by hand: break a page, look, repair. What arrived is still there to be looked at.
+    assert fake(site, "?path=/cart/&status=502")["broken"] == {"/cart/": {"status": 502}}
+    shown = fake(site, "?reset=1")
+    assert shown["broken"] == {} and len(shown["pushes"]) == 1 and shown["heartbeat_pings"] == 2
+    shown = fake(site, "?clear=1")
+    assert shown["pushes"] == [] and shown["heartbeat_pings"] == 0 and shown["last_heartbeat"] is None
+    # the stand-in for a dashboard's /health
+    assert fake(site, "?health_age=700")["health"]["last_probe_age_sec"] == 700
+    assert fake(site, "?health_age=none&health_db=down")["health"] == {
+        "ok": False, "db": "down", "screen": "ok", "last_probe_age_sec": None}
+
+
+def test_the_fake_site_by_hand_prints_the_environment_of_a_rehearsal(tmp_path):
+    config = tmp_path / "site_health.config.json"
+    process = subprocess.Popen([sys.executable, str(REFERENCE / "tests" / "fake_site.py"), "0", str(config),
+                                "--platform", "shopify"], stdout=subprocess.PIPE, text=True, encoding="utf-8",
+                               env=dict(os.environ, PYTHONIOENCODING="utf-8"))
+    try:
+        printed = ""
+        for line in process.stdout:                                       # up to the last line of its help
+            printed += line
+            if "how many heartbeat pings arrived" in line:
+                break
+        address = re.search(r"A fake Shopify shop is listening on (http://127\.0\.0\.1:\d+)", printed).group(1)
+        assert "export SH_ALLOW_PRIVATE=1" in printed
+        assert "export NTFY_URL=%s/ntfy NTFY_TOPIC=sh-local-test" % address in printed
+        assert ("export PAGESPEED_URL=%s/pagespeedonline/v5/runPagespeed PAGESPEED_KEY=local-rehearsal-key" % address
+                in printed)
+        assert "curl '%s/__fake?path=/cart&status=502'" % address in printed
+        written = json.loads(config.read_text(encoding="utf-8"))
+        assert written["platform"] == "shopify" and written["site"] == address
+        assert [(p["name"], p["url"].replace(address, ""), p["probe"], p["core"]) for p in written["pages"]] == [
+            ("בית", "/", True, True), ("קטגוריה", "/collections/sofas", True, True),
+            ("מוצר", "/products/sample-sofa", True, True), ("סל", "/cart", True, True), ("אודות", "/pages/about", False, True)]
+        with urllib.request.urlopen(address + "/products.json?limit=1", timeout=5) as answer:
+            assert len(json.loads(answer.read())["products"]) == 1
+    finally:
+        process.terminate()
+        process.wait(10)
+
+
+def test_the_configuration_of_the_fake_has_a_public_fifth_page(site):
+    pages = site.config()["pages"]
+    assert [(p["name"], p["url"].replace(site.url, ""), p["probe"], p["core"]) for p in pages] == [
+        ("בית", "/", True, True), ("קטגוריה", "/product-category/sofas/", True, True),
+        ("מוצר", "/product/sample-sofa/", True, True), ("סל", "/cart/", True, True), ("אודות", "/about/", False, True)]
+    assert all(collectors.probe_check(p, 2)["ok"] for p in pages)         # every one of them opens for anybody
+
+
+# ================================================================ 12. manage.py: the files for the owner
+
+def scratch_database():
+    """A database with nothing in it: its connection string, and the name to drop it by."""
+    from psycopg.conninfo import make_conninfo
+    name = "sh_install_" + os.urandom(6).hex()
+    with conftest.connect(conftest.ADMIN_URL, autocommit=True) as admin:
+        admin.execute('create database "%s"' % name)
+    return make_conninfo(conftest.ADMIN_URL, dbname=name), name
+
+
+def test_install_sql_writes_one_file_that_installs_an_empty_database_and_runs_twice(site, tmp_path, capsys, monkeypatch):
+    brand = "חנות $sh_config$ \"מרכאות\" 'גרש' \\ %s"                       # whatever a configuration may hold
+    source, out = tmp_path / "site_health.config.json", tmp_path / "install.sql"
+    source.write_text(json.dumps(site.config(brand=brand), ensure_ascii=False), encoding="utf-8")
+    assert run_manage("install-sql", "--config", str(source), "--out", str(out)) is None      # no database is set
+    printed = capsys.readouterr().out
+    assert "wrote %s" % out in printed and "no secret in it" in printed and "init-db --file" in printed
+    text = out.read_text(encoding="utf-8")
+    schema, functions = ((REFERENCE / name).read_text(encoding="utf-8").rstrip("\n")
+                         for name in ("schema.sql", "functions.sql"))
+    assert schema in text and functions in text                           # whole, and in the order they depend on
+    assert text.index(schema) < text.index(functions) < text.index("select 'Site Health is installed")
+
+    url, name = scratch_database()
+    try:
+        result = None
+        for attempt in (1, 2):                                            # pasted and run, and then once more
+            with conftest.connect(url, autocommit=True) as connection:
+                cursor = connection.execute(text)                         # one command of many statements, as an editor sends it
+                while True:
+                    if cursor.description:
+                        result = cursor.fetchall()
+                    if not cursor.nextset():
+                        break
+                assert result == [("Site Health is installed for %s" % site.url,)]
+                stored = connection.execute("select sh_config()").fetchone()[0]
+                assert (stored["site"], stored["brand"], len(stored["pages"]), stored["off"]) == (site.url, brand, 5, ["cert"])
+                if attempt == 1:                                          # something measured between the two runs
+                    connection.execute("insert into sh_messages (event, kind, title, msg, priority)"
+                                       " values ('open', 'התראה', 'כותרת', 'גוף', 3)")
+                else:
+                    assert connection.execute("select count(*) from sh_messages").fetchone() == (1,)
+        if shutil.which("psql"):                                          # and the way a person would run a file
+            ran = subprocess.run(["psql", url, "-v", "ON_ERROR_STOP=1", "-q", "-f", str(out)], capture_output=True, text=True)
+            assert ran.returncode == 0 and "Site Health is installed for %s" % site.url in ran.stdout, ran.stderr
+        monkeypatch.setenv("DATABASE_URL", url)                           # the rehearsal the command itself names
+        assert run_manage("init-db", "--file", str(out)) is None
+        assert capsys.readouterr().out == "applied install.sql\n"
+        assert run_manage("init-db", "--file", str(tmp_path / "missing.sql")).startswith("init-db failed: ")
+    finally:
+        with conftest.connect(conftest.ADMIN_URL, autocommit=True) as admin:
+            admin.execute('drop database if exists "%s" with (force)' % name)
+
+
+@pytest.mark.parametrize("change, message", [
+    ({"time_zone": None}, '"time_zone" is required: the time zone of the site\'s customers, such as Asia/Jerusalem'),
+    ({"time_zone": "Mars/Olympus"}, 'unknown "time_zone" Mars/Olympus'),
+    ({"site": "example.co.il"}, '"site" must be an absolute http(s) address'),
+    ({"pages": "all of them"}, '"pages" must be a list of pages'),
+    ({"pages": []}, 'exactly one page must have "home": true, found 0'),
+    ({"pages": [{"name": "בית", "url": "https://example.co.il/", "home": True, "probe": True}]},
+     "the home page must be a probe page and a core page"),
+])
+def test_install_sql_refuses_a_configuration_the_database_would_refuse(site, tmp_path, change, message):
+    source, out = tmp_path / "site_health.config.json", tmp_path / "install.sql"
+    source.write_text(json.dumps(site.config(**change), ensure_ascii=False), encoding="utf-8")
+    assert run_manage("install-sql", "--config", str(source), "--out", str(out)) == "%s: %s" % (source, message)
+    assert not out.exists()
+
+
+def test_install_sql_says_what_is_wrong_with_the_file_itself(tmp_path):
+    source = tmp_path / "site_health.config.json"
+    assert "cannot be read" in run_manage("install-sql", "--config", str(source))
+    source.write_text("{not json", encoding="utf-8")
+    assert "is not valid JSON" in run_manage("install-sql", "--config", str(source))
+    source.write_text("[1, 2]", encoding="utf-8")
+    assert "must hold one JSON object" in run_manage("install-sql", "--config", str(source))
+    assert "cannot be read" in run_manage("setup", str(tmp_path / "other.json"))      # the same reading, for setup
+
+
+PHP_STUBS = """<?php
+define('ABSPATH', '/');
+$GLOBALS['hooks'] = array();
+function add_action($name, $fn, $priority = 10) { $GLOBALS['hooks'][$name] = $fn; }
+function is_admin() { return false; }
+function is_preview() { return false; }
+function is_customize_preview() { return false; }
+function is_user_logged_in() { return getenv('SH_STAFF') === '1'; }
+function current_user_can($what) { return true; }
+function wp_json_encode($value) { return json_encode($value); }
+function wp_print_inline_script_tag($js, $attributes) { echo '<script id="' . $attributes['id'] . '">' . $js . '</script>'; }
+require $argv[1];
+$GLOBALS['hooks']['wp_footer']();
+"""
+
+
+def test_rum_plugin_writes_a_wordpress_plugin_zip_with_its_two_values_filled_in(tmp_path, capsys, monkeypatch):
+    out = tmp_path / "site-health-rum.zip"
+    assert run_manage("rum-plugin", "--endpoint", "https://dash.example.co.il/m", "--live-host", "www.Example.co.il",
+                      "--out", str(out)) is None
+    printed = capsys.readouterr().out
+    assert "sending to https://dash.example.co.il/m, live host example.co.il" in printed
+    assert "Plugins > Add new > Upload plugin" in printed and "Nobody edits wp-config.php" in printed
+    with zipfile.ZipFile(out) as archive:                                 # what the admin's upload screen takes
+        assert archive.namelist() == ["site-health-rum/site-health-rum.php"]
+        php = archive.read("site-health-rum/site-health-rum.php").decode("utf-8")
+    assert php.startswith("<?php\n/**\n * Plugin Name: Site Health RUM\n")
+    assert "define('SITE_HEALTH_RUM_ENDPOINT', 'https://dash.example.co.il/m');" in php
+    assert "define('SITE_HEALTH_RUM_LIVE_HOST', 'example.co.il');" in php
+    shipped = (REFERENCE / "rum" / "site-health-rum.php").read_text(encoding="utf-8")
+    assert php.replace("'https://dash.example.co.il/m');", "'');").replace("'example.co.il');", "'');") == shipped
+
+    if shutil.which("php"):                                               # the plugin itself, in a stand-in WordPress
+        plugin, stubs = tmp_path / "site-health-rum.php", tmp_path / "wordpress.php"
+        plugin.write_text(php, encoding="utf-8")
+        stubs.write_text(PHP_STUBS, encoding="utf-8")
+        assert subprocess.run(["php", "-l", str(plugin)], capture_output=True).returncode == 0
+        page = subprocess.run(["php", str(stubs), str(plugin)], capture_output=True, text=True, encoding="utf-8").stdout
+        head, rest = page.split(";", 1)
+        assert head.startswith('<script id="site-health-rum">window.SiteHealthRum=')
+        assert json.loads(head.split("=", 2)[2]) == {"endpoint": "https://dash.example.co.il/m",
+                                                     "liveHost": "example.co.il", "sample": 1}
+        assert rest.startswith("(function () {\nvar cfg = window.SiteHealthRum || {};")
+        assert "navigator.sendBeacon(cfg.endpoint, body)" in page and page.endswith("})();</script>")
+        staff = subprocess.run(["php", str(stubs), str(plugin)], capture_output=True, text=True,
+                               env=dict(os.environ, SH_STAFF="1")).stdout
+        assert staff == ""                                                # signed-in staff are not visitors
+        plugin.write_text(shipped, encoding="utf-8")                      # and as it ships, without an address: silent
+        assert subprocess.run(["php", str(stubs), str(plugin)], capture_output=True, text=True).stdout == ""
+
+    # the live host from the site's configuration, and "/m" added to a bare dashboard address
+    config = tmp_path / "site_health.config.json"
+    config.write_text(json.dumps({"site": "https://www.shop.example/"}), encoding="utf-8")
+    assert run_manage("rum-plugin", "--endpoint", "https://dash.example.co.il", "--config", str(config),
+                      "--out", str(out)) is None
+    assert "sending to https://dash.example.co.il/m, live host shop.example" in capsys.readouterr().out
+    monkeypatch.chdir(tmp_path)                                           # the command exactly as the kit writes it
+    (tmp_path / "site-health-rum.zip").unlink()
+    assert run_manage("rum-plugin", "--endpoint", "https://dash.example.co.il/m") is None
+    assert zipfile.ZipFile(tmp_path / "site-health-rum.zip").namelist() == ["site-health-rum/site-health-rum.php"]
+
+
+@pytest.mark.parametrize("arguments, message", [
+    (["--endpoint", "http://dash.example.co.il/m", "--live-host", "example.co.il"], "--endpoint must be the https address"),
+    (["--endpoint", "https://dash.example.co.il/m'); evil(); //", "--live-host", "example.co.il"], "--endpoint must be"),
+    (["--endpoint", "dash.example.co.il/m", "--live-host", "example.co.il"], "--endpoint must be"),
+    (["--endpoint", "https://dash.example.co.il/m", "--live-host", "exa'mple"], "the live host must be a host name"),
+    (["--endpoint", "https://dash.example.co.il/m"], "Which site is the live one?"),
+])
+def test_rum_plugin_refuses_what_it_cannot_write_into_a_php_file(tmp_path, monkeypatch, arguments, message):
+    monkeypatch.chdir(tmp_path)                                           # no configuration file here
+    assert run_manage("rum-plugin", *arguments, "--out", str(tmp_path / "plugin.zip")).startswith(message)
+    assert not (tmp_path / "plugin.zip").exists()
+
+
+# ================================================================ 13. watchdog.py: who watches the watcher (§7.10)
+
+STOPPED, BACK = "המדידה נעצרה: בודק זמינות האתר", "חזר לתקין: בודק זמינות האתר"
+
+
+@pytest.fixture
+def guard(site, monkeypatch, tmp_path):
+    """The watchdog's surroundings: the fake ntfy, a topic, no waiting, and a state file of this test."""
+    monkeypatch.setenv("NTFY_URL", site.url + "/ntfy")
+    monkeypatch.setenv("NTFY_TOPIC", TOPIC)
+    monkeypatch.setattr(watchdog, "TRY_PAUSE", 0.01)
+    monkeypatch.setattr(watchdog.tempfile, "tempdir", str(tmp_path))      # where a state file goes by default
+    return str(tmp_path / "watchdog-state.json")
+
+
+def titles(site):
+    return [push["json"]["title"] for push in site.pushes]
+
+
+def test_the_watchdog_speaks_the_same_hebrew_as_the_database(sql):
+    spans = dict(sql.sql("select m, sh_span(m) from generate_series(1, 6000) m"))
+    assert all(watchdog.span(m * 60) == spans[m] for m in spans)
+    assert [watchdog.span(seconds) for seconds in (0, 20, 89, 90, 150, 3600, 7200, 86400, 2 * 86400, 3 * 86400)] == [
+        "דקה", "דקה", "דקה", "שתי דקות", "3 דקות", "שעה", "שעתיים", "יום", "יומיים", "3 ימים"]
+    assert [watchdog.span(seconds, down=True) for seconds in (119, 659, 660)] == ["דקה", "10 דקות", "11 דקות"]
+    assert watchdog.FLOW == PROBE_FLOW and watchdog.LIMIT == 600
+
+
+def test_the_watchdog_pushes_once_when_the_measuring_stops_and_once_when_it_is_back(site, guard, capsys):
+    look = lambda now: watchdog.look(site.url, watchdog.State(guard), now=now)       # each look a new process, as under cron
+    start = 1_800_000_000
+    assert look(start) == 0 and site.pushes == []                         # the last round is 20 seconds old
+    site.health["last_probe_age_sec"] = 600
+    assert look(start + 60) == 0 and site.pushes == []                    # ten minutes exactly: not yet
+    site.health["last_probe_age_sec"] = 730
+    assert look(start + 120) == 0
+    assert site.pushes[0]["json"] == {
+        "topic": TOPIC, "title": STOPPED, "message": "אין מדידה כבר 12 דקות", "priority": 4, "tags": ["rotating_light"],
+        "click": site.url + "/site"}
+    assert (site.pushes[0]["path"], site.pushes[0]["type"]) == ("/ntfy/", "application/json")      # as the worker sends
+    site.health["last_probe_age_sec"] = 1030
+    assert look(start + 420) == 0 and len(site.pushes) == 1               # still stopped: nothing new to say
+    site.health["last_probe_age_sec"] = 12
+    assert look(start + 480) == 0
+    assert site.pushes[1]["json"] == {
+        "topic": TOPIC, "title": BACK, "message": STOPPED + "\nנמשך 18 דקות", "priority": 2,
+        "tags": ["white_check_mark"], "click": site.url + "/site"}       # 610 seconds before the alarm, 480 after
+    assert look(start + 540) == 0 and len(site.pushes) == 2
+    printed = capsys.readouterr()
+    assert TOPIC not in printed.out + printed.err
+    assert printed.out.count("watchdog:") == 3                            # the alarm, the look while it was open, the recovery
+
+
+def test_a_dashboard_that_gives_no_answer_is_an_alarm_only_when_it_lasts(site, guard):
+    look = lambda now: watchdog.look(site.url, watchdog.State(guard), now=now)
+    start = 1_800_000_000
+    site.broken["/health"] = {"status": 502}
+    assert look(start) == 0 and site.pushes == []                         # one look without an answer is no alarm
+    assert [path for _, path, _ in site.hits].count("/health") == 3       # it asked three times before saying so
+    assert look(start + 300) == 0 and site.pushes == []
+    site.broken = {}
+    assert look(start + 400) == 0                                         # it answered in between: the count starts anew
+    site.health = None                                                    # a page that is not the answer of /health
+    assert look(start + 500) == 0 and look(start + 1099) == 0 and site.pushes == []
+    assert look(start + 1100) == 0
+    assert site.pushes[0]["json"]["title"] == STOPPED
+    assert site.pushes[0]["json"]["message"] == "המסך של בריאות האתר לא עונה כבר 10 דקות"
+    assert look(start + 1400) == 0 and len(site.pushes) == 1
+    site.health = {"ok": True, "db": "ok", "screen": "ok", "last_probe_age_sec": 30}
+    assert look(start + 1700) == 0
+    assert site.pushes[1]["json"]["message"] == STOPPED + "\nנמשך 20 דקות"            # from the first silent look
+
+
+def test_a_dashboard_without_its_database_is_an_alarm_of_its_own_words(site, guard):
+    look = lambda now: watchdog.look(site.url, watchdog.State(guard), now=now)
+    site.health = {"ok": False, "db": "database unreachable (ConnectionRefusedError)", "screen": "ok",
+                   "last_probe_age_sec": None}
+    assert look(1_800_000_000) == 0 and look(1_800_000_599) == 0 and site.pushes == []
+    assert look(1_800_000_725) == 0
+    assert (site.pushes[0]["json"]["title"], site.pushes[0]["json"]["message"]) == (STOPPED, "אין חיבור לנתונים כבר 12 דקות")
+
+
+def test_a_site_that_was_never_measured_is_not_an_alarm(site, guard):
+    site.health["last_probe_age_sec"] = None                              # set up a moment ago: no round yet
+    for later in (0, 3600, 86400):
+        assert watchdog.look(site.url, watchdog.State(guard), now=1_800_000_000 + later) == 0
+    assert site.pushes == []
+
+
+def test_a_push_that_ntfy_refused_is_owed_until_it_goes_out(site, guard, capsys):
+    look = lambda now: watchdog.look(site.url, watchdog.State(guard), now=now)
+    site.health["last_probe_age_sec"] = 700
+    site.ntfy_status = 500
+    assert look(1_800_000_000) == 1                                       # the exit code tells cron
+    assert "watchdog: ntfy refused the push (HTTP 500)" in capsys.readouterr().err
+    site.ntfy_status = 200
+    assert look(1_800_000_300) == 0 and look(1_800_000_600) == 0
+    assert [(push["json"]["title"], push["accepted"]) for push in site.pushes] == [(STOPPED, False), (STOPPED, True)]
+    site.health["last_probe_age_sec"] = 5                                 # and the same for the recovery
+    site.ntfy_status = 403
+    assert look(1_800_000_900) == 1
+    site.ntfy_status = 200
+    site.broken["/ntfy/"] = {"to": site.url + "/"}                        # a server that sends the push elsewhere:
+    assert look(1_800_001_000) == 1                                       # a page that answers 200 there is no "accepted"
+    assert "watchdog: ntfy refused the push (HTTP 302)" in capsys.readouterr().err
+    site.broken = {}
+    assert look(1_800_001_200) == 0 and look(1_800_001_500) == 0
+    assert [(push["json"]["title"], push["accepted"]) for push in site.pushes[2:]] == [(BACK, False), (BACK, True)]
+
+
+def test_the_watchdog_as_a_command_under_cron_and_as_a_loop(site, guard, monkeypatch, tmp_path, capsys):
+    monkeypatch.setenv("NTFY_TOKEN", "tk_test_token")
+    command = ["--dashboard", site.url + "/"]
+    assert watchdog.main(command) == 0 and site.pushes == []
+    default = tmp_path / "site-health-watchdog.json"                      # in the system's temporary folder
+    assert json.loads(default.read_text(encoding="utf-8")) == {"open": False, "since": None, "blind": None}
+    assert capsys.readouterr().out == ""                                  # all is well: cron has nothing to mail
+    assert watchdog.main(command + ["--verbose"]) == 0
+    assert capsys.readouterr().out == "watchdog: the last probe round is 20 seconds old\n"
+    site.health["last_probe_age_sec"] = 900
+    assert watchdog.main(command) == 0 and watchdog.main(command) == 0
+    assert titles(site) == [STOPPED] and site.pushes[0]["auth"] == "Bearer tk_test_token"
+    assert json.loads(default.read_text(encoding="utf-8"))["open"] is True
+    assert 'pushed "%s": yes' % STOPPED in capsys.readouterr().out
+    site.health["last_probe_age_sec"] = 3
+    assert watchdog.main(command + ["--state", guard]) == 0               # another file knows of no alarm
+    assert watchdog.main(command) == 0 and titles(site) == [STOPPED, BACK]
+
+    # --loop: the same looks, a minute apart, remembered in memory
+    default.unlink()
+    script = [lambda: site.health.update(last_probe_age_sec=700), lambda: None, lambda: site.health.update(last_probe_age_sec=4)]
+    rests = []
+
+    def rest(seconds):
+        rests.append(seconds)
+        if not script:
+            raise KeyboardInterrupt
+        script.pop(0)()
+
+    monkeypatch.setattr(watchdog, "rest", rest)
+    monkeypatch.setenv("DASHBOARD_URL", site.url)                         # may stand in for --dashboard
+    assert watchdog.main(["--loop"]) == 0
+    assert titles(site)[2:] == [STOPPED, BACK] and rests == [60, 60, 60, 60] and not default.exists()
+    printed = capsys.readouterr()
+    assert TOPIC not in printed.out + printed.err and "tk_test_token" not in printed.out + printed.err
+
+
+@pytest.mark.parametrize("arguments, topic, message", [
+    ([], TOPIC, "name the dashboard"),
+    (["--dashboard", "dash.example.co.il"], TOPIC, "name the dashboard"),
+    (["--dashboard", "https://dash.example.co.il"], "", "NTFY_TOPIC is not set"),
+])
+def test_the_watchdog_needs_a_dashboard_and_a_topic(site, monkeypatch, capsys, arguments, topic, message):
+    monkeypatch.setenv("NTFY_TOPIC", topic)
+    with pytest.raises(SystemExit) as stop:
+        watchdog.main(arguments)
+    assert stop.value.code == 2 and message in capsys.readouterr().err
+
+
+def test_what_one_look_decides():
+    now = 1_800_000_000
+    idle = {"open": False, "since": None, "blind": None}
+    alarm = {"open": True, "since": now - 900, "blind": None}
+    assert watchdog.decide(("age", 600), idle, now)[:2] == (idle, None)
+    state, push, said = watchdog.decide(("age", 601), idle, now)
+    assert (state, push["title"], push["message"], push["priority"]) == (
+        {"open": True, "since": now - 601, "blind": None}, STOPPED, "אין מדידה כבר 10 דקות", 4)
+    assert watchdog.decide(("age", 5000), alarm, now)[:2] == (alarm, None)
+    state, push, said = watchdog.decide(("age", 59), alarm, now)
+    assert (state, push["title"], push["message"], push["priority"]) == (idle, BACK, STOPPED + "\nנמשך 15 דקות", 2)
+    assert watchdog.decide(("new", None), idle, now)[:2] == (idle, None)
+    assert watchdog.decide(("new", None), alarm, now)[:2] == (alarm, None)            # nothing to judge by: left as it is
+    blind = {"open": False, "since": None, "blind": now}
+    assert watchdog.decide(("silent", "HTTP 502"), idle, now)[:2] == (blind, None)
+    assert watchdog.decide(("silent", "HTTP 502"), blind, now + 599)[:2] == (blind, None)
+    state, push, said = watchdog.decide(("silent", "HTTP 502"), blind, now + 600)
+    assert state == {"open": True, "since": now, "blind": now} and push["message"] == "המסך של בריאות האתר לא עונה כבר 10 דקות"
+    state, push, said = watchdog.decide(("no data", "x"), blind, now + 7200)
+    assert push["message"] == "אין חיבור לנתונים כבר שעתיים"
+    assert watchdog.decide(("age", 30), blind, now + 300)[:2] == (idle, None)         # it answered again: forgotten
+
+
+@pytest.fixture
+def dashboard(sql, database, site):
+    """The reference server itself, on a port of its own and on the scratch database, measuring nothing."""
+    port = closed_port()
+    process = subprocess.Popen(
+        [sys.executable, "-m", "uvicorn", "server:app", "--host", "127.0.0.1", "--port", str(port), "--log-level", "error"],
+        cwd=str(REFERENCE), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        env=dict(os.environ, DATABASE_URL=database, COLLECTORS="0", SH_PASS_OWNER="a-password-of-this-test"))
+    address = "http://127.0.0.1:%d" % port
+    try:
+        for _ in range(100):                                              # until it answers
+            try:
+                with urllib.request.urlopen(address + "/health", timeout=2) as answer:
+                    if answer.status == 200:
+                        break
+            except OSError:
+                time.sleep(0.1)
+        else:
+            pytest.fail("the reference server did not come up on %s" % address)
+        yield address, process
+    finally:
+        process.terminate()
+        process.wait(10)
+
+
+def test_the_watchdog_against_the_reference_server(sql, site, dashboard, guard):
+    address, process = dashboard
+    config = collectors.read_config()
+    run = lambda: watchdog.main(["--dashboard", address, "--state", guard])
+    assert run() == 0 and site.pushes == []                               # set up, and never measured: no alarm
+    collectors.probe_round(config.probe, "full", this_minute() - minutes(1))
+    assert run() == 0 and site.pushes == []                               # the worker measures
+
+    # the worker stops: eleven minutes later the newest full round is that old
+    sql.sql("update sh_flows set last_at = now() - interval '11 minutes' where flow_name = %s", [PROBE_FLOW])
+    assert run() == 0 and run() == 0
+    assert titles(site) == [STOPPED] and site.pushes[0]["json"]["message"] == "אין מדידה כבר 11 דקות"
+    assert site.pushes[0]["json"]["click"] == address + "/site"
+
+    collectors.probe_round(config.probe, "full", this_minute())           # the worker is started again
+    assert run() == 0 and run() == 0
+    assert titles(site) == [STOPPED, BACK]
+    assert re.fullmatch(STOPPED + "\nנמשך 1[12] דקות", site.pushes[1]["json"]["message"])
+
+    process.terminate()                                                   # and then the whole dashboard goes away
+    process.wait(10)
+    assert run() == 0 and len(site.pushes) == 2                           # the first silent look
+    state = json.loads(Path(guard).read_text(encoding="utf-8"))
+    assert state["open"] is False and state["blind"] is not None
+    Path(guard).write_text(json.dumps(dict(state, blind=state["blind"] - 601)), encoding="utf-8")     # ten minutes later
+    assert run() == 0
+    assert titles(site)[2:] == [STOPPED] and site.pushes[2]["json"]["message"] == "המסך של בריאות האתר לא עונה כבר 10 דקות"

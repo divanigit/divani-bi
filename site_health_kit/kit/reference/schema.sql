@@ -80,7 +80,10 @@ create table if not exists sh_site_pages (
   last_measured_at timestamptz
 );
 
--- One real-user page view. Nothing here may identify a person: no IP, no cookie, no user agent.
+-- One real-user page view: about 150 bytes with its index. No IP, no cookie and no user agent
+-- are stored, and no query string; the ingest also drops a path that looks as if it carries an
+-- e-mail address or a token (spec §7.7). sh_rum_add stops storing once the last 24 hours hold
+-- 30,000 rows, so a flood of forged views cannot fill the database.
 create table if not exists sh_rum (
   created_at timestamptz not null default now(),
   site       text not null,
@@ -189,9 +192,13 @@ create table if not exists sh_login_log (
 );
 
 -- ---------------------------------------------------------------- privileges
--- Private tables: row level security without policies shuts out every role but the owner of
--- the tables and roles that bypass it (on Supabase: the service role), and on Supabase the two
--- public API roles lose their default grants as well.
+-- Private tables. Row level security without policies shuts out every role but the owner of the
+-- tables and roles that bypass it (on Supabase: the service role), and on Supabase the two public
+-- API roles lose what the platform's default privileges gave them, the identity sequences included.
+-- The service role (the secret key the server and the collectors use) is granted the tables by
+-- name: a Supabase project does not always hand out table grants on its own, and without this
+-- grant every sh_* function fails with "permission denied" on the first table it touches.
+-- sh_deadman_push (deadman.sql) is left to its owner: only the database's own job uses it.
 do $$
 declare
   t text;
@@ -202,6 +209,16 @@ begin
     foreach r in array array['anon', 'authenticated'] loop
       if exists (select 1 from pg_roles where rolname = r) then
         execute format('revoke all on table public.%I from %I', t, r);
+      end if;
+    end loop;
+    if t <> 'sh_deadman_push' and exists (select 1 from pg_roles where rolname = 'service_role') then
+      execute format('grant select, insert, update, delete on table public.%I to service_role', t);
+    end if;
+  end loop;
+  for t in select sequencename from pg_sequences where schemaname = 'public' and sequencename like 'sh\_%' loop
+    foreach r in array array['anon', 'authenticated'] loop
+      if exists (select 1 from pg_roles where rolname = r) then
+        execute format('revoke all on sequence public.%I from %I', t, r);
       end if;
     end loop;
   end loop;

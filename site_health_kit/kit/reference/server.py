@@ -3,16 +3,21 @@
 No business logic lives here. Every figure comes from an sh_* SQL function through db.rpc();
 this file decides who may see what and turns failures into the statuses of spec §5.7.
 
-    uvicorn server:app --host 0.0.0.0 --port 8000        # one worker: each worker would start its own collectors
+    uvicorn server:app --host 0.0.0.0 --port 8000 --no-access-log     # one worker: each would start its own collectors
+
+The share token travels in the query string (spec §8.2), hence --no-access-log. If the flag is forgotten,
+this file still keeps query strings out of uvicorn's access log. Under another server program, turn its
+access log off.
 
 Environment: SH_PASS_OWNER (without it nobody can sign in), SH_PASS_STAFF, SH_PASS_VENDOR_<NAME>,
-SH_VENDOR_NOALERTS, SH_SHARE_TOKEN, SH_PROXY_HOPS, SH_SCREEN, COLLECTORS, and the database variables
-of db.py. Everything about the site itself comes from sh_config().
+SH_VENDOR_NOALERTS, SH_SHARE_TOKEN, SH_PROXY_HOPS, SH_SCREEN, SH_RUM_PER_MINUTE, SH_RUM_PER_DAY,
+COLLECTORS, and the database variables of db.py. Everything about the site itself comes from sh_config().
 """
 import asyncio
 import hashlib
 import hmac
 import html
+import ipaddress
 import json
 import logging
 import os
@@ -35,10 +40,15 @@ import db
 log = logging.getLogger("uvicorn.error")     # the logger uvicorn prints; one of our own is silent below WARNING
 
 COOKIE = "sh_session"
-SESSION_LABEL = b"site-health-session-v1"
+SESSION_LABEL = b"site-health-session-v2"
 VENDOR_PREFIX = "SH_PASS_VENDOR_"
-DEFAULT_SCREEN = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, "site_health.html")
+PASSWORD_MIN, SHARE_TOKEN_MIN = 12, 20                       # shorter: a password is warned about, a token is off
+HERE = os.path.dirname(os.path.abspath(__file__))
 MARKER = "<!--SH_INJECT-->"
+# Sent with every answer (spec §8.2): no search engine, no address of this screen in a Referer header
+# (in share mode it holds the token), no page that frames the screen, no guessing of content types.
+SECURITY_HEADERS = {"X-Robots-Tag": "noindex", "Referrer-Policy": "no-referrer", "X-Frame-Options": "DENY",
+                    "X-Content-Type-Options": "nosniff"}
 
 # Access (spec §8.2). An outsider (vendor, share link) gets an allow-list, so a route added later is closed to them.
 OPEN_PATHS = {"/login", "/logout", "/health", "/m"}          # answered before any role check
@@ -46,21 +56,32 @@ DATA_PATHS = {"/api/site", "/api/site/now", "/api/site/drill"}
 OUTSIDER_PATHS = DATA_PATHS | {"/site", "/status"}           # all an outsider may GET; nothing else, no other method
 SITE_ALERT_KINDS = {"down", "slow", "silent", "cert"}        # the only alerts an outsider sees
 
-MAX_FAILURES, FAILURE_WINDOW = 8, 600                        # failed sign-ins from one address, within seconds
+MAX_FAILURES, FAILURE_WINDOW = 8, 600                        # wrong passwords and share tokens of one address, in seconds
 PROBE_FLOW = "בודק זמינות האתר"                              # the flow whose last run is "the last check"
 
-RUM_MAX_BYTES, RUM_MAX_PATH, RUM_PER_MINUTE, RUM_BATCH, RUM_QUEUE = 1024, 300, 60, 50, 1000
+RUM_MAX_BYTES, RUM_MAX_PATH, RUM_PER_ADDRESS, RUM_BATCH, RUM_QUEUE = 1024, 300, 60, 50, 1000
+RUM_PER_MINUTE, RUM_PER_DAY = 300, 20000                     # rows stored for all addresses together, unless
+                                                             # SH_RUM_PER_MINUTE / SH_RUM_PER_DAY say otherwise
 # Path segments that name an account, checkout, order or admin page: such a view is never stored.
 # A site adds its own (translated slugs) with "private_paths" in its configuration.
 RUM_PRIVATE = {"account", "my-account", "checkout", "checkouts", "order", "orders", "order-received", "order-pay",
                "view-order", "lost-password", "admin", "wp-admin", "wp-login.php"}
 RUM_SITE = re.compile(r"[a-z0-9.-]{1,100}")                  # "live" or a host name
+# A path that may name a person is never stored: an "@" (an e-mail address), or something that looks like a
+# token. The token rule is narrow on purpose, so that ordinary slugs survive: a UUID; or, among the runs of
+# letters, digits and "_" (a hyphen ends a run), one of 16 or more hexadecimal characters, or one of 24 or
+# more characters that mixes letters and digits.
+RUM_CONTROL = re.compile(r"[\x00-\x1f\x7f]")
+RUM_RUN = re.compile(r"[A-Za-z0-9_]+")
+RUM_HEX = re.compile(r"[0-9A-Fa-f]{16,}")
+RUM_UUID = re.compile(r"[0-9A-Fa-f]{8}(-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}")
 BUCKET = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}( [0-9]{2}:00)?")       # a day or an hour, as the charts name them
 
 TEXT_WRONG = "סיסמה שגויה"
 TEXT_BLOCKED = "יותר מדי ניסיונות. נסו שוב בעוד עשר דקות."
-TEXT_BAD_LINK = "הקישור אינו תקין או שפג."
+TEXT_BAD_LINK = "הקישור אינו תקין או שפג תוקפו."
 TEXT_NO_DATA = "אין כרגע חיבור לנתונים. נסו שוב בעוד רגע."
+TEXT_FAULT = "משהו השתבש. נסו שוב בעוד כמה דקות."
 
 PAGE_SHELL = """<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
@@ -95,6 +116,11 @@ class Viewer(NamedTuple):
         return self.role in ("vendor", "share")
 
     @property
+    def session_seconds(self):
+        """How long a sign-in lasts: 30 days for a vendor, 365 for the owner and staff."""
+        return 86400 * (30 if self.role == "vendor" else 365)
+
+    @property
     def screen_role(self):
         """window.SH_ROLE (spec §6.7). It only hides controls; the rules themselves are enforced in this file."""
         if self.role == "share":
@@ -116,10 +142,31 @@ def _same(a, b):
     return hmac.compare_digest(a.encode("utf-8"), b.encode("utf-8"))
 
 
-def _token(password):
-    """The session cookie: an HMAC keyed with the person's (normalized) password. Changing or deleting
-    the password in the host's settings signs that person out at once; there is no session table."""
-    return hmac.new(password.encode("utf-8"), SESSION_LABEL, hashlib.sha256).hexdigest()
+def _token(password, expires):
+    """The session cookie: "<expiry>.<HMAC-SHA256 in hex>". The expiry is in whole seconds since 1970, and
+    the HMAC, keyed with the person's (normalized) password, covers a fixed label and that expiry. So the
+    server itself ends a session when its time is up, and changing or deleting the password in the host's
+    settings signs that person out at once; there is no session table."""
+    signed = SESSION_LABEL + b"." + str(expires).encode("ascii")
+    return "%d.%s" % (expires, hmac.new(password.encode("utf-8"), signed, hashlib.sha256).hexdigest())
+
+
+def _vendor_key(name):
+    """A vendor's name as it is compared: without case, spaces and hyphens read as "_" (the way the name
+    of an environment variable has to spell them)."""
+    return re.sub(r"[\s-]+", "_", name.strip()).casefold()
+
+
+def _vendor_names(env):
+    return [variable.removeprefix(VENDOR_PREFIX) for variable in sorted(env)
+            if variable.startswith(VENDOR_PREFIX) and variable != VENDOR_PREFIX]
+
+
+def _unknown_quiet(env):
+    """The names in SH_VENDOR_NOALERTS that match no SH_PASS_VENDOR_<NAME> variable."""
+    known = {_vendor_key(name) for name in _vendor_names(env)}
+    return [name.strip() for name in env.get("SH_VENDOR_NOALERTS", "").split(",")
+            if name.strip() and _vendor_key(name) not in known]
 
 
 def _accounts():
@@ -127,16 +174,17 @@ def _accounts():
 
     The order is the collision rule. Two people with one password have one cookie, and both lookups
     below stop at the first match, so a shared password can take rights away but never grant them.
-    Read from the environment on every call; an unset or blank password never matches."""
+    Read from the environment on every call; an unset or blank password never matches.
+
+    SH_VENDOR_NOALERTS fails closed: while it holds a name that matches no vendor (a typing mistake
+    would otherwise show that vendor the alerts), no vendor sees alerts."""
     env = os.environ
     if not _norm(env.get("SH_PASS_OWNER")):
         return []
-    quiet = {name.strip().casefold() for name in env.get("SH_VENDOR_NOALERTS", "").split(",")}
-    vendors = []
-    for variable in sorted(env):
-        name = variable.removeprefix(VENDOR_PREFIX)
-        if variable.startswith(VENDOR_PREFIX) and name:
-            vendors.append((env[variable], Viewer("vendor", name, name.casefold() in quiet)))
+    quiet = {_vendor_key(name) for name in env.get("SH_VENDOR_NOALERTS", "").split(",") if name.strip()}
+    all_quiet = bool(_unknown_quiet(env))
+    vendors = [(env[VENDOR_PREFIX + name], Viewer("vendor", name, all_quiet or _vendor_key(name) in quiet))
+               for name in _vendor_names(env)]
     vendors.sort(key=lambda account: not account[1].no_alerts)          # stable: those without alerts first
     people = vendors + [(env.get("SH_PASS_STAFF"), Viewer("staff", "staff")),
                         (env["SH_PASS_OWNER"], Viewer("owner", "owner"))]
@@ -144,48 +192,94 @@ def _accounts():
 
 
 def _by_password(password):
-    """(Viewer, cookie value) for a typed password, or None."""
+    """(Viewer, that person's normalized password) for a typed password, or None."""
     typed = _norm(password)
     for known, viewer in _accounts():
         if _same(typed, known):
-            return viewer, _token(known)
+            return viewer, known
     return None
 
 
 def _by_cookie(request):
+    """The Viewer a session cookie belongs to, or None: also when its time is up."""
     cookie = request.cookies.get(COOKIE, "")
+    expires = cookie.partition(".")[0]
+    if not (expires.isascii() and expires.isdigit() and len(expires) <= 12) or int(expires) <= _now().timestamp():
+        return None
     for known, viewer in _accounts():
-        if _same(cookie, _token(known)):
+        if _same(cookie, _token(known, int(expires))):
             return viewer
     return None
 
 
+def _share_token():
+    """The configured share token, or "" when the link is switched off: no token, or one too short to be a secret."""
+    token = os.environ.get("SH_SHARE_TOKEN", "").strip()
+    return token if len(token) >= SHARE_TOKEN_MIN else ""
+
+
 def _share_ok(k):
-    token = os.environ.get("SH_SHARE_TOKEN", "").strip()     # blank: the share link is switched off
+    token = _share_token()
     return bool(token and k) and _same(k, token)
+
+
+def _link_k(request):
+    """The k of a request that only the share token decides: any request for the share page, and a data
+    call that carries k. None for every other request; nowhere else is k read."""
+    path, k = request.scope["path"], request.query_params.get("k", "")
+    return k if path == "/status" or (k and path in DATA_PATHS) else None
 
 
 def _viewer(request):
     """Who this request is, or None. On the share page, and on a data call that carries k, only the
-    share token counts: the link shows what the link shows, whoever opens it. Nowhere else is k read."""
-    path, k = request.url.path, request.query_params.get("k", "")
-    if path == "/status" or (k and path in DATA_PATHS):
+    share token counts: the link shows what the link shows, whoever opens it."""
+    k = _link_k(request)
+    if k is not None:
         return SHARE_LINK if _share_ok(k) else None
     return _by_cookie(request)
 
 
+def _address(text):
+    """An IP address in its plain form, or None when the text is not one. A port and brackets are cut
+    off ("203.0.113.9:4711", "[2001:db8::1]:443"); an IPv4 address written as IPv6 is read as IPv4."""
+    text = text.strip()
+    if text.startswith("["):
+        text = text[1:].partition("]")[0]
+    elif text.count(":") == 1:
+        text = text.partition(":")[0]
+    try:
+        ip = ipaddress.ip_address(text.partition("%")[0])
+    except ValueError:
+        return None
+    return str(ip.ipv4_mapped or ip) if ip.version == 6 else str(ip)
+
+
 def _client_ip(request):
-    """The address the sign-in and beacon limits count by (spec §8.2). Behind the host's proxy the socket
-    peer is the proxy, and each proxy appends the address it saw to X-Forwarded-For. So the client is
-    SH_PROXY_HOPS entries from the right: 1 (the default) for one proxy, 2 where the host has two (its
+    """The client's address, for the limits and the login log (spec §8.2). Behind the host's proxy the
+    socket peer is the proxy, and each proxy appends the address it saw to X-Forwarded-For. So the client
+    is SH_PROXY_HOPS entries from the right: 1 (the default) for one proxy, 2 where the host has two (its
     documentation says), 0 for no proxy at all, which uses the socket peer. Entries further left are
-    whatever the client sent; counting by them would let anybody dodge the limits."""
+    whatever the client sent; counting by them would let anybody dodge the limits. An entry that is not
+    an IP address is not believed either: the socket peer is used. Never longer than 45 characters."""
     hops = os.environ.get("SH_PROXY_HOPS", "1").strip()
     hops = int(hops) if hops.isascii() and hops.isdigit() else 1
     forwarded = [entry.strip() for entry in request.headers.get("x-forwarded-for", "").split(",") if entry.strip()]
     if hops and forwarded:
-        return forwarded[-min(hops, len(forwarded))]
-    return request.client.host if request.client else "?"
+        address = _address(forwarded[-min(hops, len(forwarded))])
+        if address:
+            return address
+    peer = request.client.host if request.client else "?"
+    return _address(peer) or peer[:45]
+
+
+def _counted_as(ip):
+    """What the limits count an address by: itself, or for IPv6 its /64. One customer of an internet
+    provider holds a whole /64, so counting each IPv6 address apart would be no limit at all."""
+    try:
+        parsed = ipaddress.ip_address(ip)
+    except ValueError:
+        return ip
+    return str(ipaddress.ip_network((parsed, 64), strict=False)) if parsed.version == 6 else ip
 
 
 def _is_https(request):
@@ -218,12 +312,49 @@ def _inline_json(value):
             .replace("<", "\\u003c").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029"))
 
 
+def _screen_file():
+    """Where the screen is: $SH_SCREEN; else site_health.html next to this file (a deployed copy of the
+    backend); else one folder up (this file running inside the kit)."""
+    named = os.environ.get("SH_SCREEN", "").strip()
+    if named:
+        return named
+    beside = os.path.join(HERE, "site_health.html")
+    return beside if os.path.isfile(beside) else os.path.join(HERE, os.pardir, "site_health.html")
+
+
+_screen_cache = {"key": None, "parts": None}
+
+
+def _screen_parts():
+    """The screen file as (text before the marker, text after it); read again when the file changes."""
+    path = _screen_file()
+    stat = os.stat(path)
+    key = (path, stat.st_mtime_ns, stat.st_size)
+    if _screen_cache["key"] != key:
+        with open(path, encoding="utf-8") as f:
+            head, marker, tail = f.read().partition(MARKER)
+        if not marker:
+            raise RuntimeError("the screen file has no %s marker" % MARKER)
+        _screen_cache.update(key=key, parts=(head, tail))
+    return _screen_cache["parts"]
+
+
+def _screen_state():
+    """"ok", or what is wrong with the screen file, in a word that /health may show to anybody."""
+    try:
+        _screen_parts()
+    except OSError:
+        return "missing"
+    except RuntimeError:
+        return "no marker"
+    except ValueError:
+        return "not UTF-8"
+    return "ok"
+
+
 def _screen(config, viewer):
     """The screen file, with this site's configuration and the viewer's role written in at the marker."""
-    with open(os.environ.get("SH_SCREEN") or DEFAULT_SCREEN, encoding="utf-8") as f:
-        head, marker, tail = f.read().partition(MARKER)
-    if not marker:
-        raise RuntimeError("the screen file has no %s marker" % MARKER)
+    head, tail = _screen_parts()
     script = "<script>window.SH_CONFIG=%s;window.SH_ROLE=%s;</script>" % (
         _inline_json(config), _inline_json(viewer.screen_role))
     return _html(head + script + tail)
@@ -257,6 +388,8 @@ def _now():
 class Site(NamedTuple):
     tz: ZoneInfo        # the local dates of spec §5.1 are dates in this zone
     hosts: frozenset    # who may send real-user beacons: the site's host and "rum_hosts", without "www."
+    names: frozenset    # what a beacon may call its site besides one of those hosts: "live" and "live_hosts"
+    rum_off: bool       # the configuration switches real-user measurements off ("off": ["real_users"])
     private: frozenset  # path segments of pages whose views are never stored, in lower case
     screen: dict        # window.SH_CONFIG
 
@@ -270,9 +403,10 @@ async def _site():
         config = await rpc("sh_config")
         try:
             hosts = [config["host"], *config["rum_hosts"]]
+            names = ["live", *(config.get("live_hosts") or [])]
             private = {urllib.parse.unquote(name).lower() for name in config["private_paths"]}
-            site = Site(ZoneInfo(config["time_zone"]), frozenset(map(_bare, hosts)), frozenset(RUM_PRIVATE | private),
-                        config["screen"])
+            site = Site(ZoneInfo(config["time_zone"]), frozenset(map(_bare, hosts)), frozenset(map(str, names)),
+                        "real_users" in (config.get("off") or []), frozenset(RUM_PRIVATE | private), config["screen"])
         except (KeyError, TypeError, ValueError, AttributeError) as e:
             raise db.DbError("the site is not configured (%s): load its configuration with sh_setup" % e) from None
         _site_cache.update(site=site, at=time.monotonic())
@@ -343,8 +477,28 @@ def _start_collectors():
         log.error("collectors: NOT started, this process measures nothing (%s: %s)", type(e).__name__, e)
 
 
-@asynccontextmanager
-async def lifespan(app):
+class _NoQueryStrings(logging.Filter):
+    """Cuts the query string off the request line that uvicorn's access log prints. The share token
+    travels in the query string (/status?k=...), and a secret does not belong in the host's log."""
+
+    def filter(self, record):
+        if isinstance(record.args, tuple):
+            record.args = tuple(arg.split("?", 1)[0] if isinstance(arg, str) else arg for arg in record.args)
+        return True
+
+
+def _quiet_access_log():
+    access = logging.getLogger("uvicorn.access")
+    if not any(isinstance(existing, _NoQueryStrings) for existing in access.filters):
+        access.addFilter(_NoQueryStrings())
+
+
+_quiet_access_log()                              # on import, so it holds whatever the start command is
+
+
+def _report_configuration():
+    """Says at start-up what is wrong or weak in the environment. Names only: never a password or a token."""
+    env = os.environ
     accounts, first = _accounts(), {}
     if not accounts:
         log.warning("SH_PASS_OWNER is not set: nobody can sign in")
@@ -352,6 +506,29 @@ async def lifespan(app):
         if first.setdefault(password, viewer) is not viewer:
             log.warning("%s and %s have the same password: both sign in as %s (%s)",
                         first[password].who, viewer.who, first[password].who, first[password].role)
+        elif len(password) < PASSWORD_MIN:
+            log.warning("the password of %s is shorter than %d characters: use a generated one of 16 or more",
+                        viewer.who, PASSWORD_MIN)
+    unknown = _unknown_quiet(env)
+    if unknown:
+        log.error("SH_VENDOR_NOALERTS names %s, and no %s<NAME> variable has that name: until this is "
+                  "corrected NO vendor sees alerts", ", ".join(unknown), VENDOR_PREFIX)
+    for name in _vendor_names(env):
+        if name.upper() == "CHECK" or name.upper().startswith("CHECK_"):
+            log.warning("%s%s is set: it is the throwaway password of a deployment check; delete it when "
+                        "the check is done", VENDOR_PREFIX, name)
+    if env.get("SH_SHARE_TOKEN", "").strip() and not _share_token():
+        log.warning("SH_SHARE_TOKEN is shorter than %d characters: the share link is switched off "
+                    "(OWNER-STEPS.md has the recipe for a good one)", SHARE_TOKEN_MIN)
+    if _screen_state() != "ok":
+        log.error("the screen file is not usable (%s: %s): /site cannot be served. Copy site_health.html next "
+                  "to server.py, or name it in SH_SCREEN", _screen_state(), _screen_file())
+
+
+@asynccontextmanager
+async def lifespan(app):
+    _quiet_access_log()                          # again: the server program may have set its logging up since
+    _report_configuration()
     _start_collectors()
     yield
 
@@ -362,18 +539,26 @@ app = FastAPI(title="Site Health", lifespan=lifespan, docs_url=None, redoc_url=N
 @app.middleware("http")
 async def gate(request: Request, call_next):
     response = await _admit(request, call_next)
-    response.headers["X-Robots-Tag"] = "noindex"
+    response.headers.update(SECURITY_HEADERS)
     return response
 
 
 async def _admit(request, call_next):
     """Every rule that depends on the path and the method (spec §8.2). The handlers only filter what they return."""
-    path = request.url.path
+    # The path as the router matches it. request.url.path is parsed again from a rebuilt address and stops
+    # at an encoded "?" or "#", so "/login%3Fx" would pass here as "/login" and reach another route there.
+    path = request.scope["path"]
     is_data = path.startswith("/api/")
     if path in OPEN_PATHS:
         return await call_next(request)
+    k = _link_k(request)
+    address = _counted_as(_client_ip(request)) if k else None
+    if k and _recent_failures(address) >= MAX_FAILURES:      # as at sign-in: the token is not even looked at
+        return _json({"error": "too many attempts"}, 429) if is_data else _message_page(TEXT_BLOCKED, 429)
     viewer = request.state.viewer = _viewer(request)
     if viewer is None:
+        if k:
+            _note_failure(address, wrong_k=k)
         if path == "/status":
             return _message_page(TEXT_BAD_LINK, 403)
         return _json({"error": "auth"}, 401) if is_data else RedirectResponse("/login", status_code=303)
@@ -384,10 +569,23 @@ async def _admit(request, call_next):
 
 @app.exception_handler(db.DbError)
 async def database_failed(request: Request, error: db.DbError):
-    log.warning("%s: %s", request.url.path, error)
-    if request.url.path.startswith("/api/"):
+    path = request.scope["path"]
+    log.warning("%s: %s", path, error)
+    if path.startswith("/api/"):
         return _json({"error": str(error)}, 502)
     return _message_page(TEXT_NO_DATA, 502)
+
+
+@app.exception_handler(Exception)
+async def server_failed(request: Request, error: Exception):
+    """Anything unforeseen (a missing screen file, a bug). The server program logs it with its traceback;
+    the answer says nothing of it, and carries the headers of every other answer."""
+    if request.scope["path"].startswith("/api/"):
+        response = _json({"error": "server error"}, 500)
+    else:
+        response = _message_page(TEXT_FAULT, 500)
+    response.headers.update(SECURITY_HEADERS)
+    return response
 
 
 # ---------------------------------------------------------------- pages and sign-in
@@ -422,20 +620,32 @@ async def login_page(request: Request):
     return _login_page(await _site_label())
 
 
-_failures = deque(maxlen=5000)       # (time, address) of failed sign-ins, oldest first; bounded on purpose
+# (time, address as _counted_as gives it, mark) of wrong passwords and wrong share tokens, oldest first;
+# bounded on purpose
+_failures = deque(maxlen=5000)
 
 
-def _recent_failures(ip):
+def _recent_failures(address):
     now = time.monotonic()
     while _failures and now - _failures[0][0] >= FAILURE_WINDOW:
         _failures.popleft()
-    return sum(1 for _, address in _failures if address == ip)
+    return sum(1 for failure in _failures if failure[1] == address)
+
+
+def _note_failure(address, wrong_k=None):
+    """One more failure of this address. A wrong share token counts once per value within the window: an
+    old link left open in a tab asks again every minute and must not lock its address out, while somebody
+    who guesses sends another value each time. Only a digest of the value is kept."""
+    mark = hashlib.sha256(wrong_k.encode("utf-8", "replace")).hexdigest()[:16] if wrong_k else None
+    if mark is None or not any(failure[1:] == (address, mark) for failure in _failures):
+        _failures.append((time.monotonic(), address, mark))
 
 
 @app.post("/login")
 async def login(request: Request):
     ip = _client_ip(request)
-    if _recent_failures(ip) >= MAX_FAILURES:                 # the password is not even looked at
+    counted = _counted_as(ip)
+    if _recent_failures(counted) >= MAX_FAILURES:            # the password is not even looked at
         return _login_page(await _site_label(), TEXT_BLOCKED, 429)
     form = urllib.parse.parse_qs((await _body(request, 4096)).decode("utf-8", "replace"))
     found = _by_password(form.get("p", [""])[0])
@@ -445,17 +655,19 @@ async def login(request: Request):
     except db.DbError as e:
         log.warning("sign-in not logged: %s", e)             # the log is a record, not a gate
     if found is None:
-        _failures.append((time.monotonic(), ip))
+        _note_failure(counted)
         return _login_page(await _site_label(), TEXT_WRONG, 401)
-    viewer, token = found
+    viewer, password = found
     response = RedirectResponse("/", status_code=303)
-    response.set_cookie(COOKIE, token, max_age=86400 * (30 if viewer.role == "vendor" else 365),
-                        httponly=True, secure=_is_https(request), samesite="lax")
+    response.set_cookie(COOKIE, _token(password, int(_now().timestamp()) + viewer.session_seconds),
+                        max_age=viewer.session_seconds, httponly=True, secure=_is_https(request), samesite="lax")
     return response
 
 
 @app.get("/logout")
 async def logout():
+    """Removes the cookie from this browser. A copy of it somewhere else stays good until its time is up
+    or the password changes: there is no session table to strike it from."""
     response = RedirectResponse("/login", status_code=303)
     response.delete_cookie(COOKIE)
     return response
@@ -484,8 +696,9 @@ async def api_site(request: Request):
         try:
             value = await rpc(fn, params)
         except Exception as e:                               # each part fails alone, whatever the failure (spec §5.2)
-            log.warning("/api/site: %s failed: %s", key, e)
-            return {"error": str(e)}
+            log.warning("/api/site: %s failed: %s: %s", key, type(e).__name__, e)
+            # only a DbError's text is made for a viewer; any other error is named by its type alone
+            return {"error": str(e) if isinstance(e, db.DbError) else type(e).__name__}
         return value if key == "cert" else value or []
 
     values = await asyncio.gather(*(part(key, fn, params) for key, (fn, params) in parts.items()))
@@ -555,6 +768,11 @@ async def api_messages(request: Request):
 
 @app.post("/api/alerts/ack")
 async def api_ack(request: Request):
+    # Only a JSON body, said to be one. A page of another origin (the monitored site itself, when the screen
+    # lives on a sibling subdomain) can make the owner's browser post text or a form here with his cookie,
+    # but not JSON: that needs a preflight, which nothing here answers.
+    if request.headers.get("content-type", "").split(";")[0].strip().lower() != "application/json":
+        return _json({"error": "bad request"}, 400)
     try:
         body = json.loads(await _body(request, 16384))
         listed = body["ids"] if isinstance(body.get("ids"), list) else [body.get("id")]
@@ -562,9 +780,9 @@ async def api_ack(request: Request):
         listed = []
     ids = []
     for item in listed[:200]:
-        if isinstance(item, str) and item.isascii() and item.isdigit():
+        if isinstance(item, str) and item.isascii() and item.isdigit() and len(item) <= 19:
             item = int(item)                                 # the screen sends ids as it read them from the page
-        if type(item) is int and item > 0 and item not in ids:
+        if type(item) is int and 0 < item <= 2 ** 63 - 1 and item not in ids:        # an id fits a bigint
             ids.append(item)
     if not ids:
         return _json({"error": "bad request"}, 400)
@@ -575,26 +793,77 @@ async def api_ack(request: Request):
 # ---------------------------------------------------------------- real-user beacons (spec §7.7)
 
 _rum_minute = {"minute": None, "seen": {}}       # beacons per address in the current minute; memory only
+_rum_budget = {"minute": None, "in_minute": 0, "day": None, "in_day": 0, "said": None}       # rows of all addresses
 _rum_queue = []                                  # rows on their way to the database
 _rum_busy = False
 
 
-def _rum_within_rate(ip):
+def _rum_within_rate(address):
     minute = int(time.monotonic() // 60)
     if _rum_minute["minute"] != minute:
         _rum_minute.update(minute=minute, seen={})
     seen = _rum_minute["seen"]
-    seen[ip] = seen.get(ip, 0) + 1
-    return seen[ip] <= RUM_PER_MINUTE
+    seen[address] = seen.get(address, 0) + 1
+    return seen[address] <= RUM_PER_ADDRESS
+
+
+def _count(name, default):
+    text = os.environ.get(name, "").strip()
+    return int(text) if text.isascii() and text.isdigit() else default
+
+
+def _rum_within_budget():
+    """Whether one more row may be stored. The limit per address stops one sender; this one stops many
+    (a few machines, an IPv6 range, made-up addresses): all of them together store at most
+    SH_RUM_PER_MINUTE rows a minute and SH_RUM_PER_DAY rows in 24 hours, so a flood cannot fill the
+    database. Counted in memory, from the start of this process; sh_rum_add has its own, wider limit."""
+    now, budget = time.monotonic(), _rum_budget
+    minute, day = int(now // 60), int(now // 86400)
+    if budget["minute"] != minute:
+        budget.update(minute=minute, in_minute=0)
+    if budget["day"] != day:
+        budget.update(day=day, in_day=0)
+    per_day = _count("SH_RUM_PER_DAY", RUM_PER_DAY)
+    if budget["in_day"] >= per_day:
+        if budget["said"] != day:                # once, not per beacon
+            budget["said"] = day
+            log.warning("real-user measurements: the %d rows of SH_RUM_PER_DAY are used up; "
+                        "further ones are dropped for up to 24 hours", per_day)
+        return False
+    if budget["in_minute"] >= _count("SH_RUM_PER_MINUTE", RUM_PER_MINUTE):
+        return False
+    budget["in_minute"] += 1
+    budget["in_day"] += 1
+    return True
+
+
+def _may_name_someone(decoded):
+    """Whether a path (percent-decoded) holds an "@" or something that looks like a token (see RUM_UUID)."""
+    if "@" in decoded or RUM_UUID.search(decoded):
+        return True
+    return any(RUM_HEX.fullmatch(run) or (len(run) >= 24 and re.search("[A-Za-z]", run) and re.search("[0-9]", run))
+               for run in RUM_RUN.findall(decoded))
+
+
+def _storable(path):
+    """Whether the database can store the text: no control character (a NUL fails the whole batch it
+    travels in) and nothing that cannot be written as UTF-8 (half of a surrogate pair)."""
+    try:
+        path.encode("utf-8")
+    except UnicodeError:
+        return False
+    return not RUM_CONTROL.search(path)
 
 
 async def _rum_row(request):
     """The row to store for one beacon, or None to drop it. The route is public, so every field is
     hostile. Nothing about the visitor is kept: no address, no cookie, no user agent, no query string."""
-    if not _rum_within_rate(_client_ip(request)):
+    if not _rum_within_rate(_counted_as(_client_ip(request))):
         return None
     try:
         site = await _site()
+        if site.rum_off:                         # a part that is switched off stores nothing
+            return None
         # A noise filter, not security (anyone can forge a header): a browser that names where the beacon
         # comes from must name this site. Origin decides, the Referer only without one. No header at all,
         # or the Origin "null" of a site with a strict referrer policy, is accepted.
@@ -610,18 +879,28 @@ async def _rum_row(request):
     name, path, lcp = beacon.get("site"), beacon.get("path"), beacon.get("lcp")      # any other field is ignored
     if not (isinstance(name, str) and RUM_SITE.fullmatch(name) and isinstance(path, str) and path.startswith("/")):
         return None
+    # The name is shown on the screen of every viewer ("מקור: ..."), so it is never the sender's own text:
+    # "live" (and what the configuration lists in live_hosts), or one of the configured hosts.
+    if name not in site.names and name.removeprefix("www.") not in site.hosts:
+        return None
     path = re.split("[?#]", path, maxsplit=1)[0]
-    # the segments are compared decoded: a translated slug arrives percent-encoded
-    if len(path) > RUM_MAX_PATH or site.private.intersection(urllib.parse.unquote(path).lower().split("/")):
+    if len(path) > RUM_MAX_PATH or not _storable(path):
+        return None
+    decoded = urllib.parse.unquote(path)         # compared decoded: a translated slug arrives percent-encoded
+    if site.private.intersection(decoded.lower().split("/")) or not _storable(decoded) or _may_name_someone(decoded):
         return None
     if type(lcp) not in (int, float) or not 1 <= lcp <= 60000:      # a view without a measurement is not a row
+        return None
+    if not _rum_within_budget():                 # last: only a row that would be stored uses the budget up
         return None
     return {"site": name, "path": path, "lcp_ms": round(lcp), "is_test": beacon.get("test") is True}
 
 
 async def _rum_store(row):
     """Hands rows over in small batches, one database call at a time: a burst of beacons or a slow
-    database must not take the workers the screen needs. Beyond RUM_QUEUE waiting rows, new ones are dropped."""
+    database must not take the workers the screen needs. Beyond RUM_QUEUE waiting rows, new ones are dropped.
+    A batch that the database refuses for its data is sent again row by row; one that fails because the
+    database is not there is not."""
     global _rum_busy
     if len(_rum_queue) < RUM_QUEUE:
         _rum_queue.append(row)
@@ -629,13 +908,20 @@ async def _rum_store(row):
         return
     _rum_busy = True
     try:
-        while _rum_queue:
-            batch = _rum_queue[:RUM_BATCH]
-            del _rum_queue[:RUM_BATCH]
+        alone = []                               # the rows of a batch the database refused, last one first
+        while alone or _rum_queue:
+            if alone:
+                batch = [alone.pop()]
+            else:
+                batch = _rum_queue[:RUM_BATCH]
+                del _rum_queue[:RUM_BATCH]
             try:
                 await rpc("sh_rum_add", {"p_rows": batch})
             except db.DbError as e:
-                log.warning("%d real-user rows lost: %s", len(batch), e)
+                if e.answered and len(batch) > 1:            # refused for its data: one bad row must not cost
+                    alone = batch[::-1]                      # the others, so they go again one by one
+                else:
+                    log.warning("real-user rows lost: %d (%s)", len(batch), e)
     finally:
         _rum_busy = False
 
@@ -653,13 +939,15 @@ async def rum(request: Request):
 async def health():
     """Always 200. A host restarts a service whose health check fails, and restarting this server
     does not repair a database."""
-    state, age = "ok", None
+    state, age, screen = "ok", None, _screen_state()
     try:
         await rpc("sh_ping")
         last = next((flow.get("last_at") for flow in await rpc("sh_health") or []
                      if flow.get("flow_name") == PROBE_FLOW), None)
         if last:
             age = int((_now() - datetime.fromisoformat(last)).total_seconds())
-    except Exception as e:
-        state = str(e) or type(e).__name__
-    return _json({"ok": state == "ok", "db": state, "last_probe_age_sec": age})
+    except db.DbError as e:
+        state = str(e) or "DbError"              # a DbError's text is made to be shown: no host, user or key
+    except Exception as e:                       # this route is public: of any other error, its type alone
+        state = type(e).__name__
+    return _json({"ok": state == "ok" and screen == "ok", "db": state, "screen": screen, "last_probe_age_sec": age})

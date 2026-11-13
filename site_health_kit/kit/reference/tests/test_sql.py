@@ -1,6 +1,10 @@
 """Tests of schema.sql and functions.sql: the rules of spec §7.2, §7.3, §7.4 and §7.8, with exact values.
+And of deadman.sql, against stand-ins for the three Supabase extensions it needs.
 
     cd reference && python3 -m pytest -q tests/test_sql.py
+
+The kit's fake backend (mock_server.py) is imported for its shapes: see _kit_dir() below for
+where it is looked for, and set SH_KIT_DIR when the tests run in a copy of reference/.
 
 Time. Tests of the window functions use fixed moments in the past: T0 is 09:00 in Jerusalem,
 the time zone of the example configuration. Tests of the "now" functions place their rows
@@ -9,7 +13,9 @@ relative to db.now(), which stands still inside a test (see conftest.db).
 import datetime as dt
 import decimal
 import math
+import os
 import pathlib
+import re
 import sys
 import threading
 import time
@@ -22,7 +28,21 @@ from psycopg.types.json import Jsonb
 import sim
 from conftest import REFERENCE, TIMINGS, apply_sql, example_config
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))
+
+
+def _kit_dir():
+    """The folder of the unpacked kit, where mock_server.py lives: $SH_KIT_DIR; else the parent of
+    reference/ (the tests run inside the kit); else site-health-kit next to a copy of reference/."""
+    named = os.environ.get("SH_KIT_DIR")
+    places = [pathlib.Path(named)] if named else [REFERENCE.parent, REFERENCE.parent / "site-health-kit"]
+    for place in places:
+        if (place / "mock_server.py").is_file():
+            return place
+    raise RuntimeError("the kit's mock_server.py was not found in %s: set SH_KIT_DIR to the folder of the"
+                       " unpacked kit (site-health-kit)" % " or ".join(str(place) for place in places))
+
+
+sys.path.insert(0, str(_kit_dir()))
 import mock_server as mock  # noqa: E402  (the kit's fake backend: the contract by example)
 
 UTC = dt.timezone.utc
@@ -30,7 +50,7 @@ TZ = ZoneInfo("Asia/Jerusalem")
 T0 = dt.datetime(2024, 11, 12, 7, 0, tzinfo=UTC)          # 12.11 09:00 in Jerusalem
 SITE = "https://example.co.il"
 URL = {"בית": SITE + "/", "קטגוריה": SITE + "/product-category/sofas/", "מוצר": SITE + "/product/sample-sofa/",
-       "סל": SITE + "/cart/", "קופה": SITE + "/checkout/"}
+       "סל": SITE + "/cart/", "אודות": SITE + "/about/"}
 PROBE = ["בית", "קטגוריה", "מוצר", "סל"]
 DEAD = dict.fromkeys(PROBE, "timeout")
 # The seven flows: name and cadence as the mock shows them, warn and late minutes as spec §7.3 lists them.
@@ -89,43 +109,164 @@ def test_setup_loads_the_example_configuration(db):
         "site": SITE, "host": "example.co.il", "label": "example.co.il", "brand": "",
         "time_zone": "Asia/Jerusalem", "platform": "woocommerce", "down_after": 1, "morning": "07:30",
         "path_labels": [["/product-category/", "קטגוריה: "], ["/product/", "מוצר: "]],
-        "bucket_note": "", "live_hosts": ["live"], "keep_days": 100, "rum_hosts": [], "private_paths": []}
+        "bucket_note": "", "live_hosts": ["live"], "keep_days": 100, "rum_hosts": [], "private_paths": [],
+        "off": [], "extra_hosts": [], "hide": [], "nav": [], "links": []}
+    assert set(config) - {"host", "screen"} == set(example_config())      # every key of the file, as it was loaded
     assert config["pages"] == [
         {"name": "בית", "url": URL["בית"], "probe": True, "core": True, "home": True, "expect": None},
         {"name": "קטגוריה", "url": URL["קטגוריה"], "probe": True, "core": True, "home": False, "expect": None},
         {"name": "מוצר", "url": URL["מוצר"], "probe": True, "core": True, "home": False, "expect": "הוספה לסל"},
         {"name": "סל", "url": URL["סל"], "probe": True, "core": True, "home": False, "expect": None},
-        {"name": "קופה", "url": URL["קופה"], "probe": False, "core": True, "home": False, "expect": None}]
+        {"name": "אודות", "url": URL["אודות"], "probe": False, "core": True, "home": False, "expect": None}]
     assert config["screen"] == {
-        "siteLabel": "example.co.il", "brand": "", "homePage": "בית", "probeCount": 4, "coreCount": 5,
+        "siteLabel": "example.co.il", "brand": "", "homePage": "בית", "probeCount": 4, "coreCount": 5, "downAfter": 1,
         "liveHosts": ["live"], "pathLabels": [["/product-category/", "קטגוריה: "], ["/product/", "מוצר: "]],
-        "bucketNote": "", "hide": []}
+        "bucketNote": "", "hide": [], "nav": [], "links": []}
     # the example uses the pages of the mock backend
     assert [(p["name"], p["url"]) for p in config["pages"] if p["probe"]] == [(n, SITE + path) for n, path in mock.PROBE]
     assert [(p["name"], p["url"]) for p in config["pages"] if p["core"]] == [(n, SITE + path) for n, path in mock.CORE]
 
 
 def test_setup_fills_in_defaults_and_follows_the_platform(db):
-    minimal = {"site": "https://www.Shop.example/", "pages": [{"name": "ראשי", "url": "https://www.shop.example/",
-                                                               "home": True, "probe": True}]}
+    minimal = {"site": "https://www.Shop.example/", "time_zone": "Europe/London",       # the least a file may hold
+               "pages": [{"name": "ראשי", "url": "https://www.shop.example/", "home": True, "probe": True, "core": True}]}
     config = db.rpc("sh_setup", p_config=minimal)
     assert {k: v for k, v in config.items() if k not in ("pages", "screen")} == {
         "site": "https://www.Shop.example", "host": "www.shop.example", "label": "shop.example", "brand": "",
-        "time_zone": "UTC", "platform": "other", "down_after": 1, "morning": "07:30",
+        "time_zone": "Europe/London", "platform": "other", "down_after": 1, "morning": "07:30",
         "path_labels": [], "bucket_note": "", "live_hosts": ["live"], "keep_days": 100, "rum_hosts": [],
-        "private_paths": []}
+        "private_paths": [], "off": ["catalogue"], "extra_hosts": [], "hide": [], "nav": [], "links": []}
     # no catalogue: the screen hides the products card and the catalogue flow is not listed
     assert config["screen"] == {"siteLabel": "shop.example", "brand": "", "homePage": "ראשי", "probeCount": 1,
-                                "coreCount": 0, "liveHosts": ["live"], "pathLabels": [], "bucketNote": "",
-                                "hide": ["issuesCard"]}
+                                "coreCount": 1, "downAfter": 1, "liveHosts": ["live"], "pathLabels": [],
+                                "bucketNote": "", "hide": ["issuesCard"], "nav": [], "links": []}
     assert [r["flow_name"] for r in db.rpc("sh_health")] == [f[0] for f in FLOWS if f[0] != CATALOGUE_FLOW]
 
     config = db.rpc("sh_setup", p_config=dict(minimal, platform="shopify", bucket_note="הערה", brand="DEMO",
                                               live_hosts=["live", "shop.example"]))
     assert config["screen"]["pathLabels"] == [["/collections/", "קטגוריה: "], ["/products/", "מוצר: "]]
-    assert config["screen"]["hide"] == [] and config["screen"]["bucketNote"] == "הערה"
+    assert config["screen"]["hide"] == [] and config["screen"]["bucketNote"] == "הערה" and config["off"] == []
     assert config["screen"]["brand"] == "DEMO" and config["screen"]["liveHosts"] == ["live", "shop.example"]
     assert [r["flow_name"] for r in db.rpc("sh_health")] == [f[0] for f in FLOWS]
+
+
+def _enabled(db):
+    return [name for (name,) in db.sql("select flow_name from sh_flows where enabled order by sort")]
+
+
+def test_setup_switches_off_the_parts_that_do_not_apply_to_the_site(db):
+    """The "off" list of the configuration (decision D3): each entry disables its flows and hides its card."""
+    everything = [f[0] for f in FLOWS]
+    assert db.setup()["off"] == [] and _enabled(db) == everything
+
+    db.rpc("sh_sitemap_set", p_urls=[SITE + "/a/", SITE + "/b/"])
+    config = db.setup(off=["real_users", "sitemap"])                      # answered in a fixed order
+    assert config["off"] == ["sitemap", "real_users"] and config["screen"]["hide"] == ["slowCard"]
+    assert _enabled(db) == [PROBE_FLOW, CORE_FLOW, CERT_FLOW, CATALOGUE_FLOW]
+    assert [r["flow_name"] for r in db.rpc("sh_health")] == _enabled(db)   # the screen lists what is measured
+    assert db.rpc("sh_rotation_next", p_n=5) == []                         # and no page takes a turn in the rotation
+
+    config = db.setup(off=["catalogue", "cert"])
+    assert config["off"] == ["catalogue", "cert"] and config["screen"]["hide"] == ["issuesCard", "certCard"]
+    assert _enabled(db) == [PROBE_FLOW, CORE_FLOW, ROTATION_FLOW, SITEMAP_FLOW, RUM_FLOW]
+
+    # what follows from the site itself needs no entry: no catalogue on "other", no certificate on http://
+    plain = example_config(site="http://example.co.il", platform="other", off=["sitemap"])
+    plain["pages"] = [dict(p, url=p["url"].replace("https://", "http://")) for p in plain["pages"]]
+    config = db.rpc("sh_setup", p_config=plain)
+    assert config["off"] == ["sitemap", "catalogue", "cert"]
+    assert config["screen"]["hide"] == ["slowCard", "issuesCard", "certCard"]
+    assert _enabled(db) == [PROBE_FLOW, CORE_FLOW, RUM_FLOW]
+    assert db.rpc("sh_config") == config
+
+    assert db.setup()["off"] == [] and _enabled(db) == everything          # the entry left the file: on again
+    assert db.rpc("sh_rotation_next", p_n=5) == [SITE + "/a/", SITE + "/b/"]
+
+
+def test_every_setup_decides_again_which_flows_run_so_none_is_switched_by_hand(db):
+    db.setup(off=["sitemap"])
+    db.sql("update sh_flows set enabled = (flow_name in (%s, %s))", [ROTATION_FLOW, SITEMAP_FLOW])       # by hand
+    db.setup(off=["sitemap"])
+    assert _enabled(db) == [PROBE_FLOW, CORE_FLOW, CERT_FLOW, CATALOGUE_FLOW, RUM_FLOW]
+    # a flow that is switched off forgets its last run: switched on again it has "no data", not an old silence
+    db.ran(SITEMAP_FLOW, days=40)
+    db.ran(PROBE_FLOW, minutes=1)
+    db.setup(off=["sitemap"])
+    assert db.sql("select last_at is null from sh_flows where flow_name = %s", [SITEMAP_FLOW]) == [(True,)]
+    db.setup()
+    assert (flow(db, SITEMAP_FLOW)["status"], flow(db, PROBE_FLOW)["status"]) == ("אין נתון", "תקין")
+    assert db.rpc("sh_alerts_check") == []                                 # and no "המדידה נעצרה" about 40 days ago
+
+
+def test_setup_hands_the_screen_its_own_settings(db):
+    nav = [["בריאות האתר", "/site"], ["מכירות", "/sales"]]
+    links = [{"href": "/export", "label": "ייצוא", "title": "הורדת הנתונים"}]
+    config = db.setup(down_after=2, hide=["certCard", "myCard"], nav=nav, links=links, off=["cert", "sitemap"],
+                      extra_hosts=["shop.example.co.il", "checkout.example.com"])
+    assert (config["hide"], config["nav"], config["links"]) == (["certCard", "myCard"], nav, links)       # as the file has them
+    assert config["extra_hosts"] == ["shop.example.co.il", "checkout.example.com"]
+    screen = config["screen"]
+    assert (screen["downAfter"], screen["nav"], screen["links"]) == (2, nav, links)
+    assert screen["hide"] == ["certCard", "myCard", "slowCard"]            # the file's cards, then those of "off", each once
+    assert "extra_hosts" not in screen and "off" not in screen
+    config = db.setup()                                                    # they left the file: back at the defaults
+    assert (config["hide"], config["nav"], config["links"], config["extra_hosts"]) == ([], [], [], [])
+    assert (config["screen"]["hide"], config["screen"]["downAfter"]) == ([], 1)
+
+
+def test_a_database_that_was_set_up_before_the_newer_settings_answers_with_their_defaults(db):
+    db.setup(platform="other")
+    db.sql("delete from sh_settings where key in ('off', 'extra_hosts', 'hide', 'nav', 'links')")
+    config = db.rpc("sh_config")
+    assert (config["off"], config["extra_hosts"], config["hide"], config["nav"], config["links"]) == (
+        ["catalogue"], [], [], [], [])                                     # "off" still follows the platform
+    assert config["screen"]["hide"] == ["issuesCard"] and config["screen"]["downAfter"] == 1
+    assert "nav" not in config["screen"] and "links" not in config["screen"]      # the screen keeps its own default
+
+
+def test_page_addresses_are_stored_in_one_spelling(db):
+    """A core page must be the same page as its line in the sitemap, however each side spells it."""
+    contact = "/%D7%A6%D7%95%D7%A8-%D7%A7%D7%A9%D7%A8/"
+    typed = example_config()
+    typed["pages"] = [
+        {"name": "בית", "url": "https://Example.co.il", "home": True, "probe": True, "core": True},      # no "/", a capital
+        {"name": "צור קשר", "url": SITE + "/צור-קשר/", "probe": True, "core": True},                      # typed in Hebrew
+        {"name": "מבצע", "url": SITE + "/sale 50%/?utm=x", "core": True}]
+    config = db.rpc("sh_setup", p_config=typed)
+    assert [p["url"] for p in config["pages"]] == [SITE + "/", SITE + contact, SITE + "/sale%2050%/?utm=x"]
+    # the sitemap of a WordPress site writes the same Hebrew slug in lower-case escapes
+    assert db.rpc("sh_sitemap_set", p_urls=[SITE + "/", SITE + contact.lower(), SITE + contact, SITE + "/about/",
+                                            "https://EXAMPLE.co.il/about/", SITE + "/בלוג/", "not an address"]) == {"n": 4}
+    assert _site_pages(db) == [(SITE + "/", True), (SITE + "/%D7%91%D7%9C%D7%95%D7%92/", True), (SITE + contact, True),
+                               (SITE + "/about/", True)]
+    rotation = [SITE + "/%D7%91%D7%9C%D7%95%D7%92/", SITE + "/about/"]
+    assert db.rpc("sh_rotation_next", p_n=10) == rotation                  # neither core page takes a turn
+    db.run(T0, SITE + contact, 9000, source="rotation")
+    db.run(T0, rotation[0], 3000, source="rotation")
+    rows = db.rpc("sh_speed", p_from=T0, p_to=T0 + mins(1))
+    assert [r["url"] for r in section(rows, "האיטיים באתר")] == [rotation[0]]
+    assert section(rows, "כיסוי") == [{"section": "כיסוי", "checks": 1, "slow_runs": 2}]
+    # the next load, spelled differently again, is the same list
+    assert db.rpc("sh_sitemap_set", p_urls=["https://example.co.il", SITE + "/צור-קשר/", SITE + "/about/"]) == {"n": 3}
+    assert [url for url, active in _site_pages(db) if not active] == [SITE + "/%D7%91%D7%9C%D7%95%D7%92/"]
+
+
+@pytest.mark.parametrize("address, stored", [
+    ("https://example.co.il", "https://example.co.il/"),
+    ("https://example.co.il/", "https://example.co.il/"),
+    ("  HTTPS://WWW.Example.CO.IL/Cart/  ", "https://www.example.co.il/Cart/"),      # the path keeps its capitals
+    ("https://example.co.il?ref=1", "https://example.co.il/?ref=1"),
+    ("https://example.co.il/מוצר/ספה אפורה/", "https://example.co.il/%D7%9E%D7%95%D7%A6%D7%A8/"
+                                              "%D7%A1%D7%A4%D7%94%20%D7%90%D7%A4%D7%95%D7%A8%D7%94/"),
+    ("https://example.co.il/%d7%9e%D7%95/x%2fy", "https://example.co.il/%D7%9E%D7%95/x%2Fy"),
+    ("https://example.co.il/a%zz/100%", "https://example.co.il/a%zz/100%"),          # not an escape: left alone
+    ("https://example.co.il/p/€5", "https://example.co.il/p/%E2%82%AC5"),
+    ("http://127.0.0.1:8080/x", "http://127.0.0.1:8080/x"),
+    ("/cart/", None), ("example.co.il/cart/", None), ("", None), (None, None),
+])
+def test_sh_url(db, address, stored):
+    assert db.sql("select sh_url(%s)", [address]) == [(stored,)]
+    assert db.sql("select sh_url(sh_url(%s))", [address]) == [(stored,)]              # and it stays that way
 
 
 def test_setup_takes_the_retention_and_the_real_user_settings(db):
@@ -137,7 +278,8 @@ def test_setup_takes_the_retention_and_the_real_user_settings(db):
     assert "keep_days" not in config["screen"]                 # none of the three is the screen's business
     for days in (30, 400, "90"):                               # the bounds; and a number that arrives as text
         assert db.setup(keep_days=days)["keep_days"] == int(days)
-    config = db.setup()                                        # a setting that left the file is back at its default
+    stripped = {k: v for k, v in example_config().items() if k not in ("keep_days", "rum_hosts", "private_paths")}
+    config = db.rpc("sh_setup", p_config=stripped)             # a setting that left the file is back at its default
     assert (config["keep_days"], config["rum_hosts"], config["private_paths"]) == (100, [], [])
 
 
@@ -151,7 +293,7 @@ def test_setup_again_changes_nothing_and_a_removed_page_keeps_its_history(db):
     smaller = example_config()
     smaller["pages"] = [p for p in smaller["pages"] if p["name"] != "סל"]
     config = db.rpc("sh_setup", p_config=smaller)
-    assert [p["name"] for p in config["pages"]] == ["בית", "קטגוריה", "מוצר", "קופה"]
+    assert [p["name"] for p in config["pages"]] == ["בית", "קטגוריה", "מוצר", "אודות"]
     assert (config["screen"]["probeCount"], config["screen"]["coreCount"]) == (3, 4)
     rows = db.rpc("sh_availability", p_from=T0, p_to=T0 + mins(1))
     assert [(r["page"], r["checks"], r["failed"]) for r in rows] == [
@@ -162,10 +304,15 @@ def _page(name="בית", url=SITE + "/", **flags):
     return dict(name=name, url=url, **flags)
 
 
+HOME = _page(home=True, probe=True, core=True)
+
+
 @pytest.mark.parametrize("change, message", [
     ({"site": "example.co.il"}, '"site" must be an absolute http\\(s\\) address, got example.co.il'),
     ({"site": None}, '"site" must be an absolute http\\(s\\) address, got nothing'),
     ({"time_zone": "Mars/Olympus"}, 'unknown "time_zone" Mars/Olympus'),
+    ({"time_zone": None}, '"time_zone" is required: the time zone of the site\'s customers, such as Asia/Jerusalem'),
+    ({"time_zone": ""}, '"time_zone" is required'),
     ({"platform": "wix"}, '"platform" must be woocommerce, shopify or other, got wix'),
     ({"down_after": 0}, '"down_after" must be 1 or more, got 0'),
     ({"morning": "7:30"}, '"morning" must be a time such as 07:30, got 7:30'),
@@ -189,18 +336,32 @@ def _page(name="בית", url=SITE + "/", **flags):
     ({"private_paths": ["my cart"]}, '"private_paths" takes single path segments'),
     ({"private_paths": ["cart", None]}, '"private_paths" takes single path segments'),
     ({"private_paths": [""]}, '"private_paths" takes single path segments'),
+    ({"off": "sitemap"}, '"extra_hosts", "off", "hide", "nav" and "links" must be lists'),
+    ({"extra_hosts": "shop.example.co.il"}, '"extra_hosts", "off", "hide", "nav" and "links" must be lists'),
+    ({"hide": "slowCard"}, '"extra_hosts", "off", "hide", "nav" and "links" must be lists'),
+    ({"nav": {"/site": "בריאות האתר"}}, '"extra_hosts", "off", "hide", "nav" and "links" must be lists'),
+    ({"links": "/export"}, '"extra_hosts", "off", "hide", "nav" and "links" must be lists'),
+    ({"off": ["rum"]}, '"off" takes sitemap, real_users, catalogue or cert, got \\["rum"\\]'),
+    ({"off": ["sitemap", "Cert"]}, '"off" takes sitemap, real_users, catalogue or cert'),
+    ({"off": [None]}, '"off" takes sitemap, real_users, catalogue or cert'),
+    ({"extra_hosts": ["https://shop.example.co.il"]}, '"extra_hosts" takes host names in lower case, .* got \\["https://'),
+    ({"extra_hosts": ["Shop.example.co.il"]}, '"extra_hosts" takes host names in lower case'),
+    ({"extra_hosts": ["shop.example.co.il", 7]}, '"extra_hosts" takes host names in lower case'),
+    ({"hide": ["slowCard", 7]}, '"hide" takes the ids of cards of the screen, such as slowCard, got \\["slowCard", 7\\]'),
     ({"pages": None}, '"pages" must be a list of pages'),
     ({"pages": []}, 'exactly one page must have "home": true, found 0'),
-    ({"pages": [_page(probe=True)]}, 'exactly one page must have "home": true, found 0'),
-    ({"pages": [_page(home=True, probe=True), _page("ב", home=True)]}, 'exactly one page must have "home": true, found 2'),
-    ({"pages": [_page(home=True)]}, 'at least one page must have "probe": true'),
-    ({"pages": [_page(home=True), _page("ב", probe=True)]}, "the home page must be a probe page"),
-    ({"pages": [_page(home=True, probe=True), _page(probe=True)]}, "page names must be unique"),
-    ({"pages": [_page(home=True, probe=True), _page("")]}, 'every page needs a "name"'),
-    ({"pages": [_page(home=True, probe=True), {"url": SITE + "/x/"}]}, 'every page needs a "name"'),
-    ({"pages": [_page(home=True, probe=True), _page("ב", url="/cart/")]}, "absolute http\\(s\\) address: ב"),
-    ({"pages": [_page(home=True, probe=True), _page("ב", url="ftp://example.co.il/")]}, "absolute http\\(s\\) address: ב"),
-    ({"pages": [_page(home=True, probe=True), {"name": "ב"}]}, "absolute http\\(s\\) address: ב"),
+    ({"pages": [_page(probe=True, core=True)]}, 'exactly one page must have "home": true, found 0'),
+    ({"pages": [HOME, _page("ב", home=True)]}, 'exactly one page must have "home": true, found 2'),
+    ({"pages": [_page(home=True, core=True)]}, 'at least one page must have "probe": true'),
+    ({"pages": [_page(home=True, core=True), _page("ב", probe=True)]}, "the home page must be a probe page"),
+    ({"pages": [_page(home=True, probe=True), _page("ב", probe=True, core=True)]}, "the home page must be a core page"),
+    ({"pages": [_page(home=True, probe=True, core=False)]}, "the home page must be a core page"),
+    ({"pages": [HOME, _page(probe=True)]}, "page names must be unique"),
+    ({"pages": [HOME, _page("")]}, 'every page needs a "name"'),
+    ({"pages": [HOME, {"url": SITE + "/x/"}]}, 'every page needs a "name"'),
+    ({"pages": [HOME, _page("ב", url="/cart/")]}, "absolute http\\(s\\) address: ב"),
+    ({"pages": [HOME, _page("ב", url="ftp://example.co.il/")]}, "absolute http\\(s\\) address: ב"),
+    ({"pages": [HOME, {"name": "ב"}]}, "absolute http\\(s\\) address: ב"),
 ])
 def test_setup_refuses_a_bad_configuration_and_keeps_the_old_one(db, change, message):
     before = db.setup()
@@ -397,6 +558,15 @@ def test_speed_core_pages_and_bottom_line(db):
          "slow_runs": 0, "checks": 2, "crux_category": None, "crux_lcp": None}]
 
 
+def test_core_speed_counts_core_runs_only_and_slow_is_above_4_seconds(db):
+    db.setup()
+    for i, lcp in enumerate([3999, 4000, 4001, 4002]):
+        db.run(T0 + mins(15 * i), "סל", lcp)
+    db.run(T0 + mins(5), URL["סל"], 9000, source="rotation")              # from before it became a core page
+    (row,) = section(db.rpc("sh_speed", p_from=T0, p_to=T0 + mins(90)), "ליבה")
+    assert (row["page"], row["checks"], row["slow_runs"], row["lcp_p50"]) == ("סל", 4, 2, 4001)      # 4000 is not slow
+
+
 def test_speed_without_runs_still_has_its_bottom_line_and_coverage(db):
     db.setup()
     db.run(T0, "בית", None, err="timeout")
@@ -418,7 +588,7 @@ def test_speed_heaviest_pages_and_coverage(db):
     db.setup()
     pages = [SITE + "/product/item-%02d/" % i for i in range(1, 13)]
     core = [URL["בית"], URL["קטגוריה"]]                       # in the sitemap too, and not the rotation's business
-    db.rpc("sh_sitemap_set", p_urls=pages + core + [SITE + "/about/", SITE + "/contact/", SITE + "/blog/"])
+    db.rpc("sh_sitemap_set", p_urls=pages + core + [SITE + "/faq/", SITE + "/contact/", SITE + "/blog/"])
     db.run(T0 + mins(40), URL["קטגוריה"], 50000, source="rotation")              # from before it became a core page
     for i, url in enumerate(pages, start=1):
         db.run(T0 + mins(i), url, 1000 * i, source="rotation", score=100 - 5 * i)
@@ -434,7 +604,7 @@ def test_speed_heaviest_pages_and_coverage(db):
         (pages[i - 1], 1000 * i, 100 - 5 * i, 1, il(T0 + mins(i))) for i in range(11, 2, -1)]      # ten rows in all
     assert section(rows, "כיסוי") == [{"section": "כיסוי", "checks": 12, "slow_runs": 15}]
     # a page that left the sitemap is neither "a page of the site" nor "measured"
-    db.rpc("sh_sitemap_set", p_urls=pages[1:] + core + [SITE + "/about/"])
+    db.rpc("sh_sitemap_set", p_urls=pages[1:] + core + [SITE + "/faq/"])
     assert section(db.rpc("sh_speed", p_from=T0, p_to=T0 + mins(90)), "כיסוי") == [
         {"section": "כיסוי", "checks": 11, "slow_runs": 12}]
     # and a page that is no longer a core page is the rotation's again, with the run it has
@@ -478,14 +648,19 @@ def test_health_lists_the_flows_of_the_spec_before_any_ran(db):
 
 @pytest.mark.parametrize("name, ago, status, text", [
     (PROBE_FLOW, dict(minutes=5), "תקין", None),                                   # warn 5, late 15
-    (PROBE_FLOW, dict(minutes=5, seconds=1), "מתעכב", "מאחר ב-1 דקות"),
+    (PROBE_FLOW, dict(minutes=5, seconds=1), "מתעכב", "מאחר בדקה"),                # a started minute counts
+    (PROBE_FLOW, dict(minutes=6, seconds=30), "מתעכב", "מאחר בשתי דקות"),
     (PROBE_FLOW, dict(minutes=15), "מתעכב", "מאחר ב-10 דקות"),
     (PROBE_FLOW, dict(minutes=15, seconds=1), "שקט", "שקט כבר 15 דקות"),
     (RUM_FLOW, dict(minutes=360), "תקין", None),                                   # warn 360, late 1440
     (RUM_FLOW, dict(minutes=400), "מתעכב", "מאחר ב-40 דקות"),
+    (RUM_FLOW, dict(minutes=420), "מתעכב", "מאחר בשעה"),
+    (RUM_FLOW, dict(minutes=360 + 119), "מתעכב", "מאחר ב-119 דקות"),               # minutes under two hours
+    (RUM_FLOW, dict(minutes=360 + 120), "מתעכב", "מאחר בשעתיים"),
     (RUM_FLOW, dict(minutes=1440), "מתעכב", "מאחר ב-18 שעות"),
     (RUM_FLOW, dict(minutes=1441), "שקט", "שקט כבר 24 שעות"),
     (CERT_FLOW, dict(minutes=1560 + 180), "מתעכב", "מאחר ב-3 שעות"),               # warn 1560, late 2880
+    (CERT_FLOW, dict(minutes=2881), "שקט", "שקט כבר יומיים"),
     (CERT_FLOW, dict(days=3, hours=5), "שקט", "שקט כבר 3 ימים"),
 ])
 def test_health_status_by_the_age_of_the_last_run(db, name, ago, status, text):
@@ -494,6 +669,32 @@ def test_health_status_by_the_age_of_the_last_run(db, name, ago, status, text):
     row = flow(db, name)
     assert (row["status"], row["silent_txt"]) == (status, text)
     assert dt.datetime.fromisoformat(row["last_at"]) == db.now() - dt.timedelta(**ago)
+
+
+@pytest.mark.parametrize("minutes, text", [
+    (0, "דקה"), (0.4, "דקה"), (1, "דקה"), (1.49, "דקה"), (1.5, "שתי דקות"), (2, "שתי דקות"), (3, "3 דקות"),
+    (59, "59 דקות"), (60, "שעה"), (61, "61 דקות"), (119, "119 דקות"),              # minutes under two hours
+    (120, "שעתיים"), (179, "שעתיים"), (180, "3 שעות"), (1439, "23 שעות"), (1440, "יום"), (1441, "24 שעות"),
+    (2879, "47 שעות"),                                                             # whole hours under two days
+    (2880, "יומיים"), (4319, "יומיים"), (4320, "3 ימים"), (144000, "100 ימים"),
+])
+def test_a_length_of_time_is_said_as_a_person_says_it(db, minutes, text):
+    assert db.sql("select sh_span(%s::numeric)", [minutes]) == [(text,)]
+
+
+def test_the_mock_says_a_length_of_time_and_a_recovery_as_the_database_does(db, monkeypatch):
+    spans = dict(db.sql("select m, sh_span(m) from generate_series(1, 6000) m"))
+    assert [m for m in spans if mock.span_he(m) != spans[m]] == []
+    halves = [0, 0.4, 0.5, 1.49, 1.5, 2.5, 59.5, 119.5, 179.5, 1439.5, 2879.5, 4319.5]
+    assert [mock.span_he(m) for m in halves] == [db.sql("select sh_span(%s::numeric)", [m])[0][0] for m in halves]
+    monkeypatch.setitem(mock.STATE, "scenario", "incident")
+    opened = {a["title"]: a for a in mock.alerts()}
+    back = [row for row in mock.api_messages({})["rows"] if row["kind"] == "חזר לתקין"]
+    assert back and all(row["title"].startswith("חזר לתקין: ") for row in back)
+    for row in back:                                  # as sh_alerts_check stores it: the alert's title, then how long
+        title, _, lasted = row["msg"].partition("\n")
+        assert title in opened and row["title"] == "חזר לתקין: " + opened[title]["name"]
+        assert lasted == "נמשך " + mock.span_he(opened[title]["minutes"])
 
 
 # ================================================================ sh_now (spec §5.3)
@@ -568,6 +769,20 @@ def test_now_real_users(db):
            " select now() - interval '2 hours', 'old.example.co.il', '/', 1000 from generate_series(1, 1200)")
     assert db.rpc("sh_now")["rum_src"]["n"] == 1000           # where the newest 1000 came from
     assert db.rpc("sh_now")["rum_src"]["hosts"][0] == {"host": "old.example.co.il", "n": 993}
+
+
+def test_now_names_the_five_largest_sources_only(db):
+    """The ingest is open to the internet: a flood of made-up site names must not fill the screen."""
+    db.setup()
+    sites = {"live": 9, "staging.example.co.il": 6, "b.example": 3, "a.example": 3, "c.example": 2, "d.example": 2,
+             "e.example": 1}
+    for site, n in sites.items():
+        db.sql("insert into sh_rum (site, path, lcp_ms) select %s, '/', 1000 from generate_series(1, %s)", [site, n])
+    db.sql("insert into sh_rum (site, path, lcp_ms) select 'flood-' || g || '.example', '/', 1000 from generate_series(1, 400) g")
+    source = db.rpc("sh_now")["rum_src"]
+    assert source["hosts"] == [{"host": "live", "n": 9}, {"host": "staging.example.co.il", "n": 6},
+                               {"host": "a.example", "n": 3}, {"host": "b.example", "n": 3}, {"host": "c.example", "n": 2}]
+    assert source["n"] == 426                                  # all the rows that were looked at
 
 
 def test_now_lab_speed_and_open_alerts(db):
@@ -720,7 +935,7 @@ def test_drill_alert(db):
                {"at": il(now - mins(3)), "page": "סל", "status": 502, "err": None}],
         sent=[{"event": "open", "status": 200, "at": il(now)}, {"event": "close", "status": 200, "at": il(now)}])]
     assert cart == {"id": cart["id"], "kind": "down", "title": "האתר לא עונה: סל", "body": "קוד 502\n" + URL["סל"],
-                    "open": False, "opened_il": il(now - secs(230)), "closed_il": il(now), "minutes": 3}
+                    "open": False, "opened_il": il(now - secs(230)), "closed_il": il(now), "minutes": 4}
     detail = db.rpc("sh_drill_alert", p_id=product["id"])[0]
     assert len(detail["fails"]) == 4 and detail["sent"] == [{"event": "open", "status": 200, "at": il(now)}]
     assert db.rpc("sh_drill_alert", p_id=cart["id"] + 1000) == []
@@ -769,15 +984,59 @@ def test_down_alert_opens_on_the_first_failed_check_and_closes_on_the_next_answe
     assert db.rpc("sh_alerts_open") == alert
     assert db.sql("select count(*) from sh_alerts") == [(1,)] and db.sql("select count(*) from sh_messages") == [(1,)]
 
-    db.sql("update sh_alerts set opened_at = now() - interval '7 minutes 30 seconds'")
+    db.sql("update sh_alerts set opened_at = now() - interval '7 minutes 20 seconds'")
     db.probe(now - secs(10), "light", ms=None)                                   # it answered
-    assert _pushes(db) == [{"title": "האתר לא עונה: סל", "msg": "נמשך 7 דקות", "priority": 2,
+    # the recovery names the page, not the alert: never "חזר לתקין: האתר לא עונה: סל"
+    assert _pushes(db) == [{"title": "חזר לתקין: סל", "msg": "האתר לא עונה: סל\nנמשך 7 דקות", "priority": 2,
                             "click": None, "kind": "חזר לתקין", "event": "close"}]
     assert db.rpc("sh_alerts_open") == []
     assert db.sql("select count(*) from sh_alerts where closed_at = now()") == [(1,)]
+    assert db.rpc("sh_messages", p_from=now, p_to=now + mins(1))[0] == {       # the message log shows what was pushed
+        "kind": "חזר לתקין", "title": "חזר לתקין: סל", "msg": "האתר לא עונה: סל\nנמשך 7 דקות", "at_il": il(now),
+        "sent": False}
 
     db.rpc("sh_alerts_check")                                                     # nothing to close twice
     assert db.sql("select count(*) from sh_messages") == [(2,)]
+
+
+@pytest.mark.parametrize("lasted, minutes, text", [
+    ("0 seconds", 1, "נמשך דקה"),                              # never "0 דקות"
+    ("20 seconds", 1, "נמשך דקה"),
+    ("1 minute 59.997 seconds", 2, "נמשך שתי דקות"),           # two rounds: the closing tick was 3 ms quicker
+    ("2 minutes 59.994 seconds", 3, "נמשך 3 דקות"),            # the outage row beside it says 3 minutes too
+    ("3 minutes 0.004 seconds", 3, "נמשך 3 דקות"),
+    ("7 minutes 30 seconds", 8, "נמשך 8 דקות"),
+    ("1 hour", 60, "נמשך שעה"),
+    ("2 hours 5 minutes", 125, "נמשך שעתיים"),
+    ("49 hours", 2940, "נמשך יומיים"),
+])
+def test_an_alert_lasted_the_nearest_whole_minute_on_the_phone_and_on_the_screen(db, lasted, minutes, text):
+    db.setup()
+    now = db.now()
+    db.probe(now - secs(40), fail={"סל": 502})
+    db.rpc("sh_alerts_check")
+    db.sql("update sh_alerts set opened_at = now() - %s::interval", [lasted])
+    db.probe(now - secs(10))
+    (push,) = db.rpc("sh_alerts_check")
+    assert (push["event"], push["title"], push["msg"]) == ("close", "חזר לתקין: סל", "האתר לא עונה: סל\n" + text)
+    (alert,) = db.rpc("sh_alerts_range", p_from=now - mins(60 * 72), p_to=now + mins(1))
+    assert alert["minutes"] == minutes
+    assert db.rpc("sh_drill_alert", p_id=alert["id"])[0]["minutes"] == minutes
+
+
+def test_an_alert_of_another_kind_is_left_alone(db):
+    """Spec §7.8: other parts of the owner's system may keep alerts of their own kinds in sh_alerts."""
+    db.setup()
+    now = db.now()
+    db.sql("insert into sh_alerts (key, kind, title, body, opened_at) values"
+           " ('ops:backup', 'ops', 'הגיבוי נכשל', 'גוף', now() - interval '3 hours'),"
+           " ('sale:כיסא', 'sale', 'מבצע הסתיים', null, now() - interval '5 minutes')")
+    db.probe(now - secs(30))
+    for _ in range(3):
+        assert db.rpc("sh_alerts_check") == []                 # nothing to push: no false "חזר לתקין"
+    assert sorted(_open(db)) == [("ops", "הגיבוי נכשל"), ("sale", "מבצע הסתיים")]
+    assert db.sql("select count(*) from sh_messages") == [(0,)]
+    assert db.sql("select count(*) from sh_alerts where closed_at is not null") == [(0,)]
 
 
 def test_a_problem_that_comes_back_is_a_new_alert_that_nobody_has_seen(db):
@@ -849,8 +1108,8 @@ def test_slow_alert(db):
     db.run(now - mins(15), "סל", 4000)
     db.run(now - mins(30), "בית", 9000, "desktop")               # the rule is about the phone
     db.run(now - mins(15), "בית", 9000, "desktop")
-    db.run(now - mins(30), "קופה", 3000)
-    db.run(now - mins(15), "קופה", 5000)                         # only the newest is slow
+    db.run(now - mins(30), "אודות", 3000)
+    db.run(now - mins(15), "אודות", 5000)                        # only the newest is slow
     assert _pushes(db) == [{"title": "עמוד איטי: קטגוריה", "msg": "4.6 שניות עד התוכן, פעמיים ברצף\n" + URL["קטגוריה"],
                             "priority": 3, "click": None, "kind": "התראה", "event": "open"}]
     assert _open(db) == [("slow", "עמוד איטי: קטגוריה")]
@@ -859,11 +1118,12 @@ def test_slow_alert(db):
     db.run(now - mins(9), "קטגוריה", 1000, "desktop")
     db.rpc("sh_alerts_check")
     assert _open(db) == [("slow", "עמוד איטי: קטגוריה")]
-    db.run(now - mins(5), "קופה", 5100)                          # now twice in a row
+    db.run(now - mins(5), "אודות", 5100)                         # now twice in a row
     db.run(now - mins(5), "קטגוריה", 4000)                       # and this one recovered
-    assert sorted((m["event"], m["title"], m["priority"]) for m in db.rpc("sh_alerts_check")) == [
-        ("close", "עמוד איטי: קטגוריה", 2), ("open", "עמוד איטי: קופה", 3)]
-    assert db.rpc("sh_alerts_open")[0]["body"] == "5.1 שניות עד התוכן, פעמיים ברצף\n" + URL["קופה"]
+    assert sorted((m["event"], m["title"], m["msg"], m["priority"]) for m in db.rpc("sh_alerts_check")) == [
+        ("close", "חזר לתקין: קטגוריה", "עמוד איטי: קטגוריה\nנמשך דקה", 2),
+        ("open", "עמוד איטי: אודות", "5.1 שניות עד התוכן, פעמיים ברצף\n" + URL["אודות"], 3)]
+    assert db.rpc("sh_alerts_open")[0]["body"] == "5.1 שניות עד התוכן, פעמיים ברצף\n" + URL["אודות"]
 
 
 def test_silent_alert(db):
@@ -878,7 +1138,26 @@ def test_silent_alert(db):
     assert flow(db, CORE_FLOW)["status"] == "שקט"                 # the screen and the alert agree
 
     db.run(db.now(), "בית", 2400)                                # it ran again
-    assert [m["event"] for m in db.rpc("sh_alerts_check")] == ["close"] and _open(db) == []
+    assert _pushes(db) == [{"title": "חזר לתקין: " + CORE_FLOW, "msg": "המדידה נעצרה: " + CORE_FLOW + "\nנמשך דקה", "priority": 2,
+                            "click": None, "kind": "חזר לתקין", "event": "close"}]
+    assert _open(db) == []
+
+
+@pytest.mark.parametrize("ago, text", [
+    (dict(minutes=60, seconds=59), "אין מדידה כבר שעה"),                  # whole minutes, as the flow's row says
+    (dict(minutes=119, seconds=59), "אין מדידה כבר 119 דקות"),
+    (dict(hours=2, minutes=30), "אין מדידה כבר שעתיים"),
+    (dict(hours=30), "אין מדידה כבר 30 שעות"),
+    (dict(minutes=2940), "אין מדידה כבר יומיים"),                         # a daily flow: never "2940 דקות"
+    (dict(days=5, hours=3), "אין מדידה כבר 5 ימים"),
+])
+def test_silent_alert_tells_the_silence_in_hours_and_days(db, ago, text):
+    db.setup()
+    db.sql("update sh_flows set late_minutes = 60 where flow_name = %s", [SITEMAP_FLOW])
+    db.ran(SITEMAP_FLOW, **ago)
+    (push,) = db.rpc("sh_alerts_check")
+    assert (push["title"], push["msg"]) == ("המדידה נעצרה: " + SITEMAP_FLOW, text)
+    assert flow(db, SITEMAP_FLOW)["silent_txt"] == text.replace("אין מדידה", "שקט")
 
 
 def test_the_real_user_flow_shows_its_silence_and_opens_no_alert(db):
@@ -895,7 +1174,7 @@ def test_the_real_user_flow_shows_its_silence_and_opens_no_alert(db):
     assert db.sql("select flow_name, alerts from sh_flows order by sort") == [(f[0], f[0] == RUM_FLOW) for f in FLOWS]
     assert [m["title"] for m in db.rpc("sh_alerts_check")] == ["המדידה נעצרה: " + RUM_FLOW]
     db.sql("update sh_flows set alerts = false")                 # the flag goes off: nothing could clear the alert
-    assert [(m["event"], m["title"]) for m in db.rpc("sh_alerts_check")] == [("close", "המדידה נעצרה: " + RUM_FLOW)]
+    assert [(m["event"], m["title"]) for m in db.rpc("sh_alerts_check")] == [("close", "חזר לתקין: " + RUM_FLOW)]
     assert db.rpc("sh_alerts_open") == []
 
 
@@ -908,6 +1187,16 @@ def test_silent_alert_ignores_a_disabled_flow_and_closes_when_its_flow_is_disabl
     assert [m["event"] for m in db.rpc("sh_alerts_check")] == ["close"] and _open(db) == []
     db.rpc("sh_alerts_check")
     assert db.sql("select count(*) from sh_alerts") == [(1,)]
+
+    db.setup()                                                    # the same through the "off" list
+    db.ran(CERT_FLOW, days=3)
+    db.ran(SITEMAP_FLOW, days=3)
+    assert sorted(m["title"] for m in db.rpc("sh_alerts_check")) == sorted(
+        "המדידה נעצרה: " + name for name in (CERT_FLOW, SITEMAP_FLOW))
+    db.setup(off=["cert", "sitemap"])
+    assert sorted((m["event"], m["title"]) for m in db.rpc("sh_alerts_check")) == sorted(
+        ("close", "חזר לתקין: " + name) for name in (CERT_FLOW, SITEMAP_FLOW))
+    assert _open(db) == []
 
 
 def test_silent_alert_opened_early_by_the_independent_check_stays_until_the_flow_runs_again(db):
@@ -922,7 +1211,8 @@ def test_silent_alert_opened_early_by_the_independent_check_stays_until_the_flow
     db.sql("update sh_flows set last_at = now() - interval '16 minutes' where flow_name = %s", [PROBE_FLOW])
     assert db.rpc("sh_alerts_check") == [] and len(_open(db)) == 1          # 16 minutes: still the same alert
     db.probe(now - secs(30))
-    assert [(m["event"], m["msg"]) for m in db.rpc("sh_alerts_check")] == [("close", "נמשך 1 דקות")]
+    assert [(m["event"], m["title"], m["msg"]) for m in db.rpc("sh_alerts_check")] == [
+        ("close", "חזר לתקין: " + PROBE_FLOW, "המדידה נעצרה: " + PROBE_FLOW + "\nנמשך דקה")]
     assert _open(db) == []
 
 
@@ -946,7 +1236,32 @@ def test_cert_alert(db):
     db.rpc("sh_alerts_check")
     assert len(_open(db)) == 1
     _cert(db, 89)
-    assert [m["event"] for m in db.rpc("sh_alerts_check")] == ["close"] and _open(db) == []
+    db.sql("update sh_alerts set opened_at = now() - interval '3 days 2 hours'")
+    assert _pushes(db) == [{"title": "חזר לתקין: תעודת האבטחה", "msg": "תעודת האבטחה פגה בעוד 13 ימים\nנמשך 3 ימים", "priority": 2,
+                            "click": None, "kind": "חזר לתקין", "event": "close"}]
+    assert _open(db) == []
+
+
+def test_cert_alert_is_not_judged_while_the_certificate_check_is_off(db):
+    db.setup()
+    _cert(db, 5)
+    db.rpc("sh_alerts_check")
+    assert _open(db) == [("cert", "תעודת האבטחה פגה בעוד 5 ימים")]
+    db.setup(off=["cert"])                                        # nothing could ever clear it: it closes
+    assert [(m["event"], m["title"]) for m in db.rpc("sh_alerts_check")] == [("close", "חזר לתקין: תעודת האבטחה")]
+    assert db.rpc("sh_alerts_check") == [] and _open(db) == []    # and the old row opens no new one
+    db.setup()
+    assert [m["title"] for m in db.rpc("sh_alerts_check")] == ["תעודת האבטחה פגה בעוד 5 ימים"]
+
+
+@pytest.mark.parametrize("days, title", [
+    (13, "תעודת האבטחה פגה בעוד 13 ימים"), (3, "תעודת האבטחה פגה בעוד 3 ימים"), (2, "תעודת האבטחה פגה בעוד יומיים"),
+    (1, "תעודת האבטחה פגה בעוד יום"), (0, "תעודת האבטחה פגה בעוד פחות מיום"), (-1, "תוקף תעודת האבטחה פג"),
+])
+def test_cert_alert_counts_the_days_as_a_person_does(db, days, title):
+    db.setup()
+    _cert(db, days)
+    assert [m["title"] for m in db.rpc("sh_alerts_check")] == [title]
 
 
 def test_ack_marks_only_open_alerts_that_nobody_marked(db):
@@ -989,8 +1304,8 @@ def test_alerts_range_lists_what_was_open_inside_the_window(db):
                      "opened_il": "12.11 09:00", "closed_il": "12.11 09:10", "minutes": 10}
     assert second == {"id": second["id"], "kind": "ops", "title": "ב", "body": None, "open": True,
                       "opened_il": "12.11 09:30", "closed_il": None,
-                      "minutes": int((now - T0 - mins(30)).total_seconds() // 60)}
-    assert db.rpc("sh_alerts_range", p_from=T0 + mins(100), p_to=T0 + mins(101))[0]["minutes"] == 1
+                      "minutes": half_up((now - T0 - mins(30)).total_seconds() / 60)}
+    assert db.rpc("sh_alerts_range", p_from=T0 + mins(100), p_to=T0 + mins(101))[0]["minutes"] == 2      # 1:59
 
 
 def test_an_owed_push_is_handed_out_once_in_two_minutes(db):
@@ -1075,6 +1390,7 @@ def test_messages_log_is_newest_first_and_inside_the_window(db):
 def test_morning_message_is_queued_once_a_day(db):
     db.setup()
     now = db.now()
+    db.probe(now - mins(2 * 1440))                              # the site has been measured for two days
     for i in range(10, 0, -1):
         db.probe(now - mins(i), fail={"סל": 502} if i == 6 else None)
     db.run(now - mins(20), "בית", 2300)
@@ -1099,6 +1415,7 @@ def test_morning_message_is_queued_once_a_day(db):
 def test_morning_message_text(db, dead_rounds, failing_now, title, lines):
     db.setup()
     now = db.now()
+    db.probe(now - mins(2 * 1440))
     for i in range(10 + dead_rounds, 10, -1):
         db.probe(now - mins(i), fail=DEAD)
     for i in range(10, 0, -1):
@@ -1112,9 +1429,31 @@ def test_morning_message_text(db, dead_rounds, failing_now, title, lines):
 
 def test_morning_message_without_any_measurement(db):
     db.setup()
-    db.rpc("sh_morning", p_day=db.now().date())
+    db.probe(db.now() - mins(2 * 1440))                         # measured once, and the prober has been dead since
+    assert db.rpc("sh_morning", p_day=db.now().date()) == {"n": 1}
     assert db.sql("select title, msg, priority, kind from sh_messages") == [
         ("בוקר טוב: אין מדידות", "אין בדיקות זמינות ב-24 שעות", 2, "בוקר")]
+
+
+def test_a_new_installation_gets_no_morning_message_until_it_has_measured_for_six_hours(db):
+    """The first push an owner ever gets must not be "good morning, nothing was measured" on the
+    afternoon of the installation (decision D4)."""
+    db.setup()
+    now = db.now()
+    days = [now.date() + dt.timedelta(days=n) for n in range(4)]
+    skipped = {"n": 0, "skipped": "the oldest probe round is less than 6 hours old"}
+    assert db.rpc("sh_morning", p_day=days[0]) == skipped                  # nothing was ever measured
+    assert db.rpc("sh_job_due", p_job="morning", p_day=days[0]) is False   # and the day's job is done all the same
+    assert db.rpc("sh_morning", p_day=days[0]) == {"n": 0}
+    for i in range(359, 0, -1):
+        db.probe(now - mins(i))
+    db.probe(now - mins(359) - secs(59), "light", ms=None)                 # the oldest round: 5:59:59
+    assert db.rpc("sh_morning", p_day=days[1]) == skipped
+    assert db.sql("select count(*) from sh_messages") == [(0,)] and db.rpc("sh_alerts_check") == []
+    db.probe(now - mins(360), "light", ms=None)                            # six hours, of either kind of round
+    assert db.rpc("sh_morning", p_day=days[2]) == {"n": 1}
+    assert db.sql("select title from sh_messages") == [("בוקר טוב: האתר תקין",)]
+    assert db.rpc("sh_job_due", p_job="morning", p_day=days[3]) is True
 
 
 def _all_at_once(sessions, fn):
@@ -1253,7 +1592,7 @@ def test_rotation_takes_turns(db):
 
 def test_rotation_never_takes_a_core_page(db):
     db.setup()
-    others = [SITE + "/about/", SITE + "/blog/"]
+    others = [SITE + "/blog/", SITE + "/contact/"]
     db.rpc("sh_sitemap_set", p_urls=list(URL.values()) + others)          # a sitemap lists the core pages as well
     assert [db.rpc("sh_rotation_next", p_n=3) for _ in range(2)] == [others, others]
     assert db.rpc("sh_rotation_next", p_n=100) == others
@@ -1414,6 +1753,24 @@ def test_rum_add_drops_what_is_outside_the_limits_of_the_ingest(db):
     assert db.sql("select site, path, lcp_ms, is_test, created_at = now() from sh_rum order by lcp_ms") == [
         ("live", "/product/sofa/", 1, True, True), ("a" * 100, long, 300, False, True),
         ("live", "/", 2400, False, True), ("dev.example.co.il", "/cart/", 60000, False, True)]
+    assert flow(db, RUM_FLOW)["status"] == "תקין"
+
+
+def test_rum_add_stores_nothing_once_a_day_holds_30000_rows(db):
+    """The ingest is open to the internet; a full database would stop storing probes and alerts too."""
+    db.setup()
+    views = [{"site": "live", "path": "/", "lcp_ms": 1000}] * 3
+    db.sql("insert into sh_rum (created_at, site, path, lcp_ms) select now() - interval '23 hours 59 minutes', 'live', '/', 1000"
+           " from generate_series(1, 29999)")
+    db.sql("insert into sh_rum (created_at, site, path, lcp_ms) select now() - interval '24 hours', 'live', '/', 1000"
+           " from generate_series(1, 5000)")                              # yesterday's do not count
+    assert db.rpc("sh_rum_add", p_rows=views) == {"n": 3}                 # the last batch that still found room
+    db.sql("update sh_flows set last_at = null")
+    assert db.rpc("sh_rum_add", p_rows=views) == {"n": 0}
+    assert db.sql("select count(*) from sh_rum where created_at > now() - interval '24 hours'") == [(30002,)]
+    assert flow(db, RUM_FLOW)["status"] == "אין נתון"                     # a refused batch is no proof of life
+    db.sql("update sh_rum set created_at = created_at - interval '2 minutes'")       # the oldest leave the last 24 hours
+    assert db.rpc("sh_rum_add", p_rows=views) == {"n": 3}
     assert flow(db, RUM_FLOW)["status"] == "תקין"
 
 
@@ -1643,13 +2000,15 @@ WRITE = ["sh_alert_ack", "sh_login_log_add", "sh_rum_add", "sh_setup", "sh_probe
          "sh_sitemap_set", "sh_cert_set", "sh_issues_set", "sh_job_mark", "sh_alerts_check", "sh_message_sent",
          "sh_morning", "sh_cleanup"]
 API = READ + WRITE                                                        # the 33 functions of spec §7.3 and §7.4
+HELPERS = ["sh_tz", "sh_il", "sh_bucket_fmt", "sh_fail_kind", "sh_span", "sh_minutes", "sh_url", "sh_off", "sh_verdict",
+           "sh_alert_row"]
 
 
 def test_every_function_of_the_spec_exists_with_the_agreed_form(db):
     found = {name: rest for name, *rest in db.sql(
         r"select proname::text, prorettype::regtype::text, provolatile::text, proconfig, coalesce(proargnames, '{}')"
         r" from pg_proc where pronamespace = 'public'::regnamespace and proname like 'sh\_%'")}
-    assert set(API) <= set(found) and len(found) == len(API) + 7           # and seven helpers
+    assert set(found) == set(API) | set(HELPERS)
     for name, (returns, volatility, settings, parameters) in found.items():
         assert settings == ["search_path=public"], name
         assert all(p.startswith("p_") for p in parameters), name
@@ -1685,7 +2044,8 @@ def test_schema_upgrades_a_database_of_the_first_version_and_keeps_its_data(db):
     db.sql("alter table sh_messages drop column claimed_at")
     db.sql("alter table sh_flows drop column alerts")
     db.sql("update sh_flows set warn_minutes = 120, late_minutes = 360 where flow_name = %s", [RUM_FLOW])
-    db.sql("delete from sh_settings where key in ('keep_days', 'rum_hosts', 'private_paths')")
+    db.sql("delete from sh_settings where key in ('keep_days', 'rum_hosts', 'private_paths', 'off', 'extra_hosts',"
+           " 'hide', 'nav', 'links')")
     before = (db.sql("select * from sh_probe order by page"), db.sql("select at, url, lcp_ms, score from sh_speed"),
               db.sql("select id, title from sh_messages"), db.sql("select flow_name, last_at from sh_flows order by sort"),
               db.rpc("sh_availability", p_from=now - mins(60), p_to=now))
@@ -1707,9 +2067,10 @@ def test_schema_upgrades_a_database_of_the_first_version_and_keeps_its_data(db):
     config = db.rpc("sh_config")                                          # the new settings read as their defaults
     assert (config["keep_days"], config["rum_hosts"], config["private_paths"], config["time_zone"]) == (
         100, [], [], "Asia/Jerusalem")
+    assert (config["off"], config["extra_hosts"], config["hide"], config["nav"], config["links"]) == ([], [], [], [], [])
     # and the functions work on it: the old push is handed out, the real-user alert closes, the page's alert opens
     assert sorted((m["event"], m["title"]) for m in db.rpc("sh_alerts_check")) == [
-        ("close", "המדידה נעצרה"), ("open", "האתר לא עונה: סל"), ("open", "הודעה ישנה")]
+        ("close", "חזר לתקין: " + RUM_FLOW), ("open", "האתר לא עונה: סל"), ("open", "הודעה ישנה")]
     assert flow(db, RUM_FLOW)["status"] == "מתעכב" and db.rpc("sh_cleanup")["probe"] == 0
     db.run(now, "בית", 2500, lh_version="13.0.1")
     assert db.sql("select lh_version from sh_speed order by at") == [(None,), ("13.0.1",)]
@@ -1741,40 +2102,227 @@ def test_tables_and_functions_are_private(db):
                 db.sql(call)
 
 
-def test_on_supabase_only_the_service_role_gets_in(db):
-    """The three roles exist (or change) only inside this test's transaction: nothing is left on the server."""
+def _call_every_function(db):
+    """One call of each function of the API, as the server and the collectors make them. The
+    answers are checked elsewhere; here every call must get through."""
+    now = db.now()
+    window = dict(p_from=now - mins(60), p_to=now + mins(1))
+    called = set()
+
+    def call(fn, **params):
+        called.add(fn)
+        return db.rpc(fn, **params)
+
+    call("sh_setup", p_config=example_config())
+    call("sh_probe_add", p_round_at=now - mins(400), p_kind="full", p_rows=[
+        {"page": "סל", "url": URL["סל"], "ok": True, "status": 200, "ms": 300}])
+    call("sh_probe_add", p_round_at=now - secs(30), p_kind="full", p_rows=[
+        {"page": "סל", "url": URL["סל"], "ok": False, "status": 502, "fail": "http", "ms": 300}])
+    call("sh_speed_add", p_rows=[{"at": (now - mins(5)).isoformat(), "url": URL["בית"], "page": "בית", "strategy": "mobile",
+                                  "source": "core", "ok": True, "lcp_ms": 2400}])
+    call("sh_sitemap_set", p_urls=[SITE + "/a/", SITE + "/b/"])
+    assert call("sh_rotation_next", p_n=1) == [SITE + "/a/"]
+    call("sh_cert_set", p_row={"host": "example.co.il", "ok": True, "days_left": 80})
+    call("sh_issues_set", p_snap_date=now.date(), p_rows=[{"product_id": "1", "issue": "בלי מחיר", "name": "מיטה"}])
+    assert call("sh_rum_add", p_rows=[{"site": "live", "path": "/", "lcp_ms": 1800}]) == {"n": 1}
+    assert call("sh_job_due", p_job="sitemap", p_day=now.date()) is True
+    assert call("sh_job_mark", p_job="sitemap", p_day=now.date()) is True
+    (push,) = call("sh_alerts_check")                                     # two identity columns: sh_alerts, sh_messages
+    assert push["title"] == "האתר לא עונה: סל"
+    assert call("sh_message_sent", p_id=push["id"], p_status=200) == {"n": 1}
+    assert call("sh_morning", p_day=now.date()) == {"n": 1}
+    (alert,) = call("sh_alerts_open")
+    assert call("sh_alert_ack", p_ids=[alert["id"]], p_who="owner") == {"n": 1}
+    assert call("sh_login_log_add", p_ip="203.0.113.7", p_ok=True, p_who="owner", p_ua="Mozilla/5.0") == {"n": 1}
+    assert call("sh_now")["alerts_open"] == 1 and len(call("sh_health")) == 7
+    for fn in ("sh_availability", "sh_availability_series", "sh_speed", "sh_alerts_range", "sh_drill_fails", "sh_messages"):
+        assert call(fn, **window)
+    assert call("sh_speed_series", p_strategy="mobile", **window)
+    assert call("sh_drill_runs", p_url=URL["בית"], **window)
+    assert call("sh_drill_bucket", p_bucket=now.astimezone(TZ).strftime("%Y-%m-%d"))
+    assert call("sh_drill_alert", p_id=alert["id"])
+    assert call("sh_product_issues") and call("sh_cert")["days_left"] == 80
+    assert call("sh_config")["time_zone"] == "Asia/Jerusalem" and call("sh_ping") == "ok"
+    assert set(call("sh_cleanup")) == {"probe", "probe_light", "speed", "rum", "product_issues", "jobs", "login_log"}
+    assert called == set(API)
+
+
+@pytest.mark.parametrize("default_grants", [True, False],
+                         ids=["a project that hands out default grants", "a project that hands out none"])
+def test_on_supabase_only_the_service_role_gets_in(db, default_grants):
+    """A Supabase project used to grant every new table, sequence and function to its three API
+    roles; a newer one grants no table by itself. The two files must end in the same place from
+    both: nothing for anon and authenticated, everything the functions need for the service role.
+    The three roles exist (or change) only inside this test's transaction: nothing is left on the server."""
     roles = ("anon", "authenticated", "service_role")
     for role in roles:
         if not db.sql("select 1 from pg_roles where rolname = %s", [role]):
             db.sql("create role %s" % role)
     db.sql("alter role service_role bypassrls")                           # as on Supabase
-    # what Supabase's default privileges hand out when a table or a function is created
-    db.sql("grant all on all tables in schema public to anon, authenticated, service_role")
-    db.sql("grant execute on all functions in schema public to anon, authenticated, service_role")
+    for kind in ("tables", "sequences", "functions"):
+        db.sql("revoke all on all %s in schema public from anon, authenticated, service_role" % kind)
+        if default_grants:
+            db.sql("grant all on all %s in schema public to anon, authenticated, service_role" % kind)
     apply_sql(db.conn)
 
     def may(role):
-        """How many of the sh_* functions the role may run, and how many of the tables it may read."""
+        """How many of the sh_* functions the role may run, of the tables it may read and write,
+        and of the sequences it may use."""
         return db.sql(r"""
             select (select count(*) from pg_proc
                     where pronamespace = 'public'::regnamespace and proname like 'sh\_%%'
                       and has_function_privilege(%(role)s, oid, 'execute')),
                    (select count(*) from pg_class
                     where relnamespace = 'public'::regnamespace and relkind = 'r' and relname like 'sh\_%%'
-                      and has_table_privilege(%(role)s, oid, 'select'))""", {"role": role})[0]
+                      and has_table_privilege(%(role)s, oid, 'select, insert, update, delete')),
+                   (select count(*) from pg_sequences
+                    where schemaname = 'public' and sequencename like 'sh\_%%'
+                      and has_sequence_privilege(%(role)s, format('public.%%I', sequencename), 'usage, select, update'))""",
+                      {"role": role})[0]
 
-    assert [may(role) for role in roles] == [(0, 0), (0, 0), (len(API) + 7, 13)]
+    assert db.sql(r"select count(*) from pg_sequences where schemaname = 'public' and sequencename like 'sh\_%'") == [(2,)]
+    assert [may(role)[:2] for role in roles] == [(0, 0), (0, 0), (len(API) + len(HELPERS), 13)]
+    assert [may(role)[2] for role in roles[:2]] == [0, 0]
 
     db.sql("set local role service_role")                                 # and the service role can do its whole job
-    db.setup()
-    db.probe(db.now() - secs(30), fail={"סל": 502})
-    assert [m["title"] for m in db.rpc("sh_alerts_check")] == ["האתר לא עונה: סל"]
-    assert db.rpc("sh_now")["alerts_open"] == 1 and len(db.rpc("sh_health")) == 7
+    _call_every_function(db)
     db.sql("set local role anon")
-    for call in ("select sh_now()", "select * from sh_alerts"):
+    for call in ("select sh_now()", "select * from sh_alerts", "select nextval('sh_alerts_id_seq')",
+                 "select last_value from sh_messages_id_seq"):
         with pytest.raises(psycopg.errors.InsufficientPrivilege):
             with db.conn.transaction():
                 db.sql(call)
+
+
+# ================================================================ deadman.sql, against stand-ins
+
+# pg_cron, pg_net and Vault as far as deadman.sql touches them: the same names and parameters,
+# doing nothing but remembering what they were asked.
+STAND_INS = """
+create schema cron;
+create schema net;
+create schema vault;
+create table cron.job (jobid bigserial primary key, jobname text unique, schedule text, command text,
+                       active boolean not null default true);
+create table cron.job_run_details (jobid bigint, end_time timestamptz);
+create function cron.schedule(job_name text, schedule text, command text) returns bigint language sql as $$
+  insert into cron.job (jobname, schedule, command) values (job_name, schedule, command)
+  on conflict (jobname) do update set schedule = excluded.schedule, command = excluded.command
+  returning jobid
+$$;
+create table net._http_response (id bigint primary key, status_code int, timed_out boolean, error_msg text,
+                                 created timestamptz not null default now());
+create table net.asked (id bigserial primary key, url text, body jsonb, headers jsonb, timeout_milliseconds int);
+create function net.http_post(url text, body jsonb default '{}', params jsonb default '{}',
+                              headers jsonb default '{}', timeout_milliseconds int default 5000)
+returns bigint language sql as $$
+  insert into net.asked (url, body, headers, timeout_milliseconds) values (url, body, headers, timeout_milliseconds)
+  returning id
+$$;
+create table vault.decrypted_secrets (name text primary key, decrypted_secret text);
+"""
+
+
+def _apply_deadman(db):
+    """deadman.sql on top of the stand-ins, without its two "create extension" lines."""
+    text, extensions = re.subn(r"(?m)^create extension [^;]*;\n", "", (REFERENCE / "deadman.sql").read_text(encoding="utf-8"))
+    assert extensions == 2
+    db.conn.execute(STAND_INS)
+    db.conn.execute(text)
+
+
+def _asked(db):
+    """What sh_deadman handed to pg_net, oldest first."""
+    return db.sql("select url, body, headers, timeout_milliseconds from net.asked order by id")
+
+
+def test_deadman_opens_the_alert_after_ten_silent_minutes_and_pushes_it_once(db):
+    db.setup()
+    _apply_deadman(db)
+    assert db.sql("select jobname, schedule, command from cron.job order by jobid")[0] == (
+        "sh-deadman", "*/5 * * * *", "select public.sh_deadman()")
+    assert db.sql("select count(*) from cron.job") == [(2,)]              # and the job that trims pg_cron's own log
+    db.sql("insert into vault.decrypted_secrets values ('sh_ntfy_topic', ' topic-x '), ('sh_dashboard_url', 'https://dash.example/')")
+    quiet = {"opened": None, "closed": None, "published": 0}
+    now = db.now()
+    assert db.rpc("sh_deadman") == quiet                                  # the prober never ran: not judged
+    db.probe(now - mins(10))
+    assert db.rpc("sh_deadman") == quiet                                  # exactly ten minutes: not yet
+
+    db.sql("update sh_flows set last_at = last_at - interval '30 seconds'")
+    fired = db.rpc("sh_deadman")
+    assert fired == {"opened": fired["opened"], "closed": None, "published": 1} and fired["opened"]
+    push = {"topic": "topic-x", "title": "המדידה נעצרה: " + PROBE_FLOW, "message": "אין מדידה כבר 10 דקות", "priority": 4,
+            "tags": ["rotating_light"], "click": "https://dash.example/site"}
+    assert _asked(db) == [("https://ntfy.sh/", push, {"Content-Type": "application/json"}, 10000)]
+    assert db.rpc("sh_alerts_open") == [{"id": fired["opened"], "kind": "silent", "title": "המדידה נעצרה: " + PROBE_FLOW,
+                                         "body": "אין מדידה כבר 10 דקות", "opened_il": il(now), "acked": False}]
+    # until ntfy's answer is read nobody sends it a second time: not the next run, not the worker
+    assert db.rpc("sh_deadman") == quiet and db.rpc("sh_alerts_check") == []
+    assert len(_asked(db)) == 1 and len(_open(db)) == 1
+    assert db.rpc("sh_messages", p_from=now, p_to=now + mins(1))[0]["sent"] is False
+
+    # ntfy refused it: a failed attempt, and the push leaves again at once
+    db.sql("insert into net._http_response (id, status_code) select request_id, 500 from sh_deadman_push")
+    assert db.rpc("sh_deadman") == dict(quiet, published=1)
+    assert [body for _, body, _, _ in _asked(db)] == [push, push]
+    assert db.sql("select status, attempts from sh_messages") == [(None, 1)]
+    # this time it was accepted: the log says sent, and nothing is left to do
+    db.sql("insert into net._http_response (id, status_code) select request_id, 200 from sh_deadman_push")
+    assert db.rpc("sh_deadman") == quiet
+    assert db.sql("select status, attempts from sh_messages") == [(200, 2)]
+    assert db.sql("select count(*) from sh_deadman_push") == [(0,)]
+    assert db.rpc("sh_messages", p_from=now, p_to=now + mins(1))[0]["sent"] is True
+
+    # the worker is back: a full round newer than the alert closes it, and the recovery is pushed
+    db.sql("update sh_alerts set opened_at = now() - interval '12 minutes'")
+    db.probe(now - secs(30))
+    assert db.rpc("sh_deadman") == {"opened": None, "closed": fired["opened"], "published": 1}
+    assert _asked(db)[-1][1] == {"topic": "topic-x", "title": "חזר לתקין: " + PROBE_FLOW,
+                                 "message": "המדידה נעצרה: " + PROBE_FLOW + "\nנמשך 12 דקות", "priority": 2,
+                                 "tags": ["white_check_mark"], "click": "https://dash.example/site"}
+    assert db.rpc("sh_alerts_open") == [] and db.rpc("sh_deadman") == quiet
+
+
+def test_deadman_without_a_topic_still_opens_the_alert_and_logs_its_message_as_not_sent(db):
+    db.setup()
+    _apply_deadman(db)
+    now = db.now()
+    db.probe(now - mins(11))
+    fired = db.rpc("sh_deadman")
+    assert fired["opened"] and fired["published"] == 0 and _asked(db) == []
+    assert _open(db) == [("silent", "המדידה נעצרה: " + PROBE_FLOW)]
+    assert db.rpc("sh_messages", p_from=now, p_to=now + mins(1)) == [
+        {"kind": "התראה", "title": "המדידה נעצרה: " + PROBE_FLOW, "msg": "אין מדידה כבר 11 דקות", "at_il": il(now), "sent": False}]
+    assert db.sql("select status from sh_messages") == [(0,)]
+    db.setup(off=[])                                                      # setting the site up again changes nothing here
+    db.sql("update sh_flows set enabled = false where flow_name = %s", [PROBE_FLOW])
+    db.sql("update sh_alerts set closed_at = now()")
+    assert db.rpc("sh_deadman") == {"opened": None, "closed": None, "published": 0}       # a flow that is off is not judged
+
+
+def test_deadman_stays_with_the_owner_in_whatever_order_the_files_are_applied(db):
+    """Only the database's own job runs sh_deadman: the service role is not given it, also when
+    functions.sql and schema.sql are applied again after deadman.sql (an upgrade)."""
+    for role in ("anon", "authenticated", "service_role"):
+        if not db.sql("select 1 from pg_roles where rolname = %s", [role]):
+            db.sql("create role %s" % role)
+    db.sql("alter default privileges in schema public grant all on tables to anon, authenticated, service_role")
+    db.sql("alter default privileges in schema public grant all on functions to anon, authenticated, service_role")
+    _apply_deadman(db)
+
+    def may():
+        return db.sql("select r, has_function_privilege(r, 'sh_deadman()', 'execute'),"
+                      " has_table_privilege(r, 'sh_deadman_push', 'select, insert, update, delete')"
+                      " from unnest(array['anon', 'authenticated', 'service_role']) r")
+
+    nobody = [("anon", False, False), ("authenticated", False, False), ("service_role", False, False)]
+    assert may() == nobody
+    apply_sql(db.conn)
+    assert may() == nobody
+    assert db.sql("select has_function_privilege('service_role', 'sh_alerts_check()', 'execute'),"
+                  " has_table_privilege('service_role', 'sh_alerts', 'select')") == [(True, True)]
+    assert db.sql("select relrowsecurity from pg_class where relname = 'sh_deadman_push'") == [(True,)]
 
 
 # ================================================================ performance

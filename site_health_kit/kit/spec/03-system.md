@@ -31,6 +31,10 @@ Collectors and their cadence (all times are the site's local time zone):
 | `מהירות אצל לקוחות` | real visitors' browsers report time to main content | every page view |
 | alert rules | open / close alerts, send pushes, keep the message log | every minute |
 
+A part that does not apply to a site (no sitemap, nothing to sell, no certificate, no add-on on
+the site) is switched off in the site's configuration (`off`, §7.4): its flow is disabled and
+its card hidden, instead of showing `אין נתון` for good.
+
 The thresholds below are used everywhere (screen, alerts, texts). Do not change them.
 
 | Measure | Green | Yellow | Red |
@@ -44,7 +48,8 @@ Definitions that the texts on the screen promise (keep them true):
 
 - **Availability** = share of full-round checks that answered correctly. Light rounds are not counted.
 - **Outage (נפילה)** = 3 or more consecutive minutes in which **no** probe page answered.
-- **Alert opens** when: one availability check fails (or two in a row, intake question 8); a core page is
+- **Alert opens** when: one availability check fails (or two in a row: `down_after`, the "down"
+  rule of the intake); a core page is
   slower than 4 seconds twice in a row; a measurement flow stops; the certificate has fewer than
   14 days left. **It closes by itself** when the condition clears.
 - **"ראיתי" (✕)** hides an open alert from the red bar for everybody until that alert closes. It
@@ -57,7 +62,9 @@ Definitions that the texts on the screen promise (keep them true):
 Everything site-specific sits in two places.
 
 **4.1 The screen: `SH_CONFIG`** (defaults are at the top of the script in `site_health.html`; the
-server overrides them by injecting one inline script at the `<!--SH_INJECT-->` marker in `<head>`):
+server overrides them by injecting one inline script at the `<!--SH_INJECT-->` marker in `<head>`.
+In the reference the injected object is `sh_config().screen`, built from the configuration file:
+nobody edits these values in the HTML):
 
 | Key | Meaning | Default |
 |---|---|---|
@@ -66,6 +73,7 @@ server overrides them by injecting one inline script at the `<!--SH_INJECT-->` m
 | `homePage` | the value of `page` for the home page, exactly as the data returns it | `'בית'` |
 | `probeCount` | number of probe pages (used in explanation texts only) | `4` |
 | `coreCount` | number of core pages (used in explanation texts only) | `5` |
+| `downAfter` | after how many failed availability checks in a row an alert goes out (the configuration's `down_after`; used in the two sentences that explain the "down" rule) | `1` |
 | `liveHosts` | values of the real-user source that mean "the live site" | `['live', siteLabel, 'www.' + siteLabel]` |
 | `pathLabels` | URL path prefixes turned into readable Hebrew labels | WooCommerce: `[['/product-category/','קטגוריה: '],['/product/','מוצר: ']]`; Shopify: `[['/collections/','קטגוריה: '],['/products/','מוצר: ']]` |
 | `bucketNote` | a note under the "server response per page" drill-down; empty = none | `''` |
@@ -75,14 +83,16 @@ server overrides them by injecting one inline script at the `<!--SH_INJECT-->` m
 | `api` | base path of the data calls | `'/api'` |
 | `loginPath`, `logoutPath` | | `'/login'`, `'/logout'` |
 | `shareKey` | share-link token; when set it is appended to every data call as `k=` | `''` |
-| `hide` | ids of cards that do not apply to this site: `'issuesCard'` (a site that sells nothing), `'slowCard'` (no sitemap rotation) | `[]` |
+| `hide` | ids of cards that do not apply to this site: `'issuesCard'` (a site that sells nothing), `'slowCard'` (no sitemap rotation), `'certCard'` (a site without https). The reference fills it from the configuration's `off` and `hide` | `[]` |
 
 and the viewer's role, `SH_ROLE` (§8): `{}` for owner and staff, `{readonly: true}` for a vendor,
 `{readonly: true, noAlerts: true}` for a vendor who must not see alerts, `{share: true}` for the
 share link. The role object only hides controls; **the server enforces the same rules itself**.
 
-**4.2 The backend:** probe pages, core pages, time zone, alert rule, ntfy topic, PageSpeed key,
-passwords. In the reference implementation these are rows in `sh_pages` plus environment
-variables (`reference/README.md` lists them).
+**4.2 The backend.** Everything about the site (its pages, time zone, platform, the "down" rule,
+the parts that are off, the screen values above) is in one file, `site_health.config.json`, which
+`sh_setup` loads into the database; §7.4 lists every key. Secrets (the database key, the
+passwords, the Google key, the alert topic) are environment variables in the host's settings:
+`reference/README.md` lists them, and `OWNER-STEPS.md` says who types each one.
 
 <!-- EOF spec/03-system.md -->

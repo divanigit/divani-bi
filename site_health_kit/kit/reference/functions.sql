@@ -2,7 +2,8 @@
 --
 -- Conventions
 --   * The server and the collectors call these functions and nothing else. Each returns jsonb;
---     a list is never null (an empty list is '[]'). The few helpers at the top return text.
+--     a list is never null (an empty list is '[]'). The helpers at the top are for the other
+--     functions (and for deadman.sql), not for callers.
 --   * Parameters are named p_*. Lists of rows and of ids arrive as jsonb and times as
 --     timestamptz, so one call works over PostgREST (/rest/v1/rpc/<fn>) and over a connection.
 --   * now() is the start of the transaction: all figures of one call are taken at one instant.
@@ -39,13 +40,65 @@ language sql immutable set search_path = public as $$
          end
 $$;
 
--- A number of minutes in the unit a person would use.
+-- A length of time as a person says it, for every text that names one: rounded to the nearest
+-- minute and never less than one; minutes under two hours, whole hours under two days, whole
+-- days from there on. One and two get their own words: דקה, שתי דקות, 5 דקות; שעה (exactly 60
+-- minutes), שעתיים, 5 שעות; יום (exactly 24 hours), יומיים, 5 ימים.
 create or replace function sh_span(p_minutes numeric) returns text
 language sql immutable set search_path = public as $$
-  select case when p_minutes < 120  then p_minutes::int || ' דקות'
-              when p_minutes < 2880 then floor(p_minutes / 60)::int || ' שעות'
-              else floor(p_minutes / 1440)::int || ' ימים'
+  select case when m = 1    then 'דקה'
+              when m = 2    then 'שתי דקות'
+              when m = 60   then 'שעה'
+              when m < 120  then m || ' דקות'
+              when m < 180  then 'שעתיים'
+              when m = 1440 then 'יום'
+              when m < 2880 then m / 60 || ' שעות'
+              when m < 4320 then 'יומיים'
+              else m / 1440 || ' ימים'
          end
+  from (select greatest(round(p_minutes), 1)::bigint as m) x
+$$;
+
+-- How long something lasted, in whole minutes: the nearest minute, and never 0. An alert opens
+-- and closes at the alert tick, a few milliseconds after the minute, so three rounds are
+-- 2:59.99 or 3:00.01 long, and both are three minutes.
+create or replace function sh_minutes(p_from timestamptz, p_to timestamptz) returns int
+language sql immutable set search_path = public as $$
+  select greatest(round(extract(epoch from p_to - p_from) / 60), 1)::int
+$$;
+
+-- A page address in the one spelling every comparison uses: scheme and host in lower case, a
+-- bare host with its "/", and the rest percent-encoded (UTF-8, capital hex digits). The site's
+-- sitemap lists a Hebrew slug as %d7%a2…, a person types it in Hebrew, and both must be the
+-- same page: sh_setup and sh_sitemap_set store what this returns. Null for anything that is not
+-- an absolute address.
+create or replace function sh_url(p_url text) returns text
+language sql immutable set search_path = public as $$
+  select lower(u[1]) || case when u[2] ~ '^[?#]' then '/' else '' end
+         || case when u[2] ~ '^[!-$&-~]+$' then u[2]                      -- nothing to encode: most addresses
+                 else coalesce((
+                   select string_agg(
+                            case when t[1] is not null then upper(t[1])   -- an escape that is already there
+                                 when t[2] is not null then t[2]          -- plain characters
+                                 when t[3] = '%' then '%'                 -- a stray percent sign stays
+                                 else (select string_agg('%' || upper(lpad(to_hex(get_byte(b, i)), 2, '0')), '' order by i)
+                                       from (select convert_to(t[3], 'UTF8') as b) c, generate_series(0, length(b) - 1) i)
+                            end, '' order by n)
+                   from regexp_matches(u[2], '(%[0-9A-Fa-f]{2})|([!-$&-~]+)|(.)', 'g') with ordinality as r(t, n)), '/')
+            end
+  from regexp_match(btrim(p_url), '^([A-Za-z][A-Za-z0-9+.-]*://[^/?#\s]+)(.*)$') u
+$$;
+
+-- The parts of the measuring that are switched off: what the configuration lists under "off",
+-- plus what follows from the site itself. Platform "other" has no catalogue to read, and an
+-- http:// site has no certificate. Always in the same order.
+create or replace function sh_off(p_off jsonb, p_platform text, p_site text) returns jsonb
+language sql immutable set search_path = public as $$
+  select coalesce(jsonb_agg(part order by n), '[]')
+  from unnest(array['sitemap', 'real_users', 'catalogue', 'cert']) with ordinality as x(part, n)
+  where coalesce(p_off, '[]') ? part
+     or (part = 'catalogue' and p_platform = 'other')
+     or (part = 'cert' and p_site ilike 'http://%')
 $$;
 
 -- The LCP thresholds, the same ones the screen colors by.
@@ -65,7 +118,7 @@ language sql stable set search_path = public as $$
     'id', p_alert.id, 'kind', p_alert.kind, 'title', p_alert.title, 'body', p_alert.body,
     'open', p_alert.closed_at is null,
     'opened_il', sh_il(p_alert.opened_at), 'closed_il', sh_il(p_alert.closed_at),
-    'minutes', floor(extract(epoch from coalesce(p_alert.closed_at, now()) - p_alert.opened_at) / 60)::int)
+    'minutes', sh_minutes(p_alert.opened_at, coalesce(p_alert.closed_at, now())))
 $$;
 
 -- ---------------------------------------------------------------- configuration
@@ -84,46 +137,72 @@ language sql stable set search_path = public as $$
            count(*) filter (where is_core) as cores,
            max(name) filter (where is_home) as home
     from sh_pages
+  ), o as (
+    -- worked out here as well as in sh_setup: a database that was set up before "off" existed
+    -- still knows that a site without a catalogue has no catalogue check
+    select sh_off(s.v -> 'off', s.v ->> 'platform', s.v ->> 'site') as off from s
   )
   -- The settings that arrived after the first version come first, with their defaults: a
   -- database that was set up before them answers with these until sh_setup runs again.
-  select jsonb_build_object('keep_days', 100, 'rum_hosts', '[]'::jsonb, 'private_paths', '[]'::jsonb)
+  select jsonb_build_object('keep_days', 100, 'rum_hosts', '[]'::jsonb, 'private_paths', '[]'::jsonb,
+                            'extra_hosts', '[]'::jsonb, 'hide', '[]'::jsonb, 'nav', '[]'::jsonb, 'links', '[]'::jsonb)
     || s.v || jsonb_build_object(
+    'off', o.off,
     'pages', p.v,
     -- a key that is not configured is left out, so the screen keeps its own default
     'screen', jsonb_strip_nulls(jsonb_build_object(
       'siteLabel', s.v -> 'label', 'brand', s.v -> 'brand', 'homePage', p.home,
-      'probeCount', p.probes, 'coreCount', p.cores,
+      'probeCount', p.probes, 'coreCount', p.cores, 'downAfter', s.v -> 'down_after',
       'liveHosts', s.v -> 'live_hosts', 'pathLabels', s.v -> 'path_labels', 'bucketNote', s.v -> 'bucket_note',
-      -- a site without a catalogue has no broken-products card
-      'hide', case when s.v ->> 'platform' = 'other' then '["issuesCard"]'::jsonb else '[]'::jsonb end)))
-  from s, p
+      'nav', s.v -> 'nav', 'links', s.v -> 'links',
+      -- the cards the configuration hides, then the card of each part that is switched off
+      'hide', (select coalesce(jsonb_agg(card order by n), '[]')
+               from (select card, min(n) as n
+                     from (select h.card, h.n
+                           from jsonb_array_elements_text(coalesce(s.v -> 'hide', '[]')) with ordinality as h(card, n)
+                           union all
+                           select c.card, 1000 + c.n
+                           from (values (1, 'sitemap', 'slowCard'), (2, 'catalogue', 'issuesCard'),
+                                        (3, 'cert', 'certCard')) as c(n, part, card)
+                           where o.off ? c.part) listed
+                     group by card) cards))))
+  from s, p, o
 $$;
 
--- Loads site_health.config.json. Running it again with the same file changes nothing; a page
--- that left the file is no longer probed or measured, and its history stays.
+-- Loads site_health.config.json (spec §7.4 lists its keys). Running it again with the same file
+-- changes nothing; a page that left the file is no longer probed or measured, and its history
+-- stays. A file that is refused changes nothing at all.
 create or replace function sh_setup(p_config jsonb) returns jsonb
 language plpgsql set search_path = public as $$
 declare
   v_site       text := rtrim(p_config ->> 'site', '/');
   v_host       text := lower(substring(v_site from '^https?://([^/:\s]+)'));
-  v_zone       text := coalesce(p_config ->> 'time_zone', 'UTC');
+  v_zone       text := p_config ->> 'time_zone';
   v_platform   text := coalesce(p_config ->> 'platform', 'other');
   v_down_after int  := coalesce((p_config ->> 'down_after')::int, 1);
   v_morning    text := coalesce(p_config ->> 'morning', '07:30');
   v_keep_days  text := coalesce(p_config ->> 'keep_days', '100');
   v_rum_hosts  jsonb := coalesce(p_config -> 'rum_hosts', '[]');
   v_private    jsonb := coalesce(p_config -> 'private_paths', '[]');
+  v_extra      jsonb := coalesce(p_config -> 'extra_hosts', '[]');
+  v_off        jsonb := coalesce(p_config -> 'off', '[]');
+  v_hide       jsonb := coalesce(p_config -> 'hide', '[]');
+  v_nav        jsonb := coalesce(p_config -> 'nav', '[]');
+  v_links      jsonb := coalesce(p_config -> 'links', '[]');
   v_live       jsonb := coalesce(p_config -> 'live_hosts', '["live"]');
   v_labels     jsonb := coalesce(p_config -> 'path_labels', case v_platform
                           when 'woocommerce' then '[["/product-category/", "קטגוריה: "], ["/product/", "מוצר: "]]'
                           when 'shopify'     then '[["/collections/", "קטגוריה: "], ["/products/", "מוצר: "]]'
                           else '[]' end::jsonb);
-  v_pages int; v_named int; v_names int; v_homes int; v_probes int; v_home_probes int;
+  v_pages int; v_named int; v_names int; v_homes int; v_probes int; v_home_probes int; v_home_cores int;
   v_bad_urls text;
 begin
   if v_host is null then
     raise exception 'sh_setup: "site" must be an absolute http(s) address, got %', coalesce(p_config ->> 'site', 'nothing');
+  end if;
+  -- no default: every time on the screen and every daily job would silently run on UTC
+  if coalesce(v_zone, '') = '' then
+    raise exception 'sh_setup: "time_zone" is required: the time zone of the site''s customers, such as Asia/Jerusalem';
   end if;
   if not exists (select 1 from pg_timezone_names where name = v_zone) then
     raise exception 'sh_setup: unknown "time_zone" %', v_zone;
@@ -155,16 +234,34 @@ begin
              where jsonb_typeof(s) <> 'string' or s #>> '{}' !~ '^[^/?#[:space:]]+$') then
     raise exception 'sh_setup: "private_paths" takes single path segments, such as checkout or its translated slug, got %', v_private;
   end if;
+  if jsonb_typeof(v_extra) <> 'array' or jsonb_typeof(v_off) <> 'array' or jsonb_typeof(v_hide) <> 'array'
+     or jsonb_typeof(v_nav) <> 'array' or jsonb_typeof(v_links) <> 'array' then
+    raise exception 'sh_setup: "extra_hosts", "off", "hide", "nav" and "links" must be lists';
+  end if;
+  if exists (select 1 from jsonb_array_elements(v_extra) h
+             where jsonb_typeof(h) <> 'string' or h #>> '{}' !~ '^[a-z0-9.-]+$') then
+    raise exception 'sh_setup: "extra_hosts" takes host names in lower case, such as shop.example.co.il, got %', v_extra;
+  end if;
+  if exists (select 1 from jsonb_array_elements(v_off) part
+             where jsonb_typeof(part) <> 'string'
+                or part #>> '{}' not in ('sitemap', 'real_users', 'catalogue', 'cert')) then
+    raise exception 'sh_setup: "off" takes sitemap, real_users, catalogue or cert, got %', v_off;
+  end if;
+  if exists (select 1 from jsonb_array_elements(v_hide) card where jsonb_typeof(card) <> 'string') then
+    raise exception 'sh_setup: "hide" takes the ids of cards of the screen, such as slowCard, got %', v_hide;
+  end if;
   if jsonb_typeof(p_config -> 'pages') is distinct from 'array' then
     raise exception 'sh_setup: "pages" must be a list of pages';
   end if;
 
   select count(*), count(*) filter (where name <> ''), count(distinct name),
          count(*) filter (where home), count(*) filter (where probe), count(*) filter (where home and probe),
+         count(*) filter (where home and core),
          string_agg(name, ', ') filter (where url is null or url !~ '^https?://[^/\s]+')
-    into v_pages, v_named, v_names, v_homes, v_probes, v_home_probes, v_bad_urls
+    into v_pages, v_named, v_names, v_homes, v_probes, v_home_probes, v_home_cores, v_bad_urls
   from (select page ->> 'name' as name, page ->> 'url' as url,
                coalesce((page ->> 'probe')::boolean, false) as probe,
+               coalesce((page ->> 'core')::boolean, false) as core,
                coalesce((page ->> 'home')::boolean, false) as home
         from jsonb_array_elements(p_config -> 'pages') as page) p;
   if v_named < v_pages then
@@ -185,6 +282,13 @@ begin
   if v_home_probes < 1 then
     raise exception 'sh_setup: the home page must be a probe page';
   end if;
+  -- the screen's bottom line and the "slow" alert of the home page read its core runs
+  if v_home_cores < 1 then
+    raise exception 'sh_setup: the home page must be a core page';
+  end if;
+
+  -- what is off: the file's own list, and what follows from the platform and from the address
+  v_off := sh_off(v_off, v_platform, v_site);
 
   insert into sh_settings (key, value)
   select key, value from jsonb_each(jsonb_build_object(
@@ -193,32 +297,39 @@ begin
     'brand', coalesce(p_config ->> 'brand', ''),
     'time_zone', v_zone, 'platform', v_platform, 'down_after', v_down_after, 'morning', v_morning,
     'keep_days', v_keep_days::int, 'rum_hosts', v_rum_hosts, 'private_paths', v_private,
+    'extra_hosts', v_extra, 'off', v_off, 'hide', v_hide, 'nav', v_nav, 'links', v_links,
     'live_hosts', v_live, 'path_labels', v_labels,
     'bucket_note', coalesce(p_config ->> 'bucket_note', '')))
   on conflict (key) do update set value = excluded.value;
 
+  -- Addresses are stored in the one spelling of sh_url, so a core page is the same page as its
+  -- line in the sitemap however the file spells it (Hebrew or %D7…, with or without the "/").
   delete from sh_pages;
   insert into sh_pages (name, url, is_probe, is_core, is_home, sort, expect)
-  select page ->> 'name', page ->> 'url',
+  select page ->> 'name', sh_url(page ->> 'url'),
          coalesce((page ->> 'probe')::boolean, false), coalesce((page ->> 'core')::boolean, false),
          coalesce((page ->> 'home')::boolean, false), sort, nullif(page ->> 'expect', '')
   from jsonb_array_elements(p_config -> 'pages') with ordinality as p(page, sort);
 
-  -- The measurement flows of the screen's last card. last_at and note are never touched here,
-  -- and alerts only when the flow is new: whoever turns a flow's alert on or off by hand keeps
-  -- that choice. The real-user flow starts without one: a small site has no visitors for hours
-  -- every night, and that is not a fault.
+  -- The measurement flows of the screen's last card. Which of them are enabled is worked out
+  -- from the configuration on every call, so a flow is never switched by hand: a part of the
+  -- measuring that does not apply to this site goes into "off". A flow that is switched off
+  -- forgets its last run: switched on again it starts from "אין נתון", not from an old silence.
+  -- note is never touched here, and alerts only when the flow is new: whoever turns a flow's
+  -- alert on or off by hand keeps that choice. The real-user flow starts without one: a small
+  -- site has no visitors for hours every night, and that is not a fault.
   insert into sh_flows (flow_name, sort, cadence, warn_minutes, late_minutes, enabled, alerts) values
-    ('בודק זמינות האתר',           1, 'כל דקה',          5,    15,   true,                  true),
-    ('מדידת מהירות — עמודי ליבה',   2, 'כל רבע שעה',      45,   90,   true,                  true),
-    ('מדידת מהירות — סבב כל האתר',  3, 'כל 5 דקות',       20,   60,   true,                  true),
-    ('טעינת מפת האתר',             4, 'פעם ביום',        1560, 2880, true,                  true),
-    ('בדיקת תעודת האבטחה',         5, 'פעם ביום',        1560, 2880, true,                  true),
-    ('בדיקת מוצרים שבורים',        6, 'פעם ביום',        1560, 2880, v_platform <> 'other', true),
-    ('מהירות אצל לקוחות',          7, 'כל צפייה בעמוד',  360,  1440, true,                  false)
+    ('בודק זמינות האתר',           1, 'כל דקה',          5,    15,   true,                     true),
+    ('מדידת מהירות — עמודי ליבה',   2, 'כל רבע שעה',      45,   90,   true,                     true),
+    ('מדידת מהירות — סבב כל האתר',  3, 'כל 5 דקות',       20,   60,   not v_off ? 'sitemap',    true),
+    ('טעינת מפת האתר',             4, 'פעם ביום',        1560, 2880, not v_off ? 'sitemap',    true),
+    ('בדיקת תעודת האבטחה',         5, 'פעם ביום',        1560, 2880, not v_off ? 'cert',       true),
+    ('בדיקת מוצרים שבורים',        6, 'פעם ביום',        1560, 2880, not v_off ? 'catalogue',  true),
+    ('מהירות אצל לקוחות',          7, 'כל צפייה בעמוד',  360,  1440, not v_off ? 'real_users', false)
   on conflict (flow_name) do update
     set sort = excluded.sort, cadence = excluded.cadence, warn_minutes = excluded.warn_minutes,
-        late_minutes = excluded.late_minutes, enabled = excluded.enabled;
+        late_minutes = excluded.late_minutes, enabled = excluded.enabled,
+        last_at = case when excluded.enabled then sh_flows.last_at end;
 
   return sh_config();
 end $$;
@@ -318,7 +429,8 @@ language sql stable set search_path = public as $$
     group by p.name, p.url, p.sort, r.strategy
   ), rotation as (
     -- The whole-site rotation is about every page of the site except the core pages, which are
-    -- measured every 15 minutes already. A core page is told by its address, character for character.
+    -- measured every 15 minutes already. A core page is told by its address: sh_setup and
+    -- sh_sitemap_set both store addresses in the spelling of sh_url.
     select url, strategy, at, lcp_ms, score
     from runs
     where source = 'rotation' and url not in (select url from sh_pages where is_core)
@@ -418,7 +530,9 @@ language sql stable set search_path = public as $$
                           else 'שקט' end,
            'cadence', cadence,
            'silent_txt', case when age > late_minutes then 'שקט כבר ' || sh_span(floor(age))
-                              when age > warn_minutes then 'מאחר ב-' || sh_span(ceil(age - warn_minutes)) end,
+                              -- "ב-10 דקות" before a number; "בדקה", "בשעתיים" before a word
+                              when age > warn_minutes
+                              then 'מאחר ב' || regexp_replace(sh_span(ceil(age - warn_minutes)), '^(\d)', '-\1') end,
            'last_at', last_at, 'warn_minutes', warn_minutes, 'late_minutes', late_minutes, 'note', note)
            order by sort), '[]')
   from (select *, extract(epoch from now() - last_at) / 60 as age from sh_flows where enabled) f
@@ -497,8 +611,9 @@ language sql stable set search_path = public as $$
     'rum_src', (
       select case when count(*) = 0 then 'null'::jsonb else jsonb_build_object(
                'n', count(*),
+               -- the five largest: the tile is one line, and a forged name must not fill the screen
                'hosts', (select jsonb_agg(jsonb_build_object('host', site, 'n', n) order by n desc, site)
-                         from (select site, count(*) as n from src group by site) h),
+                         from (select site, count(*) as n from src group by site order by n desc, site limit 5) h),
                'cols', '["created_at", "is_test", "lcp_ms", "path", "site"]'::jsonb,
                'test', count(*) filter (where is_test)) end
       from src))
@@ -663,14 +778,21 @@ $$;
 -- Real-user page views: [{site, path, lcp_ms, is_test}]. The last line of defence for the
 -- limits of the ingest (spec §7.7): no query string is stored, and a row with an impossible
 -- timing, a site that is not "live" or a host name, or a path longer than 300 characters is dropped.
+-- And nothing at all is stored while the last 24 hours already hold 30,000 rows: the ingest is
+-- open to the internet, and a flood of forged views must not fill the database (a full database
+-- stops storing probes and alerts too). 30,000 a day is about 130 MB over the 30 days rows are kept.
 create or replace function sh_rum_add(p_rows jsonb) returns jsonb
 language sql set search_path = public as $$
-  with added as (
+  with room as (
+    select count(*) < 30000 as free
+    from (select 1 from sh_rum where created_at > now() - interval '24 hours' limit 30000) today
+  ), added as (
     insert into sh_rum (site, path, lcp_ms, is_test)
     select r.site, r.path, r.lcp_ms, coalesce(r.is_test, false)
     from (select site, regexp_replace(path, '[?#].*$', '') as path, lcp_ms, is_test
           from jsonb_to_recordset(p_rows) as x(site text, path text, lcp_ms numeric, is_test boolean)) r
-    where r.site ~ '^[a-z0-9.-]{1,100}$' and length(r.path) <= 300 and r.lcp_ms between 1 and 60000
+    where (select free from room)
+      and r.site ~ '^[a-z0-9.-]{1,100}$' and length(r.path) <= 300 and r.lcp_ms between 1 and 60000
     returning 1
   ), beat as (
     update sh_flows set last_at = now()
@@ -736,7 +858,8 @@ $$;
 
 -- Claims the p_n site pages that were measured longest ago (never measured first) and returns
 -- their addresses. A page is claimed whether or not its measurement then succeeds. A core page
--- takes no turn: it is measured every 15 minutes already.
+-- takes no turn: it is measured every 15 minutes already. And nobody takes a turn while the
+-- rotation is switched off ("sitemap" under "off" in the configuration).
 create or replace function sh_rotation_next(p_n int) returns jsonb
 language sql set search_path = public as $$
   with stamp as materialized (
@@ -745,6 +868,7 @@ language sql set search_path = public as $$
   ), pick as (
     select url from sh_site_pages
     where active and url not in (select url from sh_pages where is_core)
+      and exists (select 1 from sh_flows f where f.flow_name = 'מדידת מהירות — סבב כל האתר' and f.enabled)
     order by last_measured_at nulls first, url
     limit p_n
     for update skip locked
@@ -757,21 +881,28 @@ language sql set search_path = public as $$
   select coalesce(jsonb_agg(url order by url), '[]') from claimed
 $$;
 
--- The pages of the site, from its sitemap: ["https://…", …].
+-- The pages of the site, from its sitemap: ["https://…", …]. Stored in the spelling of sh_url,
+-- the one sh_setup stores the configured pages in, so a core page is recognised as one however
+-- the sitemap writes its address.
 create or replace function sh_sitemap_set(p_urls jsonb) returns jsonb
 language plpgsql set search_path = public as $$
 declare
-  v_n int;
+  v_urls text[];
+  v_n    int;
 begin
+  select array_agg(url) into v_urls
+  from (select distinct sh_url(listed) as url from jsonb_array_elements_text(p_urls) as listed) u
+  where url is not null;
   -- an empty read looks exactly like a site whose pages all vanished
-  if coalesce(jsonb_array_length(p_urls), 0) = 0 then
+  if v_urls is null then
     raise exception 'sh_sitemap_set: an empty list is refused';
   end if;
   insert into sh_site_pages (url)
-  select distinct url from jsonb_array_elements_text(p_urls) as url
+  select unnest(v_urls)
   on conflict (url) do update set active = true, last_seen = now();
   get diagnostics v_n = row_count;
-  update sh_site_pages set active = false where active and not p_urls ? url;
+  update sh_site_pages s set active = false
+  where s.active and not exists (select 1 from unnest(v_urls) as l(url) where l.url = s.url);
   update sh_flows set last_at = now() where flow_name = 'טעינת מפת האתר';
   return jsonb_build_object('n', v_n);
 end $$;
@@ -839,6 +970,8 @@ $$;
 
 -- Evaluates the four alert rules, opens and closes alerts, queues their pushes, and claims and
 -- returns the pushes that are owed, oldest first. Call it every minute, after the full probe round.
+-- An alert of any other kind (another part of the owner's system may keep its own in sh_alerts)
+-- is never judged, closed or pushed about here.
 create or replace function sh_alerts_check() returns jsonb
 language plpgsql set search_path = public as $$
 declare
@@ -898,7 +1031,7 @@ begin
     -- independent check of spec §7.10 opens this alert earlier than late_minutes, and must not
     -- see it closed a minute later.) A flow whose alerts flag is off is not judged at all.
     select 'silent:' || f.flow_name, 'silent', 'המדידה נעצרה: ' || f.flow_name,
-           'אין מדידה כבר ' || floor(f.age) || ' דקות',
+           'אין מדידה כבר ' || sh_span(floor(f.age)),          -- whole minutes, as the flow's row on the screen
            f.age > f.late_minutes,
            coalesce(f.last_at >= (select a.opened_at from sh_alerts a
                                   where a.key = 'silent:' || f.flow_name and a.closed_at is null), false)
@@ -906,11 +1039,16 @@ begin
     where f.enabled and f.alerts and f.last_at is not null
 
     union all
-    -- cert: the last successful check found fewer than 14 days
-    select 'cert:' || c.host, 'cert', 'תעודת האבטחה פגה בעוד ' || c.days_left || ' ימים', c.host,
-           c.days_left < 14, c.days_left >= 14
+    -- cert: the last successful check found fewer than 14 days. Not judged while the
+    -- certificate check is switched off ("off" in the configuration, or an http:// site).
+    select 'cert:' || c.host, 'cert',
+           case when c.days_left >= 1 then 'תעודת האבטחה פגה בעוד ' || sh_span(c.days_left * 1440)
+                when c.days_left = 0 then 'תעודת האבטחה פגה בעוד פחות מיום'
+                else 'תוקף תעודת האבטחה פג' end,
+           c.host, c.days_left < 14, c.days_left >= 14
     from sh_cert c
     where c.host = (select value #>> '{}' from sh_settings where key = 'host') and c.days_left is not null
+      and exists (select 1 from sh_flows f where f.flow_name = 'בדיקת תעודת האבטחה' and f.enabled)
   ), opened as (
     -- insert, never upsert: the unique index on key covers open alerts only
     insert into sh_alerts (key, kind, title, body)
@@ -920,18 +1058,22 @@ begin
     returning id, kind, title, body
   ), closed as (
     -- also closes an alert whose subject is gone (a page that left the configuration, a flow
-    -- that was disabled or lost its alerts flag): nothing could ever clear it
+    -- that was switched off or lost its alerts flag): nothing could ever clear it
     update sh_alerts a set closed_at = now()
     where a.closed_at is null and a.kind in ('down', 'slow', 'silent', 'cert')
       and coalesce((select s.good from state s where s.key = a.key), true)
-    returning a.id, a.title, a.opened_at
+    returning a.id, a.kind, a.key, a.title, a.opened_at
   )
   insert into sh_messages (alert_id, event, kind, title, msg, priority)
   select id, 'open', 'התראה', title, body, case when kind in ('down', 'silent') then 4 else 3 end
   from opened
   union all
-  select id, 'close', 'חזר לתקין', title,
-         'נמשך ' || floor(extract(epoch from now() - opened_at) / 60) || ' דקות', 2
+  -- A recovery names what recovered, the page or the flow (the rest of the alert's key), and
+  -- not the alert's title: "חזר לתקין: האתר לא עונה: …" would read as a contradiction. The
+  -- alert's title goes into the text, above how long it lasted.
+  select id, 'close', 'חזר לתקין',
+         'חזר לתקין: ' || case when kind = 'cert' then 'תעודת האבטחה' else substr(key, length(kind) + 2) end,
+         title || E'\n' || 'נמשך ' || sh_span(sh_minutes(opened_at, now())), 2
   from closed;
 
   -- The claim: a push without a final result goes to this caller, and to nobody else for the
@@ -942,6 +1084,7 @@ begin
     where status is null and (claimed_at is null or claimed_at <= now() - interval '2 minutes')
     returning id, at, title, msg, priority, click, kind, event
   )
+  -- title and msg are the push as the phone shows it: the sender adds nothing to them
   select coalesce(jsonb_agg(jsonb_build_object(
            'id', id, 'title', title, 'msg', msg, 'priority', priority, 'click', click,
            'kind', kind, 'event', event)
@@ -971,7 +1114,9 @@ language sql set search_path = public as $$
 $$;
 
 -- Queues the morning summary of the last 24 hours, once per day: the day's marker is set first,
--- so a second call (or a second worker) queues nothing.
+-- so a second call (or a second worker) queues nothing. A new installation has nothing to sum
+-- up, and its first push must not be "good morning, nothing was measured" in the afternoon: until
+-- the oldest probe round is six hours old the day counts as done and nothing is queued.
 create or replace function sh_morning(p_day date) returns jsonb
 language plpgsql set search_path = public as $$
 declare
@@ -986,6 +1131,9 @@ begin
   insert into sh_jobs (job, day) values ('morning', p_day) on conflict do nothing;
   if not found then
     return jsonb_build_object('n', 0);
+  end if;
+  if not exists (select 1 from sh_probe where round_at <= now() - interval '6 hours') then
+    return jsonb_build_object('n', 0, 'skipped', 'the oldest probe round is less than 6 hours old');
   end if;
 
   -- the same figures the screen shows for "24 שעות", from the same functions
@@ -1050,22 +1198,23 @@ end $$;
 
 -- ---------------------------------------------------------------- privileges
 -- Only the owner of these functions may run them. On Supabase the service role (the secret
--- key) may too, and the two public API roles lose the grant they get by default.
+-- key) may too, and the two public API roles lose the grant they get by default. sh_deadman
+-- (deadman.sql) stays with the owner alone: only the database's own job runs it.
 do $$
 declare
-  f regprocedure;
+  f record;
   r text;
 begin
-  for f in select p.oid::regprocedure from pg_proc p
+  for f in select p.oid::regprocedure as sig, p.proname as name from pg_proc p
            where p.pronamespace = 'public'::regnamespace and p.proname like 'sh\_%' loop
-    execute format('revoke all on function %s from public', f);
+    execute format('revoke all on function %s from public', f.sig);
     foreach r in array array['anon', 'authenticated'] loop
       if exists (select 1 from pg_roles where rolname = r) then
-        execute format('revoke all on function %s from %I', f, r);
+        execute format('revoke all on function %s from %I', f.sig, r);
       end if;
     end loop;
-    if exists (select 1 from pg_roles where rolname = 'service_role') then
-      execute format('grant execute on function %s to service_role', f);
+    if f.name <> 'sh_deadman' and exists (select 1 from pg_roles where rolname = 'service_role') then
+      execute format('grant execute on function %s to service_role', f.sig);
     end if;
   end loop;
 end $$;
