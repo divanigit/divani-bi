@@ -1001,9 +1001,10 @@ begin
 
   insert into sh_messages (event, kind, title, msg, priority)
   values ('morning', 'בוקר',
-          case v_open when 0 then 'בוקר טוב: האתר תקין'
-                      when 1 then 'בוקר טוב: התראה פתוחה אחת'
-                      else 'בוקר טוב: ' || v_open || ' התראות פתוחות' end,
+          case when v_open = 0 and v_checks is null then 'בוקר טוב: אין מדידות'   -- nothing measured is not "fine"
+               when v_open = 0 then 'בוקר טוב: האתר תקין'
+               when v_open = 1 then 'בוקר טוב: התראה פתוחה אחת'
+               else 'בוקר טוב: ' || v_open || ' התראות פתוחות' end,
           -- a line without a value is left out
           concat_ws(E'\n',
             coalesce('זמינות ' || to_char(v_up, case when v_up < 99.95 then 'FM990.00' else 'FM990.0' end) || '% ב-24 שעות',

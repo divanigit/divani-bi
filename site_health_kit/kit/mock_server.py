@@ -2,7 +2,7 @@
 """Mock backend for the site-health screen. Standard library only.
 
 It serves the screen and answers every data call with realistic, deterministic fake data,
-in exactly the shapes described in SPEC.md ("API contract"). Use it to:
+in exactly the shapes described in spec/05-api-contract.md. Use it to:
   * see the screen working before any real backend exists;
   * compare your real backend's answers with these, field by field;
   * run check_screen.js (the acceptance test of the screen).

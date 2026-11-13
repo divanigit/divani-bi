@@ -1114,7 +1114,7 @@ def test_morning_message_without_any_measurement(db):
     db.setup()
     db.rpc("sh_morning", p_day=db.now().date())
     assert db.sql("select title, msg, priority, kind from sh_messages") == [
-        ("בוקר טוב: האתר תקין", "אין בדיקות זמינות ב-24 שעות", 2, "בוקר")]
+        ("בוקר טוב: אין מדידות", "אין בדיקות זמינות ב-24 שעות", 2, "בוקר")]
 
 
 def _all_at_once(sessions, fn):

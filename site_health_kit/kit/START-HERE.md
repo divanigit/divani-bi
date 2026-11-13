@@ -21,9 +21,10 @@ seen its last line, which is always `<!-- EOF <path> -->`. If a tool prints
 | 2 | `spec/03-system.md` | what is measured, cadences, thresholds, definitions, per-site configuration (§3, §4) |
 | 3 | `spec/05-api-contract.md` | the JSON the screen reads, field by field (§5) — binding |
 | 4 | `spec/06-screen.md` | the screen: layout, texts, interactions, what you may change (§6) — binding |
-| 5 | `spec/07-backend.md` | tables, functions, collectors, alert rules, pushes (§7) — reference design |
-| 6 | `spec/08-access.md` | sign-in, roles, vendors, the share link (§8) |
-| 7 | `spec/09-build-and-checks.md` | build phases with their checks, the go-live checklist, lessons already paid for (§9–§11) |
+| 5 | `spec/07-backend-data.md` | the shape of the backend, tables, functions (§7.1–§7.4) — reference design |
+| 6 | `spec/07-collectors-alerts.md` | the collectors, alert rules, pushes, the watchdog (§7.5–§7.11) — reference design |
+| 7 | `spec/08-access.md` | sign-in, roles, vendors, the share link (§8) |
+| 8 | `spec/09-build-and-checks.md` | build phases with their checks, the go-live checklist, lessons already paid for (§9–§11) |
 
 Section numbers (§5.2, §7.8, …) are the same everywhere in the kit, including in code comments.
 

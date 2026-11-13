@@ -1,4 +1,4 @@
-"""Site Health collectors: everything that measures the site and hands rows to the database (SPEC.md §7.4-§7.10).
+"""Site Health collectors: everything that measures the site and hands rows to the database (spec §7.4-§7.10).
 
 One function per collector, each taking its inputs explicitly, and a scheduler that runs them:
 
@@ -55,7 +55,7 @@ PSI_URL = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
 PSI_CONNECT, PSI_READ = 10, 120                  # seconds; one call takes 10-60
 PSI_BYTES = 30_000_000                           # an answer is 0.5-2 MB (it embeds screenshots)
 PSI_WAITS = (5, 10)                              # seconds before the second and the third try of one call
-OPPS = 8                                         # reasons kept per run
+OPPS = 6                                         # reasons kept per run: what the screen shows
 ROTATION_PAGES = 2                               # per 5 minutes = 576 pages a day; up to 6 for a larger site (§7.7)
 QUOTA_ZONE = ZoneInfo("America/Los_Angeles")     # Google's daily quotas start again at midnight Pacific time
 # Audits that are the measurement itself, not a reason for it. "largest-contentful-paint-element"
@@ -86,7 +86,7 @@ PUSH_SECONDS = 45                # no push starts later than this after its roun
 TITLE_MAX, MESSAGE_MAX = 199, 1499               # characters; ntfy counts bytes and a Hebrew letter takes two
 
 # Daily jobs: the local time from which each is owed. The morning message has its time in the configuration.
-DAILY_TIMES = {"sitemap": (3, 0), "cleanup": (3, 30), "catalogue": (4, 0), "cert": (5, 0)}
+DAILY_TIMES = {"sitemap": (3, 0), "cleanup": (3, 30), "catalogue": (4, 0), "cert": (4, 0)}   # the screen says the certificate is first checked at 04:00
 DAILY_RETRY = timedelta(minutes=10)              # a failed daily job waits this long before its next try
 
 _TLS = ssl.create_default_context()              # normal verification, everywhere

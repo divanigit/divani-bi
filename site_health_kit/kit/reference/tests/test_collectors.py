@@ -261,6 +261,20 @@ def test_rounds_are_stored_with_their_kind_under_one_scheduled_moment(sql, site)
     assert sql.sql("select kind, count(*) from sh_probe group by kind order by kind") == [("full", 4), ("light", 4)]
 
 
+def test_every_kind_of_failure_is_stored_with_its_code(sql, site):
+    config, at = collectors.read_config(), this_minute() - minutes(1)
+    site.broken = {"/": {"hang": 2}, "/product-category/sofas/": {"drop": True},
+                   "/product/sample-sofa/": {"body": "<html><body>אזל מהמלאי</body></html>"}, "/cart/": {"status": 503}}
+    assert collectors.probe_round(config.probe, "full", at, timeout=0.4)["stored"] == 4
+    assert sql.sql("select page, ok, fail, status, ms is not null from sh_probe order by fail") == [
+        ("קטגוריה", False, "connect", None, True), ("מוצר", False, "content", 200, True),
+        ("סל", False, "http", 503, True), ("בית", False, "timeout", None, True)]
+    fails = sql.rpc("sh_drill_fails", p_from=at - minutes(1), p_to=at + minutes(1))
+    assert {row["page"]: row["kind"] for row in fails} == {
+        "בית": "לא ענה בזמן", "קטגוריה": "שגיאת חיבור", "מוצר": "תוכן לא צפוי", "סל": "קוד 503"}
+    assert last_run(sql, PROBE_FLOW) == at                                # a round of failures is still a round
+
+
 def test_the_two_timeouts_of_a_round(site, monkeypatch):
     seen = []
     monkeypatch.setattr(collectors, "probe_check", lambda page, timeout: seen.append(timeout) or {"ms": 1})
@@ -539,8 +553,8 @@ def test_the_stored_columns_of_a_lighthouse_13_answer():
                  {"id": "mainthread-work-breakdown", "title": "Minimize main-thread work", "ms": 1050},
                  {"id": "render-blocking-insight", "title": "Render-blocking requests", "ms": 850},
                  {"id": "unminified-javascript", "title": "Minify JavaScript", "ms": 580},           # classic:
-                 {"id": "unused-javascript", "title": "Reduce unused JavaScript", "ms": 580},        # overallSavingsMs
-                 {"id": "legacy-javascript-insight", "title": "Legacy JavaScript", "ms": 300}]}
+                 {"id": "unused-javascript", "title": "Reduce unused JavaScript", "ms": 580}]}       # overallSavingsMs
+    # the seventh, legacy-javascript-insight (300 ms), is cut: six reasons are kept
 
 
 def test_the_stored_columns_of_a_lighthouse_12_answer():
@@ -552,9 +566,8 @@ def test_the_stored_columns_of_a_lighthouse_12_answer():
                  {"id": "image-delivery-insight", "title": "Improve image delivery", "ms": 1950},
                  {"id": "modern-image-formats", "title": "Serve images in next-gen formats", "ms": 1650},
                  {"id": "uses-text-compression", "title": "Enable text compression", "ms": 1140},
-                 {"id": "mainthread-work-breakdown", "title": "Minimize main-thread work", "ms": 1000},
-                 {"id": "unused-javascript", "title": "Reduce unused JavaScript", "ms": 690},
-                 {"id": "unminified-javascript", "title": "Minify JavaScript", "ms": 540}]}    # the ninth is cut
+                 {"id": "mainthread-work-breakdown", "title": "Minimize main-thread work", "ms": 1000}]}
+    # cut: unused-javascript (690), unminified-javascript (540), legacy-javascript (240)
 
 
 @pytest.mark.parametrize("name", ["psi_lighthouse13.json", "psi_lighthouse12.json"])
@@ -600,7 +613,7 @@ def test_the_rule_for_what_slows_a_page():
         {"id": "largest-metric", "title": "כותרת", "ms": 450}, {"id": "overall-first", "title": "כותרת", "ms": 300},
         {"id": "numeric-ms", "title": "כותרת", "ms": 121}, {"id": "no-title", "title": None, "ms": 50}]
     many = {"audit-%02d" % i: audit(details={"overallSavingsMs": 100 + i}) for i in range(12)}
-    assert [opp["ms"] for opp in collectors._opps(many)] == [111, 110, 109, 108, 107, 106, 105, 104]      # the top 8
+    assert [opp["ms"] for opp in collectors._opps(many)] == [111, 110, 109, 108, 107, 106]      # the six largest
 
 
 def test_field_data_is_optional_and_whole_site_numbers_are_not_the_pages():
@@ -697,7 +710,7 @@ def test_a_core_round_stores_one_run_per_core_page_under_the_rounds_time(sql, si
     assert len(rows) == 5 and [call["url"] for call in site.psi_calls] == [site.url + path for path in PAGES]
     assert sorted(sql.sql("select page, url, at, strategy, source, ok, score, lcp_ms, cls::float, ttfb_ms, bytes,"
                           " crux_category, crux_lcp_ms, lh_version, jsonb_array_length(opps) from sh_speed")) == sorted(
-        (name, site.url + path, T0, "mobile", "core", True, 32, 10885, 0.1, 8, 1871037, "FAST", 2140, "13.6.0", 7)
+        (name, site.url + path, T0, "mobile", "core", True, 32, 10885, 0.1, 8, 1871037, "FAST", 2140, "13.6.0", 6)
         for path, name in PAGES.items())
     assert sql.sql("select opps -> 0 from sh_speed limit 1") == [
         ({"id": "cache-insight", "title": "Use efficient cache lifetimes", "ms": 3600},)]
@@ -1251,7 +1264,7 @@ def test_which_jobs_a_site_has_use_for(sql, site):
         (3, 0), (3, 30), (4, 0), None, (7, 30)]                           # no certificate on a site without https
     secure = config._replace(site="https://example.co.il", platform="other", morning=(6, 15))
     assert [collectors.daily_time(job, secure) for job, _ in collectors.DAILY_JOBS] == [
-        (3, 0), (3, 30), None, (5, 0), (6, 15)]                           # and no catalogue on a site that sells nothing
+        (3, 0), (3, 30), None, (4, 0), (6, 15)]                           # and no catalogue on a site that sells nothing
 
 
 def test_the_real_daily_jobs_run_once_and_leave_their_proof_of_life(sql, site, phone):
@@ -1521,6 +1534,8 @@ def test_init_db_applies_both_files_or_explains_what_to_do(sql, site, monkeypatc
     assert capsys.readouterr().out.splitlines()[:2] == ["applied schema.sql", "applied functions.sql"]
     assert sql.sql("select count(*) from sh_pages") == before and sql.rpc("sh_ping") == "ok"
 
+    monkeypatch.setenv("DATABASE_URL", "postgresql://nobody:wrong@127.0.0.1:%d/nothing" % closed_port())
+    assert run_manage("init-db").startswith("init-db failed: ")           # one line, no traceback
     monkeypatch.delenv("DATABASE_URL")
     assert run_manage("init-db") == "DATABASE_URL is not set: nothing to apply the SQL files to."
     monkeypatch.setenv("SUPABASE_URL", "https://project.supabase.co")

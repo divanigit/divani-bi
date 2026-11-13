@@ -3,9 +3,9 @@
  "files": [
   {
    "path": "START-HERE.md",
-   "bytes": 8891,
-   "lines": 125,
-   "sha256": "6a57a7e639ad01397cc4b4b2b2ee9810d8411607148468056cdf144a3ecc7e79"
+   "bytes": 9028,
+   "lines": 126,
+   "sha256": "8a8304792ce670f04824adbe62cf85ac0b13fe98ae73dc5f0b9704f262b516b9"
   },
   {
    "path": "SKILL.md",
@@ -20,16 +20,46 @@
    "sha256": "420c1b013b227ba4b569f150ed5416c811d5c1c88f19c260996579745c2b1bc9"
   },
   {
-   "path": "AGENTS.md",
-   "bytes": 2724,
-   "lines": 47,
-   "sha256": "aa385ee4bcb7c63870d701b68265df2ce9736c58f26139938964d6a0d3641836"
+   "path": "spec/03-system.md",
+   "bytes": 6217,
+   "lines": 88,
+   "sha256": "b962b81c48de297d810732eec30e5e09ff3f56b3160989181d552a53aa91ec7f"
   },
   {
-   "path": "SPEC.md",
-   "bytes": 78157,
-   "lines": 1036,
-   "sha256": "fdd9f79709014250cd8877b429bf9563401f0b15b1f2232143ad076321e3bc49"
+   "path": "spec/05-api-contract.md",
+   "bytes": 13894,
+   "lines": 192,
+   "sha256": "fe3305a50551b626b2ba1a20b9b676555c5dd40d946fa6e92ac20dfbea8583e5"
+  },
+  {
+   "path": "spec/06-screen.md",
+   "bytes": 8695,
+   "lines": 129,
+   "sha256": "8746014fdec7ab9f8c92ea8bc9ac8445cf952ce3802b6bd4a3e0b85d5f5e0fb9"
+  },
+  {
+   "path": "spec/07-backend-data.md",
+   "bytes": 13993,
+   "lines": 159,
+   "sha256": "5ec0530a54944419ad00324f0ac136ae3068deab5406c7e5f3ec069db033b4e5"
+  },
+  {
+   "path": "spec/07-collectors-alerts.md",
+   "bytes": 23319,
+   "lines": 299,
+   "sha256": "a5aee679b6484601539c55704490e410b134a90504be9c5a145b31cf4e1d3bd9"
+  },
+  {
+   "path": "spec/08-access.md",
+   "bytes": 5659,
+   "lines": 77,
+   "sha256": "70c9d5fe9be9ddd68453fff768814f1afb276221567d93780cd8045608844333"
+  },
+  {
+   "path": "spec/09-build-and-checks.md",
+   "bytes": 5448,
+   "lines": 81,
+   "sha256": "a5f1c768e6c17c768fd2cb93205133c9b2564b9c8a9a8827bf55cfd98b06f9d6"
   },
   {
    "path": "check_screen.js",
@@ -39,15 +69,27 @@
   },
   {
    "path": "mock_server.py",
-   "bytes": 26508,
-   "lines": 486,
-   "sha256": "545850f6a7feb0bb86c3b2fbe6ca126be465fe7b5b556a02b7f1c5779317f56c"
+   "bytes": 26598,
+   "lines": 487,
+   "sha256": "1df9a82d61a404c537c232adda85c372aa205eea2949f286c247fec45c680d77"
   },
   {
    "path": "site_health.html",
-   "bytes": 88930,
-   "lines": 943,
-   "sha256": "35aa2ea6f3c976d6680e04eddbca6a115ed083e3ac6d0b2810f12c9809b093db"
+   "bytes": 89002,
+   "lines": 944,
+   "sha256": "584999691209e124bbbd348b6d44f9a5983cff9b34aaff7321dd60c14bb90892"
+  },
+  {
+   "path": "reference/README.md",
+   "bytes": 18138,
+   "lines": 239,
+   "sha256": "634fa2294c84a413a08e004d995fc522a627e95d19885e907b4f3f77c6c22de1"
+  },
+  {
+   "path": "reference/collectors.py",
+   "bytes": 51348,
+   "lines": 1033,
+   "sha256": "5f433ab8c19c6910aaf45527a5f68853b04f939b406815d7f50a00bcebd9ab06"
   },
   {
    "path": "reference/db.py",
@@ -56,10 +98,22 @@
    "sha256": "b5c6d4a1b76c40b373d94a12e3590d02f8209e2a8fedf8d5a3830f9b9e6bf281"
   },
   {
+   "path": "reference/deadman.sql",
+   "bytes": 12037,
+   "lines": 208,
+   "sha256": "77cce73248b29827380845b4152cc1837a18088674bec5b80205936b2d42514c"
+  },
+  {
    "path": "reference/functions.sql",
-   "bytes": 50361,
-   "lines": 997,
-   "sha256": "d98a3938c1ce4263f6d9f00c9d54c32b4c2c8e2057434c06be00509c5fb474d7"
+   "bytes": 56226,
+   "lines": 1075,
+   "sha256": "10899c2a6d3b7d1c891505679cdf8ab7105e10fcfb1c9b59ef2a09d644ca640d"
+  },
+  {
+   "path": "reference/manage.py",
+   "bytes": 8115,
+   "lines": 161,
+   "sha256": "ede6a1036d1ff2d2f01b2d9c23adaea97118088d4f7e55d8ea74c66692997f61"
   },
   {
    "path": "reference/requirements.txt",
@@ -69,21 +123,21 @@
   },
   {
    "path": "reference/schema.sql",
-   "bytes": 6463,
-   "lines": 180,
-   "sha256": "fb58b7f32b56e452066b5e093a8909d52cf569a9aae2d0632ce00212dff22ab1"
+   "bytes": 8145,
+   "lines": 208,
+   "sha256": "09dc55fdf0e4dfd769f207ee19b26a66d69383e7ff73f33d42dea2f5220f3269"
   },
   {
    "path": "reference/server.py",
-   "bytes": 26641,
-   "lines": 631,
-   "sha256": "1c403fc6a1d72caac4855c9c721ddd3de77543d9ee5d0061417a58dbeb4cae3e"
+   "bytes": 29407,
+   "lines": 665,
+   "sha256": "cc06f77e37543e10e1867065f27afb5b01f97e6cb38d56c62da9afc63e4f2deb"
   },
   {
    "path": "reference/site_health.config.example.json",
-   "bytes": 867,
-   "lines": 19,
-   "sha256": "32391a8b4a5113440d0b5cb209677227c5fed4537da28b1b718667de0dc721a8"
+   "bytes": 929,
+   "lines": 22,
+   "sha256": "208030f36d169f130bb5bdd1ae9aac0dce2fc48bf4f23125b75f27117365198f"
   },
   {
    "path": "reference/rum/site-health-rum.js",
@@ -104,10 +158,22 @@
    "sha256": "0a7b07642e0b35ea1937743219420883cb4e0f0673a0bc4f47edaeb3ebea8f3c"
   },
   {
+   "path": "reference/tests/fake_site.py",
+   "bytes": 21281,
+   "lines": 388,
+   "sha256": "76a663b72adf49cebdf1ac47af4e4e0a08e9f7ef69d97bbe58bbbc7c686c1a32"
+  },
+  {
    "path": "reference/tests/sim.py",
-   "bytes": 7028,
-   "lines": 115,
-   "sha256": "0226390c5945f267230039e2df58c924341619fc281a789b095417f757de5ad4"
+   "bytes": 7255,
+   "lines": 118,
+   "sha256": "bb6fa075b48329eb0b1140223489b95441f29cc8a6d76b1f834fb0ee2e84145f"
+  },
+  {
+   "path": "reference/tests/test_collectors.py",
+   "bytes": 90786,
+   "lines": 1543,
+   "sha256": "3c15adae7dbcb5320bbb0710e9cc9c419a2e0d43a1f77ad2b32cc1210107a1b9"
   },
   {
    "path": "reference/tests/test_rum_snippet.js",
@@ -117,15 +183,27 @@
   },
   {
    "path": "reference/tests/test_server.py",
-   "bytes": 71803,
-   "lines": 1349,
-   "sha256": "d9a933aba5d1a38eca13f9c9875800b7648072692f20958d3e3f6af9ccbc4eee"
+   "bytes": 81267,
+   "lines": 1479,
+   "sha256": "7a8ace014fef94102702a67bed04e66d3a158affdca9808d8fe4479eaee9c2d5"
   },
   {
    "path": "reference/tests/test_sql.py",
-   "bytes": 93048,
-   "lines": 1534,
-   "sha256": "565e1134e7deef4e4e06c3f25a7b1d06e7b14bb9859ff212a53e6bad81826362"
+   "bytes": 116491,
+   "lines": 1860,
+   "sha256": "d2942b5185751d4c994164641fc67dbe6d7683195ff81fbf03a8fef6bb51c5c5"
+  },
+  {
+   "path": "reference/tests/fixtures/psi_lighthouse12.json",
+   "bytes": 9224,
+   "lines": 400,
+   "sha256": "59aebf964165bc738ba1d3d75873f477e5d452df56c1892ebacd664138d99549"
+  },
+  {
+   "path": "reference/tests/fixtures/psi_lighthouse13.json",
+   "bytes": 8357,
+   "lines": 367,
+   "sha256": "9b19baba430ca866c60986f19bda151a71d4edbe10ba0f1764655cdc964fd52c"
   },
   {
    "path": "tools/check_template.py",

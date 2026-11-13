@@ -3,7 +3,7 @@
     python3 manage.py init-db                 apply schema.sql, then functions.sql (over DATABASE_URL)
     python3 manage.py setup <config.json>     load the site's configuration (sh_setup); safe to repeat
     python3 manage.py check                   the database, the configuration, every flow, which keys are set
-    python3 manage.py run-once <collector>    one run of one collector, printing what it stored
+    python3 manage.py run-once <collector>    one run of one collector, printing what it measured and stored
     python3 manage.py test-push               one push to the real topic that says it is a test
     python3 manage.py new-secret              a fresh ntfy topic name and a fresh share token
 
@@ -46,10 +46,13 @@ def init_db(args):
         sys.exit("DATABASE_URL is not set: nothing to apply the SQL files to.")
     import psycopg                              # only this command and db.py's Postgres transport need the driver
 
-    with psycopg.connect(os.environ["DATABASE_URL"], autocommit=True) as connection:
-        for name in ("schema.sql", "functions.sql"):            # each file is one command of many statements
-            connection.execute((HERE / name).read_text(encoding="utf-8"))
-            print("applied", name)
+    try:
+        with psycopg.connect(os.environ["DATABASE_URL"], autocommit=True) as connection:
+            for name in ("schema.sql", "functions.sql"):        # each file is one command of many statements
+                connection.execute((HERE / name).read_text(encoding="utf-8"))
+                print("applied", name)
+    except psycopg.Error as e:
+        sys.exit("init-db failed: %s" % str(e).splitlines()[0])
     print("Next: python3 manage.py setup site_health.config.json")
 
 
@@ -89,17 +92,22 @@ def run_once(args):
     config = collectors.read_config()
     if config is None:
         sys.exit("The site is not configured. Load a configuration first: python3 manage.py setup <config.json>")
-    now = datetime.now(timezone.utc).replace(microsecond=0)
+    now = datetime.now(timezone.utc)
     key = os.environ.get("PAGESPEED_KEY", "").strip()
     if args.collector.startswith("speed") and not key:
         sys.exit("PAGESPEED_KEY is not set: the speed collectors cannot run.")
+
+    def slot(seconds):
+        # A round by hand is stored under the same scheduled moment as the scheduler's own, so it
+        # can never add a second round to a minute or a second run to a quarter of an hour.
+        return datetime.fromtimestamp(now.timestamp() // seconds * seconds, timezone.utc)
+
     runs = {
-        "probe": lambda: collectors.probe_round(config.probe, "full", now),
-        "probe-light": lambda: collectors.probe_round(config.probe, "light", now),
+        "probe": lambda: collectors.probe_round(config.probe, "full", slot(60)),
         "alerts": lambda: collectors.alert_tick(collectors.Pusher()),
-        "speed-core": lambda: collectors.speed_core(config.core, "mobile", now, key),
-        "speed-desktop": lambda: collectors.speed_core(config.core, "desktop", now, key),
-        "speed-rotation": lambda: collectors.speed_rotation(collectors.ROTATION_PAGES, now, key),
+        "speed-core": lambda: collectors.speed_core(config.core, "mobile", slot(900), key),
+        "speed-desktop": lambda: collectors.speed_core(config.core, "desktop", slot(3600), key),
+        "speed-rotation": lambda: collectors.speed_rotation(collectors.ROTATION_PAGES, slot(300), key),
         "sitemap": lambda: collectors.sitemap_job(config, now),
         "catalogue": lambda: collectors.catalogue_job(config, now),
         "cert": lambda: collectors.cert_job(config, now),
@@ -138,8 +146,8 @@ def main(argv=None):
     commands.add_parser("check").set_defaults(run=check)
     commands.add_parser("run-once").set_defaults(run=run_once)
     commands.choices["run-once"].add_argument("collector", choices=[
-        "probe", "probe-light", "alerts", "speed-core", "speed-desktop", "speed-rotation", "sitemap", "catalogue",
-        "cert", "morning", "cleanup"])
+        "probe", "alerts", "speed-core", "speed-desktop", "speed-rotation", "sitemap", "catalogue", "cert", "morning",
+        "cleanup"])
     commands.add_parser("test-push").set_defaults(run=test_push)
     commands.add_parser("new-secret").set_defaults(run=new_secret)
     args = parser.parse_args(argv)

@@ -12,7 +12,8 @@ One HTTP server on 127.0.0.1 that plays every outside party the collectors talk 
 
 Tests switch behaviour through the attributes of FakeSite. By hand:
 
-    python3 tests/fake_site.py [port]        # prints its addresses, a configuration, and how to break a page
+    python3 tests/fake_site.py [port [config.json]]     # prints its addresses and how to break a page,
+                                                        # and writes a configuration for manage.py setup
 """
 import gzip
 import json
@@ -48,7 +49,7 @@ PSI_ERRORS = {
 
 
 def woo_products(site):
-    """A WooCommerce Store API catalogue: one product for each issue label of SPEC §7.7, the tricky
+    """A WooCommerce Store API catalogue: one product for each issue label of spec §7.7, the tricky
     cases, and enough healthy products to need a second page (107 in all)."""
     def product(pid, name, **changes):
         base = {"id": pid, "name": name, "type": "simple", "permalink": "%s/product/p-%d/" % (site, pid),
@@ -356,14 +357,17 @@ class _Handler(BaseHTTPRequestHandler):
 
 def main():
     site = FakeSite(int(sys.argv[1]) if len(sys.argv) > 1 else 8900)
+    config = json.dumps(site.config(), ensure_ascii=False, indent=2)
+    if len(sys.argv) > 2:
+        Path(sys.argv[2]).write_text(config + "\n", encoding="utf-8")
     print("""A fake website is listening on %(url)s  (Ctrl+C stops it)
 
-Save this as site_health.config.json and load it with:  python3 manage.py setup site_health.config.json
+Its configuration%(saved)s. Load it with:  python3 manage.py setup <that file>
 
 %(config)s
 
 For the collectors:   NTFY_URL=%(url)s/ntfy   NTFY_TOPIC=sh-local-test   HEARTBEAT_URL=%(url)s/hb
-(PageSpeed cannot measure a local address; leave PAGESPEED_KEY unset here.)
+(PageSpeed cannot measure a local address: leave PAGESPEED_KEY unset here.)
 
 Break and repair it from another terminal:
   curl '%(url)s/__fake?path=/cart/&status=502'      the cart answers 502
@@ -372,7 +376,8 @@ Break and repair it from another terminal:
   curl '%(url)s/__fake?ntfy=500'                    the push service refuses
   curl '%(url)s/__fake?reset=1'                     everything works again
   curl '%(url)s/__fake'                             the switches, and every push that was published
-""" % {"url": site.url, "config": json.dumps(site.config(), ensure_ascii=False, indent=2)})
+""" % {"url": site.url, "config": config,
+       "saved": " was written to " + sys.argv[2] if len(sys.argv) > 2 else " (save it as site_health.config.json)"})
     try:
         site.server.serve_forever()
     except KeyboardInterrupt:
