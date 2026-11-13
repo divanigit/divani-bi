@@ -518,7 +518,27 @@ var OPP = {
   'third-party-summary': 'קוד של צד שלישי (פיקסלים, צ\'אט, אנליטיקס) מאט',
   'bootup-time': 'הדפדפן עסוק בהרצת קוד',
   'mainthread-work-breakdown': 'הדפדפן עסוק מדי בזמן הטעינה',
-  'font-display': 'הטקסט מחכה לגופן שייטען'
+  'font-display': 'הטקסט מחכה לגופן שייטען',
+  'unminified-css': 'קובצי סגנון (CSS) לא מכווצים',
+  'unminified-javascript': 'קובצי קוד (JavaScript) לא מכווצים',
+  /* מ-Lighthouse 13 (אוקטובר 2025) רוב הסיבות הישנות הוחלפו ב"תובנות" (insight) */
+  'render-blocking-insight': 'קבצים שחוסמים את הציור הראשון (סקריפטים וסגנון בראש העמוד)',
+  'image-delivery-insight': 'תמונות כבדות מדי: לדחוס, להקטין לגודל התצוגה, לעבור ל-WebP/AVIF',
+  'document-latency-insight': 'העמוד עצמו מגיע לאט מהשרת (תגובה איטית, הפניות, או בלי דחיסה)',
+  'network-dependency-tree-insight': 'שרשרת ארוכה של קבצים שמחכים זה לזה',
+  'cache-insight': 'קבצים לא נשמרים בזיכרון הדפדפן לזמן ארוך',
+  'duplicated-javascript-insight': 'קוד כפול',
+  'legacy-javascript-insight': 'קוד ישן שנשלח גם לדפדפנים חדשים',
+  'lcp-discovery-insight': 'התמונה הראשית מתגלה מאוחר או לא נטענת בעדיפות',
+  'lcp-breakdown-insight': 'התוכן העיקרי מתעכב (פירוט השלבים בדוח של גוגל)',
+  'dom-size-insight': 'העמוד מורכב מיותר מדי אלמנטים',
+  'third-parties-insight': 'קוד של צד שלישי (פיקסלים, צ\'אט, אנליטיקס) מאט',
+  'font-display-insight': 'הטקסט מחכה לגופן שייטען',
+  'forced-reflow-insight': 'קוד שמכריח את הדפדפן לחשב מחדש את פריסת העמוד',
+  'cls-culprits-insight': 'אלמנטים שגורמים לעמוד לקפוץ בזמן הטעינה',
+  'inp-breakdown-insight': 'העמוד מגיב לאט ללחיצות',
+  'viewport-insight': 'העמוד לא מוגדר נכון לרוחב של טלפון',
+  'modern-http-insight': 'קבצים נשלחים בפרוטוקול ישן (HTTP/1.1)'
 };
 function oppName(o){ return OPP[o.id] || o.title || o.id; }
 

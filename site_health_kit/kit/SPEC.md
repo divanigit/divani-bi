@@ -454,7 +454,7 @@ pill "טוען נתונים…" show, and the cards dim.
 
 The runs sheet translates PageSpeed audit ids to plain Hebrew through the `OPP` table in the
 script. An id that is not in the table falls back to the `title` the backend stored. Request
-PageSpeed results with `locale=he` so that fallback is Hebrew too (§7.3).
+PageSpeed results with `locale=he` so that fallback is Hebrew too (§7.6).
 
 ### 6.9 What you may change in `site_health.html`
 
@@ -509,7 +509,7 @@ All tables are private: on Supabase enable row level security on each (no polici
 | `sh_settings` | one setting | `key`, `value` (json): time zone, site host, `down_after`, morning hour |
 | `sh_pages` | a configured page | `name` (Hebrew), `url`, `is_probe`, `is_core`, `sort`, `expect` (optional text the page must contain) |
 | `sh_probe` | one availability check | `round_at`, `kind` (`full`/`light`), `page`, `url`, `ok`, `status`, `ms`, `fail` (`timeout`/`http`/`connect`/`content`), `err`; unique (`round_at`, `kind`, `page`) |
-| `sh_speed` | one lab speed run | `at`, `url`, `page` (null for rotation pages), `strategy`, `source` (`core`/`rotation`), `ok`, `err`, `score`, `lcp_ms`, `cls`, `ttfb_ms`, `bytes`, `crux_category`, `crux_lcp_ms`, `opps` (json) |
+| `sh_speed` | one lab speed run | `at`, `url`, `page` (null for rotation pages), `strategy`, `source` (`core`/`rotation`), `ok`, `err`, `score`, `lcp_ms`, `cls`, `ttfb_ms`, `bytes`, `crux_category`, `crux_lcp_ms`, `opps` (json), `lh_version` |
 | `sh_site_pages` | a page of the site, from the sitemap | `url`, `active`, `first_seen`, `last_seen`, `last_measured_at` |
 | `sh_rum` | one real-user page view | `created_at`, `site`, `path`, `lcp_ms`, `is_test` — nothing that identifies a person |
 | `sh_cert` | the certificate state | `host`, `issuer`, `not_before`, `not_after`, `days_left`, `ok`, `err`, `checked_at` |
@@ -618,36 +618,62 @@ Google PageSpeed Insights API v5, one call per page per strategy:
 
 `GET https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=<page>&strategy=mobile|desktop&category=performance&locale=he&key=<PAGESPEED_KEY>`
 
-- A call takes 10–60 seconds. Use a 90-second timeout, run calls one at a time, and never let
-  this collector block the probe (separate thread / job).
-- Store per run (missing values → null, never 0):
+- **A key is required.** Calls without a key are refused (HTTP 429, daily limit 0). The key is
+  free and needs no billing account. The owner creates it: Google Cloud Console → pick or create
+  a project → APIs & Services → Library → "PageSpeed Insights API" → Enable → Credentials → Create
+  credentials → API key; then restrict the key to that API only. Do not set an HTTP-referrer
+  restriction (a server sends no referrer). Default quota: 25,000 calls a day and 240 a minute per
+  project; the project's Quotas page is the authority.
+- **Always send `strategy`** (the API's default is desktop) and `category=performance` (other
+  categories only make the call slower).
+- A call takes 10–60 seconds. Connect timeout 10 s, read timeout 120 s, one call at a time, and
+  never let this collector block the probe (separate thread / job).
+- Errors: 429 whose message mentions "per day" → stop until tomorrow; other 429 and 5xx → retry
+  after 5, 10, 20 seconds, at most 3 tries; 400 "API key not valid" → a configuration error: do
+  not retry, log it clearly, and let the flow go `שקט`. A failure of the test itself (HTTP 500
+  "Lighthouse returned error: …", or `lighthouseResult.runtimeError` on a 200) is stored as a run
+  with `ok = false` and the error text. Failed runs never count in medians.
+- Store per run (a missing value is null, never 0; do not store the raw answer, it is huge):
 
 | Column | From the answer |
 |---|---|
-| `score` | `lighthouseResult.categories.performance.score × 100`, rounded |
+| `score` | `lighthouseResult.categories.performance.score × 100`, rounded (the score can be null) |
 | `lcp_ms` | `lighthouseResult.audits["largest-contentful-paint"].numericValue`, rounded |
 | `cls` | `lighthouseResult.audits["cumulative-layout-shift"].numericValue`, 3 decimals |
-| `ttfb_ms` | `lighthouseResult.audits["server-response-time"].numericValue`, rounded |
+| `ttfb_ms` | `lighthouseResult.audits["server-response-time"].numericValue`, rounded (fallback: `audits.metrics.details.items[0].timeToFirstByte`) |
 | `bytes` | `lighthouseResult.audits["total-byte-weight"].numericValue` |
-| `crux_category` | `loadingExperience.metrics.LARGEST_CONTENTFUL_PAINT_MS.category` (`FAST` / `AVERAGE` / `SLOW`); null when Google has no real-user data for the page |
-| `crux_lcp_ms` | `loadingExperience.metrics.LARGEST_CONTENTFUL_PAINT_MS.percentile` |
-| `opps` | up to 8 audits with an estimated time saving, largest first: `[{id, title, ms}]` (see below) |
+| `crux_category` | `loadingExperience.metrics.LARGEST_CONTENTFUL_PAINT_MS.category` (`FAST` / `AVERAGE` / `SLOW`) |
+| `crux_lcp_ms` | `loadingExperience.metrics.LARGEST_CONTENTFUL_PAINT_MS.percentile` (75th percentile, ms) |
+| `lh_version` | `lighthouseResult.lighthouseVersion` (for diagnosing a sudden change in the numbers) |
+| `opps` | up to 8 reasons with an estimated time saving, largest first: `[{id, title, ms}]` (rule below) |
 
-- **`opps`:** walk `lighthouseResult.audits`; keep an audit when it has a positive saving:
-  `details.overallSavingsMs` (classic "opportunity" audits) or, failing that, the largest of
-  `metricSavings.LCP` / `metricSavings.FCP`; skip audits with `score` 1 or `scoreDisplayMode`
-  `notApplicable`/`manual`/`informative` without savings. `title` is the audit's `title` (Hebrew
-  because of `locale=he`). Lighthouse renames audits between versions; the screen shows the stored
-  `title` for ids it does not know, so nothing breaks, but add new ids to the `OPP` table when you see them.
-- A failed call (HTTP error, `lighthouseResult.runtimeError`, timeout) is stored as a run with
-  `ok = false` and the error text. It never counts in medians.
+- **Real-user data is optional.** A page with little traffic has no `loadingExperience.metrics`.
+  When `loadingExperience.origin_fallback` is true the numbers describe the whole site, not this
+  page: store null for both `crux_*` columns in that case. The screen then says "אין מספיק תנועה".
+- **`opps` rule** (works for old and new Lighthouse versions). For every audit in
+  `lighthouseResult.audits`, except the metric audits themselves:
+  1. skip it when `scoreDisplayMode` is `notApplicable`, `manual` or `error`, or when `score` is
+     null or ≥ 0.9 (it passed; note that `server-response-time` reports a "saving" even when it passes);
+  2. its saving in ms = `details.overallSavingsMs` if present; otherwise the largest of
+     `metricSavings.LCP`, `.FCP`, `.TBT`, `.INP`; otherwise `numericValue` when `numericUnit` is `millisecond`;
+  3. keep it when the saving is > 0. `title` is the audit's `title` (Hebrew, because of `locale=he`).
+
+  Since Lighthouse 13 (in PageSpeed from October 2025) most classic audits (`modern-image-formats`,
+  `render-blocking-resources`, …) no longer exist; they were replaced by `…-insight` audits
+  (`image-delivery-insight`, `render-blocking-insight`, …) that have no `overallSavingsMs`. A
+  collector that only looks for `details.type == "opportunity"` silently loses images, caching,
+  fonts and render blocking. The screen's `OPP` table knows both generations and shows the stored
+  `title` for any id it does not know.
 - **Core pages:** every 15 minutes all core pages with `strategy=mobile`; once an hour with
   `strategy=desktop`. **Rotation:** every 5 minutes, 2 pages from `sh_rotation_next(2)`, phone only.
-  With 5 core pages that is about 1,200 calls a day; the free quota is 25,000 a day.
+  With 5 core pages that is about 1,200 calls a day.
 - Without `PAGESPEED_KEY` the collector does not run and says so in its log once; the speed cards
-  show their empty states and the flow stays `אין נתון`. The lab test simulates a mid-range phone
-  on a slow mobile network, so it is harsher than what most visitors see. It is there for the
-  trend. The screen says so.
+  show their empty states and the flows stay `אין נתון`.
+- What the numbers mean (the screen says this too): the phone test simulates a mid-range phone on
+  a slow 4G connection, measured from a Google data center, so it is harsher than what most
+  visitors see and single runs are noisy. Verdicts and alerts therefore use medians and
+  "twice in a row", never one run. A site behind bot protection may block Google's test; that
+  shows up as failed runs with a 403 in the error text.
 
 ### 7.7 Collectors: sitemap, catalogue, certificate, real users
 
