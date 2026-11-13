@@ -61,7 +61,8 @@ A count of one is written in singular Hebrew everywhere on the screen (`מדיד
 ### 6.3 Interactions
 
 Everything that shows a number is clickable and opens a **sheet** (bottom sheet on a phone, a
-centered 720 px panel from 720 px width; closes with ✕, a click outside, or Escape):
+centered 720 px panel from 720 px width; closes with ✕, a click outside, or Escape). The sheet
+opens on the click itself, reading `טוען…` until its data call answers:
 
 | Click on | Opens | Data call |
 |---|---|---|

@@ -23,7 +23,8 @@
    The test only reads from the server: groups A and C send GET calls (C also deletes alerts, in
    the mock), and every call of group B is answered inside the browser and never reaches the server.
    A check that breaks (a click that cannot happen, a sheet that does not close) is one FAIL line,
-   and the run goes on to its summary "N passed, M failed".
+   and the run goes on to its summary "N passed, M failed". A screen that does not finish loading
+   the canned answers of group B stops that group with one FAIL line that says why.
    Needs Playwright 1.45 or newer. Exit code 0 = every check passed, 1 = at least one failed,
    2 = the test could not run. */
 'use strict';
@@ -64,9 +65,23 @@ const css = (page, sel, prop) => page.evaluate(([s, k]) => { const e = document.
    is too wide shows only in the body's own scroll width */
 const rgbSum = (c) => { const m = String(c).match(/\d+/g); return m ? +m[0] + +m[1] + +m[2] : -1; };
 const noOverflow = (page) => page.evaluate(() => document.body.scrollWidth <= window.innerWidth + 1);
-const settle = (page) => page.waitForFunction(() => !document.body.classList.contains('loading') && document.querySelectorAll('#verdict .vbox').length === 4 && !/טוען…/.test(document.getElementById('now').textContent), null, { timeout: 15000 }).catch(() => {});
+/* waits until the screen has drawn its answers; true when it did */
+const settle = (page) => page.waitForFunction(() => !document.body.classList.contains('loading') && document.querySelectorAll('#verdict .vbox').length === 4 && !/טוען…/.test(document.getElementById('now').textContent), null, { timeout: 15000 }).then(() => true, () => false);
+/* why a page did not settle: the marks it still shows, and the errors of the page */
+const notSettled = async (s) => 'the screen did not finish loading the canned answers in 15 s (' + await s.page.evaluate(() => {
+  const why = [], n = document.querySelectorAll('#verdict .vbox').length, now = document.getElementById('now');
+  if (document.body.classList.contains('loading')) why.push('still loading');
+  if (n !== 4) why.push(n + ' tiles in "שורה תחתונה", not 4');
+  if (!now || /טוען…/.test(now.textContent)) why.push('"עכשיו" still reads טוען…');
+  return why.join(', ');
+}).catch(() => '?') + ')' + (s.errors.length ? '; ' + s.errors.slice(0, 3).join(' | ') : '');
 const sheetOn = (page) => page.evaluate(() => document.getElementById('dov').classList.contains('on')).catch(() => false);
-const sheetReady = (page) => page.waitForFunction(() => document.getElementById('dov').classList.contains('on') && !/טוען…/.test(document.getElementById('dbody').textContent), null, { timeout: 5000 }).catch(() => {});
+/* the sheet opens on the click itself, reading "טוען…" (spec §6.3); only its content waits for the server.
+   A click that opened nothing costs 2 seconds, not 5. */
+const sheetReady = async (page) => {
+  if (!(await page.waitForFunction(() => document.getElementById('dov').classList.contains('on'), null, { timeout: 2000 }).then(() => true, () => false))) return;
+  await page.waitForFunction(() => document.getElementById('dov').classList.contains('on') && !/טוען…/.test(document.getElementById('dbody').textContent), null, { timeout: 5000 }).catch(() => {});
+};
 /* closes the sheet without the page's help: after a failed check, so that the next steps still run */
 const shut = (page) => page.evaluate(() => { document.getElementById('dov').classList.remove('on'); document.body.style.overflow = ''; }).catch(() => {});
 const escapeFailed = new WeakSet();
@@ -263,7 +278,13 @@ async function open(browser, path, vp, o = {}) {
   }
   const resp = await page.goto(BASE + path, { waitUntil: 'domcontentloaded' });
   s.status = resp ? resp.status() : 0;
-  if (s.status === 200 && !o.noWait) await settle(page);
+  if (s.status === 200 && !o.noWait && !(await settle(page)) && o.fake) {
+    /* canned answers come at once: a screen that has not drawn them by now is broken, and each
+       check of the group would only wait for it in turn. The group stops here with one FAIL line. */
+    const why = await notSettled(s);
+    await ctx.close().catch(() => {});
+    throw new Error(why);
+  }
   return s;
 }
 const fake = (browser, o = {}) => open(browser, PAGE_PATH, o.vp || PHONE, Object.assign({ fake: true }, o));
@@ -1103,7 +1124,7 @@ async function reload(s, change) {
   }
 
   await browser.close();
-  console.log('\n' + passed + ' passed, ' + failed + ' failed' + (runC ? '' : '  (groups A and B; group C needs the kit\'s mock)'));
+  console.log('\n' + passed + ' passed, ' + failed + ' failed' + (runC ? '' : isMock ? '  (groups A and B; --basic leaves out group C)' : '  (groups A and B; group C needs the kit\'s mock)'));
   process.exit(failed ? 1 : 0);
 })().catch((e) => {
   /* only what no group catches ends up here, such as a browser that cannot start */
