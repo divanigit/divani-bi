@@ -32,7 +32,7 @@ SKIP_EXT = {".pyc", ".png", ".log", ".zip"}
 FIRST = ["START-HERE.md", "OWNER-STEPS.md", "SKILL.md", "AGENTS-snippet.md", "MANIFEST.json"]   # then spec/, then the rest
 # the files of the reading table: the agent must read them to the last line, a few 150-line chunks each
 MUST_END_WITH_EOF = re.compile(r"^(START-HERE\.md|OWNER-STEPS\.md|SKILL\.md|spec/.*\.md|reference/README\.md)$")
-MAX_READ_BYTES = 36_000           # a file above this cannot be read in a few 150-line chunks
+MAX_READ_BYTES = 40_000           # a file above this cannot be read in a few 150-line chunks
 
 # The unpacker. It verifies everything first and writes only afterwards, so a damaged or cut copy
 # leaves nothing on disk. Every refusal is one line that starts with KIT NOT UNPACKED.

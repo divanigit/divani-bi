@@ -70,7 +70,7 @@ that names the unmatched entry. A mistake must never show a vendor the alerts he
 - **No token, no link; a short token, no link.** An empty configured token disables the link. So
   does one shorter than 20 characters (after trimming): the server logs a warning at start-up
   (without the token) and answers every `k` as wrong. The owner makes the token up
-  (`OWNER-STEPS.md` step 5).
+  (`OWNER-STEPS.md` step 6).
 - **A wrong token is a failed attempt**, counted in the same per-address limit as a wrong password
   (below). One wrong value counts once within the ten minutes: a tab left open on an old link asks
   again every minute and must not lock its address out, while somebody who guesses sends a new
@@ -90,7 +90,7 @@ that names the unmatched entry. A mistake must never show a vendor the alerts he
 - **Passwords** come from environment variables, one per person (§8.1). An unset or blank variable
   never matches. Compare trimmed and case-insensitively (phone keyboards capitalize), in constant
   time. Passwords are **generated**, 16 characters or more: by the password generator of the
-  owner's browser or phone, or four unrelated words and six digits (`OWNER-STEPS.md` step 5). The
+  owner's browser or phone, or four unrelated words and six digits (`OWNER-STEPS.md` step 6). The
   owner types them into the host's settings; the builder never sees one. The reference warns at
   start-up about a password shorter than 12 characters (by name, never the password).
 - **Session cookie** `sh_session` = `<expiry>.<signature>`: `expiry` is the moment the session
@@ -122,7 +122,10 @@ that names the unmatched entry. A mistake must never show a vendor the alerts he
   - the chosen entry counts only if it **is an IP address** (a port or brackets are cut off:
     `203.0.113.9:4711`, `[2001:db8::1]:443`); anything else is not believed and the socket peer
     is used instead;
-  - the address is stored in its shortest spelling and **never longer than 45 characters**;
+  - the address is stored in its shortest spelling and **never longer than 45 characters**; when
+    neither the chosen entry nor the socket peer is an IP address (a Unix socket, or a peer that
+    uvicorn rewrote from the header, below), the address is `?`: the login log stores `?`, the
+    limits count all such requests as one address, and no header text is ever stored;
   - the limits (sign-in, share token, real-user beacons) count an **IPv6 address by its /64**: one
     customer of an internet provider holds a whole /64. The login log still stores the address itself;
   - uvicorn itself replaces the peer's address from `X-Forwarded-For` when the connection comes
@@ -137,7 +140,7 @@ that names the unmatched entry. A mistake must never show a vendor the alerts he
 - A check of a deployed server never uses the owner's password, and the builder never holds a
   production secret. For the time of the check the owner adds `SH_PASS_VENDOR_CHECK` (a generated
   throwaway that the builder made up for this one check; read-only like every vendor) to the
-  host's settings and deletes it right after (`OWNER-STEPS.md` step 5 has the messages);
+  host's settings and deletes it right after (`OWNER-STEPS.md` step 6 has the messages);
   deleting it ends its sessions at once. The reference warns at start-up for as long as a vendor
   variable named `CHECK` or `CHECK_<something>` is set.
 - The cookie for `check_screen.js` comes from a sign-in with that password, without printing it:
@@ -155,8 +158,9 @@ that names the unmatched entry. A mistake must never show a vendor the alerts he
   `--no-quiet`), `SH_PASS_OWNER` (optional, read-only use); or ready cookies `SH_COOKIE_VENDOR`,
   `SH_COOKIE_QUIET`, `SH_COOKIE_OWNER` (`name=value`) for a server with another kind of sign-in.
   It covers the outsider allow-list, the scope of the share token, vendor filtering, the vendor
-  without alerts, `POST /api/alerts/ack` refused for outsiders, `POST /m`, `/health` and the
-  headers below. It changes nothing on the server. Exit code 0 only when every check passed
+  without alerts, outsiders' pages without `nav` and `links` (with a note when the owner's own
+  page has neither, so the check could not be seen at work), `POST /api/alerts/ack` refused for
+  outsiders, `POST /m`, `/health` and the headers below. It changes nothing on the server. Exit code 0 only when every check passed
   (1 = a check failed, 2 = it could not run). On the live address:
   `python3 tools/check_access.py https://<address> --no-share --no-quiet`.
 
@@ -169,7 +173,9 @@ that names the unmatched entry. A mistake must never show a vendor the alerts he
   `משהו השתבש. נסו שוב בעוד כמה דקות.`
 - The page is served with the role injected at `<!--SH_INJECT-->`:
   `<script>window.SH_CONFIG={…};window.SH_ROLE={…};</script>`. Build it with a JSON encoder; never
-  concatenate user input into it.
+  concatenate user input into it. For an outsider (vendor, vendor without alerts, share link) the
+  injected `SH_CONFIG` has **no `nav` and no `links` keys at all**: the addresses and labels of
+  the owner's other screens never reach their page source, not even hidden. Owner and staff get both.
 - **Four headers on every answer** (pages, data, redirects, refusals, 404, 500):
   `X-Robots-Tag: noindex`, `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY`,
   `X-Content-Type-Options: nosniff`. The page carries the first two as meta tags too. The screen

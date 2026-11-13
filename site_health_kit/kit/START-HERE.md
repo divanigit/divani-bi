@@ -63,7 +63,7 @@ Working files (do not read them top to bottom; use them):
    alert topic, not the share token. Secrets live only in the host's settings; the owner types
    each one there (`OWNER-STEPS.md`) and you confirm from the outside. Never ask for one, never
    print one (no `env`, no `cat .env`), never put one in the repository, a log or a chat message.
-   The single exception is the throwaway check password of `OWNER-STEPS.md` step 5: read-only,
+   The only exception: the throwaway check passwords of `OWNER-STEPS.md` step 6: read-only,
    and deleted right after the check.
 6. **No customer data.** The backend stores no names, emails, phones, order numbers or visitor
    addresses, and URLs without their query strings. A page path can still carry an identifier;
@@ -110,13 +110,13 @@ with the owner, one message per topic. Record the answers in
 | 3 | Platform | WooCommerce, Shopify, other | Test WooCommerce first: `<site>/wp-json/wc/store/v1/products?per_page=1` answers 200 with JSON → WooCommerce, even if the next test answers too. Else `<site>/products.json?limit=1` answers → Shopify. Else `other`. **The Shopify branch has never run against a real shop** (§7.7): tell the owner of a Shopify shop so, and look at the first real read together. |
 | 4 | Probe pages (default 4) | the pages checked every minute, each with a short Hebrew name | A shop: home (`בית`), one category, one product, the cart. Otherwise home plus the three pages that matter most. Prefer pages that will not be deleted (a category rather than one product where possible). Give the home page an `expect` text copied from the real page (§7.5). A cart or checkout that redirects to another domain needs that domain in `extra_hosts`. |
 | 5 | Core pages (default 5) | the pages whose speed is measured every 15 minutes | The probe pages plus one more public page, such as `אודות`. Only pages that open without signing in or filling a cart. The home page is always one of them. |
-| 6 | Private pages | the path segments whose pages are never measured or stored (`private_paths`, single names such as `עגלה` or `track`) | The site's own names for cart, checkout and account pages (often translated), and the first segment of every path that carries an identifier: order tracking, unsubscribe and password-reset links, profiles. Read the sitemap and the menus. |
-| 7 | Who gets alerts | the people who get a push on their phone | Ask who. Each installs the ntfy app (`OWNER-STEPS.md` step 6). |
+| 6 | Private pages | the path segments never stored from real users or the sitemap (`private_paths`, single names such as `עגלה` or `track`) | The site's own names for cart, checkout and account pages (often translated), and the first segment of every path that carries an identifier: order tracking, unsubscribe and password-reset links, profiles. Read the sitemap and the menus. |
+| 7 | Who gets alerts | the people who get a push on their phone | Ask who. Each installs the ntfy app (`OWNER-STEPS.md` step 7). |
 | 8 | Who may view | owner; staff; outside vendors (read-only); a share link | Default: owner only. Offer the vendor role when the owner mentions an agency or a developer. |
-| 9 | Money and hosting | where the database and the small server run | **Before the owner chooses anything, send the message of `OWNER-STEPS.md` step 1** (what is needed, what is normally paid monthly). Default: Supabase + one small always-on web service. A project that already has a backend, in any language: run the reference as its own small service next to it and link the two (`nav`, `links`); do not port it (§9, phase 3). |
+| 9 | Money and accounts | where the database, the code and the small server live (an account each, in the owner's name) | **Before the owner chooses anything, send the message of `OWNER-STEPS.md` step 1** (what is needed, what is normally paid monthly). Default: Supabase + a private GitHub repository (normally free; skip it if the repository has the owner's remote) + one small always-on web service. A project that already has a backend, in any language: run the reference as its own small service next to it and link the two (`nav`, `links`); do not port it (§9). |
 | 10 | "Down" rule | alert on the first failed check, or only after two in a row (`down_after`) | Default 1 (nothing missed, more noise). Offer 2 when the owner dislikes noise. The screen's sentences follow by themselves. |
-| 11 | Google key | a PageSpeed Insights API key (free) | The owner creates it (`OWNER-STEPS.md` step 4). Without it the speed cards stay empty. |
-| 12 | The add-on on the site | who can install a plugin on the site, or paste a snippet into its theme | Ask. If it is a developer or an agency, the owner forwards them the message of `OWNER-STEPS.md` step 8. |
+| 11 | Google key | a PageSpeed Insights API key (free) | The owner creates it (`OWNER-STEPS.md` step 5). **Required for go-live:** without it the two speed flows stay `אין נתון` (§10 item 2). |
+| 12 | The add-on on the site | who can install a plugin on the site, or paste a snippet into its theme | Ask. If it is a developer or an agency, the owner forwards them the message of `OWNER-STEPS.md` step 9. |
 | 13 | Parts that do not apply | the `off` list (§7.4) | No sitemap → `sitemap`; nobody can add the add-on → `real_users`; a shop with no public catalogue → `catalogue`. A site that sells nothing is platform `other`. |
 
 Do not ask the owner about thresholds, colors, wording or cadences. Those are decided.
@@ -146,8 +146,10 @@ information and asks one question only, the first.
    at the top of `AGENTS.md`, start `PROGRESS.md`, and commit the container and the unpacked kit.
 1. `python3 site-health-kit/mock_server.py` (it keeps running: use another terminal for the
    rest) → open `http://localhost:8787/site` at phone width. That is the finished screen, on fake
-   data. Open a drill-down, press `הסברים`, try `?role=vendor` and `--scenario empty`.
-2. `node site-health-kit/check_screen.js`. It needs node and Playwright 1.45 or newer; at the
+   data. Open a drill-down, press `הסברים`, try `?role=vendor`, `?hide=nowRum,certCard` (as a
+   server hides parts that are off) and `--scenario empty`.
+2. `node site-health-kit/check_screen.js`; with `--shots ./shots` it also saves the screen at
+   phone and desktop width: look at them. It needs node and Playwright 1.45 or newer; at the
    root of the repository: `npm install playwright && npx playwright install chromium`. If that
    cannot be installed, say so and go on: the checks that use `check_screen.js` (phases 0 and 3,
    checklist item 1) and `tests/test_rum_snippet.js` (phase 7) stay **open, not passed**.
@@ -163,12 +165,13 @@ information and asks one question only, the first.
 
 Everything you adapt lives in `site-health/`, which is also the host's root directory. The tests
 find the kit in `../site-health-kit` (or in `$SH_KIT_DIR`). Another version of the kit never
-unpacks over this one: the unpack command refuses, and says what to do.
+unpacks over this one: the unpack command refuses, and says what to do. The same version again
+restores the kit's files, and a second line `not part of the kit: …` names files to remove.
 
 ## F. Done
 
 The go-live checklist of §10 passes on the live address; `PROGRESS.md` is complete; the owner saw
 the screen on their phone, saw one push arrive, and got the hand-over note of `OWNER-STEPS.md`
-step 9. Paste the output of the final checks into your last message.
+step 10. Paste the output of the final checks into your last message.
 
 <!-- EOF START-HERE.md -->

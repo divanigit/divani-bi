@@ -4,7 +4,7 @@
      node check_screen.js                                # against the mock:  http://127.0.0.1:8787
      node check_screen.js http://127.0.0.1:8000 --cookie "name=value"
                                                          # your real server; the session cookie of the throwaway
-                                                         # check vendor (OWNER-STEPS.md step 5), never the owner's
+                                                         # check vendor (OWNER-STEPS.md step 6), never the owner's
      node check_screen.js <url> --path "/status?k=<token>"
                                                          # another page than /site, for example the share link
                                                          # of a real server (it needs no cookie)
@@ -312,7 +312,7 @@ async function reload(s, change) {
   const isScreen = s.status === 200 && await p.evaluate(() => !!(document.getElementById('verdict') && document.getElementById('now') && document.getElementById('dov')));
   check('the page loads (200) and is the site-health screen', isScreen, 'status ' + s.status + ', address ' + p.url());
   if (!isScreen) {
-    console.error('\n' + BASE + PAGE_PATH + ' did not give the screen, so nothing else can be checked.\nFor a real server pass the session cookie of the throwaway check vendor (OWNER-STEPS.md step 5: --cookie "name=value"), never the owner\'s, or test the share link (--path "/status?k=<token>").');
+    console.error('\n' + BASE + PAGE_PATH + ' did not give the screen, so nothing else can be checked.\nFor a real server pass the session cookie of the throwaway check vendor (OWNER-STEPS.md step 6: --cookie "name=value"), never the owner\'s, or test the share link (--path "/status?k=<token>").');
     process.exit(2);
   }
   Object.assign(CFG, await p.evaluate(() => { const c = window.CFG || {}, o = {}; ['api', 'loginPath', 'homePage', 'here'].forEach((k) => { if (typeof c[k] === 'string' && c[k]) o[k] = c[k]; }); if (Array.isArray(c.hide)) o.hide = c.hide.slice(); return o; }));
@@ -1070,6 +1070,10 @@ async function reload(s, change) {
         await rowsOf('/api/site/drill?what=runs&url=' + encodeURIComponent('https://example.co.il/') + '&bucket=2026-02-30&h=24'), await rowsOf('/api/site/drill?what=bucket&bucket=2026-02-30'),
         await rowsOf('/api/site/drill?what=alert&id=41&bucket=garbage'), await rowsOf('/api/site/drill?what=alert&id=0000000000000000041')];
       check('mock, as the reference server: a bucket in the right shape that is no real day or hour (2026-13-45, 24:00, 30.2) answers {"rows": []}; an alert ignores bucket; an id of 19 digits is malformed', got[0] > 0 && got.slice(1, 5).every((x) => x === 0) && got[5] === 1 && got[6] === 0, got.join(','));
+      const home = 'https://example.co.il/', ctl = [await rowsOf('/api/site/drill?what=runs&url=' + encodeURIComponent(home) + '&bucket=&h=24'),
+        await rowsOf('/api/site/drill?what=runs&url=' + encodeURIComponent(home + '\t') + '&bucket=&h=24'), await rowsOf('/api/site/drill?what=runs&url=' + encodeURIComponent(home + '\x7f') + '&h=24'),
+        await rowsOf('/api/site/drill?what=fails&page=' + encodeURIComponent('סל') + '&bucket=&h=24'), await rowsOf('/api/site/drill?what=fails&page=' + encodeURIComponent('סל\n') + '&bucket=&h=24')];
+      check('mock, as the reference server: a page or url with a control character (U+0000 to U+001F, U+007F) answers {"rows": []}', ctl[0] > 0 && ctl[1] === 0 && ctl[2] === 0 && ctl[3] > 0 && ctl[4] === 0, ctl.join(','));
     });
 
     await block('C7 the server hides what the site does not measure', async () => {

@@ -31,4 +31,5 @@ python3 site-health-kit/tools/check_template.py site-health/site_health.html    
 
 The acceptance test of the screen needs the mock running, so it takes two terminals:
 `python3 site-health-kit/mock_server.py` in one (it stays running), `node site-health-kit/check_screen.js`
-in the other (needs Playwright).
+in the other (needs Playwright). It takes about 30 seconds, and up to 10 minutes on a broken screen:
+never cut it short.

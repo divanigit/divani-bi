@@ -185,7 +185,8 @@ parameter is absent** (all pages, the whole window), not a malformed one.
 Unknown `what`: status 400 `{"error": "what?"}`. A missing or malformed parameter (`id` not a
 number of at most 18 digits, `url` empty, a required `bucket` missing or empty, a non-empty
 `bucket` that is not in one of the two bucket formats or names no real day or hour, such as
-`2026-13-45` or `2026-11-12 24:00`): `{"rows": []}`, without touching the database. `alert`
+`2026-13-45` or `2026-11-12 24:00`, a `page` or `url` that holds a control character, U+0000 to
+U+001F or U+007F, or is not valid UTF-8): `{"rows": []}`, without touching the database. `alert`
 ignores `bucket`.
 Backend failure: status 502 `{"error": "<text>"}`; the sheet then says "לא הצלחתי לטעון".
 

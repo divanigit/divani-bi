@@ -143,6 +143,10 @@ The uptime tile reads `100%` only when no check failed; otherwise two decimals, 
 | `{readonly: true, noAlerts: true}` | also no red bar, no alerts card, no `התראות פתוחות` tile |
 | `{share: true}` | as read-only, and no "יציאה" link |
 
+Hiding the menu and the extra links is not enough for an outsider: the server leaves `nav` and
+`links` out of their `SH_CONFIG` entirely (§8.2), so the owner's other screens are not even in the
+page source. The screen then draws no menu button and no extra buttons, as for an empty list.
+
 ### 6.8 Translations of "what slows the page"
 
 The runs sheet translates PageSpeed audit ids to plain Hebrew through the `OPP` table in the

@@ -76,10 +76,16 @@ product snapshots 30 days, login log and job markers 400 days, alerts and messag
 A speed run is about 1 KB, nearly all of it `opps`. Windows longer than the retention simply
 show what is left.
 
-Real-user rows come on top of that estimate: about 150 bytes a row with the index, so 10,000
-measured views a day are about 45 MB over the 30 days. The ingest is open to the internet, so
-the database also protects itself: `sh_rum_add` stores nothing while the last 24 hours already
-hold **30,000 rows** (at most about 130 MB). The server's own, lower budget is in §7.7.
+Real-user rows come on top of that estimate. Measured on PostgreSQL 16 (table and index
+together): about 116 bytes a row with a 40-character path, 197 bytes with a path of 120 bytes
+(the longest that is stored, §7.7), and 296 bytes in the worst case (a 100-character host name
+in `site` as well). So 10,000 measured views a day are about 35 MB over the 30 days kept (about
+59 MB with 120-byte paths). The ingest is open to the internet, so the database also protects
+itself: `sh_rum_add` stores nothing while the last 24 hours already hold **30,000 rows**. The
+nightly cleanup leaves up to 31 days, so a flood kept up for a month at that cap reaches about
+275 MB of worst-case rows, about 475 MB with the rest of the database; at the server's own,
+lower budget of 20,000 rows a day (§7.7), about 183 MB, about 385 MB in all. Both stay under the
+500 MB of a free project.
 
 ### 7.3 Functions the server calls (read side)
 
@@ -160,7 +166,8 @@ Exact rules (these are the definitions the screen's texts promise):
 - **`sh_now`:** `pages` = the newest full round if it is at most 15 minutes old; `latest` = the
   newest round of either kind, under the same 15-minute rule; `rum` over the last 60 minutes
   where `site` is a live value and `is_test` is false, `p75_ms` = `percentile_cont(0.75)` rounded
-  (null with `n` = 0 when there are no rows; never 0, which would paint green); `rum_src` over the
+  (null with `n` = 0 when there are no rows; never 0, which would paint green; with `real_users`
+  off the screen draws no tile for it: `nowRum`, §7.4); `rum_src` over the
   newest 1000 rows (null when there are none), its `hosts` holding the **5 largest** sources
   only, largest first (`n` and `test` still count all the rows); `speed` = the newest successful
   phone run of the home page.
@@ -177,7 +184,7 @@ Exact rules (these are the definitions the screen's texts promise):
 | `sh_sitemap_set(p_urls)` | replaces the list of site pages (new ones added, missing ones deactivated), each address in the spelling of `sh_url` (§7.3); raises on an empty list; beats the sitemap flow | `{"n"}` |
 | `sh_cert_set(p_row)` | stores `{host, issuer, not_before, not_after, days_left, ok, err, checked_at}`; beats the flow only when `ok` | `{"n": 1}` |
 | `sh_issues_set(p_snap_date, p_rows)` | stores the day's broken products `{product_id, issue, name, url}`, replacing that day (an empty list is a valid, good snapshot); beats the flow | `{"n"}` |
-| `sh_rum_add(p_rows)` | stores real-user rows `{site, path, lcp_ms, is_test}`; drops rows outside the limits of §7.7 again, as the last line of defence, and stores nothing while the last 24 hours hold 30,000 rows (§7.2); beats the flow only when a row was stored | `{"n"}` |
+| `sh_rum_add(p_rows)` | stores real-user rows `{site, path, lcp_ms, is_test}`; drops rows outside the limits of §7.7 again, as the last line of defence: cuts `path` at 120 characters exactly as the server does, then drops a row whose path is still longer than 120 bytes; stores nothing while the last 24 hours hold 30,000 rows (§7.2); beats the flow only when a row was stored | `{"n"}` |
 | `sh_job_due(p_job, p_day)` / `sh_job_mark(p_job, p_day)` | daily jobs: "is this day's run still owed?" / "done" | `true`/`false`; `true` when this call set the marker |
 | `sh_alerts_check()` | evaluates the alert rules (§7.8), opens and closes alerts, queues messages, and **claims** the messages that are owed. Alerts of any other `kind` are never touched | `[{id, title, msg, priority, click, kind, event}]`, oldest first. `title` and `msg` are the push as the phone shows it, the sender adds nothing; `click` is always null |
 | `sh_message_sent(p_id, p_status)` | records the result of one push attempt (§7.9) | `{"n": 0 or 1}` |
@@ -207,7 +214,7 @@ file that breaks a rule of the table, with a message that names the key.
 | `keep_days` | whole number, 30 to 400 | `100` | Days that full-round probes and core speed runs are kept (§7.2) |
 | `off` | list out of `sitemap`, `real_users`, `catalogue`, `cert` | `[]` | The parts of the measuring that do not apply to this site (next table) |
 | `hide` | list of card ids | `[]` | Cards of the screen to hide, on top of those that `off` hides |
-| `nav`, `links` | lists | `[]` | Passed to the screen as they are (§4.1) |
+| `nav`, `links` | lists | `[]` | Passed to the screen as they are (§4.1), for owner and staff only: an outsider's page gets neither (§8.2) |
 | `extra_hosts` | list of host names, lower case | `[]` | Other hosts a probed page may redirect to (§7.5) |
 | `rum_hosts` | list of host names, lower case | `[]` | Other hosts whose real-user beacons are accepted, for example a staging copy (§7.7) |
 | `private_paths` | list of single path segments | `[]` | The site's own names for private pages (a translated cart, checkout or account slug), on top of the built-in ones: the ingest and the sitemap loader skip such pages (§7.7) |
@@ -223,11 +230,13 @@ next alert tick, and `sh_health` does not return it.
 | `off` entry | Flows disabled | Card hidden | Also in effect when |
 |---|---|---|---|
 | `sitemap` | `טעינת מפת האתר`, `מדידת מהירות — סבב כל האתר` | `slowCard` | |
-| `real_users` | `מהירות אצל לקוחות` | | |
+| `real_users` | `מהירות אצל לקוחות` | `nowRum` (the real-user tile of "עכשיו", §6.2) | |
 | `catalogue` | `בדיקת מוצרים שבורים` | `issuesCard` | `platform` is `other` |
 | `cert` | `בדיקת תעודת האבטחה` (and the `cert` alert rule) | `certCard` | `site` is `http://` |
 
-`בודק זמינות האתר` and `מדידת מהירות — עמודי ליבה` cannot be switched off.
+`בודק זמינות האתר` and `מדידת מהירות — עמודי ליבה` cannot be switched off. The speed test needs
+the Google key (`PAGESPEED_KEY`, §7.6): without it the core flow, and the rotation unless
+`sitemap` is off, stay `אין נתון`, so the key is required for go-live (§10 item 2).
 
 `sh_config()` after loading the example file (`pages` shortened):
 
@@ -238,7 +247,7 @@ next alert tick, and `sh_health` does not return it.
   "rum_hosts": [], "private_paths": [], "live_hosts": ["live"], "bucket_note": "",
   "path_labels": [["/product-category/", "קטגוריה: "], ["/product/", "מוצר: "]],
   "pages": [{"name": "בית", "url": "https://example.co.il/", "probe": true, "core": true,
-             "home": true, "expect": null}],
+             "home": true, "expect": "ברוכים הבאים"}],
   "screen": {"siteLabel": "example.co.il", "brand": "", "homePage": "בית", "probeCount": 4,
              "coreCount": 5, "downAfter": 1, "liveHosts": ["live"], "bucketNote": "",
              "pathLabels": [["/product-category/", "קטגוריה: "], ["/product/", "מוצר: "]],
@@ -247,8 +256,10 @@ next alert tick, and `sh_health` does not return it.
 
 `off` is the list as it took effect: the file's entries plus the two that follow from the site,
 always in the order `sitemap`, `real_users`, `catalogue`, `cert`. `hide`, `nav` and `links` at the
-top are the file's own; `screen.hide` is the file's `hide` followed by the cards that `off`
-hides, each once. A database that was set up before a key existed answers with that key's
+top are the file's own; `screen.hide` is the file's `hide` followed by the card of each part
+that is off, each card once, in this order: `sitemap` → `slowCard`, `catalogue` → `issuesCard`,
+`cert` → `certCard`, `real_users` → `nowRum`. So `"off": ["real_users"]` hides the real-user
+tile of "עכשיו". A database that was set up before a key existed answers with that key's
 default until `sh_setup` runs again (and leaves `nav` and `links` out of `screen`).
 
 <!-- EOF spec/07-backend-data.md -->

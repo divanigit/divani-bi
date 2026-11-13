@@ -20,7 +20,7 @@ A server whose sign-in is not the form of spec §8 takes ready cookies instead, 
 SH_COOKIE_VENDOR, SH_COOKIE_QUIET, SH_COOKIE_OWNER.
 
 On the live address use the throwaway vendor password that the owner set for the check (OWNER-STEPS.md,
-step 5), and leave out what you do not hold:    python3 tools/check_access.py https://<address> --no-share --no-quiet
+step 6), and leave out what you do not hold:    python3 tools/check_access.py https://<address> --no-share --no-quiet
 With --no-share the check still proves that a made-up token opens nothing.
 
 What it does to the server: nothing that stays. It marks no alert (as an outsider it must be

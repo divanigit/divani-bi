@@ -2475,7 +2475,10 @@ def test_reads_over_90_days_take_less_than_2_seconds(db):
     assert rows[4:] == [{"section": "נפילות", "outage_minutes": 7, "outage_start_il": il(minute - mins(50006)),
                          "outage_end_il": il(minute - mins(49999))}]
     days = answers["sh_availability_series"]
-    assert len(days) in (91, 92) and sum(r["checks"] for r in days) == 518400
+    # one row per local day, from the oldest round's to today's: 90, 91 or 92, as daylight saving time moves the oldest
+    first = (minute - mins(129599)).astimezone(TZ).date()
+    assert len(days) == (minute.astimezone(TZ).date() - first).days + 1
+    assert sum(r["checks"] for r in days) == 518400
     assert [r["checks"] for r in section(answers["sh_speed"], "ליבה")] == [8640] * 5 + [2160] * 5
     assert section(answers["sh_speed"], "כיסוי") == [{"section": "כיסוי", "checks": 400, "slow_runs": 400}]
     assert len(answers["sh_drill_runs"]) == 8640 and len(answers["sh_drill_fails"]) == 500

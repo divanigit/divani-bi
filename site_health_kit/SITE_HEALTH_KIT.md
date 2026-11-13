@@ -8,7 +8,7 @@
 
 **מה נדרש ממך בדרך.** קודקס מסביר כל צעד כשמגיעים אליו, ואף פעם לא מבקש לראות סיסמה:
 
-1. לפתוח שני חשבונות: אחד למקום שבו נשמרות המדידות, ואחד לשרת קטן שעובד כל הזמן ובודק את האתר.
+1. לפתוח שלושה חשבונות (אם כבר יש לך אחד מהם, משתמשים בו): אחד למקום שבו נשמרות המדידות, אחד למקום שבו נשמר הקוד שקודקס כותב (GitHub, ולמאגר פרטי זה בדרך כלל בחינם), ואחד לשרת קטן שעובד כל הזמן ובודק את האתר.
 2. ליצור מפתח של גוגל למדידת המהירות. המפתח בחינם.
 3. להתקין אפליקציה בטלפון. דרכה מגיעות ההודעות.
 4. להוסיף לאתר תוסף קטן, שמודד כמה מהר העמודים נטענים אצל הגולשים.
@@ -23,7 +23,7 @@
 
 # For the coding agent
 
-This file is a container: kit version 1.0 (build 06d7fca9c171), 41 files (about 1272 KB), embedded
+This file is a container: kit version 1.0 (build 9b6fd93243c7), 41 files (about 1287 KB), embedded
 below the line `FILES BELOW`. **Do not read or print the part below that line.** Unpack it instead.
 
 **Step 1: unpack.** From the directory that contains this file, run this one command:
@@ -86,7 +86,7 @@ for path, body in found:
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, 'w', encoding='utf-8', newline='\n') as f:
         f.write(body)
-print('KIT OK: unpacked %d files into %s/ (kit version %s, build 06d7fca9c171)' % (len(found), DEST, VERSION))
+print('KIT OK: unpacked %d files into %s/ (kit version %s, build 9b6fd93243c7)' % (len(found), DEST, VERSION))
 kit, stray = {path for path, _ in found}, []
 for root, dirs, names in os.walk(DEST):
     dirs[:] = sorted(d for d in dirs if d not in ['.pytest_cache', '__pycache__', 'node_modules', 'shots'])
@@ -100,22 +100,22 @@ if stray:
 
 Contents:
 
-- `site-health-kit/START-HERE.md` (174 lines)
-- `site-health-kit/OWNER-STEPS.md` (470 lines)
+- `site-health-kit/START-HERE.md` (177 lines)
+- `site-health-kit/OWNER-STEPS.md` (552 lines)
 - `site-health-kit/SKILL.md` (16 lines)
-- `site-health-kit/AGENTS-snippet.md` (34 lines)
+- `site-health-kit/AGENTS-snippet.md` (35 lines)
 - `site-health-kit/MANIFEST.json` (247 lines)
-- `site-health-kit/spec/03-system.md` (98 lines)
-- `site-health-kit/spec/05-api-contract.md` (223 lines)
-- `site-health-kit/spec/06-screen.md` (169 lines)
-- `site-health-kit/spec/07-backend-data.md` (254 lines)
-- `site-health-kit/spec/07-collectors-alerts.md` (409 lines)
-- `site-health-kit/spec/08-access.md` (191 lines)
-- `site-health-kit/spec/09-build-and-checks.md` (124 lines)
-- `site-health-kit/check_screen.js` (1113 lines)
-- `site-health-kit/mock_server.py` (611 lines)
+- `site-health-kit/spec/03-system.md` (100 lines)
+- `site-health-kit/spec/05-api-contract.md` (224 lines)
+- `site-health-kit/spec/06-screen.md` (174 lines)
+- `site-health-kit/spec/07-backend-data.md` (265 lines)
+- `site-health-kit/spec/07-collectors-alerts.md` (425 lines)
+- `site-health-kit/spec/08-access.md` (197 lines)
+- `site-health-kit/spec/09-build-and-checks.md` (131 lines)
+- `site-health-kit/check_screen.js` (1138 lines)
+- `site-health-kit/mock_server.py` (621 lines)
 - `site-health-kit/site_health.html` (1008 lines)
-- `site-health-kit/reference/README.md` (361 lines)
+- `site-health-kit/reference/README.md` (377 lines)
 - `site-health-kit/reference/collectors.py` (1325 lines)
 - `site-health-kit/reference/db.py` (142 lines)
 - `site-health-kit/reference/deadman.sql` (218 lines)
@@ -136,7 +136,7 @@ Contents:
 - `site-health-kit/reference/tests/test_collectors.py` (2803 lines)
 - `site-health-kit/reference/tests/test_rum_snippet.js` (101 lines)
 - `site-health-kit/reference/tests/test_server.py` (2535 lines)
-- `site-health-kit/reference/tests/test_sql.py` (2484 lines)
+- `site-health-kit/reference/tests/test_sql.py` (2487 lines)
 - `site-health-kit/reference/tests/fixtures/psi_lighthouse12.json` (400 lines)
 - `site-health-kit/reference/tests/fixtures/psi_lighthouse13.json` (367 lines)
 - `site-health-kit/tools/check_access.py` (459 lines)
@@ -146,7 +146,7 @@ Contents:
 
 FILES BELOW
 
-<!-- FILE: site-health-kit/START-HERE.md sha256=20f162fa7532999871e5d7694d62a3f9599edc1e339f5a9f6511bdbffaed0e9a -->
+<!-- FILE: site-health-kit/START-HERE.md sha256=e24243c8d10916340e34117b36ab358e9adb3dbf1bc46779f4c6e47a80cd274b -->
 ~~~~~~~~markdown
 # Site Health kit: start here
 
@@ -213,7 +213,7 @@ Working files (do not read them top to bottom; use them):
    alert topic, not the share token. Secrets live only in the host's settings; the owner types
    each one there (`OWNER-STEPS.md`) and you confirm from the outside. Never ask for one, never
    print one (no `env`, no `cat .env`), never put one in the repository, a log or a chat message.
-   The single exception is the throwaway check password of `OWNER-STEPS.md` step 5: read-only,
+   The only exception: the throwaway check passwords of `OWNER-STEPS.md` step 6: read-only,
    and deleted right after the check.
 6. **No customer data.** The backend stores no names, emails, phones, order numbers or visitor
    addresses, and URLs without their query strings. A page path can still carry an identifier;
@@ -260,13 +260,13 @@ with the owner, one message per topic. Record the answers in
 | 3 | Platform | WooCommerce, Shopify, other | Test WooCommerce first: `<site>/wp-json/wc/store/v1/products?per_page=1` answers 200 with JSON → WooCommerce, even if the next test answers too. Else `<site>/products.json?limit=1` answers → Shopify. Else `other`. **The Shopify branch has never run against a real shop** (§7.7): tell the owner of a Shopify shop so, and look at the first real read together. |
 | 4 | Probe pages (default 4) | the pages checked every minute, each with a short Hebrew name | A shop: home (`בית`), one category, one product, the cart. Otherwise home plus the three pages that matter most. Prefer pages that will not be deleted (a category rather than one product where possible). Give the home page an `expect` text copied from the real page (§7.5). A cart or checkout that redirects to another domain needs that domain in `extra_hosts`. |
 | 5 | Core pages (default 5) | the pages whose speed is measured every 15 minutes | The probe pages plus one more public page, such as `אודות`. Only pages that open without signing in or filling a cart. The home page is always one of them. |
-| 6 | Private pages | the path segments whose pages are never measured or stored (`private_paths`, single names such as `עגלה` or `track`) | The site's own names for cart, checkout and account pages (often translated), and the first segment of every path that carries an identifier: order tracking, unsubscribe and password-reset links, profiles. Read the sitemap and the menus. |
-| 7 | Who gets alerts | the people who get a push on their phone | Ask who. Each installs the ntfy app (`OWNER-STEPS.md` step 6). |
+| 6 | Private pages | the path segments never stored from real users or the sitemap (`private_paths`, single names such as `עגלה` or `track`) | The site's own names for cart, checkout and account pages (often translated), and the first segment of every path that carries an identifier: order tracking, unsubscribe and password-reset links, profiles. Read the sitemap and the menus. |
+| 7 | Who gets alerts | the people who get a push on their phone | Ask who. Each installs the ntfy app (`OWNER-STEPS.md` step 7). |
 | 8 | Who may view | owner; staff; outside vendors (read-only); a share link | Default: owner only. Offer the vendor role when the owner mentions an agency or a developer. |
-| 9 | Money and hosting | where the database and the small server run | **Before the owner chooses anything, send the message of `OWNER-STEPS.md` step 1** (what is needed, what is normally paid monthly). Default: Supabase + one small always-on web service. A project that already has a backend, in any language: run the reference as its own small service next to it and link the two (`nav`, `links`); do not port it (§9, phase 3). |
+| 9 | Money and accounts | where the database, the code and the small server live (an account each, in the owner's name) | **Before the owner chooses anything, send the message of `OWNER-STEPS.md` step 1** (what is needed, what is normally paid monthly). Default: Supabase + a private GitHub repository (normally free; skip it if the repository has the owner's remote) + one small always-on web service. A project that already has a backend, in any language: run the reference as its own small service next to it and link the two (`nav`, `links`); do not port it (§9). |
 | 10 | "Down" rule | alert on the first failed check, or only after two in a row (`down_after`) | Default 1 (nothing missed, more noise). Offer 2 when the owner dislikes noise. The screen's sentences follow by themselves. |
-| 11 | Google key | a PageSpeed Insights API key (free) | The owner creates it (`OWNER-STEPS.md` step 4). Without it the speed cards stay empty. |
-| 12 | The add-on on the site | who can install a plugin on the site, or paste a snippet into its theme | Ask. If it is a developer or an agency, the owner forwards them the message of `OWNER-STEPS.md` step 8. |
+| 11 | Google key | a PageSpeed Insights API key (free) | The owner creates it (`OWNER-STEPS.md` step 5). **Required for go-live:** without it the two speed flows stay `אין נתון` (§10 item 2). |
+| 12 | The add-on on the site | who can install a plugin on the site, or paste a snippet into its theme | Ask. If it is a developer or an agency, the owner forwards them the message of `OWNER-STEPS.md` step 9. |
 | 13 | Parts that do not apply | the `off` list (§7.4) | No sitemap → `sitemap`; nobody can add the add-on → `real_users`; a shop with no public catalogue → `catalogue`. A site that sells nothing is platform `other`. |
 
 Do not ask the owner about thresholds, colors, wording or cadences. Those are decided.
@@ -296,8 +296,10 @@ information and asks one question only, the first.
    at the top of `AGENTS.md`, start `PROGRESS.md`, and commit the container and the unpacked kit.
 1. `python3 site-health-kit/mock_server.py` (it keeps running: use another terminal for the
    rest) → open `http://localhost:8787/site` at phone width. That is the finished screen, on fake
-   data. Open a drill-down, press `הסברים`, try `?role=vendor` and `--scenario empty`.
-2. `node site-health-kit/check_screen.js`. It needs node and Playwright 1.45 or newer; at the
+   data. Open a drill-down, press `הסברים`, try `?role=vendor`, `?hide=nowRum,certCard` (as a
+   server hides parts that are off) and `--scenario empty`.
+2. `node site-health-kit/check_screen.js`; with `--shots ./shots` it also saves the screen at
+   phone and desktop width: look at them. It needs node and Playwright 1.45 or newer; at the
    root of the repository: `npm install playwright && npx playwright install chromium`. If that
    cannot be installed, say so and go on: the checks that use `check_screen.js` (phases 0 and 3,
    checklist item 1) and `tests/test_rum_snippet.js` (phase 7) stay **open, not passed**.
@@ -313,78 +315,68 @@ information and asks one question only, the first.
 
 Everything you adapt lives in `site-health/`, which is also the host's root directory. The tests
 find the kit in `../site-health-kit` (or in `$SH_KIT_DIR`). Another version of the kit never
-unpacks over this one: the unpack command refuses, and says what to do.
+unpacks over this one: the unpack command refuses, and says what to do. The same version again
+restores the kit's files, and a second line `not part of the kit: …` names files to remove.
 
 ## F. Done
 
 The go-live checklist of §10 passes on the live address; `PROGRESS.md` is complete; the owner saw
 the screen on their phone, saw one push arrive, and got the hand-over note of `OWNER-STEPS.md`
-step 9. Paste the output of the final checks into your last message.
+step 10. Paste the output of the final checks into your last message.
 
 <!-- EOF START-HERE.md -->
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/OWNER-STEPS.md sha256=f4d29536453364b96d3b8296e1b72f684ae50db8bedf6ea493a40cfe5d069f55 -->
+<!-- FILE: site-health-kit/OWNER-STEPS.md sha256=9c3cf7de82f23b0205c88c25dbfeb7a40f04cee651787e1c621c610d04ec8e58 -->
 ~~~~~~~~markdown
 # Site Health kit: the steps only the owner can do
 
-Part of the Site Health kit; `START-HERE.md` is the entry point. This file covers phase 8 (deploy)
-and phase 9 (hand-over) of §9, and the money question of the intake. Read it completely.
+Part of the Site Health kit (entry point `START-HERE.md`): phases 8 and 9 of §9 and the money
+question of the intake. Read it completely.
 
-**The rule behind every step (START-HERE rule 5): you never hold a production secret.** The owner
-opens the accounts in their own name and types every secret into the place that needs it. You
-prepare a file or the exact values, send one short message, and confirm from the outside: the
-public `/health`, the screen seen through a throwaway read-only password, or what the owner tells
-you they see. Nothing the owner reports back is a secret: a result line, "saved", what the phone shows.
+**START-HERE rule 5: you never hold a production secret.** The owner opens every account and types
+every secret where it is needed. You prepare a file or the values, send one short message, and
+confirm from the outside (`/health`, the screen through a throwaway read-only password, what the
+owner sees). Nothing the owner reports back is a secret.
 
-How to use the messages:
+- Send each message as written, every `<…>` filled in: **one message, one step**; wait for the
+  answer. Messages are referred to by their labels (`2b`, `4c`, …).
+- **Other services' menus and buttons were not checked.** Look them up if you can, or keep the
+  wording, which promises no label; if the owner does not find something, ask what they see.
+- **Never quote a price.** "Normally free" and "normally paid monthly" say what is usual.
+- **Files for the owner:** `install.sql`, `site-health-rum.zip` (generated, git-ignored, no secret)
+  and `site-health/deadman.sql`. On the owner's computer, name the folder (in the messages
+  `ששלחתי` becomes `שנמצא בתיקייה <folder> במחשב שלך`). In a cloud sandbox,
+  attach the file, or else commit it once (`git add -f <file>`) and remove it after the step.
 
-- Send them as written, with every `<…>` filled in. **One message, one step**; wait for the answer
-  before the next. Each ends with what the owner does now. They are worded to fit a man or a woman.
-- **The labels of other services (menus, buttons) could not be checked from where this kit was
-  written.** Before sending a message, look the current labels up if you can. If you cannot,
-  keep the wording below: it says what to look for ("the place where SQL is run, usually called
-  SQL Editor") and never promises an exact label. If the owner does not find something, ask them
-  what they see and go from there.
-- **Never quote a price.** Plans and prices change; the owner reads them on the providers' pages.
-- **Files for the owner** (`install.sql`, `site-health-rum.zip`) are git-ignored: generated, and
-  free of secrets. If the owner works on the computer you run on, name the folder. If you run in
-  a cloud sandbox, attach the file to your message; if you cannot, commit it once
-  (`git add -f <file>`) so the owner can download it, and remove it again when the step is done.
-
-`<address>` below is the public address of the dashboard (the web service of step 3), `<host>` the
-hosting provider the owner chose, `<site>` the monitored site.
+`<address>`: the dashboard's public address (step 4). `<host>`: the owner's hosting provider.
+`<site>`: the monitored site. `<repository name>`: the repository of step 3.
 
 ---
 
 ## Step 1. What it takes, and what is paid (before the owner chooses anything)
 
-**Who:** you send it during the intake (row 9), before any account is opened. **Prepare:** nothing.
+**Who:** you, during the intake (row 9), before any account is opened.
 
-Facts for you. The system needs: a Postgres database (default: a Supabase project), one small
-web service that runs **all the time** (it probes every minute; a plan that sleeps when idle
-stops the measuring), a Google key (free), the ntfy app on every phone that gets alerts, and a
-small add-on on the site. The limits that matter: the database settles around 200 MB plus the
-real-user rows (§7.2), and a free Supabase project holds 500 MB; the web service must be a single
-always-on instance. An always-on service is normally a paid monthly plan. A free database plan may
-pause a project it considers idle: read the provider's current terms. Any host that keeps one
-small Python process running will do; none was tried from where this kit was written. The host
-takes the code from a Git hosting account: if the repository has no remote yet, that is one more
-account for the owner, and you ask before pushing (rule 12).
+Facts for you: Supabase settles around 200 MB plus the real-user rows (§7.2); a free project holds
+500 MB and may be paused when idle (read the current terms). Any host that keeps one small Python
+process running **all the time** will do; none was tried from here. If the repository already has
+a remote the owner controls, drop item 2 and write "חמישה דברים".
 
 ```text
-כדי שהמסך יעבוד צריך חמישה דברים. כולם נפתחים על השם שלך ונשארים בשליטתך:
+כדי שהמסך יעבוד צריך שישה דברים, כולם על השם שלך:
 
-1. מקום שבו נשמרות המדידות (מסד נתונים). פותחים בשבילו חשבון.
-2. שרת קטן שעובד כל הזמן. הוא בודק את האתר כל דקה ומציג את המסך. גם בשבילו פותחים חשבון.
-3. מפתח של גוגל למדידת המהירות. הוא בחינם.
-4. האפליקציה ntfy בכל טלפון שצריך לקבל הודעות.
-5. תוסף קטן באתר, שמודד כמה מהר העמודים נטענים אצל הגולשים.
+1. מקום לשמירת המדידות (מסד נתונים). פותחים בשבילו חשבון.
+2. מקום לקוד שאני כותב (מאגר ב-GitHub). פותחים שם חשבון, אם אין לך. למאגר פרטי זה בדרך כלל בחינם.
+3. שרת קטן שעובד כל הזמן, בודק את האתר כל דקה ומציג את המסך. גם בשבילו פותחים חשבון.
+4. מפתח של גוגל למדידת המהירות. הוא בחינם.
+5. האפליקציה ntfy בכל טלפון שמקבל הודעות. היא בחינם, ולא צריך לפתוח בה חשבון.
+6. תוסף קטן באתר, שמודד כמה מהר העמודים נטענים אצל הגולשים.
 
-מה עולה כסף: השרת הקטן הוא בדרך כלל בתשלום חודשי, כי הוא חייב לעבוד בלי הפסקה. תוכנית חינמית ש"נרדמת" כשאין תנועה לא מתאימה: כשהשרת ישן, אף אחד לא בודק את האתר. מסד הנתונים מתחיל בדרך כלל בתוכנית חינמית, והמדידות אמורות להיכנס בה. מחירים לא כתובים כאן כי הם משתנים. רואים אותם באתרים של הספקים.
+מה עולה כסף: השרת הקטן, בדרך כלל בתשלום חודשי. הוא חייב לעבוד בלי הפסקה, ולכן תוכנית חינמית ש"נרדמת" כשאין תנועה לא מתאימה. למסד הנתונים מספיקה בדרך כלל תוכנית חינמית. את המחירים רואים באתרים של הספקים. אם בהמשך יצטרך עוד שירות או חשבון, אשאל אותך לפני.
 
-ההצעה: Supabase למסד הנתונים, ו-<host> לשרת הקטן. אפשר להחליף ספק גם בהמשך, אבל זו עבודה נוספת.
+ההצעה: Supabase למסד הנתונים, GitHub לקוד ו-<host> לשרת הקטן. אפשר להחליף ספק גם אחר כך, אבל זו עבודה נוספת.
 
 מה עושים עכשיו: לכתוב לי אם ההצעה מתאימה, או אם כבר יש לך שרת או מסד נתונים שעדיף להשתמש בהם.
 ```
@@ -393,91 +385,106 @@ account for the owner, and you ask before pushing (rule 12).
 
 ## Step 2. The database: one project, one file pasted once
 
-**Who:** the owner opens the account and the project and runs one file.
-**Prepare:** the finished `site-health/site_health.config.json`, then, in `site-health/`:
+**Who:** the owner. **Prepare**, in `site-health/`, from the finished `site_health.config.json`:
 
 ```bash
 python3 manage.py install-sql --config site_health.config.json --out install.sql
 DATABASE_URL=<a scratch database> python3 manage.py init-db --file install.sql     # the rehearsal: run it twice
 ```
 
-`install.sql` is schema, functions and the `sh_setup` call in one file, with no secret in it. It is
-safe to run again and deletes no measurement. It was run on PostgreSQL 16, never in Supabase's
-own editor; that editor may ask for a confirmation because the file holds statements that delete
-(old rows, at the nightly cleanup). **After every change of the configuration file, write the file
-again and have the owner run it again** (message 2b): that is how pages and settings change.
+`install.sql` (schema, functions, the `sh_setup` call; no secret) is safe to run again and deletes
+no measurement. It ran on PostgreSQL 16, never in Supabase's editor, which may ask to confirm its
+delete statements (the nightly cleanup). **After every change of the configuration, write it again
+and send 2b again**: that is how pages and settings change.
+
+**2a**, the project:
 
 ```text
 מתחילים במקום שבו יישמרו המדידות.
 
-1. נכנסים לאתר supabase.com ופותחים חשבון.
+1. נכנסים לאתר supabase.com ופותחים חשבון. כשנשאלים איזו תוכנית, בוחרים בתוכנית החינמית (Free).
 2. יוצרים פרויקט חדש. בשם כותבים site-health, ובאזור בוחרים את הקרוב ביותר ל<המדינה של הגולשים>.
 3. כשמבקשים סיסמה למסד הנתונים, נותנים לדפדפן להציע אחת ושומרים אותה אצלך. לא שולחים אותה אליי.
 
 מה עושים עכשיו: לכתוב לי "הפרויקט מוכן" כשהוא נפתח. זה לוקח דקה או שתיים.
 ```
 
+**2b**, the file:
+
 ```text
-עכשיו מכינים את מסד הנתונים. זה צעד אחד: מדביקים קובץ ולוחצים על כפתור.
+עכשיו מכינים את מסד הנתונים: מדביקים קובץ אחד ומריצים אותו.
 
-1. פותחים את הקובץ install.sql ששלחתי, מסמנים את כולו ומעתיקים. אין בו שום סיסמה.
-2. בפרויקט ב-Supabase מחפשים בתפריט את המקום שבו מריצים SQL (בדרך כלל SQL Editor) ופותחים בו דף חדש.
-3. מדביקים ולוחצים על כפתור ההרצה (Run). אם מופיעה שאלה אם להריץ בכל זאת, מאשרים: הקובץ לא מוחק שום מדידה.
-4. בתוצאה אמורה להופיע שורה שמתחילה במילים Site Health is installed for.
+1. פותחים את הקובץ install.sql ששלחתי: לחיצה ימנית עליו, "פתח באמצעות" (Open With), ובוחרים פנקס רשימות (Notepad) ב-Windows או TextEdit במק.
+2. מסמנים את כל הטקסט (Ctrl+A, ובמק Cmd+A) ומעתיקים.
+3. ב-Supabase מחפשים בתפריט את המקום שבו מריצים SQL (בדרך כלל SQL Editor) ופותחים בו דף חדש.
+4. מדביקים ולוחצים על כפתור ההרצה (Run). אם נשאלים אם להריץ בכל זאת, מאשרים: הקובץ לא מוחק שום מדידה.
+5. בתוצאה אמורה להופיע שורה שמתחילה במילים Site Health is installed for.
 
-מה עושים עכשיו: להעתיק לי את השורה שהופיעה בתוצאה. אם הופיעה שגיאה, להעתיק לי אותה כמו שהיא.
+מה עושים עכשיו: להעתיק לי את השורה הזאת, או את השגיאה אם הופיעה שגיאה.
 ```
 
-**Confirm:** the line reads `Site Health is installed for <site>`. An error text holds no secret:
-read it, fix the configuration, write the file again. The real proof comes in step 3: `"db": "ok"`.
-Another Postgres (15 or newer): the same file in whatever SQL console it has, and `DATABASE_URL`
-instead of the two Supabase variables.
+**Confirm:** the line reads `Site Health is installed for <site>`. An error holds no secret: fix the
+configuration and write the file again. The real proof is `"db": "ok"` in step 4. Another Postgres
+(15 or newer): the same file in its SQL console, and `DATABASE_URL` for the two Supabase variables.
 
-## Step 3. The host: the small server
+## Step 3. The code: a private repository the host can read
 
-**Who:** the owner opens the account, creates the service and types the settings.
-**Prepare:** the repository where the host can read it (ask before pushing), and these values:
+**Who:** the owner opens the account and the repository and lets you in; you push. **Skip it** when
+`git remote -v` already names a repository the owner controls and the host can read.
 
-| Setting | Value |
-|---|---|
-| Root directory | `site-health` |
-| Build command | `pip install -r requirements.txt` |
-| Start command | `uvicorn server:app --host 0.0.0.0 --port $PORT --no-access-log` |
-| Python | 3.10 or newer (tested with 3.13). If the host's default is older, set its Python version setting; how depends on the host |
-| Health-check path | `/health` |
-| Instances | exactly one, always on. No sleep when idle, no scaling to several: every copy would measure and alert |
-| Region | near the site's visitors (§7.5) |
-
-Environment variables, by name. The owner types every value; you only name them.
-
-| Name | When | What the owner puts there |
-|---|---|---|
-| `SUPABASE_URL` | now | the project's address, `https://….supabase.co` |
-| `SUPABASE_SECRET_KEY` | now | the project's **secret** key (`sb_secret_…`; on an older project the key named `service_role`), never the public one |
-| `DASHBOARD_URL` | now | `<address>`, the service's own public address (not a secret: you give the value) |
-| `SH_PASS_OWNER` | step 5 | the owner's password |
-| `PAGESPEED_KEY` | step 4 | the Google key |
-| `SH_PASS_VENDOR_CHECK` | step 5 | the throwaway check password; deleted after the check |
-| `NTFY_TOPIC` | step 6, **last** | the alert topic |
-| optional | when needed | `SH_PASS_STAFF`, `SH_PASS_VENDOR_<NAME>`, `SH_VENDOR_NOALERTS`, `SH_SHARE_TOKEN` (step 5), `HEARTBEAT_URL` (step 7). `reference/README.md` lists every variable |
+Facts for you: the host builds from a Git repository, by default a **private** GitHub one (any Git
+hosting it can read will do). No token ever passes through the chat or into a remote address. On
+the owner's computer sign in through the browser: `gh auth login --web` (it prints a short one-time
+code; give it to the owner), or Git Credential Manager when `git config credential.helper` names
+`manager`; never let a password prompt reach the terminal. In a cloud workspace connected to
+GitHub, the owner grants that connection the repository. The owner's answer is the repository's
+address: `git remote add origin <it>.git`. Before the first push run the secret check of §10 item
+7; that answer is the owner's request to push (START-HERE rule 12).
 
 ```text
-עכשיו מקימים את השרת הקטן שבודק את האתר ומציג את המסך.
+עכשיו פותחים מקום לקוד שאני כותב. השרת הקטן ייקח את הקוד משם.
+
+1. נכנסים ל-github.com. אם אין לך חשבון, פותחים חשבון בתוכנית החינמית (Free). אפשר לשמור בה מאגר פרטי.
+2. יוצרים מאגר חדש (New repository). בשם כותבים <repository name> ובוחרים פרטי (Private). את שאר השדות משאירים כמו שהם.
+3. <במחשב שלך: כשאעלה את הקוד בפעם הראשונה, ייפתח בדפדפן חלון כניסה של GitHub. נכנסים שם ומאשרים. אם מתבקש קוד קצר, אכתוב לך אותו. | בענן: בהגדרות של קודקס, בחיבור ל-GitHub, נותנים גישה למאגר <repository name>.>
+4. לא שולחים לי סיסמה או מפתח של GitHub. נכנסים רק בחלון של GitHub עצמו.
+
+מה עושים עכשיו: להעתיק לי את הכתובת של המאגר מהדפדפן (מתחילה ב-https://github.com/). היא לא סודית. אחרי זה אעלה אליו את הקוד.
+```
+
+Keep the variant of item 3 that fits where you run. **Confirm:** the push succeeds, and an anonymous
+`curl -s -o /dev/null -w '%{http_code}\n' <the address>` answers 404 (private).
+
+## Step 4. The host: the small server
+
+**Who:** the owner. **Prepare:** the code pushed (step 3). 4a holds the values (Python 3.10 or
+newer, tested with 3.13; a host that reads the version from a variable or a file gets it there:
+name it in 4b, or commit the file). **Exactly one instance, always on**: no sleep when idle, no
+scaling (every copy would measure and alert). Region: near the site's visitors (§7.5). The owner
+types every variable's value (all of them are in `reference/README.md`).
+
+**4a**, the service:
+
+```text
+עכשיו מקימים את השרת הקטן.
 
 1. נכנסים לאתר של <host> ופותחים חשבון.
-2. יוצרים שירות חדש מהסוג שמריץ אתר (בדרך כלל Web Service), ומחברים אותו למאגר הקוד <repository>.
-3. ממלאים את השדות האלה. מעתיקים כל ערך בדיוק כמו שהוא:
+2. יוצרים שירות חדש מהסוג שמריץ אתר (בדרך כלל Web Service) ומחברים אותו ל-GitHub. כשנשאלים לאילו מאגרים לתת גישה, בוחרים רק את <repository name>.
+3. ממלאים את השדות האלה, כל ערך בדיוק כמו שהוא:
    - תיקיית הבסיס (Root Directory): site-health
    - פקודת הבנייה (Build Command): pip install -r requirements.txt
    - פקודת ההפעלה (Start Command): uvicorn server:app --host 0.0.0.0 --port $PORT --no-access-log
    - כתובת לבדיקת תקינות (Health Check Path): /health
-4. בוחרים תוכנית שבה השרת עובד כל הזמן ולא נרדם, ואזור קרוב ל<המדינה של הגולשים>.
+4. אם יש מקום לבחור גרסה של Python, בוחרים 3.13.
+5. בוחרים תוכנית שבה השרת עובד כל הזמן ולא נרדם (בדרך כלל התוכנית בתשלום), ואזור קרוב ל<המדינה של הגולשים>.
 
 מה עושים עכשיו: לכתוב לי את הכתובת שהשירות קיבל (מתחילה ב-https://). היא לא סודית.
 ```
 
+**4b**, the database settings:
+
 ```text
-עכשיו מחברים את השרת למסד הנתונים. מעתיקים שני ערכים מ-Supabase אל ההגדרות של השרת. הם לא עוברים דרכי.
+עכשיו מחברים את השרת למסד הנתונים. מעתיקים שני ערכים מ-Supabase להגדרות של השרת. הם לא עוברים דרכי.
 
 1. ב-Supabase פותחים את הגדרות הפרויקט ומחפשים את העמוד של מפתחות ה-API.
 2. ב-<host> פותחים את השירות ומחפשים את העמוד של משתני הסביבה (בדרך כלל Environment).
@@ -490,90 +497,90 @@ Environment variables, by name. The owner types every value; you only name them.
 מה עושים עכשיו: לכתוב לי "שמרתי". את המפתח עצמו לא שולחים לי.
 ```
 
+**4c**, a line of the service's log (`<word>`: what it contains; the server never logs a secret).
+
+```text
+צריך שורה אחת מהיומן של השרת. אין בה שום סוד.
+
+1. ב-<host> פותחים את השירות ומחפשים את היומן שלו (בדרך כלל Logs).
+2. מחפשים בו את המילה <word>: בשדה החיפוש של היומן, ואם אין כזה, בחיפוש של הדפדפן (Ctrl+F, ובמק Cmd+F).
+3. מסמנים בעכבר את השורה האחרונה שיש בה <word>, מעתיקים ומדביקים לי.
+
+מה עושים עכשיו: להדביק לי את השורה. אם אין שורה כזאת, לכתוב לי "אין".
+```
+
 **Confirm**, about two minutes after the save: `curl -s <address>/health` answers
 `{"ok": true, "db": "ok", "screen": "ok", "last_probe_age_sec": <under 90>}`.
 
 - `"screen": "missing"`: the root directory is not `site-health`, or `site_health.html` is not committed there.
-- `"db"` is a text: it says what is wrong (the address must start with `https://`; an HTTP 401
-  means the wrong key) and never holds the key. Ask the owner to paste the two values again.
-- `"last_probe_age_sec": null`: nothing was measured yet. Step 2 did not run, or the service is
-  not the single always-on instance.
+- `"db"` is a text saying what is wrong, never the key: the address must start with `https://`;
+  HTTP 401 is the wrong key (the secret one; on an older project `service_role`). Have the two
+  values pasted again.
+- `"last_probe_age_sec": null`: step 2 did not run, or the service is not one always-on instance.
+- No answer: the build or the start failed: 4c with `Error` (or `Traceback`). A Python older than
+  3.10 fails at the start.
 
-**Then look at the first real round** (after step 5 gave you a check cookie): in
-`<address>/api/site/now` every row of `pages` has `"ok": true`. If pages that open in a browser
-fail there (a 403, a 503, a timeout), the site's firewall refuses the prober. Do not go on to
-step 6; send this, and wait:
+**Then the first real round** (once step 6 gave you a check cookie): every row of `pages` in
+`<address>/api/site/now` has `"ok": true`. Pages that open in a browser but fail there (403, 503,
+a timeout): the site's firewall refuses the prober. Do not go on to step 7; send this:
 
 ```text
-המערכת מנסה לבדוק את האתר כל דקה, אבל האתר חוסם אותה. זה קורה כשלאתר יש חומת אש או הגנה מפני רובוטים.
+המערכת מנסה לבדוק את האתר כל דקה, אבל האתר חוסם אותה (חומת אש או הגנה מפני רובוטים).
 
-מי שמנהל את האתר או את האחסון שלו צריך לאשר את הבודק. הוא מזדהה בשם SiteHealthProbe/1.0 ופונה מהשרת <address>.
+מי שמנהל את האתר או את האחסון שלו צריך לאשר את הבודק: הוא מזדהה בשם SiteHealthProbe/1.0 ופונה מהשרת <address>.
 
-עד שזה מאושר, המסך מראה שהאתר לא עונה גם כשהוא תקין. לכן עדיין לא מחברים את ההודעות לטלפון.
+עד שזה מאושר, המסך מראה שהאתר לא עונה גם כשהוא תקין, ולכן עוד לא מחברים את ההודעות לטלפון.
 
 מה עושים עכשיו: להעביר את ההודעה הזאת למי שמנהל את האתר, ולכתוב לי כשזה אושר.
 ```
 
-## Step 4. The Google key
+## Step 5. The Google key
 
-**Who:** the owner. **Prepare:** nothing. The key is free and needs no billing account (§7.6).
+**Who:** the owner. The key is free, needs no billing account (§7.6), and is required: the core
+speed flow cannot be switched off and stays `אין נתון` without it (§10 item 2).
 
 ```text
-עכשיו יוצרים מפתח של גוגל. איתו המערכת מודדת כמה מהר האתר נטען. המפתח בחינם.
+עכשיו יוצרים מפתח של גוגל, שאיתו המערכת מודדת כמה מהר האתר נטען. המפתח בחינם.
 
-1. נכנסים ל-console.cloud.google.com עם חשבון גוגל.
-2. יוצרים פרויקט חדש, או בוחרים פרויקט קיים.
-3. מחפשים בשורת החיפוש שלמעלה PageSpeed Insights API, נכנסים אליו ומפעילים אותו (Enable).
-4. בעמוד של פרטי הגישה (Credentials) יוצרים מפתח חדש מהסוג API key.
-5. בהגדרות של המפתח מגבילים אותו כך שיעבוד רק עם PageSpeed Insights API. לא מגבילים אותו לפי כתובת אתר.
-6. מעתיקים את המפתח. ב-<host>, בעמוד של משתני הסביבה, מוסיפים משתנה בשם PAGESPEED_KEY והמפתח הוא הערך. שומרים.
+1. נכנסים ל-console.cloud.google.com עם חשבון גוגל, ויוצרים פרויקט חדש או בוחרים פרויקט קיים. אם מוצע ניסיון חינם או מבקשים כרטיס אשראי, מדלגים: המפתח לא צריך את זה.
+2. מחפשים בשורת החיפוש שלמעלה PageSpeed Insights API, נכנסים אליו ומפעילים אותו (Enable).
+3. בעמוד של פרטי הגישה (Credentials) יוצרים מפתח חדש מהסוג API key.
+4. בהגדרות של המפתח מגבילים אותו כך שיעבוד רק עם PageSpeed Insights API. לא מגבילים אותו לפי כתובת אתר.
+5. מעתיקים את המפתח. ב-<host>, במשתני הסביבה, מוסיפים משתנה בשם PAGESPEED_KEY והמפתח הוא הערך. שומרים.
 
 מה עושים עכשיו: לכתוב לי "שמרתי". את המפתח עצמו לא שולחים לי.
 ```
 
 **Confirm:** within 20 minutes the flow `מדידת מהירות — עמודי ליבה` is `תקין` (the flow list of
-step 5) and the screen's speed tiles show a figure. Still `אין נתון`: the key is refused or the
-API is not enabled. The service's log says which, without the key; ask the owner to copy the line
-that starts with `speed:`. After a repair the collector asks Google again within the hour.
+step 6) and the speed tiles show a figure. Still `אין נתון`: the key is refused or the API is off;
+4c with the word `speed:` (the line that contains it) says which, without the key. After a repair
+the collector asks Google again within the hour.
 
-## Step 5. The passwords, and the one you may hold for a check
+## Step 6. The passwords, and the one you may hold for a check
 
-**Who:** the owner makes every password up and types it into the host's settings.
-**The recipe:** the password generator of the owner's browser or phone, 16 characters or more;
-where there is none, four unrelated words and six digits. Passwords are compared without case.
-One variable per person: `SH_PASS_OWNER`, `SH_PASS_STAFF`, `SH_PASS_VENDOR_<NAME>` (§8.1).
-**The share link** (only if the owner wants one): `SH_SHARE_TOKEN`, at least 20 characters of
-letters, digits and hyphens (four words and six digits with hyphens between them do). The link is
-`<address>/status?k=<the token>`; the owner builds it and sends it, never through you.
+**Who:** the owner makes every password up (16 characters or more; compared without case) and types
+it into the host's settings. One variable per person (§8.1).
 
-```text
-עכשיו קובעים את הסיסמה שלך למסך.
-
-1. ממציאים סיסמה ארוכה, 16 תווים לפחות. הכי פשוט: לתת לדפדפן או לטלפון להציע סיסמה. אפשר גם ארבע מילים שלא קשורות זו לזו ואחריהן שש ספרות.
-2. שומרים אותה אצלך, במקום שבו שמורות הסיסמאות שלך.
-3. ב-<host>, בעמוד של משתני הסביבה, מוסיפים משתנה בשם SH_PASS_OWNER והסיסמה היא הערך. שומרים.
-4. פותחים בטלפון את הכתובת <address>/site ונכנסים עם הסיסמה.
-
-מה עושים עכשיו: לכתוב לי אם המסך נפתח בטלפון. את הסיסמה לא שולחים לי.
-```
-
-**The check password.** To see the deployed screen you sign in as a throwaway read-only vendor,
-`SH_PASS_VENDOR_CHECK`. It is the only secret-like value that passes between you and the owner:
-you make it up, it opens the vendor's view and nothing else, and it is deleted right after the
-check. The server logs a warning at every start for as long as it is set.
+**6a**, the owner's password and `SH_PASS_VENDOR_CHECK`, a throwaway read-only vendor: the only
+secret-like value between you and the owner (a new one later: item 4 alone, with the first and
+last line).
 
 ```bash
 python3 -c "import secrets; print('SH_PASS_VENDOR_CHECK=' + secrets.token_urlsafe(18))" > .env.check   # git-ignored
+# only with SH_VENDOR_NOALERTS (6b item 3), for 6e:
+python3 -c "import secrets; print('SH_PASS_VENDOR_CHECK_QUIET=' + secrets.token_urlsafe(18))" >> .env.check
 ```
 
 ```text
-כדי לבדוק שהמסך עובד כמו שצריך, צריך סיסמה זמנית לבדיקה. היא מאפשרת צפייה בלבד, ומוחקים אותה מיד אחרי הבדיקה.
+עכשיו קובעים את הסיסמה שלך למסך, ומוסיפים סיסמה זמנית שבה אבדוק את המסך.
 
-1. ב-<host>, בעמוד של משתני הסביבה, מוסיפים משתנה בשם SH_PASS_VENDOR_CHECK.
-2. בערך מדביקים את זה: <the value from .env.check>
-3. שומרים.
+1. ממציאים סיסמה ארוכה, 16 תווים לפחות. הכי פשוט: לתת לדפדפן או לטלפון להציע סיסמה. אפשר גם ארבע מילים שלא קשורות זו לזו ואחריהן שש ספרות.
+2. שומרים אותה אצלך, עם שאר הסיסמאות שלך.
+3. ב-<host>, במשתני הסביבה, מוסיפים משתנה בשם SH_PASS_OWNER והסיסמה היא הערך.
+4. מוסיפים שם עוד משתנה בשם SH_PASS_VENDOR_CHECK, ובערך מדביקים: <the value from .env.check>. זו הסיסמה הזמנית, לצפייה בלבד. נמחק אותה מיד אחרי הבדיקה.
+5. שומרים, ופותחים בטלפון את הכתובת <address>/site עם הסיסמה שלך.
 
-מה עושים עכשיו: לכתוב לי "שמרתי". אכתוב לך כשהבדיקה נגמרת ואפשר למחוק.
+מה עושים עכשיו: לכתוב לי אם המסך נפתח בטלפון. את הסיסמה שלך לא שולחים לי.
 ```
 
 The checks, from the root of the repository (`check_access.py`: at most twice in ten minutes):
@@ -588,62 +595,111 @@ curl -s -H "Cookie: $COOKIE" "$BASE/api/site?h=24" | python3 -c "import json,sys
 for f in json.load(sys.stdin)['health']: print(f['status'], '|', f['flow_name'], '|', f['silent_txt'] or '')"
 ```
 
-The last command is the flow list: every flow must read `תקין` (go-live checklist, item 2). A
-site that uses `SH_VENDOR_NOALERTS` gets a second throwaway, `SH_PASS_VENDOR_CHECK_QUIET`, with
-`CHECK_QUIET` added to that list, and `--no-quiet` is dropped. Keep the check password while the
-checklist of §10 runs (steps 6 and 7 fall inside it) and have it deleted the same day; if the
-work stretches over days, delete it now and make a new one later. When the checks are done:
+The last command is the flow list: every flow must read `תקין` (§10 item 2). With
+`SH_VENDOR_NOALERTS`, send 6e and drop `--no-quiet`. Keep the check passwords through the §10
+checklist (steps 7 and 8 included), then send 6d the same day; if the work takes days, delete them
+now and make new ones later.
+
+**6b**, another person (intake row 8). `<VARIABLE>`: `SH_PASS_STAFF` (everything; one password for
+all staff) or `SH_PASS_VENDOR_<NAME>` (read-only; `<NAME>`: capitals, digits, `_`). Item 3 only for
+a vendor who must not see alerts. A name there that matches no vendor hides the alerts from every
+vendor (§8.1): 4c with the word `SH_VENDOR_NOALERTS` must find no line.
+
+```text
+עכשיו נותנים ל<שם> גישה <למסך כולו | למסך, לצפייה בלבד>.
+
+1. ממציאים סיסמה חדשה רק ל<שם>, כמו שעשית עם הסיסמה שלך.
+2. ב-<host>, במשתני הסביבה, מוסיפים משתנה בשם <VARIABLE> והסיסמה היא הערך. שומרים.
+3. באותו מקום מוסיפים משתנה בשם SH_VENDOR_NOALERTS וכותבים בו <NAME>. אם הוא כבר קיים, מוסיפים בסופו פסיק ואת השם. שומרים. כך ההתראות לא יוצגו ל<שם>.
+4. שולחים ל<שם> את הכתובת <address>/site ואת הסיסמה בהודעה פרטית, לא דרכי.
+
+מה עושים עכשיו: לכתוב לי "שמרתי". את הסיסמה לא שולחים לי.
+```
+
+**6c**, the share link, only if the owner wants one. `SH_SHARE_TOKEN`: 20 or more letters, digits
+and hyphens. The owner sends the link, never through you; you confirm with the made-up token of
+§10 item 5.
+
+```text
+קישור צפייה פותח את המסך בלי סיסמה, לצפייה בלבד. כל מי שמחזיק בו רואה את המסך, ולכן שולחים אותו רק למי שצריך.
+
+1. ממציאים מפתח לקישור: ארבע מילים באנגלית שלא קשורות זו לזו ואחריהן שש ספרות, עם מקף בין החלקים ובלי רווחים.
+2. ב-<host>, במשתני הסביבה, מוסיפים משתנה בשם SH_SHARE_TOKEN והמפתח הוא הערך. שומרים.
+3. הקישור הוא <address>/status?k= ומיד אחריו המפתח, בלי רווח. שומרים אותו אצלך ופותחים אותו בטלפון.
+4. כדי לבטל את הקישור מוחקים את המשתנה ושומרים.
+
+מה עושים עכשיו: לכתוב לי אם המסך נפתח מהקישור. את הקישור לא שולחים לי.
+```
+
+**6d**, when the checks are done:
 
 ```text
 הבדיקה הסתיימה. עכשיו מוחקים את הסיסמה הזמנית.
 
-1. ב-<host>, בעמוד של משתני הסביבה, מוחקים את המשתנה SH_PASS_VENDOR_CHECK.
-2. שומרים.
+1. ב-<host>, במשתני הסביבה, מוחקים את המשתנה SH_PASS_VENDOR_CHECK.
+2. <only after 6e:> מוחקים גם את SH_PASS_VENDOR_CHECK_QUIET. במשתנה SH_VENDOR_NOALERTS מוחקים את הפסיק ואת CHECK_QUIET (אם זו המילה היחידה בו, מוחקים את כל המשתנה).
+3. שומרים.
 
 מה עושים עכשיו: לכתוב לי "מחקתי".
 ```
 
-**Confirm:** the same sign-in now answers 401
-(`curl -s -o /dev/null -w '%{http_code}\n' --data-urlencode "p=$SH_PASS_VENDOR_CHECK" "$BASE/login"`),
-then `rm .env.check`. The owner's own sign-in is confirmed by the owner: "the screen opened on my phone".
+**Confirm:** the same sign-in now answers 401 (`curl -s -o /dev/null -w '%{http_code}\n'
+--data-urlencode "p=$SH_PASS_VENDOR_CHECK" "$BASE/login"`), and so does `$SH_PASS_VENDOR_CHECK_QUIET`
+after 6e; 4c with the word `SH_VENDOR_NOALERTS` finds no line (`אין`); then `rm .env.check`.
 
-## Step 6. The alert topic: last, and never through you
-
-**When:** only after the first round of step 3 was clean and no alert is open that the owner does
-not expect. Until `NTFY_TOPIC` is set nothing is pushed (alerts still open and show on the
-screen); from the moment it is set, every alert reaches the phones. Tell the owner both.
-**Who:** the owner makes the topic name up and types it in three places: the ntfy app of every
-phone, the host's settings, and the watchdog of step 7. Its name is its only protection: whoever
-knows it can read the alerts. It never appears in a chat, in the repository or in your terminal.
+**6e**, only with `SH_VENDOR_NOALERTS`, before the checks: the second throwaway password, a vendor
+without alerts (`check_access.py` then runs without `--no-quiet`).
 
 ```text
-עכשיו מחברים את ההודעות לטלפון. הן מגיעות דרך אפליקציה בשם ntfy, לערוץ שרק מי שיודע את השם שלו יכול לקרוא.
+עוד סיסמה זמנית אחת, כדי לבדוק שמי שלא אמור לראות התראות באמת לא רואה אותן.
 
-1. במחשב פותחים את ntfy.sh/app ולוחצים על הוספת ערוץ (Subscribe to topic).
-2. בוחרים שם לערוץ. אם יש שם כפתור שמציע שם אקראי, לוחצים עליו. אם אין, ממציאים: ארבע מילים באנגלית שלא קשורות זו לזו ואחריהן שש ספרות, עם מקף בין החלקים ובלי רווחים.
-3. שומרים את השם אצלך, ולא שולחים אותו אליי או בצ'אט: מי שיודע אותו יכול לקרוא את ההודעות.
-4. בטלפון מתקינים את האפליקציה ntfy מחנות האפליקציות, לוחצים בה על הפלוס, מקלידים את שם הערוץ בדיוק ומאשרים. כשהטלפון שואל אם לאפשר התראות, מאשרים.
+1. ב-<host>, במשתני הסביבה, מוסיפים משתנה בשם SH_PASS_VENDOR_CHECK_QUIET, ובערך מדביקים: <the second value from .env.check>. נמחק אותה מיד אחרי הבדיקה.
+2. במשתנה SH_VENDOR_NOALERTS מוסיפים בסופו פסיק ואת המילה CHECK_QUIET, בלי רווח.
+3. שומרים.
 
-מה עושים עכשיו: לכתוב לי "הערוץ מוכן".
+מה עושים עכשיו: לכתוב לי "שמרתי".
 ```
 
-```text
-עכשיו מגדירים לשרת לאיזה ערוץ לשלוח.
+**6f**, only when the limiter check of §10 item 4 fails. `<n>`: how many proxies the host puts in
+front of the service (its documentation; §8.2). Run the check again ten minutes later.
 
-1. ב-<host>, בעמוד של משתני הסביבה, מוסיפים משתנה בשם NTFY_TOPIC ושם הערוץ הוא הערך. שומרים.
-2. מעכשיו כל התראה מגיעה לטלפון. בכל בוקר מגיעה גם הודעת "בוקר טוב" עם סיכום קצר. ביום הראשון היא עוד לא נשלחת.
+```text
+צריך לתקן הגדרה אחת בשרת. היא לא סודית.
+
+1. ב-<host>, במשתני הסביבה, מוסיפים משתנה בשם SH_PROXY_HOPS ובערך כותבים <n>. אם הוא כבר קיים, משנים את הערך ל-<n>.
+2. שומרים.
+
+מה עושים עכשיו: לכתוב לי "שמרתי".
+```
+
+## Step 7. The alert topic: after a clean first round, and never through you
+
+**When:** after a clean first round (step 4), with no alert open that the owner does not expect.
+Until `NTFY_TOPIC` is set nothing is pushed (alerts still show on the screen); from then on every
+alert reaches the phones: tell the owner both. The name, made up by the owner, is the topic's
+only protection: it never appears in a chat, the repository or your terminal.
+
+**7a**:
+
+```text
+עכשיו מחברים את ההודעות לטלפון, דרך האפליקציה ntfy. היא בחינם, ולא צריך לפתוח בה חשבון. ההודעות נשלחות לערוץ שרק מי שיודע את השם שלו יכול לקרוא.
+
+1. במחשב פותחים את ntfy.sh/app ולוחצים על הוספת ערוץ (Subscribe to topic). אם מוצעת הרשמה או תוכנית בתשלום, מדלגים.
+2. בוחרים שם לערוץ. אם יש כפתור שמציע שם אקראי, לוחצים עליו. אם אין, ממציאים ארבע מילים באנגלית שלא קשורות זו לזו ואחריהן שש ספרות, עם מקף בין החלקים ובלי רווחים.
+3. שומרים את השם אצלך. לא שולחים אותו אליי ולא כותבים אותו בצ'אט.
+4. בטלפון מתקינים את ntfy מחנות האפליקציות, לוחצים בה על הפלוס, מקלידים את שם הערוץ בדיוק ומאשרים. כשהטלפון שואל אם לאפשר התראות, מאשרים.
+5. ב-<host>, במשתני הסביבה, מוסיפים משתנה בשם NTFY_TOPIC ושם הערוץ הוא הערך. שומרים. מעכשיו כל התראה מגיעה לטלפון, ומהבוקר הבא בכל בוקר גם סיכום קצר בשם "בוקר טוב".
 
 מה עושים עכשיו: לכתוב לי "שמרתי".
 ```
 
 Every other person of intake row 7 gets the name from the owner, privately, and does item 4.
 
-**Confirm that a phone shows a push.** You cannot send one: the topic is not yours. In this order:
+**Confirm that a phone shows a push.** You cannot send one (the topic is not yours). The first of:
+(1) 7b, if the host offers a command screen (it prints `ntfy answered 200`, no secret); (2) the two
+pushes of the planned stop in step 8; (3) the first morning message. Until then the item is open.
 
-1. If the host gives the owner a command screen for the service, they run one line there
-   (message below). It prints `ntfy answered 200` and no secret.
-2. The planned stop of step 7 produces two real pushes.
-3. The first morning message, the day after. Until one of the three happened, the item stays open.
+**7b**:
 
 ```text
 שולחים הודעת בדיקה לטלפון.
@@ -655,107 +711,139 @@ Every other person of intake row 7 gets the name from the owner, privately, and 
 מה עושים עכשיו: לכתוב לי אם ההודעה הגיעה לטלפון.
 ```
 
-## Step 7. Who watches the watcher
+## Step 8. Who watches the watcher
 
 If the small server stops, nothing inside it can say so (§7.10). Pick one independent check:
 
-| Option | For | What the owner does |
-|---|---|---|
-| 1. `site-health/deadman.sql` | a Supabase database | switches on two extensions, adds two secrets to the database's secret store, pastes one more file (message below). No further account. Never run on a real project: if its test does not pass, take option 2 |
-| 2. a heartbeat service | any host | opens an account at such a service, creates a check that expects a ping every minute and alarms after about 10 silent minutes, and puts the check's ping address into the host's settings as `HEARTBEAT_URL`. The alarm comes through that service (usually e-mail), in its own words |
-| 3. `site-health/watchdog.py` | any host | runs this one file somewhere that does not stop with the host (a second small always-on service with `--loop`, or a cron job every 5 minutes), with `NTFY_TOPIC` typed into that place's settings. A second always-on service is normally paid as well |
+1. **`site-health/deadman.sql`** (8a), Supabase only, no cost: two extensions, two Vault secrets,
+   one more file. It never ran on a real project: if the test below fails, take option 2.
+2. **A heartbeat service** (8b; `<service>`, such as healthchecks.io), any host, normally free for
+   one check: it e-mails its own alarm after about 10 minutes without the ping that
+   `HEARTBEAT_URL` gets after every probe round.
+3. **`site-health/watchdog.py`** (8c), a second always-on service (`<host 2>`, preferably another
+   provider), normally paid monthly, with `NTFY_TOPIC` in its own settings; or a cron job every 5
+   minutes.
+
+Options 2 and 3 bring a new account, and option 3 a monthly cost: before 8b or 8c ask the owner
+(one question: what it is for, that it is normally free or paid monthly, that it can be removed).
+
+**8a**, option 1 (send `deadman.sql` with it):
 
 ```text
-עוד צעד אחד ב-Supabase: שומר שבודק שהמדידה עצמה לא נעצרה. אם השרת הקטן מפסיק לעבוד, השומר הוא ששולח לך הודעה.
+עוד צעד אחד ב-Supabase: שומר שבודק שהמדידה עצמה לא נעצרה. אם השרת הקטן מפסיק לעבוד, השומר שולח לך הודעה.
 
 1. ב-Supabase מחפשים את העמוד של התוספים למסד הנתונים (Integrations או Extensions) ומפעילים שניים: Cron ו-pg_net.
 2. מחפשים את הכספת (Vault) ומוסיפים בה שני סודות:
    - שם: sh_ntfy_topic. ערך: שם הערוץ מהאפליקציה ntfy.
    - שם: sh_dashboard_url. ערך: <address>
-3. פותחים את הקובץ deadman.sql ששלחתי, מעתיקים את כולו, מדביקים במקום שבו מריצים SQL ולוחצים על כפתור ההרצה.
+3. את הקובץ deadman.sql ששלחתי פותחים, מעתיקים ומריצים כמו את install.sql.
 
-מה עושים עכשיו: לכתוב לי אם ההרצה הסתיימה בלי שגיאה. אם הופיעה שגיאה, להעתיק לי אותה כמו שהיא.
+מה עושים עכשיו: לכתוב לי אם ההרצה הסתיימה בלי שגיאה, או להעתיק לי את השגיאה.
 ```
 
-**The test** (go-live checklist, item 3). Only the owner can stop the service. Announce it first:
+**8b**, option 2:
 
 ```text
-בדיקה אחרונה: עוצרים את השרת בכוונה ל-16 דקות, כדי לראות שמגיעה הודעה כשהמדידה נעצרת. בזמן הזה המסך לא נפתח. זה מתוכנן.
+עוד שמירה אחת: שירות בחוץ שמצפה לסימן חיים מהשרת הקטן כל דקה. אם הסימנים נעצרים, הוא שולח לך מייל.
+
+1. נכנסים לאתר של <service> ופותחים חשבון. לבדיקה אחת התוכנית החינמית בדרך כלל מספיקה.
+2. יוצרים בדיקה חדשה (Check): מרווח (Period) של דקה אחת, וזמן המתנה (Grace) של 10 דקות.
+3. מעתיקים את הכתובת של הבדיקה (Ping URL). ב-<host>, במשתני הסביבה, מוסיפים משתנה בשם HEARTBEAT_URL והכתובת היא הערך. שומרים.
+
+מה עושים עכשיו: לכתוב לי "שמרתי". את הכתובת לא שולחים לי.
+```
+
+**8c**, option 3:
+
+```text
+עוד שמירה אחת: שירות קטן נוסף שבודק כל דקה שהשרת הראשון עובד, ושולח לטלפון הודעה אם הוא נעצר. גם הוא עובד כל הזמן, ולכן גם הוא בדרך כלל בתשלום חודשי. עדיף ספק אחר, כדי שתקלה אצל <host> לא תעצור את שניהם.
+
+1. ב-<host 2> יוצרים שירות חדש שעובד ברקע (בדרך כלל Background Worker) ומחברים אותו למאגר <repository name>.
+2. את תיקיית הבסיס ואת פקודת הבנייה ממלאים כמו בשרת הראשון. בפקודת ההפעלה (Start Command) כותבים: python3 watchdog.py --dashboard <address> --loop
+3. במשתני הסביבה של השירות החדש מוסיפים משתנה בשם NTFY_TOPIC, ושם הערוץ מהאפליקציה ntfy הוא הערך. שומרים.
+
+מה עושים עכשיו: לכתוב לי "שמרתי".
+```
+
+**The test** (go-live checklist, item 3). Only the owner can stop the service:
+
+```text
+בדיקה אחרונה: עוצרים את השרת בכוונה ל-16 דקות, כדי לראות שמגיעה הודעה כשהמדידה נעצרת. בזמן הזה המסך לא נפתח, וזה מתוכנן.
 
 1. ב-<host> עוצרים את השירות (בדרך כלל Suspend או Stop).
 2. מחכים 16 דקות. בטלפון אמורה להגיע ההודעה "המדידה נעצרה: בודק זמינות האתר".
-3. מפעילים את השירות מחדש. תוך כמה דקות אמורה להגיע ההודעה "חזר לתקין: בודק זמינות האתר".
+3. מפעילים את השירות מחדש. תוך כמה דקות מההפעלה אמורה להגיע ההודעה "חזר לתקין: בודק זמינות האתר".
 
 מה עושים עכשיו: לכתוב לי אילו הודעות הגיעו לטלפון, ובאיזו שעה.
 ```
 
-**Confirm:** what the owner reports (with option 2: the heartbeat service's own alarm and its own
-"up again"; change the message accordingly); from the outside, `/health` stops answering and,
-after the start, shows a `last_probe_age_sec` under 90. With option 1 the alert is also in the
-screen's list of the period's alerts, and its recovery push comes from the server itself: that
-push proves the topic in the host's settings as well.
+**Confirm:** what the owner reports (option 2: that service's own alarm and "up again"; adapt the
+message); `/health` stops answering, then shows a `last_probe_age_sec` under 90 within a few
+minutes of the start. With option 1 the recovery push comes from the server: proof of its topic too.
 
-## Step 8. The add-on on the site
+## Step 9. The add-on on the site
 
-It measures how fast pages load for real visitors (§7.7). **Who:** whoever can install a plugin on
-the site or paste a snippet into its theme (intake row 12); the owner forwards your message.
+**Who:** whoever can install a plugin on the site or paste a snippet into its theme (intake row 12,
+§7.7); the owner forwards your message.
 
 - **WordPress.** In `site-health/`: `python3 manage.py rum-plugin --endpoint <address>/m --out site-health-rum.zip`
-  (the live host comes from the configuration). Send the ZIP with the message below.
+  (the live host comes from the configuration). Send the ZIP with 9a.
 - **Shopify.** Copy `site-health/rum/site-health-rum.liquid`, fill its two `assign` lines
-  (`<address>/m`, and the shop's public host without `www`), and send the copy with the second
-  message below. It has never run in a real shop: the message says so.
+  (`<address>/m`, the shop's public host without `www`), send the copy with 9b. It never ran in a
+  real shop: the message says so.
 - **Any other site.** Its developer adds one line and the script (§7.7, Delivery).
 
-```text
-הצעד האחרון הוא באתר עצמו: תוסף קטן שמודד כמה מהר העמודים נטענים אצל הגולשים. אם מישהו אחר מנהל את האתר, מעבירים לו את ההודעה הזאת ואת הקובץ.
+**9a**, WordPress:
 
-1. שומרים במחשב את הקובץ site-health-rum.zip ששלחתי. לא פותחים אותו.
-2. בניהול האתר (וורדפרס) נכנסים לתוספים, בוחרים להוסיף תוסף חדש, ואז להעלות תוסף.
-3. בוחרים את הקובץ, מתקינים ומפעילים.
-4. אם באתר יש תוסף מטמון (cache), מנקים את המטמון.
-5. פותחים עמוד כלשהו באתר, מוסיפים בסוף הכתובת ?sh_test=1, מחכים שהעמוד ייטען וסוגרים אותו.
+```text
+הצעד האחרון הוא באתר עצמו: תוסף קטן שמודד כמה מהר העמודים נטענים אצל הגולשים. אם מישהו אחר מנהל את האתר, מעבירים לו את ההודעה ואת הקובץ.
+
+1. שומרים במחשב את הקובץ site-health-rum.zip ששלחתי, בלי לפתוח אותו.
+2. בניהול האתר (וורדפרס) נכנסים לתוספים, בוחרים להוסיף תוסף חדש ואז להעלות תוסף. בוחרים את הקובץ, מתקינים ומפעילים.
+3. אם באתר יש תוסף מטמון (cache), מנקים את המטמון. אם יש תוסף או הגדרה שמשהים טעינה של JavaScript (Delay JavaScript), מוסיפים לרשימת החריגים שלהם את site-health-rum.
+4. התוסף לא מודד את מי שמחובר לניהול האתר. לכן פותחים חלון גלישה בסתר (או טלפון שלא מחובר לניהול), נכנסים לעמוד רגיל באתר (לא הסל ולא הקופה), מוסיפים בסוף הכתובת ?sh_test=1, מחכים שהעמוד ייטען וסוגרים אותו.
 
 מה עושים עכשיו: לפתוח את המסך ולכתוב לי מה כתוב בריבוע "מהירות אצל לקוחות, שעה אחרונה".
 ```
 
-```text
-הצעד האחרון הוא בחנות עצמה: קטע קוד קטן שמודד כמה מהר העמודים נטענים אצל הגולשים. הוא עוד לא נוסה בחנות אמיתית של Shopify, ולכן בסוף בודקים יחד שהוא עובד.
+**9b**, Shopify:
 
-1. בניהול החנות נכנסים לחנות המקוונת (Online Store) ומשם לערכות העיצוב (Themes).
-2. ליד ערכת העיצוב הפעילה פותחים את התפריט (שלוש נקודות) ובוחרים לשכפל אותה (Duplicate). זה עותק לגיבוי.
-3. באותו תפריט בוחרים לערוך את הקוד (Edit code), ופותחים את הקובץ theme.liquid שבתיקייה layout.
-4. קרוב לסוף הקובץ מחפשים את השורה </body>. בשורה שמעליה מדביקים את כל התוכן של הקובץ site-health-rum.liquid ששלחתי, ושומרים.
-5. פותחים עמוד כלשהו בחנות, מוסיפים בסוף הכתובת ?sh_test=1, מחכים שהעמוד ייטען וסוגרים אותו.
+```text
+הצעד האחרון הוא בחנות עצמה: קטע קוד קטן שמודד כמה מהר העמודים נטענים אצל הגולשים. הוא עוד לא נוסה בחנות אמיתית, ולכן בסוף בודקים יחד שהוא עובד.
+
+1. בניהול החנות נכנסים לחנות המקוונת (Online Store) ואז לערכות העיצוב (Themes). ליד הערכה הפעילה פותחים את התפריט (שלוש נקודות) ובוחרים לשכפל אותה (Duplicate), לגיבוי.
+2. באותו תפריט בוחרים לערוך את הקוד (Edit code) ופותחים את הקובץ theme.liquid שבתיקייה layout.
+3. קרוב לסוף הקובץ מחפשים את השורה </body>. בשורה שמעליה מדביקים את כל התוכן של הקובץ site-health-rum.liquid ששלחתי, ושומרים.
+4. פותחים את החנות עצמה בחלון חדש (לא מתוך עורך העיצוב), נכנסים לעמוד רגיל (לא הסל ולא הקופה), מוסיפים בסוף הכתובת ?sh_test=1, מחכים שהעמוד ייטען וסוגרים אותו.
 
 מה עושים עכשיו: לפתוח את המסך ולכתוב לי מה כתוב בריבוע "מהירות אצל לקוחות, שעה אחרונה".
 ```
 
-**Confirm:** from the outside, `curl -s <site>/ | grep -c 'site-health-rum'` prints 1 or more (the
-script is on the page); the owner reads the tile: a count, and "מתוכן מדידת בדיקה אחת". Nothing
-arrives within a minute: `curl -sI <site>/ | grep -i content-security-policy`. If the site sends
-that header, its developer must allow `<address>` in `connect-src` and the inline script in
-`script-src`; otherwise the page cache was not purged, or a "delay JavaScript" optimization holds
-the script back (§7.7).
+**Confirm:** `curl -s <site>/ | grep -c 'site-health-rum'` prints 1 or more, and the owner reads the
+tile: a count, and "מתוכן מדידת בדיקה אחת". Nothing within a minute, most likely first (§7.7): (1)
+the tester was signed in to the site's admin (WordPress leaves the script out for editors) or used
+the theme editor (Shopify): the last item again, in a private window or on a phone that is not
+signed in; (2) a Content-Security-Policy header (`curl -sI <site>/`) must allow `<address>` in
+`connect-src` and the inline script in `script-src`; (3) the page cache was not purged, or a "delay
+JavaScript" optimisation holds the script back.
 
-Then tell the owner what the add-on sends. Whether the site's privacy policy needs the sentence
-is their decision; they can only make it when told.
+Then **9c**, what the add-on sends: whether the privacy policy needs the sentence is the owner's call.
 
 ```text
-דבר אחד שכדאי לדעת על התוסף. מעכשיו, בכל פעם שגולש פותח עמוד באתר, הדפדפן שלו שולח למסך בריאות האתר שני דברים: איזה עמוד נפתח, וכמה זמן לקח לו להיטען. לא נשלח ולא נשמר שום פרט שמזהה את הגולש.
+כדאי לדעת: מעכשיו, בכל פעם שגולש פותח עמוד באתר, הדפדפן שלו שולח למסך בריאות האתר שני דברים: איזה עמוד נפתח וכמה זמן לקח לו להיטען. שום פרט שמזהה את הגולש לא נשלח ולא נשמר.
 
 אם לאתר יש מדיניות פרטיות, אפשר להוסיף לה את המשפט הזה:
 "האתר מודד את מהירות הטעינה של העמודים. בכל צפייה בעמוד נשלחים לשירות המדידה של האתר כתובת העמוד וזמן הטעינה שלו, בלי שום פרט שמזהה את הגולש."
 
-ההחלטה אם להוסיף אותו היא שלך, או של מי שמייעץ לך בנושא.
+ההחלטה אם להוסיף אותו היא שלך.
 
 מה עושים עכשיו: אין צורך לעשות דבר, אלא אם מחליטים להוסיף את המשפט.
 ```
 
-## Step 9. The hand-over note
+## Step 10. The hand-over note
 
-**Who:** you write it, when the go-live checklist of §10 is green. Fill every `<…>`, leave out the
-lines that do not apply (no certificate check, no watchdog push with option 2), and keep it one note.
+**Who:** you, when the §10 checklist is green. Fill every `<…>`, leave out what does not apply (no
+certificate check, no watchdog push with option 2), and keep it one note.
 
 ```text
 המסך "בריאות האתר" מוכן. כדאי לשמור את ההודעה הזאת.
@@ -764,37 +852,34 @@ lines that do not apply (no certificate check, no watchdog push with option 2), 
 
 הצבעים: ירוק זה תקין. צהוב זה לשים לב. אדום זה תקלה. אפור זה שעדיין אין נתון.
 
-ההודעות לטלפון מגיעות באפליקציה ntfy. כדי לצרף עוד טלפון: מתקינים בו את האפליקציה, לוחצים על הפלוס ומקלידים את שם הערוץ. האפליקציה שומרת הודעות 12 שעות; במסך, בכרטיס "הודעות שנשלחו לטלפון", הן נשארות. באייפון הודעה מגיעה לפעמים באיחור.
+ההודעות מגיעות באפליקציה ntfy. כדי לצרף טלפון: מתקינים בו את האפליקציה, לוחצים על הפלוס ומקלידים את שם הערוץ. הודעה מחכה לטלפון 12 שעות: טלפון שהיה כבוי יותר מזה לא יקבל אותה. כל ההודעות נשמרות גם במסך, בכרטיס "הודעות שנשלחו לטלפון". באייפון הודעה מגיעה לפעמים באיחור.
 
 מה עושים כשמגיעה הודעה:
-- "האתר לא עונה": פותחים את העמוד בטלפון. אם הוא לא נפתח, פונים למי שמאחסן את האתר. כשכל האתר נופל מגיעה הודעה נפרדת על כל עמוד שנבדק, <N> הודעות. זו תקלה אחת, לא <N>.
+- "האתר לא עונה": פותחים את העמוד בטלפון. אם הוא לא נפתח, פונים למי שמאחסן את האתר. כשכל האתר נופל מגיעה הודעה על כל עמוד שנבדק, <N> הודעות, אבל זו תקלה אחת.
 - "עמוד איטי": לא דחוף. אם זה חוזר, מעבירים למי שמתחזק את האתר.
 - "תעודת האבטחה פגה בעוד…": מעבירים באותו יום למי שמאחסן את האתר. כשהתעודה פגה, הגולשים רואים אזהרה במקום את האתר.
-- "המדידה נעצרה": האתר עצמו כנראה תקין, אבל הבודק הפסיק לעבוד, וייתכן שגם המסך לא נפתח. נכנסים ל-<host> ובודקים שהשירות פועל. אם לא ברור מה קרה, כותבים לקודקס: "בריאות האתר: הגיעה הודעה שהמדידה נעצרה".
+- "המדידה נעצרה": האתר כנראה תקין, אבל הבודק הפסיק לעבוד, וייתכן שגם המסך לא נפתח. בודקים ב-<host> שהשירות פועל, ואם לא ברור מה קרה, כותבים לקודקס: "בריאות האתר: המדידה נעצרה".
 - "חזר לתקין": התקלה נגמרה. אין צורך לעשות דבר.
 - "בוקר טוב": סיכום יומי. הוא גם הסימן שההודעות עובדות: אם בוקר אחד הוא לא מגיע, משהו נעצר.
 
 אי אפשר להשתיק את ההודעות מתוך המסך. לפני עבודה מתוכננת על האתר אפשר להשתיק את הערוץ באפליקציה לכמה שעות.
 
 החשבונות שנפתחו, כולם על השם שלך:
-- Supabase: שם נשמרות המדידות.
-- <host>: השרת הקטן. זה החשבון שבתשלום חודשי. שם שמורים גם הסיסמאות, המפתח של גוגל ושם הערוץ, בעמוד של משתני הסביבה.
+- Supabase: המדידות.
+- GitHub: הקוד, במאגר פרטי.
+- <host>: השרת הקטן, בתשלום חודשי. במשתני הסביבה שלו שמורים הסיסמאות, המפתח של גוגל ושם הערוץ.
 - גוגל: המפתח למדידת המהירות.
+- <Supabase, בכספת (Vault) | <service> | <host 2>>: השומר שבודק שהשרת עובד<. גם שם שמור שם הערוץ>.
 כדי להחליף סיסמה, משנים את הערך שלה ב-<host> ושומרים. מי שנכנס עם הסיסמה הישנה יתבקש להיכנס מחדש.
 
-כדי לשנות משהו, כותבים לקודקס בתיקייה של הפרויקט. למשל:
-- "בריאות האתר: להוסיף עמוד לבדיקה, <כתובת>"
-- "בריאות האתר: מחקתי מהאתר את העמוד <שם>, להפסיק לבדוק אותו"
-- "בריאות האתר: לתת גישת צפייה ל<שם>"
-חשוב: אם מוחקים מהאתר עמוד שנבדק, או משנים את הכתובת שלו, מגיעה הודעה "האתר לא עונה" עד שמעדכנים את קודקס.
+כדי לשנות משהו, כותבים לקודקס בתיקייה של הפרויקט, למשל: "בריאות האתר: להוסיף עמוד לבדיקה, <כתובת>". חשוב: אם מוחקים מהאתר עמוד שנבדק או משנים את הכתובת שלו, מגיעה הודעה "האתר לא עונה" עד שכותבים על זה לקודקס.
 
 מה עושים עכשיו: לשמור את ההודעה הזאת.
 ```
 
-For you, when such a request comes later: read `START-HERE.md` and `PROGRESS.md` first. A change
-of pages or settings is a change of `site_health.config.json`, a new `install.sql` and message 2b
-again; the collectors pick a new page list up within five minutes. A change of people is a
-variable the owner adds or deletes in the host's settings (step 5). There is no pause for alerts.
+Later requests: read `START-HERE.md` and `PROGRESS.md` first. Pages or settings: change
+`site_health.config.json`, write `install.sql`, send 2b (a new page list is picked up within five
+minutes). People: 6b, or a variable the owner deletes. There is no pause for alerts.
 
 <!-- EOF OWNER-STEPS.md -->
 ~~~~~~~~
@@ -821,7 +906,7 @@ hold a production secret: `OWNER-STEPS.md` says what the owner does and how you 
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/AGENTS-snippet.md sha256=c6a050216cb8e2a8b334af5b4ce9d9b7fe11b93f787348c1c2d7c949d2d41a79 -->
+<!-- FILE: site-health-kit/AGENTS-snippet.md sha256=86da199c33555d5d43a5c9cb3e76e0790a97585a7d51d99a056b96bb35748e4c -->
 ~~~~~~~~markdown
 ## Site Health kit ("בריאות האתר")
 
@@ -856,28 +941,29 @@ python3 site-health-kit/tools/check_template.py site-health/site_health.html    
 
 The acceptance test of the screen needs the mock running, so it takes two terminals:
 `python3 site-health-kit/mock_server.py` in one (it stays running), `node site-health-kit/check_screen.js`
-in the other (needs Playwright).
+in the other (needs Playwright). It takes about 30 seconds, and up to 10 minutes on a broken screen:
+never cut it short.
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/MANIFEST.json sha256=64d3dc2d5939c5ec74f0aec3cc336c6bebd3c0316eeb12405e63b53b866af288 -->
+<!-- FILE: site-health-kit/MANIFEST.json sha256=df5ae283585f43013bf61291bb600cb42393b36e556807909786eb280f8d4157 -->
 ~~~~~~~~json
 {
  "kit": "site-health-kit",
  "version": "1.0",
- "build": "06d7fca9c171",
+ "build": "9b6fd93243c7",
  "files": [
   {
    "path": "START-HERE.md",
-   "bytes": 13994,
-   "lines": 174,
-   "sha256": "20f162fa7532999871e5d7694d62a3f9599edc1e339f5a9f6511bdbffaed0e9a"
+   "bytes": 14466,
+   "lines": 177,
+   "sha256": "e24243c8d10916340e34117b36ab358e9adb3dbf1bc46779f4c6e47a80cd274b"
   },
   {
    "path": "OWNER-STEPS.md",
-   "bytes": 33295,
-   "lines": 470,
-   "sha256": "f4d29536453364b96d3b8296e1b72f684ae50db8bedf6ea493a40cfe5d069f55"
+   "bytes": 38720,
+   "lines": 552,
+   "sha256": "9c3cf7de82f23b0205c88c25dbfeb7a40f04cee651787e1c621c610d04ec8e58"
   },
   {
    "path": "SKILL.md",
@@ -887,63 +973,63 @@ in the other (needs Playwright).
   },
   {
    "path": "AGENTS-snippet.md",
-   "bytes": 2234,
-   "lines": 34,
-   "sha256": "c6a050216cb8e2a8b334af5b4ce9d9b7fe11b93f787348c1c2d7c949d2d41a79"
+   "bytes": 2322,
+   "lines": 35,
+   "sha256": "86da199c33555d5d43a5c9cb3e76e0790a97585a7d51d99a056b96bb35748e4c"
   },
   {
    "path": "spec/03-system.md",
-   "bytes": 7152,
-   "lines": 98,
-   "sha256": "01dcf3e1b47a3d2acb759668026f7ea4b468e9a1d6171ab9d225129a1e481536"
+   "bytes": 7620,
+   "lines": 100,
+   "sha256": "a21b73b546488eb1a229515af520330af697e74157689204f45ff132987a15a6"
   },
   {
    "path": "spec/05-api-contract.md",
-   "bytes": 16918,
-   "lines": 223,
-   "sha256": "1262005b7c0cfac3311c63e590c9f1cb75f179c74a1f3c52802bb1a732117543"
+   "bytes": 17019,
+   "lines": 224,
+   "sha256": "6c194ecf24b9b2f9d2fe9a0147d808a2280544af40f1988d1cc37440ea38f6d3"
   },
   {
    "path": "spec/06-screen.md",
-   "bytes": 12256,
-   "lines": 169,
-   "sha256": "0457ad8927a5a6dc6dbfbb550ce7ba62f892eaf8c3a05d8ad1e30118df2994ca"
+   "bytes": 12634,
+   "lines": 174,
+   "sha256": "eadd64e9f899d90336011fd6a878e8b1a387377375ddedfd05a66b2ef1dc7a06"
   },
   {
    "path": "spec/07-backend-data.md",
-   "bytes": 23185,
-   "lines": 254,
-   "sha256": "2d0880ae5f721ea7eac9c515e112061a544b0d93a8caa22dd03ffb75483fcabf"
+   "bytes": 24422,
+   "lines": 265,
+   "sha256": "24ed7e80807c30341f1c1f63b42c792ed541ef8a178665e8a6a2c97d9ddc9e7c"
   },
   {
    "path": "spec/07-collectors-alerts.md",
-   "bytes": 33110,
-   "lines": 409,
-   "sha256": "d59b96002fa91983938807d7fc1af67197376ed8e1f8ba1aff7f83ab3fb1d47a"
+   "bytes": 34530,
+   "lines": 425,
+   "sha256": "7ebf4f2c6129fd70e87438e525a61018b22ccdcd3c3c939c8b847cebf5dbb6f2"
   },
   {
    "path": "spec/08-access.md",
-   "bytes": 13968,
-   "lines": 191,
-   "sha256": "9bc45c1111a8e3ea3665480e0e72cc27f263d4fedeb8647d2e0b150ca17f17f3"
+   "bytes": 14651,
+   "lines": 197,
+   "sha256": "96de2de44067bb9c47886cc3bd6644a3a19674a2b9f6524f24f8f4008606bfbf"
   },
   {
    "path": "spec/09-build-and-checks.md",
-   "bytes": 10924,
-   "lines": 124,
-   "sha256": "bf21f11c34a1eff24423013d1686327efa8fe7769038f12fa5869580459758a2"
+   "bytes": 11737,
+   "lines": 131,
+   "sha256": "0bee4000b906566034fbb59bbd3e54149cdb5be6e74f142a0a7efbf69f5b0b56"
   },
   {
    "path": "check_screen.js",
-   "bytes": 115340,
-   "lines": 1113,
-   "sha256": "5171161d814c9517db5e05945606d0fb8547b13bf9e234059261302537f74a36"
+   "bytes": 117760,
+   "lines": 1138,
+   "sha256": "e41a66a4a6cac5f37accd5975558184e3d745d3a6cdbf44a59408fcf99b4f830"
   },
   {
    "path": "mock_server.py",
-   "bytes": 33256,
-   "lines": 611,
-   "sha256": "f43d597f083e8917f5888dfdb6163ee374a5f096eb9c27773ffa7ca924cb3d77"
+   "bytes": 33618,
+   "lines": 621,
+   "sha256": "6e45098316530754fabb456d923933a4e378ce8bc28ed1099d94344089835047"
   },
   {
    "path": "site_health.html",
@@ -953,9 +1039,9 @@ in the other (needs Playwright).
   },
   {
    "path": "reference/README.md",
-   "bytes": 30590,
-   "lines": 361,
-   "sha256": "4da222b005e698a8f39a2588387a50dab27738c3f96c741227ba06a59e08958a"
+   "bytes": 32628,
+   "lines": 377,
+   "sha256": "76e1e3e0be11b507affdb19d6f84080141da0b5be89215243827c2ec80b5bde8"
   },
   {
    "path": "reference/collectors.py",
@@ -971,9 +1057,9 @@ in the other (needs Playwright).
   },
   {
    "path": "reference/deadman.sql",
-   "bytes": 12837,
+   "bytes": 12902,
    "lines": 218,
-   "sha256": "a20a18345219b9380fbd52fa23f1d91c056dd5bf99cf62bc1c0f383dfb555580"
+   "sha256": "25b137cd1d6674aa8935512dcbe499dd3a2a659f4b613e775f3879f886b0d729"
   },
   {
    "path": "reference/functions.sql",
@@ -1079,9 +1165,9 @@ in the other (needs Playwright).
   },
   {
    "path": "reference/tests/test_sql.py",
-   "bytes": 157933,
-   "lines": 2484,
-   "sha256": "76bf635fc83f75629c13cb3c5b666f8f3db050e2a59eca0c00687cb653f6f3d3"
+   "bytes": 158157,
+   "lines": 2487,
+   "sha256": "f97192c064ae4bb0d77f6fd098d819fc7452eff4144a18236ee3c9ccf3c797cb"
   },
   {
    "path": "reference/tests/fixtures/psi_lighthouse12.json",
@@ -1099,7 +1185,7 @@ in the other (needs Playwright).
    "path": "tools/check_access.py",
    "bytes": 25123,
    "lines": 459,
-   "sha256": "229c5ce55f1752007063b0ec47ef942e7ee2879faf88d9541bd7b824cdaadc61"
+   "sha256": "6db25dc7ff2a3192dcaca0a70e436a7ca544f5340a7287d75f74b1c325a3251f"
   },
   {
    "path": "tools/check_template.py",
@@ -1112,7 +1198,7 @@ in the other (needs Playwright).
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/spec/03-system.md sha256=01dcf3e1b47a3d2acb759668026f7ea4b468e9a1d6171ab9d225129a1e481536 -->
+<!-- FILE: site-health-kit/spec/03-system.md sha256=a21b73b546488eb1a229515af520330af697e74157689204f45ff132987a15a6 -->
 ~~~~~~~~markdown
 # Site Health kit — spec: what is measured, and per-site configuration (§3, §4)
 
@@ -1149,7 +1235,9 @@ Collectors and their cadence (all times are the site's local time zone):
 
 A part that does not apply to a site (no sitemap, nothing to sell, no certificate, no add-on on
 the site) is switched off in the site's configuration (`off`, §7.4): its flow is disabled and
-its card hidden, instead of showing `אין נתון` for good.
+its card (for real users: the tile of "עכשיו") hidden, instead of showing `אין נתון` for good.
+The probe and the core-page speed test cannot be switched off; the speed test needs the free
+Google key (§7.6), so the key is required for go-live (§10).
 
 The thresholds below are used everywhere (screen, alerts, texts). Do not change them.
 
@@ -1193,13 +1281,13 @@ nobody edits these values in the HTML):
 | `liveHosts` | values of the real-user source that mean "the live site" | `['live', siteLabel, 'www.' + siteLabel]` |
 | `pathLabels` | URL path prefixes turned into readable Hebrew labels | WooCommerce: `[['/product-category/','קטגוריה: '],['/product/','מוצר: ']]`; Shopify: `[['/collections/','קטגוריה: '],['/products/','מוצר: ']]` |
 | `bucketNote` | a note under the "server response per page" drill-down; empty = none | `''` |
-| `nav` | menu entries to other screens of the same system; empty = no menu button | `[]` |
+| `nav` | menu entries to other screens of the same system; empty = no menu button. Never sent to an outsider (§8.2) | `[]` |
 | `here` | this screen's path in `nav` | `'/site'` |
-| `links` | extra buttons in the top bar | `[]` |
+| `links` | extra buttons in the top bar. Never sent to an outsider (§8.2) | `[]` |
 | `api` | base path of the data calls | `'/api'` |
 | `loginPath`, `logoutPath` | | `'/login'`, `'/logout'` |
 | `shareKey` | share-link token; when set it is appended to every data call as `k=` | `''` |
-| `hide` | ids of cards that do not apply to this site: `'issuesCard'` (a site that sells nothing), `'slowCard'` (no sitemap rotation), `'certCard'` (a site without https). The reference fills it from the configuration's `off` and `hide` | `[]` |
+| `hide` | ids of cards that do not apply to this site: `'issuesCard'` (a site that sells nothing), `'slowCard'` (no sitemap rotation), `'certCard'` (a site without https), and `'nowRum'`, the tile `מהירות אצל לקוחות, שעה אחרונה` of "עכשיו" with its sentence in the card's explanation (a site that does not measure real users, §6.2). The reference fills it from the configuration's `hide` and `off` (§7.4) | `[]` |
 
 and the viewer's role, `SH_ROLE` (§8): `{}` for owner and staff, `{readonly: true}` for a vendor,
 `{readonly: true, noAlerts: true}` for a vendor who must not see alerts, `{share: true}` for the
@@ -1215,7 +1303,7 @@ passwords, the Google key, the alert topic) are environment variables in the hos
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/spec/05-api-contract.md sha256=1262005b7c0cfac3311c63e590c9f1cb75f179c74a1f3c52802bb1a732117543 -->
+<!-- FILE: site-health-kit/spec/05-api-contract.md sha256=6c194ecf24b9b2f9d2fe9a0147d808a2280544af40f1988d1cc37440ea38f6d3 -->
 ~~~~~~~~markdown
 # Site Health kit — spec: the JSON the screen reads (§5, binding)
 
@@ -1404,7 +1492,8 @@ parameter is absent** (all pages, the whole window), not a malformed one.
 Unknown `what`: status 400 `{"error": "what?"}`. A missing or malformed parameter (`id` not a
 number of at most 18 digits, `url` empty, a required `bucket` missing or empty, a non-empty
 `bucket` that is not in one of the two bucket formats or names no real day or hour, such as
-`2026-13-45` or `2026-11-12 24:00`): `{"rows": []}`, without touching the database. `alert`
+`2026-13-45` or `2026-11-12 24:00`, a `page` or `url` that holds a control character, U+0000 to
+U+001F or U+007F, or is not valid UTF-8): `{"rows": []}`, without touching the database. `alert`
 ignores `bucket`.
 Backend failure: status 502 `{"error": "<text>"}`; the sheet then says "לא הצלחתי לטעון".
 
@@ -1443,7 +1532,7 @@ The screen removes the rows at once and only reloads if the call fails.
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/spec/06-screen.md sha256=0457ad8927a5a6dc6dbfbb550ce7ba62f892eaf8c3a05d8ad1e30118df2994ca -->
+<!-- FILE: site-health-kit/spec/06-screen.md sha256=eadd64e9f899d90336011fd6a878e8b1a387377375ddedfd05a66b2ef1dc7a06 -->
 ~~~~~~~~markdown
 # Site Health kit — spec: the screen (§6, binding)
 
@@ -1508,7 +1597,8 @@ A count of one is written in singular Hebrew everywhere on the screen (`מדיד
 ### 6.3 Interactions
 
 Everything that shows a number is clickable and opens a **sheet** (bottom sheet on a phone, a
-centered 720 px panel from 720 px width; closes with ✕, a click outside, or Escape):
+centered 720 px panel from 720 px width; closes with ✕, a click outside, or Escape). The sheet
+opens on the click itself, reading `טוען…` until its data call answers:
 
 | Click on | Opens | Data call |
 |---|---|---|
@@ -1589,6 +1679,10 @@ The uptime tile reads `100%` only when no check failed; otherwise two decimals, 
 | `{readonly: true, noAlerts: true}` | also no red bar, no alerts card, no `התראות פתוחות` tile |
 | `{share: true}` | as read-only, and no "יציאה" link |
 
+Hiding the menu and the extra links is not enough for an outsider: the server leaves `nav` and
+`links` out of their `SH_CONFIG` entirely (§8.2), so the owner's other screens are not even in the
+page source. The screen then draws no menu button and no extra buttons, as for an empty list.
+
 ### 6.8 Translations of "what slows the page"
 
 The runs sheet translates PageSpeed audit ids to plain Hebrew through the `OPP` table in the
@@ -1617,7 +1711,7 @@ Anything else: do not change. If you believe something must change, ask the owne
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/spec/07-backend-data.md sha256=2d0880ae5f721ea7eac9c515e112061a544b0d93a8caa22dd03ffb75483fcabf -->
+<!-- FILE: site-health-kit/spec/07-backend-data.md sha256=24ed7e80807c30341f1c1f63b42c792ed541ef8a178665e8a6a2c97d9ddc9e7c -->
 ~~~~~~~~markdown
 # Site Health kit — spec: the backend: shape, tables, functions (§7.1–§7.4, reference design)
 
@@ -1697,10 +1791,16 @@ product snapshots 30 days, login log and job markers 400 days, alerts and messag
 A speed run is about 1 KB, nearly all of it `opps`. Windows longer than the retention simply
 show what is left.
 
-Real-user rows come on top of that estimate: about 150 bytes a row with the index, so 10,000
-measured views a day are about 45 MB over the 30 days. The ingest is open to the internet, so
-the database also protects itself: `sh_rum_add` stores nothing while the last 24 hours already
-hold **30,000 rows** (at most about 130 MB). The server's own, lower budget is in §7.7.
+Real-user rows come on top of that estimate. Measured on PostgreSQL 16 (table and index
+together): about 116 bytes a row with a 40-character path, 197 bytes with a path of 120 bytes
+(the longest that is stored, §7.7), and 296 bytes in the worst case (a 100-character host name
+in `site` as well). So 10,000 measured views a day are about 35 MB over the 30 days kept (about
+59 MB with 120-byte paths). The ingest is open to the internet, so the database also protects
+itself: `sh_rum_add` stores nothing while the last 24 hours already hold **30,000 rows**. The
+nightly cleanup leaves up to 31 days, so a flood kept up for a month at that cap reaches about
+275 MB of worst-case rows, about 475 MB with the rest of the database; at the server's own,
+lower budget of 20,000 rows a day (§7.7), about 183 MB, about 385 MB in all. Both stay under the
+500 MB of a free project.
 
 ### 7.3 Functions the server calls (read side)
 
@@ -1781,7 +1881,8 @@ Exact rules (these are the definitions the screen's texts promise):
 - **`sh_now`:** `pages` = the newest full round if it is at most 15 minutes old; `latest` = the
   newest round of either kind, under the same 15-minute rule; `rum` over the last 60 minutes
   where `site` is a live value and `is_test` is false, `p75_ms` = `percentile_cont(0.75)` rounded
-  (null with `n` = 0 when there are no rows; never 0, which would paint green); `rum_src` over the
+  (null with `n` = 0 when there are no rows; never 0, which would paint green; with `real_users`
+  off the screen draws no tile for it: `nowRum`, §7.4); `rum_src` over the
   newest 1000 rows (null when there are none), its `hosts` holding the **5 largest** sources
   only, largest first (`n` and `test` still count all the rows); `speed` = the newest successful
   phone run of the home page.
@@ -1798,7 +1899,7 @@ Exact rules (these are the definitions the screen's texts promise):
 | `sh_sitemap_set(p_urls)` | replaces the list of site pages (new ones added, missing ones deactivated), each address in the spelling of `sh_url` (§7.3); raises on an empty list; beats the sitemap flow | `{"n"}` |
 | `sh_cert_set(p_row)` | stores `{host, issuer, not_before, not_after, days_left, ok, err, checked_at}`; beats the flow only when `ok` | `{"n": 1}` |
 | `sh_issues_set(p_snap_date, p_rows)` | stores the day's broken products `{product_id, issue, name, url}`, replacing that day (an empty list is a valid, good snapshot); beats the flow | `{"n"}` |
-| `sh_rum_add(p_rows)` | stores real-user rows `{site, path, lcp_ms, is_test}`; drops rows outside the limits of §7.7 again, as the last line of defence, and stores nothing while the last 24 hours hold 30,000 rows (§7.2); beats the flow only when a row was stored | `{"n"}` |
+| `sh_rum_add(p_rows)` | stores real-user rows `{site, path, lcp_ms, is_test}`; drops rows outside the limits of §7.7 again, as the last line of defence: cuts `path` at 120 characters exactly as the server does, then drops a row whose path is still longer than 120 bytes; stores nothing while the last 24 hours hold 30,000 rows (§7.2); beats the flow only when a row was stored | `{"n"}` |
 | `sh_job_due(p_job, p_day)` / `sh_job_mark(p_job, p_day)` | daily jobs: "is this day's run still owed?" / "done" | `true`/`false`; `true` when this call set the marker |
 | `sh_alerts_check()` | evaluates the alert rules (§7.8), opens and closes alerts, queues messages, and **claims** the messages that are owed. Alerts of any other `kind` are never touched | `[{id, title, msg, priority, click, kind, event}]`, oldest first. `title` and `msg` are the push as the phone shows it, the sender adds nothing; `click` is always null |
 | `sh_message_sent(p_id, p_status)` | records the result of one push attempt (§7.9) | `{"n": 0 or 1}` |
@@ -1828,7 +1929,7 @@ file that breaks a rule of the table, with a message that names the key.
 | `keep_days` | whole number, 30 to 400 | `100` | Days that full-round probes and core speed runs are kept (§7.2) |
 | `off` | list out of `sitemap`, `real_users`, `catalogue`, `cert` | `[]` | The parts of the measuring that do not apply to this site (next table) |
 | `hide` | list of card ids | `[]` | Cards of the screen to hide, on top of those that `off` hides |
-| `nav`, `links` | lists | `[]` | Passed to the screen as they are (§4.1) |
+| `nav`, `links` | lists | `[]` | Passed to the screen as they are (§4.1), for owner and staff only: an outsider's page gets neither (§8.2) |
 | `extra_hosts` | list of host names, lower case | `[]` | Other hosts a probed page may redirect to (§7.5) |
 | `rum_hosts` | list of host names, lower case | `[]` | Other hosts whose real-user beacons are accepted, for example a staging copy (§7.7) |
 | `private_paths` | list of single path segments | `[]` | The site's own names for private pages (a translated cart, checkout or account slug), on top of the built-in ones: the ingest and the sitemap loader skip such pages (§7.7) |
@@ -1844,11 +1945,13 @@ next alert tick, and `sh_health` does not return it.
 | `off` entry | Flows disabled | Card hidden | Also in effect when |
 |---|---|---|---|
 | `sitemap` | `טעינת מפת האתר`, `מדידת מהירות — סבב כל האתר` | `slowCard` | |
-| `real_users` | `מהירות אצל לקוחות` | | |
+| `real_users` | `מהירות אצל לקוחות` | `nowRum` (the real-user tile of "עכשיו", §6.2) | |
 | `catalogue` | `בדיקת מוצרים שבורים` | `issuesCard` | `platform` is `other` |
 | `cert` | `בדיקת תעודת האבטחה` (and the `cert` alert rule) | `certCard` | `site` is `http://` |
 
-`בודק זמינות האתר` and `מדידת מהירות — עמודי ליבה` cannot be switched off.
+`בודק זמינות האתר` and `מדידת מהירות — עמודי ליבה` cannot be switched off. The speed test needs
+the Google key (`PAGESPEED_KEY`, §7.6): without it the core flow, and the rotation unless
+`sitemap` is off, stay `אין נתון`, so the key is required for go-live (§10 item 2).
 
 `sh_config()` after loading the example file (`pages` shortened):
 
@@ -1859,7 +1962,7 @@ next alert tick, and `sh_health` does not return it.
   "rum_hosts": [], "private_paths": [], "live_hosts": ["live"], "bucket_note": "",
   "path_labels": [["/product-category/", "קטגוריה: "], ["/product/", "מוצר: "]],
   "pages": [{"name": "בית", "url": "https://example.co.il/", "probe": true, "core": true,
-             "home": true, "expect": null}],
+             "home": true, "expect": "ברוכים הבאים"}],
   "screen": {"siteLabel": "example.co.il", "brand": "", "homePage": "בית", "probeCount": 4,
              "coreCount": 5, "downAfter": 1, "liveHosts": ["live"], "bucketNote": "",
              "pathLabels": [["/product-category/", "קטגוריה: "], ["/product/", "מוצר: "]],
@@ -1868,15 +1971,17 @@ next alert tick, and `sh_health` does not return it.
 
 `off` is the list as it took effect: the file's entries plus the two that follow from the site,
 always in the order `sitemap`, `real_users`, `catalogue`, `cert`. `hide`, `nav` and `links` at the
-top are the file's own; `screen.hide` is the file's `hide` followed by the cards that `off`
-hides, each once. A database that was set up before a key existed answers with that key's
+top are the file's own; `screen.hide` is the file's `hide` followed by the card of each part
+that is off, each card once, in this order: `sitemap` → `slowCard`, `catalogue` → `issuesCard`,
+`cert` → `certCard`, `real_users` → `nowRum`. So `"off": ["real_users"]` hides the real-user
+tile of "עכשיו". A database that was set up before a key existed answers with that key's
 default until `sh_setup` runs again (and leaves `nav` and `links` out of `screen`).
 
 <!-- EOF spec/07-backend-data.md -->
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/spec/07-collectors-alerts.md sha256=d59b96002fa91983938807d7fc1af67197376ed8e1f8ba1aff7f83ab3fb1d47a -->
+<!-- FILE: site-health-kit/spec/07-collectors-alerts.md sha256=7ebf4f2c6129fd70e87438e525a61018b22ccdcd3c3c939c8b847cebf5dbb6f2 -->
 ~~~~~~~~markdown
 # Site Health kit — spec: the backend: collectors, alert rules, pushes, the watchdog (§7.5–§7.11, reference design)
 
@@ -1904,10 +2009,15 @@ Part of the Site Health kit. The entry point and the rules of the work are in `S
 - **Where a request to the site may go.** What a site answers must never choose which machine
   the collectors talk to. Two rules hold for every request to the monitored site (the probe,
   `robots.txt`, sitemap files, the catalogue, the certificate check):
-  1. A redirect is followed only to the host the request started on (with or without `www.`, on
-     http or https) or to a host listed in the configuration's `extra_hosts` (a shop whose cart
-     lives on another domain). Any other redirect is not followed: the check fails with `fail`
-     `http`, the redirect's status and `err` `redirected to another host`.
+  1. A redirect is followed only to the host the request started on (with or without `www.`) or
+     to a host listed in the configuration's `extra_hosts` (a shop whose cart lives on another
+     domain); never from https down to http (`extra_hosts` included), and never to another port
+     of the starting host, except http on port 80 to https on 443 (a host of `extra_hosts` may
+     use a port of its own). Any other redirect is not followed: the check fails with `fail`
+     `http`, the redirect's status and an `err` that says why: `redirected to another host`,
+     `… from https to http`, `… to another port` or `… to an address that is not http(s)`. A
+     sitemap file then fails with `redirected <why>: <address>`, the catalogue with `the
+     catalogue redirects <why>`.
   2. The name is resolved once and the connection goes to the address that was checked. An
      address that is not a public one (loopback, private ranges, link-local, the cloud metadata
      address) is refused before a packet leaves: `fail` `connect`, `err` `NotPublic: …`. The
@@ -1993,7 +2103,8 @@ Google PageSpeed Insights API v5, one call per page per strategy:
   `strategy=desktop`. **Rotation:** every 5 minutes, 2 pages from `sh_rotation_next(2)`, phone only;
   none where the sitemap is switched off. With 5 core pages that is up to about 1,200 calls a day.
 - Without `PAGESPEED_KEY` the collector does not run and says so in its log once; the speed cards
-  show their empty states and the flows stay `אין נתון`.
+  show their empty states and the flows stay `אין נתון`. That is why the key is required for
+  go-live (§10 item 2): core speed cannot be switched off.
 - A rehearsal on one machine: the optional `PAGESPEED_URL` names another address for the API.
   `reference/tests/fake_site.py` prints the value to use, with a made-up key; its fake answers
   every page with the same sample result, so it proves the plumbing and no speed.
@@ -2021,8 +2132,10 @@ rotation and the card `slowCard` ("העמודים הכבדים באתר") go wit
    `/wp-sitemap.xml`, `/sitemap.xml`, and take the first that parses as `<sitemapindex>` or `<urlset>`.
 2. Follow index files (at most 500 files; 10 MB each after decompression, `SH_SITEMAP_MB` in
    the worker's environment raises that up to 50). Decide gzip by the first two bytes (`1f 8b`),
-   not by the file name. Refuse a document that is not UTF-8, holds a NUL byte (UTF-16 without
-   its mark) or contains `<!ENTITY`.
+   not by the file name. First refuse a document that declares any entity, as an XML parser
+   finds it when it reads up to the first element in whatever encoding the document declares
+   (UTF-16 without a mark included; the words `<!ENTITY` in a comment declare nothing). Then
+   refuse one that is not UTF-8 or holds a NUL byte.
 3. From each `<url>` take only its **direct child** `<loc>` (SEO plugins nest `<image:loc>` inside;
    those are pictures, not pages). Child sitemap addresses are followed exactly as written,
    including their query strings.
@@ -2085,7 +2198,8 @@ verification, read `notBefore` / `notAfter` / issuer, store `days_left`. A faile
 `ok = false` with the error and does not beat the flow. Off, and never run, for a site whose
 address is `http://`, or with `"off": ["cert"]`.
 
-**Real users (`מהירות אצל לקוחות`)**. Off with `"off": ["real_users"]`. A small script on the
+**Real users (`מהירות אצל לקוחות`)**. Off with `"off": ["real_users"]`; the tile of "עכשיו"
+(`nowRum`, §6.2) goes with it. A small script on the
 site (`reference/rum/site-health-rum.js`) measures LCP with the browser's `PerformanceObserver`
 and sends one beacon per page view when the page is hidden or left: a JSON **string** through
 `navigator.sendBeacon`, which goes out as `text/plain` and therefore needs no CORS preflight and
@@ -2111,14 +2225,17 @@ The ingest endpoint is **`POST /m`** (a neutral name: content blockers drop path
   forge a header;
 - keep the row only when `lcp` is between 1 and 60,000 ms; `site` is `live` (or a name of
   `live_hosts`) or one of those configured hosts, never the sender's own text; and `path` (query
-  string removed) is at most 300 characters, has no control character, and has no segment,
-  decoded and lower-cased, that names an account, checkout, order or admin page (the built-in
-  English names plus the site's own slugs from `private_paths`);
+  string removed; the script sends at most 300 characters) has no control character and no
+  segment, decoded and lower-cased, that names an account, checkout, order or admin page (the
+  built-in English names plus the site's own slugs from `private_paths`);
 - drop a path that may name a person: one that holds an `@`, a UUID, a run of 16 or more
   hexadecimal characters, or a run of 24 or more letters, digits and `_` that mixes letters and
   digits (a hyphen ends a run, so ordinary product slugs survive). The script applies the same
   rule before sending. It is a narrow rule, not a promise: paths that carry identifiers in
   another shape belong in `private_paths`;
+- these rules judge the whole path; what is stored is the path percent-encoded as browsers send
+  it (`/ספה/` → `/%D7%A1%D7%A4%D7%94/`), cut at 120 characters, never inside a `%XX` escape or
+  inside the escapes of one character (`sh_rum_add` makes the same cut);
 - store no IP address, no cookie, no user agent, and ignore any cookie that arrives; limit each
   address to 60 beacons a minute and all addresses together to 300 rows a minute and 20,000 a
   day (`SH_RUM_PER_MINUTE`, `SH_RUM_PER_DAY`), in memory only; `sh_rum_add` itself stores nothing
@@ -2145,11 +2262,14 @@ Delivery. Nobody edits a site's configuration files by hand.
   run in a real shop; it skips the theme editor but cannot tell staff from visitors.
 - **Elsewhere:** one line `window.SiteHealthRum = {endpoint, liveHost}` and the script at the end
   of the page body.
-- **When the `?sh_test=1` view does not arrive** within a minute: look at the site's response
-  headers for a `Content-Security-Policy`. If there is one, the browser sends nothing until the
-  site's developer allows the dashboard's host in `connect-src` (and the inline script in
-  `script-src`). Then: the page cache was not purged, or a "delay JavaScript" plugin holds the
-  script back.
+- **When the `?sh_test=1` view does not arrive** within a minute, the causes, most likely first:
+  (1) the tester is signed in to the site's admin (WordPress leaves the script out for staff) or
+  opened the page from Shopify's theme editor: repeat in a private window, or on a phone that is
+  not signed in; (2) a `Content-Security-Policy` header in the site's answers (`curl -sI
+  <site>/`): the browser sends nothing until the site's developer allows the dashboard's host in
+  `connect-src` (and the inline script in `script-src`); (3) an optimisation plugin: the page
+  cache was not purged, or a "delay JavaScript" setting holds the script back (exclude
+  `site-health-rum`).
 
 ### 7.8 Alert rules (`sh_alerts_check`, every minute, right after the full probe round)
 
@@ -2200,11 +2320,12 @@ subscribes to one topic; the system publishes to that topic.
   owner makes it up and types it in three places only: the ntfy app of every phone, the host's
   settings (`NTFY_TOPIC`), and the watchdog of §7.10 (the database's secret store, or the
   environment of `watchdog.py`). Never in the repository, on the screen, in a log, a chat
-  message or the agent's terminal. `OWNER-STEPS.md` step 6 has the recipe for the name, the
+  message or the agent's terminal. `OWNER-STEPS.md` step 7 has the recipe for the name, the
   owner's steps for each phone as a ready message, and the three ways to see that a phone
   really shows a push (the agent cannot send one). (`manage.py new-secret --out <file>` writes a
   random topic and share token to a file without printing them: for an owner who runs Python on
-  their own computer.) The topic is set **last**, after a first clean round (§7.5).
+  their own computer.) The topic is the **last of the settings**, after a first clean round
+  (§7.5) and before the watchdog and the add-on (§9, phase 8).
 - Publish with a **JSON body to the server root** (not to `/<topic>`), which avoids every
   header-encoding problem with Hebrew:
   `POST https://ntfy.sh/` with `Content-Type: application/json` and
@@ -2263,7 +2384,7 @@ arrive again; option 2 speaks through a channel of its own.
 
 **What a pass looks like** (go-live checklist, item 3: stop the worker for 16 minutes, then start
 it). Option 1: the phone gets `המדידה נעצרה` 10 to 15 minutes after the stop and the screen shows
-the alert; after the start, `חזר לתקין` within a minute. It cannot be tried on a local Postgres.
+the alert; `חזר לתקין` within a few minutes of the start. It cannot be tried on a local Postgres.
 Option 2: the heartbeat service's own notification, and its own "up again". Option 3: the two
 pushes, at the watchdog's next look after minute 10 and after the start; it can be rehearsed
 locally: the reference server with `COLLECTORS=0`, `python3 collectors.py` as the worker that
@@ -2290,7 +2411,7 @@ you build it, keep the worker loop off (`COLLECTORS=0`), and §7.10 then needs o
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/spec/08-access.md sha256=9bc45c1111a8e3ea3665480e0e72cc27f263d4fedeb8647d2e0b150ca17f17f3 -->
+<!-- FILE: site-health-kit/spec/08-access.md sha256=96de2de44067bb9c47886cc3bd6644a3a19674a2b9f6524f24f8f4008606bfbf -->
 ~~~~~~~~markdown
 # Site Health kit — spec: sign-in, roles, vendors, the share link (§8)
 
@@ -2364,7 +2485,7 @@ that names the unmatched entry. A mistake must never show a vendor the alerts he
 - **No token, no link; a short token, no link.** An empty configured token disables the link. So
   does one shorter than 20 characters (after trimming): the server logs a warning at start-up
   (without the token) and answers every `k` as wrong. The owner makes the token up
-  (`OWNER-STEPS.md` step 5).
+  (`OWNER-STEPS.md` step 6).
 - **A wrong token is a failed attempt**, counted in the same per-address limit as a wrong password
   (below). One wrong value counts once within the ten minutes: a tab left open on an old link asks
   again every minute and must not lock its address out, while somebody who guesses sends a new
@@ -2384,7 +2505,7 @@ that names the unmatched entry. A mistake must never show a vendor the alerts he
 - **Passwords** come from environment variables, one per person (§8.1). An unset or blank variable
   never matches. Compare trimmed and case-insensitively (phone keyboards capitalize), in constant
   time. Passwords are **generated**, 16 characters or more: by the password generator of the
-  owner's browser or phone, or four unrelated words and six digits (`OWNER-STEPS.md` step 5). The
+  owner's browser or phone, or four unrelated words and six digits (`OWNER-STEPS.md` step 6). The
   owner types them into the host's settings; the builder never sees one. The reference warns at
   start-up about a password shorter than 12 characters (by name, never the password).
 - **Session cookie** `sh_session` = `<expiry>.<signature>`: `expiry` is the moment the session
@@ -2416,7 +2537,10 @@ that names the unmatched entry. A mistake must never show a vendor the alerts he
   - the chosen entry counts only if it **is an IP address** (a port or brackets are cut off:
     `203.0.113.9:4711`, `[2001:db8::1]:443`); anything else is not believed and the socket peer
     is used instead;
-  - the address is stored in its shortest spelling and **never longer than 45 characters**;
+  - the address is stored in its shortest spelling and **never longer than 45 characters**; when
+    neither the chosen entry nor the socket peer is an IP address (a Unix socket, or a peer that
+    uvicorn rewrote from the header, below), the address is `?`: the login log stores `?`, the
+    limits count all such requests as one address, and no header text is ever stored;
   - the limits (sign-in, share token, real-user beacons) count an **IPv6 address by its /64**: one
     customer of an internet provider holds a whole /64. The login log still stores the address itself;
   - uvicorn itself replaces the peer's address from `X-Forwarded-For` when the connection comes
@@ -2431,7 +2555,7 @@ that names the unmatched entry. A mistake must never show a vendor the alerts he
 - A check of a deployed server never uses the owner's password, and the builder never holds a
   production secret. For the time of the check the owner adds `SH_PASS_VENDOR_CHECK` (a generated
   throwaway that the builder made up for this one check; read-only like every vendor) to the
-  host's settings and deletes it right after (`OWNER-STEPS.md` step 5 has the messages);
+  host's settings and deletes it right after (`OWNER-STEPS.md` step 6 has the messages);
   deleting it ends its sessions at once. The reference warns at start-up for as long as a vendor
   variable named `CHECK` or `CHECK_<something>` is set.
 - The cookie for `check_screen.js` comes from a sign-in with that password, without printing it:
@@ -2449,8 +2573,9 @@ that names the unmatched entry. A mistake must never show a vendor the alerts he
   `--no-quiet`), `SH_PASS_OWNER` (optional, read-only use); or ready cookies `SH_COOKIE_VENDOR`,
   `SH_COOKIE_QUIET`, `SH_COOKIE_OWNER` (`name=value`) for a server with another kind of sign-in.
   It covers the outsider allow-list, the scope of the share token, vendor filtering, the vendor
-  without alerts, `POST /api/alerts/ack` refused for outsiders, `POST /m`, `/health` and the
-  headers below. It changes nothing on the server. Exit code 0 only when every check passed
+  without alerts, outsiders' pages without `nav` and `links` (with a note when the owner's own
+  page has neither, so the check could not be seen at work), `POST /api/alerts/ack` refused for
+  outsiders, `POST /m`, `/health` and the headers below. It changes nothing on the server. Exit code 0 only when every check passed
   (1 = a check failed, 2 = it could not run). On the live address:
   `python3 tools/check_access.py https://<address> --no-share --no-quiet`.
 
@@ -2463,7 +2588,9 @@ that names the unmatched entry. A mistake must never show a vendor the alerts he
   `משהו השתבש. נסו שוב בעוד כמה דקות.`
 - The page is served with the role injected at `<!--SH_INJECT-->`:
   `<script>window.SH_CONFIG={…};window.SH_ROLE={…};</script>`. Build it with a JSON encoder; never
-  concatenate user input into it.
+  concatenate user input into it. For an outsider (vendor, vendor without alerts, share link) the
+  injected `SH_CONFIG` has **no `nav` and no `links` keys at all**: the addresses and labels of
+  the owner's other screens never reach their page source, not even hidden. Owner and staff get both.
 - **Four headers on every answer** (pages, data, redirects, refusals, 404, 500):
   `X-Robots-Tag: noindex`, `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY`,
   `X-Content-Type-Options: nosniff`. The page carries the first two as meta tags too. The screen
@@ -2486,7 +2613,7 @@ the request as the vendor). Useful before sending a vendor their password.
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/spec/09-build-and-checks.md sha256=bf21f11c34a1eff24423013d1686327efa8fe7769038f12fa5869580459758a2 -->
+<!-- FILE: site-health-kit/spec/09-build-and-checks.md sha256=0bee4000b906566034fbb59bbd3e54149cdb5be6e74f142a0a7efbf69f5b0b56 -->
 ~~~~~~~~markdown
 # Site Health kit — spec: build phases, go-live checklist, lessons (§9–§11)
 
@@ -2503,16 +2630,16 @@ variables and the local rehearsal are spelled out in `reference/README.md`.
 
 | Phase | Build | Done when |
 |---|---|---|
-| 0. Look | `START-HERE.md` section E: the repository, the mock, the screen | you have seen all 11 titled cards and the controls, opened a drill-down, pressed `הסברים`; `node site-health-kit/check_screen.js` passes |
+| 0. Look | `START-HERE.md` section E: the repository, the mock, the screen | you have seen all 11 titled cards and the controls (without a browser window: the pictures of `check_screen.js --shots ./shots`), opened a drill-down, pressed `הסברים`; `node site-health-kit/check_screen.js` passes |
 | 1. Intake | `START-HERE.md` section D | `site_health.config.json` exists, `python3 manage.py install-sql --config site_health.config.json` accepts it, and the owner confirmed it |
 | 2. Database | tables and `sh_*` functions | `python3 -m pytest -q tests/test_sql.py` passes against a scratch database (or your equivalent tests of the rules in §7.3 and §7.8); `python3 manage.py init-db --file install.sql` runs twice on a scratch database |
 | 3. Server | sign-in, roles, the routes of §5 | `python3 -m pytest -q tests/test_server.py` passes. Then, against the server running locally on a scratch database (README, "Checking a running server"): `python3 ../site-health-kit/tools/check_access.py http://127.0.0.1:8000` passes; `node ../site-health-kit/check_screen.js http://127.0.0.1:8000 --basic --cookie "$COOKIE"` passes, and once more with `--path "/status?k=$SH_SHARE_TOKEN"` in place of the cookie (the share link); `python3 ../site-health-kit/tools/check_template.py site_health.html` prints `SCREEN OK` |
 | 4. Probe + alerts | §7.5, §7.8, §7.9 | `python3 -m pytest -q tests/test_collectors.py` passes. Then the local rehearsal against `tests/fake_site.py` (it needs `SH_ALLOW_PRIVATE=1`): a page that starts failing opens an alert within 2 minutes, the fake ntfy lists the push, the alert closes when the page recovers; 3 dead minutes show as one outage |
-| 5. Speed | §7.6, sitemap | in the rehearsal, with `PAGESPEED_URL` pointing at the fake: `python3 manage.py run-once speed-core` stores one run per core page and the speed tiles show it. That proves the plumbing, not a speed: the first real PageSpeed result is seen in phase 8 (`OWNER-STEPS.md` step 4) |
+| 5. Speed | §7.6, sitemap | in the rehearsal, with `PAGESPEED_URL` pointing at the fake: `python3 manage.py run-once speed-core` stores one run per core page and the speed tiles show it. That proves the plumbing, not a speed: the first real PageSpeed result is seen in phase 8 (`OWNER-STEPS.md` step 5) |
 | 6. Daily jobs | catalogue, certificate, cleanup, morning message | in the rehearsal each `run-once` of README's table gives its good answer and its flow shows `תקין`. What stays empty on the fake site, by design: it is plain http, so the certificate check is off and its card hidden (`skipped: …`); the morning message is skipped until the oldest probe round is 6 hours old; `מהירות אצל לקוחות` is `אין נתון` until a browser sends a measurement |
-| 7. Real users | §7.7 | `node tests/test_rum_snippet.js` passes; the add-on is ready for the owner (`python3 manage.py rum-plugin …` wrote the ZIP, or the Shopify snippet is filled in). After phase 8: a page view of the real site with `?sh_test=1` appears in "מהירות אצל לקוחות" within a minute, counted as a test measurement (if not: the Content-Security-Policy hint of §7.7), and the owner got the privacy message (`OWNER-STEPS.md` step 8) |
-| 8. Deploy | `OWNER-STEPS.md` steps 2 to 8, in that order | the checklist of §10 is green on the live address |
-| 9. Hand-over | `OWNER-STEPS.md` step 9 | the owner got the note |
+| 7. Real users | §7.7 | `node tests/test_rum_snippet.js` passes; the add-on is ready for the owner (`python3 manage.py rum-plugin …` wrote the ZIP, or the Shopify snippet is filled in). After phase 8: a page view of the real site with `?sh_test=1` appears in "מהירות אצל לקוחות" within a minute, counted as a test measurement (if not: the causes of §7.7, a tester signed in to the site's admin first), and the owner got the privacy message (`OWNER-STEPS.md` step 9) |
+| 8. Deploy | `OWNER-STEPS.md` steps 2 to 9, in that order | the checklist of §10 is green on the live address |
+| 9. Hand-over | `OWNER-STEPS.md` step 10 | the owner got the note |
 
 Rules for the whole build:
 
@@ -2522,13 +2649,17 @@ Rules for the whole build:
   it into `PROGRESS.md` and into your report, and say who can close it.
 - An unattended run (nobody to ask): phase 1 is "waiting for confirmation", phases 2 to 7 go on
   against stand-ins, phases 8 and 9 wait for the owner (`START-HERE.md` section D).
+- **Give `check_screen.js` 15 minutes and do not cut it short.** On a healthy screen it takes
+  about 30 seconds; on a screen broken at its root (its script fails on every load) about 10
+  minutes, and it still ends with `N passed, M failed` and exit code 1.
 - Use a scratch database for tests. Never run tests that write against the live database.
 - Do not leave test alerts, test pushes or fake rows in the live database. A test push to the
   real topic must say it is a test.
-- **Phase 8: nothing is pushed before the topic is set, and the topic is set last.** Until
+- **Phase 8: nothing is pushed before the topic is set, and the topic is the last of the
+  settings, before the watchdog and the add-on** (`OWNER-STEPS.md` step 7, then 8 and 9). Until
   `NTFY_TOPIC` exists in the host's settings, alerts open and show on the screen and every
   message is logged as not sent. Set it only after a first clean round was seen from the real
-  host (`OWNER-STEPS.md` step 3: a firewall that refuses the prober would otherwise fill the
+  host (`OWNER-STEPS.md` step 4: a firewall that refuses the prober would otherwise fill the
   owner's phone with `האתר לא עונה`), and tell the owner that from then on every alert arrives.
 - **A project that already has a backend, in any language:** run the reference as it is, as its
   own small service next to that backend, and link the two (the configuration's `nav` and
@@ -2541,27 +2672,30 @@ Rules for the whole build:
 
 ## 10. Go-live checklist
 
-On the live address, with the throwaway check password of `OWNER-STEPS.md` step 5 (`$COOKIE` is
+On the live address, with the throwaway check password of `OWNER-STEPS.md` step 6 (`$COOKIE` is
 its session cookie). You hold no other secret. The two check programs only read: they change
 nothing on the live service.
 
 1. `/health` answers `"ok": true` with `"db": "ok"` and `"screen": "ok"`, and
    `node site-health-kit/check_screen.js <address> --basic --cookie "$COOKIE"` passes (it looks
    at the screen at 390 px and at 1280 px).
-2. Every flow in `המדידה עצמה` is `תקין` (the flow list of `OWNER-STEPS.md` step 5). A part that
-   does not apply to the site is in the configuration's `off` list (§7.4): its flow is gone and
-   its card hidden, so nothing reads `אין נתון` for good. Two flows may lag on the first day:
+2. Every flow in `המדידה עצמה` is `תקין` (the flow list of `OWNER-STEPS.md` step 6). **The Google
+   key is required for go-live** (`OWNER-STEPS.md` step 5): core speed cannot be switched off,
+   and without the key the two speed flows stay `אין נתון`. A part that does not apply to the
+   site is in the configuration's `off` list (§7.4): its flow is gone and its card hidden (for
+   `real_users`, the tile `מהירות אצל לקוחות, שעה אחרונה` of "עכשיו"), so nothing reads `אין נתון`
+   or `אין מדידות` for good. Two flows may lag on the first day:
    `מהירות אצל לקוחות` until the add-on is installed, and the daily ones until their hour.
 3. The service is stopped for **16 minutes** on purpose and started again (the owner does it,
-   `OWNER-STEPS.md` step 7), and the independent check of §7.10 speaks. A pass: with
+   `OWNER-STEPS.md` step 8), and the independent check of §7.10 speaks. A pass: with
    `deadman.sql` or `watchdog.py`, the phone gets `המדידה נעצרה: בודק זמינות האתר` 10 to 15
-   minutes after the stop and `חזר לתקין: בודק זמינות האתר` within minutes of the start; with a
+   minutes after the stop and `חזר לתקין: בודק זמינות האתר` within a few minutes of the start; with a
    heartbeat service, that service's own alarm and its own "up again".
 4. Access: `python3 site-health-kit/tools/check_access.py <address> --no-share --no-quiet` passes.
    Then, as the last check (it blocks your address for ten minutes), the same with `--limiter`:
    nine wrong passwords, each with a made-up `X-Forwarded-For`, must end in 429; if they do not,
-   `SH_PROXY_HOPS` does not match the host (§8.2). A site that uses `SH_VENDOR_NOALERTS` runs it
-   without `--no-quiet`, with the second throwaway password; a name in that list that matches no
+   `SH_PROXY_HOPS` does not match the host (§8.2; `OWNER-STEPS.md` 6f). A site that uses `SH_VENDOR_NOALERTS` runs it
+   without `--no-quiet`, with the second throwaway password (`OWNER-STEPS.md` 6e); a name in that list that matches no
    vendor hides the alerts from every vendor (§8.1), so see that an ordinary vendor still gets them.
 5. The share link, if the owner wanted one: the owner opens it on a phone and sees the screen
    without signing in; a made-up token answers 403
@@ -2572,9 +2706,9 @@ nothing on the live service.
 7. No secret where it does not belong. `git ls-files | grep -i '\.env'` prints nothing;
    `git grep -nE 'sb_secret_[A-Za-z0-9]{20}|AIza[0-9A-Za-z_-]{35}|eyJ[A-Za-z0-9_-]{30,}\.eyJ'`
    (the shapes of a database key and of a Google key) prints nothing; after the share link was opened, the host's log shows no `k=` (the start command
-   carries `--no-access-log`); the throwaway check password is deleted from the host's settings,
-   a sign-in with it answers 401, and your `.env.check` is gone.
-8. The owner saw the screen on their phone and saw one push arrive (`OWNER-STEPS.md` step 6).
+   carries `--no-access-log`); the throwaway check passwords are deleted from the host's settings,
+   a sign-in with each answers 401, and your `.env.check` is gone.
+8. The owner saw the screen on their phone and saw one push arrive (`OWNER-STEPS.md` step 7).
 
 ---
 
@@ -2615,7 +2749,7 @@ Each of these was a real problem in the production original. Do not rediscover t
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/check_screen.js sha256=5171161d814c9517db5e05945606d0fb8547b13bf9e234059261302537f74a36 -->
+<!-- FILE: site-health-kit/check_screen.js sha256=e41a66a4a6cac5f37accd5975558184e3d745d3a6cdbf44a59408fcf99b4f830 -->
 ~~~~~~~~javascript
 #!/usr/bin/env node
 /* Acceptance test of the site-health screen (Playwright, headless Chromium).
@@ -2623,7 +2757,7 @@ Each of these was a real problem in the production original. Do not rediscover t
      node check_screen.js                                # against the mock:  http://127.0.0.1:8787
      node check_screen.js http://127.0.0.1:8000 --cookie "name=value"
                                                          # your real server; the session cookie of the throwaway
-                                                         # check vendor (OWNER-STEPS.md step 5), never the owner's
+                                                         # check vendor (OWNER-STEPS.md step 6), never the owner's
      node check_screen.js <url> --path "/status?k=<token>"
                                                          # another page than /site, for example the share link
                                                          # of a real server (it needs no cookie)
@@ -2637,12 +2771,13 @@ Each of these was a real problem in the production original. Do not rediscover t
         failed reads, the sequence guard, both timers, the alert bar, every click, the date
         range, colours against the thresholds, print, roles, the menu button, downAfter,
         texts with markup in them.                                                         Any server.
-     C. Scenarios, roles and sessions of the mock (incident, ok, empty, error, hostile).   Mock only.
+     C. Scenarios, roles, sessions and ?hide= of the mock (incident, ok, empty, error, hostile). Mock only.
 
    The test only reads from the server: groups A and C send GET calls (C also deletes alerts, in
    the mock), and every call of group B is answered inside the browser and never reaches the server.
    A check that breaks (a click that cannot happen, a sheet that does not close) is one FAIL line,
-   and the run goes on to its summary "N passed, M failed".
+   and the run goes on to its summary "N passed, M failed". A screen that does not finish loading
+   the canned answers of group B stops that group with one FAIL line that says why.
    Needs Playwright 1.45 or newer. Exit code 0 = every check passed, 1 = at least one failed,
    2 = the test could not run. */
 'use strict';
@@ -2683,9 +2818,23 @@ const css = (page, sel, prop) => page.evaluate(([s, k]) => { const e = document.
    is too wide shows only in the body's own scroll width */
 const rgbSum = (c) => { const m = String(c).match(/\d+/g); return m ? +m[0] + +m[1] + +m[2] : -1; };
 const noOverflow = (page) => page.evaluate(() => document.body.scrollWidth <= window.innerWidth + 1);
-const settle = (page) => page.waitForFunction(() => !document.body.classList.contains('loading') && document.querySelectorAll('#verdict .vbox').length === 4 && !/טוען…/.test(document.getElementById('now').textContent), null, { timeout: 15000 }).catch(() => {});
+/* waits until the screen has drawn its answers; true when it did */
+const settle = (page) => page.waitForFunction(() => !document.body.classList.contains('loading') && document.querySelectorAll('#verdict .vbox').length === 4 && !/טוען…/.test(document.getElementById('now').textContent), null, { timeout: 15000 }).then(() => true, () => false);
+/* why a page did not settle: the marks it still shows, and the errors of the page */
+const notSettled = async (s) => 'the screen did not finish loading the canned answers in 15 s (' + await s.page.evaluate(() => {
+  const why = [], n = document.querySelectorAll('#verdict .vbox').length, now = document.getElementById('now');
+  if (document.body.classList.contains('loading')) why.push('still loading');
+  if (n !== 4) why.push(n + ' tiles in "שורה תחתונה", not 4');
+  if (!now || /טוען…/.test(now.textContent)) why.push('"עכשיו" still reads טוען…');
+  return why.join(', ');
+}).catch(() => '?') + ')' + (s.errors.length ? '; ' + s.errors.slice(0, 3).join(' | ') : '');
 const sheetOn = (page) => page.evaluate(() => document.getElementById('dov').classList.contains('on')).catch(() => false);
-const sheetReady = (page) => page.waitForFunction(() => document.getElementById('dov').classList.contains('on') && !/טוען…/.test(document.getElementById('dbody').textContent), null, { timeout: 5000 }).catch(() => {});
+/* the sheet opens on the click itself, reading "טוען…" (spec §6.3); only its content waits for the server.
+   A click that opened nothing costs 2 seconds, not 5. */
+const sheetReady = async (page) => {
+  if (!(await page.waitForFunction(() => document.getElementById('dov').classList.contains('on'), null, { timeout: 2000 }).then(() => true, () => false))) return;
+  await page.waitForFunction(() => document.getElementById('dov').classList.contains('on') && !/טוען…/.test(document.getElementById('dbody').textContent), null, { timeout: 5000 }).catch(() => {});
+};
 /* closes the sheet without the page's help: after a failed check, so that the next steps still run */
 const shut = (page) => page.evaluate(() => { document.getElementById('dov').classList.remove('on'); document.body.style.overflow = ''; }).catch(() => {});
 const escapeFailed = new WeakSet();
@@ -2882,7 +3031,13 @@ async function open(browser, path, vp, o = {}) {
   }
   const resp = await page.goto(BASE + path, { waitUntil: 'domcontentloaded' });
   s.status = resp ? resp.status() : 0;
-  if (s.status === 200 && !o.noWait) await settle(page);
+  if (s.status === 200 && !o.noWait && !(await settle(page)) && o.fake) {
+    /* canned answers come at once: a screen that has not drawn them by now is broken, and each
+       check of the group would only wait for it in turn. The group stops here with one FAIL line. */
+    const why = await notSettled(s);
+    await ctx.close().catch(() => {});
+    throw new Error(why);
+  }
   return s;
 }
 const fake = (browser, o = {}) => open(browser, PAGE_PATH, o.vp || PHONE, Object.assign({ fake: true }, o));
@@ -2910,7 +3065,7 @@ async function reload(s, change) {
   const isScreen = s.status === 200 && await p.evaluate(() => !!(document.getElementById('verdict') && document.getElementById('now') && document.getElementById('dov')));
   check('the page loads (200) and is the site-health screen', isScreen, 'status ' + s.status + ', address ' + p.url());
   if (!isScreen) {
-    console.error('\n' + BASE + PAGE_PATH + ' did not give the screen, so nothing else can be checked.\nFor a real server pass the session cookie of the throwaway check vendor (OWNER-STEPS.md step 5: --cookie "name=value"), never the owner\'s, or test the share link (--path "/status?k=<token>").');
+    console.error('\n' + BASE + PAGE_PATH + ' did not give the screen, so nothing else can be checked.\nFor a real server pass the session cookie of the throwaway check vendor (OWNER-STEPS.md step 6: --cookie "name=value"), never the owner\'s, or test the share link (--path "/status?k=<token>").');
     process.exit(2);
   }
   Object.assign(CFG, await p.evaluate(() => { const c = window.CFG || {}, o = {}; ['api', 'loginPath', 'homePage', 'here'].forEach((k) => { if (typeof c[k] === 'string' && c[k]) o[k] = c[k]; }); if (Array.isArray(c.hide)) o.hide = c.hide.slice(); return o; }));
@@ -3668,6 +3823,10 @@ async function reload(s, change) {
         await rowsOf('/api/site/drill?what=runs&url=' + encodeURIComponent('https://example.co.il/') + '&bucket=2026-02-30&h=24'), await rowsOf('/api/site/drill?what=bucket&bucket=2026-02-30'),
         await rowsOf('/api/site/drill?what=alert&id=41&bucket=garbage'), await rowsOf('/api/site/drill?what=alert&id=0000000000000000041')];
       check('mock, as the reference server: a bucket in the right shape that is no real day or hour (2026-13-45, 24:00, 30.2) answers {"rows": []}; an alert ignores bucket; an id of 19 digits is malformed', got[0] > 0 && got.slice(1, 5).every((x) => x === 0) && got[5] === 1 && got[6] === 0, got.join(','));
+      const home = 'https://example.co.il/', ctl = [await rowsOf('/api/site/drill?what=runs&url=' + encodeURIComponent(home) + '&bucket=&h=24'),
+        await rowsOf('/api/site/drill?what=runs&url=' + encodeURIComponent(home + '\t') + '&bucket=&h=24'), await rowsOf('/api/site/drill?what=runs&url=' + encodeURIComponent(home + '\x7f') + '&h=24'),
+        await rowsOf('/api/site/drill?what=fails&page=' + encodeURIComponent('סל') + '&bucket=&h=24'), await rowsOf('/api/site/drill?what=fails&page=' + encodeURIComponent('סל\n') + '&bucket=&h=24')];
+      check('mock, as the reference server: a page or url with a control character (U+0000 to U+001F, U+007F) answers {"rows": []}', ctl[0] > 0 && ctl[1] === 0 && ctl[2] === 0 && ctl[3] > 0 && ctl[4] === 0, ctl.join(','));
     });
 
     await block('C7 the server hides what the site does not measure', async () => {
@@ -3722,7 +3881,7 @@ async function reload(s, change) {
   }
 
   await browser.close();
-  console.log('\n' + passed + ' passed, ' + failed + ' failed' + (runC ? '' : '  (groups A and B; group C needs the kit\'s mock)'));
+  console.log('\n' + passed + ' passed, ' + failed + ' failed' + (runC ? '' : isMock ? '  (groups A and B; --basic leaves out group C)' : '  (groups A and B; group C needs the kit\'s mock)'));
   process.exit(failed ? 1 : 0);
 })().catch((e) => {
   /* only what no group catches ends up here, such as a browser that cannot start */
@@ -3733,7 +3892,7 @@ async function reload(s, change) {
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/mock_server.py sha256=f43d597f083e8917f5888dfdb6163ee374a5f096eb9c27773ffa7ca924cb3d77 -->
+<!-- FILE: site-health-kit/mock_server.py sha256=6e45098316530754fabb456d923933a4e378ce8bc28ed1099d94344089835047 -->
 ~~~~~~~~python
 #!/usr/bin/env python3
 """Mock backend for the site-health screen. Standard library only.
@@ -4083,9 +4242,19 @@ def is_bucket(text):
     return True
 
 
+def storable(text):
+    """As reference/server.py _storable: text that UTF-8 can carry, without a control character."""
+    try:
+        text.encode("utf-8")
+    except UnicodeError:
+        return False
+    return not re.search(r"[\x00-\x1f\x7f]", text)
+
+
 def drill_request_ok(q):
     """Spec §5.4: a missing or malformed parameter answers {"rows": []}. An empty value means "absent".
-    The same rules as reference/server.py: an id is ASCII digits that fit a bigint; an alert has no bucket."""
+    The same rules as reference/server.py: an id is ASCII digits that fit a bigint; an alert has no bucket;
+    a page or url with a control character is malformed."""
     what, bucket = q.get("what"), q.get("bucket") or ""
     if what == "alert":
         aid = q.get("id") or ""
@@ -4095,8 +4264,8 @@ def drill_request_ok(q):
     if what == "bucket":
         return bool(bucket)
     if what == "runs":
-        return bool(q.get("url"))
-    return True
+        return bool(q.get("url")) and storable(q["url"])
+    return storable(q.get("page") or "")
 
 
 def api_drill(q, role):
@@ -5362,7 +5531,7 @@ function loadMessages(){
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/reference/README.md sha256=4da222b005e698a8f39a2588387a50dab27738c3f96c741227ba06a59e08958a -->
+<!-- FILE: site-health-kit/reference/README.md sha256=76e1e3e0be11b507affdb19d6f84080141da0b5be89215243827c2ec80b5bde8 -->
 ~~~~~~~~markdown
 # Site Health: the reference backend
 
@@ -5415,8 +5584,8 @@ you never see their values** (`OWNER-STEPS.md`). Everything about the site itsel
 | `SH_SCREEN` | server | no | path of the screen file. Without it: `site_health.html` next to `server.py`, else `../site_health.html`. |
 | `SH_RUM_PER_MINUTE`, `SH_RUM_PER_DAY` | server | no (defaults `300`, `20000`) | how many real-user rows are stored a minute and a day, for all visitors together (§7.7). Beyond it rows are dropped. |
 | `COLLECTORS` | server | no (default on) | `0`: this server process measures nothing (the collectors run elsewhere). |
-| `PAGESPEED_KEY` | collectors | no | Google PageSpeed Insights API key (§7.6). Without it the two speed collectors do not run and the speed cards stay empty. |
-| `NTFY_TOPIC` | collectors, watchdog | no | the ntfy topic alerts are pushed to (§7.9). Without it alerts still open and show on the screen; every message is logged as not sent. On a live service it is set last. |
+| `PAGESPEED_KEY` | collectors | for go-live | Google PageSpeed Insights API key (§7.6), free. Without it the two speed collectors do not run, the speed cards stay empty and their flows `אין נתון`; core speed cannot be switched off, so go-live needs the key (§10 item 2). |
+| `NTFY_TOPIC` | collectors, watchdog | no | the ntfy topic alerts are pushed to (§7.9). Without it alerts still open and show on the screen; every message is logged as not sent. On a live service it is the last of the settings, before the watchdog and the add-on (§9, phase 8). |
 | `NTFY_URL`, `NTFY_TOKEN` | collectors, watchdog | no | the ntfy server (default `https://ntfy.sh`), and the access token of a reserved topic or a self-hosted server. |
 | `DASHBOARD_URL` | collectors, watchdog | no, recommended | this dashboard's public address. It is named in the probe's `User-Agent` (`SiteHealthProbe/1.0 (+<address>)`, so a firewall can allow it) and opened by a tap on a push. |
 | `HEARTBEAT_URL` | collectors | no | the ping address of an outside heartbeat service; requested after every full probe round (§7.10, option 2). |
@@ -5430,19 +5599,22 @@ you never see their values** (`OWNER-STEPS.md`). Everything about the site itsel
 server nor the collectors log a key, a password, a token, the topic or the heartbeat address.
 The database variables are trimmed; a wrong one shows as a short text in `/health` (`"db"`),
 never with the key: `SUPABASE_URL must start with https://`, `the database address or key is
-malformed`, `HTTP 401…`, `database call failed (…): check DATABASE_URL`.
+malformed`, `HTTP 401…`, and for an error while connecting `database call failed (…): check
+DATABASE_URL`. An error while a call is sent (a value the database cannot store) reads
+`database call failed (DataError): the call carried a value the database cannot store` and
+never names `DATABASE_URL`.
 
 ## Commands
 
 | Command | Needs | What it does |
 |---|---|---|
-| `python3 manage.py install-sql --config site_health.config.json --out install.sql` | nothing | writes **one SQL file**: `schema.sql`, `functions.sql` and the `sh_setup` call with the configuration. The owner pastes it into the database's SQL editor (`OWNER-STEPS.md` step 2). It refuses a configuration that is plainly wrong; `sh_setup` checks the rest when the file runs, so rehearse it. Write it again after every change of the configuration. |
+| `python3 manage.py install-sql --config site_health.config.json --out install.sql` | nothing | writes **one SQL file**: `schema.sql`, `functions.sql` and the `sh_setup` call with the configuration. The owner pastes it into the database's SQL editor (`OWNER-STEPS.md` step 2). It refuses every configuration that `sh_setup` would refuse, before writing anything, in the database's own words: `<config file>: <message>`, such as `site_health.config.json: sh_setup: the home page must be a core page`. The file is written beside its place and then moved there, so it is never half written (a write failure: `<out> cannot be written: <reason>`, the old file kept). Still rehearse it with `init-db`. Write it again after every change of the configuration. |
 | `python3 manage.py init-db --file install.sql` | `DATABASE_URL` | applies that file: the rehearsal on a scratch database (run it twice). Plain `init-db` applies `schema.sql` and `functions.sql`. |
 | `python3 manage.py setup site_health.config.json` | the database | loads the configuration (`sh_setup`) where you hold the database variables: a rehearsal. Safe to repeat. |
 | `python3 manage.py check` | the database | the variables that are set, the configuration, what is switched off, every flow. |
 | `python3 manage.py run-once <collector>` | the service's environment | one run of one collector, printing what it stored (table further down). A part that is off answers `skipped: …`. |
 | `python3 manage.py test-push` | `NTFY_TOPIC` | one push that says it is a test; leaves no row in the database. |
-| `python3 manage.py rum-plugin --endpoint https://<dashboard>/m --out site-health-rum.zip` | nothing | the WordPress plugin as a ZIP with its two values filled in (the live host comes from `site_health.config.json`, or `--live-host`). The owner uploads it (`OWNER-STEPS.md` step 8). |
+| `python3 manage.py rum-plugin --endpoint https://<dashboard>/m --out site-health-rum.zip` | nothing | the WordPress plugin as a ZIP with its two values filled in (the live host comes from `site_health.config.json`, or `--live-host`). The owner uploads it (`OWNER-STEPS.md` step 9). |
 | `python3 manage.py new-secret --out <file>` | nothing | writes a random topic name and share token into a new file and prints neither. For an owner who runs Python on their own computer; an agent never reads that file. |
 | `python3 watchdog.py --dashboard https://<dashboard> [--loop]` | `NTFY_TOPIC` | one look at `/health` (for cron, every 5 minutes), or a look every minute with `--loop`. Pushes `המדידה נעצרה: בודק זמינות האתר` and `חזר לתקין: …`. Exit code 0, 1 (a push was owed and not accepted) or 2. |
 
@@ -5473,6 +5645,9 @@ uvicorn server:app --port 8000 --no-access-log           # http://127.0.0.1:8000
 python3 manage.py check                                  # the database, the configuration, every flow
 ```
 
+A port that is taken (here 8900 or 8000) needs another number: the fake then says so in one line
+(`port 8900 cannot be opened (Address already in use). … try another one, such as  python3
+tests/fake_site.py 8901 …`) and writes nothing; change the addresses of the exports to match.
 Without `SH_ALLOW_PRIVATE=1` every check of the fake site is refused (it is on 127.0.0.1), and
 `SH_PROXY_HOPS=0` is right here because no proxy stands in front. Within a minute the "עכשיו"
 card shows the first round. `curl 'http://127.0.0.1:8900/__fake?path=/cart/&status=502'` breaks
@@ -5508,14 +5683,14 @@ python3 $KIT/tools/check_template.py site_health.html                       # SC
 at most twice in ten minutes. Its `--limiter` check is for the live address; against 127.0.0.1 it
 fails unless the server is started with `--no-proxy-headers` (uvicorn itself believes
 `X-Forwarded-For` from 127.0.0.1). On a live address the same commands run with the throwaway
-check password that the owner sets and deletes (`OWNER-STEPS.md` step 5); the share-link line is
+check password that the owner sets and deletes (`OWNER-STEPS.md` step 6); the share-link line is
 then the owner's to try, because the token is not yours.
 
 ## Running the tests
 
 ```bash
 pip install -r requirements-dev.txt     # the service's packages, pytest and httpx
-python3 -m pytest -q                    # all three layers: about 1,100 tests, about a minute
+python3 -m pytest -q                    # all three layers, a minute or two; every test must pass
 python3 -m pytest -q tests/test_server.py    # this file alone needs no PostgreSQL
 node tests/test_rum_snippet.js          # the real-user script in a browser (needs Playwright)
 ```
@@ -5523,9 +5698,10 @@ node tests/test_rum_snippet.js          # the real-user script in a browser (nee
 - **A scratch PostgreSQL (15 or newer)** where the tests may create and drop a database:
   `SH_TEST_ADMIN_URL`. To get one: `docker run --rm -d -p 5432:5432 -e POSTGRES_PASSWORD=shtest postgres:16`,
   or, where PostgreSQL 16 is installed, `pg_ctlcluster 16 main start`. The database gets a random
-  name and is dropped at the end; no other database is touched. When none answers, the run ends
-  with one line that starts `No Postgres answers at SH_TEST_ADMIN_URL` (return code 2), without
-  a password in it.
+  name and is dropped at the end; no other database is touched. When none answers, the password
+  is refused or the database does not exist, the run ends with one line that starts `No usable
+  Postgres at SH_TEST_ADMIN_URL (<host>:<port>): no answer, or the sign-in was refused.` (return
+  code 2), without a password in it.
 - **The kit.** The tests use the kit's `mock_server.py` and `site_health.html`. They look in
   `$SH_KIT_DIR`, then in the parent folder, then in `../site-health-kit`; when none holds them
   the run ends with one line that names `SH_KIT_DIR`.
@@ -5563,9 +5739,11 @@ What follows is what you need to know behind them.
    - Root directory: this folder (`site-health/`). Build: `pip install -r requirements.txt`.
      Python 3.10 or newer; set the version explicitly where the host's default is older.
    - Start command: `uvicorn server:app --host 0.0.0.0 --port $PORT --no-access-log`. The share
-     token travels in the query string; `server.py` also cuts query strings out of uvicorn's
-     access log by itself, so a forgotten flag leaks nothing. Under another server program
-     (gunicorn, hypercorn) turn its access log off.
+     token travels in the query string; `server.py` also cuts query strings, an encoded `?`
+     (`%3F`) included, out of uvicorn's access log by itself, so a forgotten flag leaks nothing
+     for ordinary requests. **Never run a live service with `--log-level trace`**: uvicorn then
+     prints every request whole, token included. Under another server program (gunicorn,
+     hypercorn) turn its access log off.
    - **One worker process only.** No `--workers 2`, no scaling to several instances: every worker
      would start its own collectors, and the sign-in limits live in memory.
    - Health-check path: `/health`. Always status 200 (a restart does not repair a database):
@@ -5578,8 +5756,8 @@ What follows is what you need to know behind them.
    collectors' variables. Same code, same schedule.
 6. **Who watches the watcher (§7.10).** `deadman.sql` on Supabase (follow its header), or a
    heartbeat service and `HEARTBEAT_URL`, or `watchdog.py` on a machine that does not stop with
-   the host. `OWNER-STEPS.md` step 7.
-7. **Real users.** `manage.py rum-plugin`, `rum/`, §7.7, `OWNER-STEPS.md` step 8.
+   the host. `OWNER-STEPS.md` step 8.
+7. **Real users.** `manage.py rum-plugin`, `rum/`, §7.7, `OWNER-STEPS.md` step 9.
 
 ### What happens while two workers overlap (a deploy)
 
@@ -5601,7 +5779,7 @@ For a minute or two the old and the new process both run. Nothing is stored or p
 
 These need the service's environment (the database variables and the collectors' own). You have
 it in the rehearsal above. On a live service you do not: there the proof is the flow list seen
-from the outside (`OWNER-STEPS.md` step 5), and only the owner could run a command, in the host's
+from the outside (`OWNER-STEPS.md` step 6), and only the owner could run a command, in the host's
 command screen. `run-once` leaves the daily markers alone, so the scheduled run still happens. A
 probe round or a speed round run by hand is stored under the same scheduled moment as the
 scheduler's own, so it never adds a second one: when the scheduler has been there first, the
@@ -5647,10 +5825,13 @@ of an `http://` site and the catalogue of platform `other`) never runs.
   sent later.
 - **A full outage is one alert per probe page**, and one recovery per page (§7.8): four pages,
   eight pushes. The hand-over note tells the owner.
-- **A check is ok only for status 200.** A redirect to another host is not followed and fails
-  the check (`redirected to another host`): a cart on another domain needs that domain in
-  `extra_hosts`. A page that a firewall answers with a 200 challenge counts as up unless the
-  page has an `expect` text.
+- **A check is ok only for status 200.** A redirect is not followed, and fails the check, when
+  it goes to another host (`redirected to another host`: a cart on another domain needs that
+  domain in `extra_hosts`), from https down to http (`redirected from https to http`, any host),
+  or to another port of the same host (`redirected to another port`; http on 80 to https on 443
+  is fine). A sitemap file then fails with `redirected <why>: <address>`, the catalogue with
+  `the catalogue redirects <why>`. A page that a firewall answers with a 200 challenge counts as
+  up unless the page has an `expect` text (the example configuration gives the home page one).
 - **A refused PageSpeed key** (`API key not valid`, or a 403): nothing is measured and the
   collector asks again once an hour, so enabling the API in Google's console needs no restart.
 - **Real-user rows have three budgets**: 60 a minute per visitor address; 300 a minute and 20,000
@@ -5658,7 +5839,11 @@ of an `http://` site and the catalogue of platform `other`) never runs.
   database stores nothing once the last 24 hours hold 30,000 rows. Beyond a budget rows are
   dropped and nothing breaks. A busier site raises `SH_RUM_PER_DAY`, or measures a share of its
   views (the `sample` value of the script; in your copy of the plugin, `SITE_HEALTH_RUM_SAMPLE`).
-  A row is about 150 bytes: 10,000 measured views a day are about 45 MB over the 30 days kept.
+  The path is stored percent-encoded and cut at 120 characters. Measured on PostgreSQL 16, table
+  and index: about 116 bytes a row with a 40-character path, 197 with a 120-byte path, 296 at
+  worst. So 10,000 measured views a day are about 35 MB over the 30 days kept; a flood held at
+  the database's cap for a month reaches about 275 MB (about 183 MB at the server's 20,000 a
+  day), which with the rest of the database stays under the 500 MB of a free project (§7.2).
 - **Pages that real users never measure**: cart, checkout, account and order pages, the
   `private_paths` of the configuration, and any path that holds an `@`, a 16-digit number or a
   long code of letters and digits (§7.7).
@@ -7205,7 +7390,7 @@ def _rpc_postgres(dsn, fn, params):
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/reference/deadman.sql sha256=a20a18345219b9380fbd52fa23f1d91c056dd5bf99cf62bc1c0f383dfb555580 -->
+<!-- FILE: site-health-kit/reference/deadman.sql sha256=25b137cd1d6674aa8935512dcbe499dd3a2a659f4b613e775f3879f886b0d729 -->
 ~~~~~~~~sql
 -- Site Health: who watches the watcher (spec §7.10, option 1), for Supabase.
 --
@@ -7267,8 +7452,8 @@ def _rpc_postgres(dsn, fn, params):
 --      shows status_code 200, and after the next run (5 minutes):
 --        select title, event, status, attempts from sh_messages order by id desc limit 3;
 --      shows status 200 for the "open" message.
---   e. Start the worker. Within a minute the alert closes and the phone gets
---      "חזר לתקין: בודק זמינות האתר".
+--   e. Start the worker. Within a few minutes of the start the alert closes and the phone gets
+--      "חזר לתקין: בודק זמינות האתר" (the host builds and starts the service first).
 --   f. select status, return_message, start_time from cron.job_run_details
 --      where jobid = (select jobid from cron.job where jobname = 'sh-deadman') order by start_time desc limit 5;
 --      shows "succeeded" every 5 minutes.
@@ -17265,7 +17450,7 @@ def test_the_server_tests_alone_need_no_postgres():
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/reference/tests/test_sql.py sha256=76bf635fc83f75629c13cb3c5b666f8f3db050e2a59eca0c00687cb653f6f3d3 -->
+<!-- FILE: site-health-kit/reference/tests/test_sql.py sha256=f97192c064ae4bb0d77f6fd098d819fc7452eff4144a18236ee3c9ccf3c797cb -->
 ~~~~~~~~python
 """Tests of schema.sql and functions.sql: the rules of spec §7.2, §7.3, §7.4 and §7.8, with exact values.
 And of deadman.sql, against stand-ins for the three Supabase extensions it needs.
@@ -19744,7 +19929,10 @@ def test_reads_over_90_days_take_less_than_2_seconds(db):
     assert rows[4:] == [{"section": "נפילות", "outage_minutes": 7, "outage_start_il": il(minute - mins(50006)),
                          "outage_end_il": il(minute - mins(49999))}]
     days = answers["sh_availability_series"]
-    assert len(days) in (91, 92) and sum(r["checks"] for r in days) == 518400
+    # one row per local day, from the oldest round's to today's: 90, 91 or 92, as daylight saving time moves the oldest
+    first = (minute - mins(129599)).astimezone(TZ).date()
+    assert len(days) == (minute.astimezone(TZ).date() - first).days + 1
+    assert sum(r["checks"] for r in days) == 518400
     assert [r["checks"] for r in section(answers["sh_speed"], "ליבה")] == [8640] * 5 + [2160] * 5
     assert section(answers["sh_speed"], "כיסוי") == [{"section": "כיסוי", "checks": 400, "slow_runs": 400}]
     assert len(answers["sh_drill_runs"]) == 8640 and len(answers["sh_drill_fails"]) == 500
@@ -20531,7 +20719,7 @@ def test_reads_over_90_days_take_less_than_2_seconds(db):
 ~~~~~~~~
 <!-- END FILE -->
 
-<!-- FILE: site-health-kit/tools/check_access.py sha256=229c5ce55f1752007063b0ec47ef942e7ee2879faf88d9541bd7b824cdaadc61 -->
+<!-- FILE: site-health-kit/tools/check_access.py sha256=6db25dc7ff2a3192dcaca0a70e436a7ca544f5340a7287d75f74b1c325a3251f -->
 ~~~~~~~~python
 #!/usr/bin/env python3
 """Black-box check of the access rules (spec §8) and of the public routes of a running Site Health server.
@@ -20555,7 +20743,7 @@ A server whose sign-in is not the form of spec §8 takes ready cookies instead, 
 SH_COOKIE_VENDOR, SH_COOKIE_QUIET, SH_COOKIE_OWNER.
 
 On the live address use the throwaway vendor password that the owner set for the check (OWNER-STEPS.md,
-step 5), and leave out what you do not hold:    python3 tools/check_access.py https://<address> --no-share --no-quiet
+step 6), and leave out what you do not hold:    python3 tools/check_access.py https://<address> --no-share --no-quiet
 With --no-share the check still proves that a made-up token opens nothing.
 
 What it does to the server: nothing that stays. It marks no alert (as an outsider it must be

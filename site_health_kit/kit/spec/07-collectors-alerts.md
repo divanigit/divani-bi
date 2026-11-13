@@ -24,10 +24,15 @@ Part of the Site Health kit. The entry point and the rules of the work are in `S
 - **Where a request to the site may go.** What a site answers must never choose which machine
   the collectors talk to. Two rules hold for every request to the monitored site (the probe,
   `robots.txt`, sitemap files, the catalogue, the certificate check):
-  1. A redirect is followed only to the host the request started on (with or without `www.`, on
-     http or https) or to a host listed in the configuration's `extra_hosts` (a shop whose cart
-     lives on another domain). Any other redirect is not followed: the check fails with `fail`
-     `http`, the redirect's status and `err` `redirected to another host`.
+  1. A redirect is followed only to the host the request started on (with or without `www.`) or
+     to a host listed in the configuration's `extra_hosts` (a shop whose cart lives on another
+     domain); never from https down to http (`extra_hosts` included), and never to another port
+     of the starting host, except http on port 80 to https on 443 (a host of `extra_hosts` may
+     use a port of its own). Any other redirect is not followed: the check fails with `fail`
+     `http`, the redirect's status and an `err` that says why: `redirected to another host`,
+     `… from https to http`, `… to another port` or `… to an address that is not http(s)`. A
+     sitemap file then fails with `redirected <why>: <address>`, the catalogue with `the
+     catalogue redirects <why>`.
   2. The name is resolved once and the connection goes to the address that was checked. An
      address that is not a public one (loopback, private ranges, link-local, the cloud metadata
      address) is refused before a packet leaves: `fail` `connect`, `err` `NotPublic: …`. The
@@ -113,7 +118,8 @@ Google PageSpeed Insights API v5, one call per page per strategy:
   `strategy=desktop`. **Rotation:** every 5 minutes, 2 pages from `sh_rotation_next(2)`, phone only;
   none where the sitemap is switched off. With 5 core pages that is up to about 1,200 calls a day.
 - Without `PAGESPEED_KEY` the collector does not run and says so in its log once; the speed cards
-  show their empty states and the flows stay `אין נתון`.
+  show their empty states and the flows stay `אין נתון`. That is why the key is required for
+  go-live (§10 item 2): core speed cannot be switched off.
 - A rehearsal on one machine: the optional `PAGESPEED_URL` names another address for the API.
   `reference/tests/fake_site.py` prints the value to use, with a made-up key; its fake answers
   every page with the same sample result, so it proves the plumbing and no speed.
@@ -141,8 +147,10 @@ rotation and the card `slowCard` ("העמודים הכבדים באתר") go wit
    `/wp-sitemap.xml`, `/sitemap.xml`, and take the first that parses as `<sitemapindex>` or `<urlset>`.
 2. Follow index files (at most 500 files; 10 MB each after decompression, `SH_SITEMAP_MB` in
    the worker's environment raises that up to 50). Decide gzip by the first two bytes (`1f 8b`),
-   not by the file name. Refuse a document that is not UTF-8, holds a NUL byte (UTF-16 without
-   its mark) or contains `<!ENTITY`.
+   not by the file name. First refuse a document that declares any entity, as an XML parser
+   finds it when it reads up to the first element in whatever encoding the document declares
+   (UTF-16 without a mark included; the words `<!ENTITY` in a comment declare nothing). Then
+   refuse one that is not UTF-8 or holds a NUL byte.
 3. From each `<url>` take only its **direct child** `<loc>` (SEO plugins nest `<image:loc>` inside;
    those are pictures, not pages). Child sitemap addresses are followed exactly as written,
    including their query strings.
@@ -205,7 +213,8 @@ verification, read `notBefore` / `notAfter` / issuer, store `days_left`. A faile
 `ok = false` with the error and does not beat the flow. Off, and never run, for a site whose
 address is `http://`, or with `"off": ["cert"]`.
 
-**Real users (`מהירות אצל לקוחות`)**. Off with `"off": ["real_users"]`. A small script on the
+**Real users (`מהירות אצל לקוחות`)**. Off with `"off": ["real_users"]`; the tile of "עכשיו"
+(`nowRum`, §6.2) goes with it. A small script on the
 site (`reference/rum/site-health-rum.js`) measures LCP with the browser's `PerformanceObserver`
 and sends one beacon per page view when the page is hidden or left: a JSON **string** through
 `navigator.sendBeacon`, which goes out as `text/plain` and therefore needs no CORS preflight and
@@ -231,14 +240,17 @@ The ingest endpoint is **`POST /m`** (a neutral name: content blockers drop path
   forge a header;
 - keep the row only when `lcp` is between 1 and 60,000 ms; `site` is `live` (or a name of
   `live_hosts`) or one of those configured hosts, never the sender's own text; and `path` (query
-  string removed) is at most 300 characters, has no control character, and has no segment,
-  decoded and lower-cased, that names an account, checkout, order or admin page (the built-in
-  English names plus the site's own slugs from `private_paths`);
+  string removed; the script sends at most 300 characters) has no control character and no
+  segment, decoded and lower-cased, that names an account, checkout, order or admin page (the
+  built-in English names plus the site's own slugs from `private_paths`);
 - drop a path that may name a person: one that holds an `@`, a UUID, a run of 16 or more
   hexadecimal characters, or a run of 24 or more letters, digits and `_` that mixes letters and
   digits (a hyphen ends a run, so ordinary product slugs survive). The script applies the same
   rule before sending. It is a narrow rule, not a promise: paths that carry identifiers in
   another shape belong in `private_paths`;
+- these rules judge the whole path; what is stored is the path percent-encoded as browsers send
+  it (`/ספה/` → `/%D7%A1%D7%A4%D7%94/`), cut at 120 characters, never inside a `%XX` escape or
+  inside the escapes of one character (`sh_rum_add` makes the same cut);
 - store no IP address, no cookie, no user agent, and ignore any cookie that arrives; limit each
   address to 60 beacons a minute and all addresses together to 300 rows a minute and 20,000 a
   day (`SH_RUM_PER_MINUTE`, `SH_RUM_PER_DAY`), in memory only; `sh_rum_add` itself stores nothing
@@ -265,11 +277,14 @@ Delivery. Nobody edits a site's configuration files by hand.
   run in a real shop; it skips the theme editor but cannot tell staff from visitors.
 - **Elsewhere:** one line `window.SiteHealthRum = {endpoint, liveHost}` and the script at the end
   of the page body.
-- **When the `?sh_test=1` view does not arrive** within a minute: look at the site's response
-  headers for a `Content-Security-Policy`. If there is one, the browser sends nothing until the
-  site's developer allows the dashboard's host in `connect-src` (and the inline script in
-  `script-src`). Then: the page cache was not purged, or a "delay JavaScript" plugin holds the
-  script back.
+- **When the `?sh_test=1` view does not arrive** within a minute, the causes, most likely first:
+  (1) the tester is signed in to the site's admin (WordPress leaves the script out for staff) or
+  opened the page from Shopify's theme editor: repeat in a private window, or on a phone that is
+  not signed in; (2) a `Content-Security-Policy` header in the site's answers (`curl -sI
+  <site>/`): the browser sends nothing until the site's developer allows the dashboard's host in
+  `connect-src` (and the inline script in `script-src`); (3) an optimisation plugin: the page
+  cache was not purged, or a "delay JavaScript" setting holds the script back (exclude
+  `site-health-rum`).
 
 ### 7.8 Alert rules (`sh_alerts_check`, every minute, right after the full probe round)
 
@@ -320,11 +335,12 @@ subscribes to one topic; the system publishes to that topic.
   owner makes it up and types it in three places only: the ntfy app of every phone, the host's
   settings (`NTFY_TOPIC`), and the watchdog of §7.10 (the database's secret store, or the
   environment of `watchdog.py`). Never in the repository, on the screen, in a log, a chat
-  message or the agent's terminal. `OWNER-STEPS.md` step 6 has the recipe for the name, the
+  message or the agent's terminal. `OWNER-STEPS.md` step 7 has the recipe for the name, the
   owner's steps for each phone as a ready message, and the three ways to see that a phone
   really shows a push (the agent cannot send one). (`manage.py new-secret --out <file>` writes a
   random topic and share token to a file without printing them: for an owner who runs Python on
-  their own computer.) The topic is set **last**, after a first clean round (§7.5).
+  their own computer.) The topic is the **last of the settings**, after a first clean round
+  (§7.5) and before the watchdog and the add-on (§9, phase 8).
 - Publish with a **JSON body to the server root** (not to `/<topic>`), which avoids every
   header-encoding problem with Hebrew:
   `POST https://ntfy.sh/` with `Content-Type: application/json` and
@@ -383,7 +399,7 @@ arrive again; option 2 speaks through a channel of its own.
 
 **What a pass looks like** (go-live checklist, item 3: stop the worker for 16 minutes, then start
 it). Option 1: the phone gets `המדידה נעצרה` 10 to 15 minutes after the stop and the screen shows
-the alert; after the start, `חזר לתקין` within a minute. It cannot be tried on a local Postgres.
+the alert; `חזר לתקין` within a few minutes of the start. It cannot be tried on a local Postgres.
 Option 2: the heartbeat service's own notification, and its own "up again". Option 3: the two
 pushes, at the watchdog's next look after minute 10 and after the start; it can be rehearsed
 locally: the reference server with `COLLECTORS=0`, `python3 collectors.py` as the worker that

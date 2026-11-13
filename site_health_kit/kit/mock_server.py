@@ -346,9 +346,19 @@ def is_bucket(text):
     return True
 
 
+def storable(text):
+    """As reference/server.py _storable: text that UTF-8 can carry, without a control character."""
+    try:
+        text.encode("utf-8")
+    except UnicodeError:
+        return False
+    return not re.search(r"[\x00-\x1f\x7f]", text)
+
+
 def drill_request_ok(q):
     """Spec §5.4: a missing or malformed parameter answers {"rows": []}. An empty value means "absent".
-    The same rules as reference/server.py: an id is ASCII digits that fit a bigint; an alert has no bucket."""
+    The same rules as reference/server.py: an id is ASCII digits that fit a bigint; an alert has no bucket;
+    a page or url with a control character is malformed."""
     what, bucket = q.get("what"), q.get("bucket") or ""
     if what == "alert":
         aid = q.get("id") or ""
@@ -358,8 +368,8 @@ def drill_request_ok(q):
     if what == "bucket":
         return bool(bucket)
     if what == "runs":
-        return bool(q.get("url"))
-    return True
+        return bool(q.get("url")) and storable(q["url"])
+    return storable(q.get("page") or "")
 
 
 def api_drill(q, role):

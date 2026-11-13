@@ -49,8 +49,8 @@ you never see their values** (`OWNER-STEPS.md`). Everything about the site itsel
 | `SH_SCREEN` | server | no | path of the screen file. Without it: `site_health.html` next to `server.py`, else `../site_health.html`. |
 | `SH_RUM_PER_MINUTE`, `SH_RUM_PER_DAY` | server | no (defaults `300`, `20000`) | how many real-user rows are stored a minute and a day, for all visitors together (§7.7). Beyond it rows are dropped. |
 | `COLLECTORS` | server | no (default on) | `0`: this server process measures nothing (the collectors run elsewhere). |
-| `PAGESPEED_KEY` | collectors | no | Google PageSpeed Insights API key (§7.6). Without it the two speed collectors do not run and the speed cards stay empty. |
-| `NTFY_TOPIC` | collectors, watchdog | no | the ntfy topic alerts are pushed to (§7.9). Without it alerts still open and show on the screen; every message is logged as not sent. On a live service it is set last. |
+| `PAGESPEED_KEY` | collectors | for go-live | Google PageSpeed Insights API key (§7.6), free. Without it the two speed collectors do not run, the speed cards stay empty and their flows `אין נתון`; core speed cannot be switched off, so go-live needs the key (§10 item 2). |
+| `NTFY_TOPIC` | collectors, watchdog | no | the ntfy topic alerts are pushed to (§7.9). Without it alerts still open and show on the screen; every message is logged as not sent. On a live service it is the last of the settings, before the watchdog and the add-on (§9, phase 8). |
 | `NTFY_URL`, `NTFY_TOKEN` | collectors, watchdog | no | the ntfy server (default `https://ntfy.sh`), and the access token of a reserved topic or a self-hosted server. |
 | `DASHBOARD_URL` | collectors, watchdog | no, recommended | this dashboard's public address. It is named in the probe's `User-Agent` (`SiteHealthProbe/1.0 (+<address>)`, so a firewall can allow it) and opened by a tap on a push. |
 | `HEARTBEAT_URL` | collectors | no | the ping address of an outside heartbeat service; requested after every full probe round (§7.10, option 2). |
@@ -64,19 +64,22 @@ you never see their values** (`OWNER-STEPS.md`). Everything about the site itsel
 server nor the collectors log a key, a password, a token, the topic or the heartbeat address.
 The database variables are trimmed; a wrong one shows as a short text in `/health` (`"db"`),
 never with the key: `SUPABASE_URL must start with https://`, `the database address or key is
-malformed`, `HTTP 401…`, `database call failed (…): check DATABASE_URL`.
+malformed`, `HTTP 401…`, and for an error while connecting `database call failed (…): check
+DATABASE_URL`. An error while a call is sent (a value the database cannot store) reads
+`database call failed (DataError): the call carried a value the database cannot store` and
+never names `DATABASE_URL`.
 
 ## Commands
 
 | Command | Needs | What it does |
 |---|---|---|
-| `python3 manage.py install-sql --config site_health.config.json --out install.sql` | nothing | writes **one SQL file**: `schema.sql`, `functions.sql` and the `sh_setup` call with the configuration. The owner pastes it into the database's SQL editor (`OWNER-STEPS.md` step 2). It refuses a configuration that is plainly wrong; `sh_setup` checks the rest when the file runs, so rehearse it. Write it again after every change of the configuration. |
+| `python3 manage.py install-sql --config site_health.config.json --out install.sql` | nothing | writes **one SQL file**: `schema.sql`, `functions.sql` and the `sh_setup` call with the configuration. The owner pastes it into the database's SQL editor (`OWNER-STEPS.md` step 2). It refuses every configuration that `sh_setup` would refuse, before writing anything, in the database's own words: `<config file>: <message>`, such as `site_health.config.json: sh_setup: the home page must be a core page`. The file is written beside its place and then moved there, so it is never half written (a write failure: `<out> cannot be written: <reason>`, the old file kept). Still rehearse it with `init-db`. Write it again after every change of the configuration. |
 | `python3 manage.py init-db --file install.sql` | `DATABASE_URL` | applies that file: the rehearsal on a scratch database (run it twice). Plain `init-db` applies `schema.sql` and `functions.sql`. |
 | `python3 manage.py setup site_health.config.json` | the database | loads the configuration (`sh_setup`) where you hold the database variables: a rehearsal. Safe to repeat. |
 | `python3 manage.py check` | the database | the variables that are set, the configuration, what is switched off, every flow. |
 | `python3 manage.py run-once <collector>` | the service's environment | one run of one collector, printing what it stored (table further down). A part that is off answers `skipped: …`. |
 | `python3 manage.py test-push` | `NTFY_TOPIC` | one push that says it is a test; leaves no row in the database. |
-| `python3 manage.py rum-plugin --endpoint https://<dashboard>/m --out site-health-rum.zip` | nothing | the WordPress plugin as a ZIP with its two values filled in (the live host comes from `site_health.config.json`, or `--live-host`). The owner uploads it (`OWNER-STEPS.md` step 8). |
+| `python3 manage.py rum-plugin --endpoint https://<dashboard>/m --out site-health-rum.zip` | nothing | the WordPress plugin as a ZIP with its two values filled in (the live host comes from `site_health.config.json`, or `--live-host`). The owner uploads it (`OWNER-STEPS.md` step 9). |
 | `python3 manage.py new-secret --out <file>` | nothing | writes a random topic name and share token into a new file and prints neither. For an owner who runs Python on their own computer; an agent never reads that file. |
 | `python3 watchdog.py --dashboard https://<dashboard> [--loop]` | `NTFY_TOPIC` | one look at `/health` (for cron, every 5 minutes), or a look every minute with `--loop`. Pushes `המדידה נעצרה: בודק זמינות האתר` and `חזר לתקין: …`. Exit code 0, 1 (a push was owed and not accepted) or 2. |
 
@@ -107,6 +110,9 @@ uvicorn server:app --port 8000 --no-access-log           # http://127.0.0.1:8000
 python3 manage.py check                                  # the database, the configuration, every flow
 ```
 
+A port that is taken (here 8900 or 8000) needs another number: the fake then says so in one line
+(`port 8900 cannot be opened (Address already in use). … try another one, such as  python3
+tests/fake_site.py 8901 …`) and writes nothing; change the addresses of the exports to match.
 Without `SH_ALLOW_PRIVATE=1` every check of the fake site is refused (it is on 127.0.0.1), and
 `SH_PROXY_HOPS=0` is right here because no proxy stands in front. Within a minute the "עכשיו"
 card shows the first round. `curl 'http://127.0.0.1:8900/__fake?path=/cart/&status=502'` breaks
@@ -142,14 +148,14 @@ python3 $KIT/tools/check_template.py site_health.html                       # SC
 at most twice in ten minutes. Its `--limiter` check is for the live address; against 127.0.0.1 it
 fails unless the server is started with `--no-proxy-headers` (uvicorn itself believes
 `X-Forwarded-For` from 127.0.0.1). On a live address the same commands run with the throwaway
-check password that the owner sets and deletes (`OWNER-STEPS.md` step 5); the share-link line is
+check password that the owner sets and deletes (`OWNER-STEPS.md` step 6); the share-link line is
 then the owner's to try, because the token is not yours.
 
 ## Running the tests
 
 ```bash
 pip install -r requirements-dev.txt     # the service's packages, pytest and httpx
-python3 -m pytest -q                    # all three layers: about 1,100 tests, about a minute
+python3 -m pytest -q                    # all three layers, a minute or two; every test must pass
 python3 -m pytest -q tests/test_server.py    # this file alone needs no PostgreSQL
 node tests/test_rum_snippet.js          # the real-user script in a browser (needs Playwright)
 ```
@@ -157,9 +163,10 @@ node tests/test_rum_snippet.js          # the real-user script in a browser (nee
 - **A scratch PostgreSQL (15 or newer)** where the tests may create and drop a database:
   `SH_TEST_ADMIN_URL`. To get one: `docker run --rm -d -p 5432:5432 -e POSTGRES_PASSWORD=shtest postgres:16`,
   or, where PostgreSQL 16 is installed, `pg_ctlcluster 16 main start`. The database gets a random
-  name and is dropped at the end; no other database is touched. When none answers, the run ends
-  with one line that starts `No Postgres answers at SH_TEST_ADMIN_URL` (return code 2), without
-  a password in it.
+  name and is dropped at the end; no other database is touched. When none answers, the password
+  is refused or the database does not exist, the run ends with one line that starts `No usable
+  Postgres at SH_TEST_ADMIN_URL (<host>:<port>): no answer, or the sign-in was refused.` (return
+  code 2), without a password in it.
 - **The kit.** The tests use the kit's `mock_server.py` and `site_health.html`. They look in
   `$SH_KIT_DIR`, then in the parent folder, then in `../site-health-kit`; when none holds them
   the run ends with one line that names `SH_KIT_DIR`.
@@ -197,9 +204,11 @@ What follows is what you need to know behind them.
    - Root directory: this folder (`site-health/`). Build: `pip install -r requirements.txt`.
      Python 3.10 or newer; set the version explicitly where the host's default is older.
    - Start command: `uvicorn server:app --host 0.0.0.0 --port $PORT --no-access-log`. The share
-     token travels in the query string; `server.py` also cuts query strings out of uvicorn's
-     access log by itself, so a forgotten flag leaks nothing. Under another server program
-     (gunicorn, hypercorn) turn its access log off.
+     token travels in the query string; `server.py` also cuts query strings, an encoded `?`
+     (`%3F`) included, out of uvicorn's access log by itself, so a forgotten flag leaks nothing
+     for ordinary requests. **Never run a live service with `--log-level trace`**: uvicorn then
+     prints every request whole, token included. Under another server program (gunicorn,
+     hypercorn) turn its access log off.
    - **One worker process only.** No `--workers 2`, no scaling to several instances: every worker
      would start its own collectors, and the sign-in limits live in memory.
    - Health-check path: `/health`. Always status 200 (a restart does not repair a database):
@@ -212,8 +221,8 @@ What follows is what you need to know behind them.
    collectors' variables. Same code, same schedule.
 6. **Who watches the watcher (§7.10).** `deadman.sql` on Supabase (follow its header), or a
    heartbeat service and `HEARTBEAT_URL`, or `watchdog.py` on a machine that does not stop with
-   the host. `OWNER-STEPS.md` step 7.
-7. **Real users.** `manage.py rum-plugin`, `rum/`, §7.7, `OWNER-STEPS.md` step 8.
+   the host. `OWNER-STEPS.md` step 8.
+7. **Real users.** `manage.py rum-plugin`, `rum/`, §7.7, `OWNER-STEPS.md` step 9.
 
 ### What happens while two workers overlap (a deploy)
 
@@ -235,7 +244,7 @@ For a minute or two the old and the new process both run. Nothing is stored or p
 
 These need the service's environment (the database variables and the collectors' own). You have
 it in the rehearsal above. On a live service you do not: there the proof is the flow list seen
-from the outside (`OWNER-STEPS.md` step 5), and only the owner could run a command, in the host's
+from the outside (`OWNER-STEPS.md` step 6), and only the owner could run a command, in the host's
 command screen. `run-once` leaves the daily markers alone, so the scheduled run still happens. A
 probe round or a speed round run by hand is stored under the same scheduled moment as the
 scheduler's own, so it never adds a second one: when the scheduler has been there first, the
@@ -281,10 +290,13 @@ of an `http://` site and the catalogue of platform `other`) never runs.
   sent later.
 - **A full outage is one alert per probe page**, and one recovery per page (§7.8): four pages,
   eight pushes. The hand-over note tells the owner.
-- **A check is ok only for status 200.** A redirect to another host is not followed and fails
-  the check (`redirected to another host`): a cart on another domain needs that domain in
-  `extra_hosts`. A page that a firewall answers with a 200 challenge counts as up unless the
-  page has an `expect` text.
+- **A check is ok only for status 200.** A redirect is not followed, and fails the check, when
+  it goes to another host (`redirected to another host`: a cart on another domain needs that
+  domain in `extra_hosts`), from https down to http (`redirected from https to http`, any host),
+  or to another port of the same host (`redirected to another port`; http on 80 to https on 443
+  is fine). A sitemap file then fails with `redirected <why>: <address>`, the catalogue with
+  `the catalogue redirects <why>`. A page that a firewall answers with a 200 challenge counts as
+  up unless the page has an `expect` text (the example configuration gives the home page one).
 - **A refused PageSpeed key** (`API key not valid`, or a 403): nothing is measured and the
   collector asks again once an hour, so enabling the API in Google's console needs no restart.
 - **Real-user rows have three budgets**: 60 a minute per visitor address; 300 a minute and 20,000
@@ -292,7 +304,11 @@ of an `http://` site and the catalogue of platform `other`) never runs.
   database stores nothing once the last 24 hours hold 30,000 rows. Beyond a budget rows are
   dropped and nothing breaks. A busier site raises `SH_RUM_PER_DAY`, or measures a share of its
   views (the `sample` value of the script; in your copy of the plugin, `SITE_HEALTH_RUM_SAMPLE`).
-  A row is about 150 bytes: 10,000 measured views a day are about 45 MB over the 30 days kept.
+  The path is stored percent-encoded and cut at 120 characters. Measured on PostgreSQL 16, table
+  and index: about 116 bytes a row with a 40-character path, 197 with a 120-byte path, 296 at
+  worst. So 10,000 measured views a day are about 35 MB over the 30 days kept; a flood held at
+  the database's cap for a month reaches about 275 MB (about 183 MB at the server's 20,000 a
+  day), which with the rest of the database stays under the 500 MB of a free project (§7.2).
 - **Pages that real users never measure**: cart, checkout, account and order pages, the
   `private_paths` of the configuration, and any path that holds an `@`, a 16-digit number or a
   long code of letters and digits (§7.7).

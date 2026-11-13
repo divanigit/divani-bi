@@ -58,8 +58,8 @@
 --      shows status_code 200, and after the next run (5 minutes):
 --        select title, event, status, attempts from sh_messages order by id desc limit 3;
 --      shows status 200 for the "open" message.
---   e. Start the worker. Within a minute the alert closes and the phone gets
---      "חזר לתקין: בודק זמינות האתר".
+--   e. Start the worker. Within a few minutes of the start the alert closes and the phone gets
+--      "חזר לתקין: בודק זמינות האתר" (the host builds and starts the service first).
 --   f. select status, return_message, start_time from cron.job_run_details
 --      where jobid = (select jobid from cron.job where jobname = 'sh-deadman') order by start_time desc limit 5;
 --      shows "succeeded" every 5 minutes.

@@ -33,7 +33,9 @@ Collectors and their cadence (all times are the site's local time zone):
 
 A part that does not apply to a site (no sitemap, nothing to sell, no certificate, no add-on on
 the site) is switched off in the site's configuration (`off`, §7.4): its flow is disabled and
-its card hidden, instead of showing `אין נתון` for good.
+its card (for real users: the tile of "עכשיו") hidden, instead of showing `אין נתון` for good.
+The probe and the core-page speed test cannot be switched off; the speed test needs the free
+Google key (§7.6), so the key is required for go-live (§10).
 
 The thresholds below are used everywhere (screen, alerts, texts). Do not change them.
 
@@ -77,13 +79,13 @@ nobody edits these values in the HTML):
 | `liveHosts` | values of the real-user source that mean "the live site" | `['live', siteLabel, 'www.' + siteLabel]` |
 | `pathLabels` | URL path prefixes turned into readable Hebrew labels | WooCommerce: `[['/product-category/','קטגוריה: '],['/product/','מוצר: ']]`; Shopify: `[['/collections/','קטגוריה: '],['/products/','מוצר: ']]` |
 | `bucketNote` | a note under the "server response per page" drill-down; empty = none | `''` |
-| `nav` | menu entries to other screens of the same system; empty = no menu button | `[]` |
+| `nav` | menu entries to other screens of the same system; empty = no menu button. Never sent to an outsider (§8.2) | `[]` |
 | `here` | this screen's path in `nav` | `'/site'` |
-| `links` | extra buttons in the top bar | `[]` |
+| `links` | extra buttons in the top bar. Never sent to an outsider (§8.2) | `[]` |
 | `api` | base path of the data calls | `'/api'` |
 | `loginPath`, `logoutPath` | | `'/login'`, `'/logout'` |
 | `shareKey` | share-link token; when set it is appended to every data call as `k=` | `''` |
-| `hide` | ids of cards that do not apply to this site: `'issuesCard'` (a site that sells nothing), `'slowCard'` (no sitemap rotation), `'certCard'` (a site without https). The reference fills it from the configuration's `off` and `hide` | `[]` |
+| `hide` | ids of cards that do not apply to this site: `'issuesCard'` (a site that sells nothing), `'slowCard'` (no sitemap rotation), `'certCard'` (a site without https), and `'nowRum'`, the tile `מהירות אצל לקוחות, שעה אחרונה` of "עכשיו" with its sentence in the card's explanation (a site that does not measure real users, §6.2). The reference fills it from the configuration's `hide` and `off` (§7.4) | `[]` |
 
 and the viewer's role, `SH_ROLE` (§8): `{}` for owner and staff, `{readonly: true}` for a vendor,
 `{readonly: true, noAlerts: true}` for a vendor who must not see alerts, `{share: true}` for the
