@@ -64,6 +64,7 @@ DASH_PASS_EYAL = os.environ.get("DASH_PASS_EYAL", "")  # אייל (דיגיטא�
 CLARITY_TOKEN = os.environ.get("CLARITY_TOKEN", "")  # Microsoft Clarity → Settings → Data export → API token
 OWL_CART_SECRET = os.environ.get("OWL_CART_SECRET", "")  # לכידת עגלות מהאתר: חתימת HMAC משותפת עם התוסף
 HEALTH_SHARE_TOKEN = os.environ.get("HEALTH_SHARE_TOKEN", "")  # קישור בריאות האתר לדיגיטאץ' — טוקן נפרד, מסך אחד בלבד, בלי שום גישה לינשוף
+GLASSIX_ALERT_TOKEN = os.environ.get("GLASSIX_ALERT_TOKEN", "")  # בקרת גלסיקס → "דוח נשלח למייל" לפס האדום של דורון בלבד (16.11.2026). ריק = נקודת הקצה כבויה
 if not HEALTH_SHARE_TOKEN and OWL_CART_SECRET:
     # אין צורך במשתנה סביבה נוסף: הטוקן נגזר מ-OWL_CART_SECRET בגזירה חד-כיוונית
     # (לא ניתן לשחזר ממנו את הסוד). יציב בין דיפלויים. לסובב: להגדיר HEALTH_SHARE_TOKEN במפורש.
@@ -712,6 +713,24 @@ def _dg_alerts(rows):
     return [r for r in rows if isinstance(r, dict) and (r.get("kind") or "") in _DG_ALERT_KINDS] if isinstance(rows, list) else rows
 
 
+# ---------- התראות לדורון בלבד (16.11.2026) ----------
+# הסוג 'glassix' = "דוח גלסיקס HH:MM נשלח למייל" — בקרת גלסיקס (GlassixMonitor\send_outlook.ps1) מודיעה
+# דרך /api/alerts/push שדוח יצא. רואה אותו רק העוגייה האישית של דורון, ולא כשהוא רואה את הינשוף
+# כמו מישהו אחר (העין). לא דב, לא רום, לא סבינה והיועצים, לא עידו, לא איתמר ורחל.
+_PRIVATE_ALERT_KINDS = {"glassix"}
+
+
+def _private_alerts_ok(request: Request) -> bool:
+    return _is_doron(request) and not request.cookies.get(PREVIEW_COOKIE, "")
+
+
+def _hide_private_alerts(rows, request: Request, field: str = "kind"):
+    """מסיר את ההתראות הפרטיות מכל רשימה שיוצאת למי שאינו דורון. field = שם שדה הסוג בשורה."""
+    if not isinstance(rows, list) or _private_alerts_ok(request):
+        return rows
+    return [r for r in rows if not (isinstance(r, dict) and (r.get(field) or "") in _PRIVATE_ALERT_KINDS)]
+
+
 @app.middleware("http")
 async def _dg_gate(request: Request, call_next):
     if not _is_digi(request):
@@ -911,6 +930,11 @@ def api_site_now(request: Request):
         return JSONResponse({"error": "auth"}, status_code=401)
     try:
         d = sb_rpc("bi_site_now", {}) or {}
+        if isinstance(d, dict):
+            # המונה הפרטי (glassix) מצטרף למונה אצל דורון בלבד; אצל כל אחד אחר הוא נמחק
+            n_priv = d.pop("alerts_open_private", 0) or 0
+            if _private_alerts_ok(request):
+                d["alerts_open"] = (d.get("alerts_open") or 0) + n_priv
         if _is_keren(request) and isinstance(d, dict):
             d["alerts_open"] = 0
         if _is_digi(request) and isinstance(d, dict):
@@ -937,6 +961,7 @@ def api_alerts(request: Request):
         rows = sb_rpc("bi_alerts_open", {}) or []
         if not _can_ops(request):
             rows = [r for r in rows if (r.get("kind") or "") != "ops"]   # רשימת הבוקר של ינשוף גיבור — רק למי שיש לו אותו
+        rows = _hide_private_alerts(rows, request)                          # "דוח גלסיקס נשלח" — דורון בלבד
         return JSONResponse({"open": rows})
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=502)
@@ -969,7 +994,9 @@ def api_messages(request: Request, h: int = 720, f: str = "", t: str = ""):
         return JSONResponse({"error": "auth"}, status_code=401)
     p_from, p_to, _ = _range_args(h, f, t)
     try:
-        return JSONResponse({"rows": sb_rpc("bi_messages_range", {"p_from": p_from, "p_to": p_to}) or []})
+        rows = sb_rpc("bi_messages_range2", {"p_from": p_from, "p_to": p_to}) or []
+        # bi_messages_range2 מחזירה גם alert_kind — הדחיפות של ההתראות הפרטיות נסתרות ממי שאינו דורון
+        return JSONResponse({"rows": _hide_private_alerts(rows, request, "alert_kind")})
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=502)
 
@@ -1007,6 +1034,55 @@ async def api_alerts_ack(request: Request):
         return JSONResponse({"ok": True, "n": len(ids)})
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=502)
+
+
+_PUSH_KEY_RE = re.compile(r"[A-Za-z0-9_.:-]{1,80}")
+_PUSH_HHMM_RE = re.compile(r"\d{2}:\d{2}")
+
+
+@app.post("/api/alerts/push")
+async def api_alerts_push(request: Request):
+    """התראה מבחוץ לפס האדום של דורון בלבד (16.11.2026): בקרת גלסיקס (send_outlook.ps1) מודיעה שדוח
+    נשלח למייל. אימות בטוקן ייעודי (GLASSIX_ALERT_TOKEN ב-Render, אותו ערך כ-OWL_ALERT_TOKEN ב-.env של
+    הבקרה) ולא בעוגיית התחברות — לבקרה אין ולא יהיה מפתח סופאבייס. הסוג נקבע כאן (glassix) ולא על ידי
+    השולח, ולכן השולח אינו יכול לייצר התראת אתר/ops. כל דוח חדש סוגר את ההתראה הקודמת מאותו סוג, כדי
+    שהפס יראה רק את הדוח האחרון. הדחיפה לטלפון של דורון נעשית בתוך bi_alert_push (bi_alert_notify → ntfy).
+    הסקריפט השולח הוא ASCII בלבד, ולכן הכותרת העברית נבנית כאן: "דוח גלסיקס HH:MM נשלח למייל".
+    גוף: {time:"HH:MM", subject, to} או במקום זה {key, title, body}. ריק GLASSIX_ALERT_TOKEN = 404."""
+    if not GLASSIX_ALERT_TOKEN:
+        return JSONResponse({"error": "off"}, status_code=404)
+    auth = request.headers.get("authorization", "")
+    tok = auth[7:].strip() if auth.lower().startswith("bearer ") else request.headers.get("x-alert-token", "")
+    if not tok or not hmac.compare_digest(tok, GLASSIX_ALERT_TOKEN):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    try:
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise ValueError("not an object")
+    except Exception:
+        return JSONResponse({"error": "bad request"}, status_code=400)
+    if (body.get("kind") or "glassix") != "glassix":
+        return JSONResponse({"error": "kind"}, status_code=400)
+    now = dt.datetime.now(IL)
+    hhmm = str(body.get("time") or "")
+    if not _PUSH_HHMM_RE.fullmatch(hhmm):
+        hhmm = now.strftime("%H:%M")
+
+    def _clean(v, n):
+        return re.sub(r"\s+", " ", str(v or "")).strip()[:n]
+    key = _clean(body.get("key"), 80)
+    if not _PUSH_KEY_RE.fullmatch(key):
+        key = "glassix_" + now.strftime("%Y-%m-%d_") + hhmm.replace(":", "")
+    title = _clean(body.get("title"), 120) or f"דוח גלסיקס {hhmm} נשלח למייל"
+    subject, to = _clean(body.get("subject"), 200), _clean(body.get("to"), 200)
+    desc = _clean(body.get("body"), 600) or " · ".join(p for p in (subject, ("אל: " + to) if to else "") if p)[:600]
+    try:
+        r = sb_rpc("bi_alert_push", {"p_key": key, "p_kind": "glassix", "p_title": title, "p_body": desc,
+                                     "p_priority": 3, "p_tags": ["email"], "p_close_kind": True})
+        print(f"alerts/push: {key} new={r.get('new') if isinstance(r, dict) else '?'}", flush=True)
+        return JSONResponse({"ok": True, "key": key, "title": title, "result": r})
+    except Exception as e:
+        return JSONResponse({"error": str(e)[:200]}, status_code=502)
 
 
 @app.get("/api/site")
@@ -1054,6 +1130,8 @@ def api_site(request: Request, h: int = 24, strategy: str = "mobile", f: str = "
         # דיגיטאץ': רק התראות על האתר עצמו
         out["alerts_open"] = _dg_alerts(out.get("alerts_open"))
         out["alerts_recent"] = _dg_alerts(out.get("alerts_recent"))
+    out["alerts_open"] = _hide_private_alerts(out.get("alerts_open"), request)
+    out["alerts_recent"] = _hide_private_alerts(out.get("alerts_recent"), request)
     try:
         out["cert"] = (sb_select("bi_site_cert?select=host,issuer,not_after,days_left,ok,err,checked_at&host=eq.vdivani.co.il") or [None])[0]
     except Exception as e:
@@ -1084,6 +1162,7 @@ def api_site_drill(request: Request, what: str = "", h: int = 24, f: str = "", t
                                                  "p_strategy": strategy, "p_bucket": bucket or None})
         elif what == "alert":
             rows = sb_rpc("bi_alert_detail", {"p_id": int(id)})
+            rows = _hide_private_alerts(rows, request)
             if _is_keren(request):
                 rows = []
             if _is_digi(request):

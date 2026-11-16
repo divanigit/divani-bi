@@ -4887,7 +4887,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       var o=((d&&d.open)||[]).filter(function(a){return !a.acked;});if(!o.length){el.classList.remove('on');el.innerHTML='';return;}
       // בלוח הראשי רק סיכום קצר — הפירוט והטיפול במסך "בריאות האתר".
       var t=o[0]&&o[0].title?String(o[0].title).replace(/[<>&]/g,' '):'';
-      el.innerHTML='<div class="arow"><div><b>⚠ '+o.length+' '+(o.length===1?'התראה פעילה':'התראות פעילות')+' באתר</b><small>'+t+(o.length>1?' ועוד '+(o.length-1):'')+' · הקש לבריאות האתר</small></div></div>';
+      // "דוח גלסיקס נשלח למייל" (סוג glassix, דורון בלבד) אינה התראה "באתר": בלי המילה, ומעטפה במקום משולש
+      var ng=o.filter(function(a){return a.kind==='glassix';}).length;
+      el.innerHTML='<div class="arow"><div><b>'+(ng===o.length?'📧 ':'⚠ ')+o.length+' '+(o.length===1?'התראה פעילה':'התראות פעילות')+(ng?'':' באתר')+'</b><small>'+t+(o.length>1?' ועוד '+(o.length-1):'')+' · הקש לבריאות האתר</small></div></div>';
       el.classList.add('on');
     }).catch(function(){});}
     pull();setInterval(pull,60000);})();
