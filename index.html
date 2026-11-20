@@ -684,7 +684,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .dflag{display:inline-block;margin-inline-start:6px;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:#c0392b;color:#fff;font-weight:800;font-size:12px;cursor:pointer;vertical-align:middle}
   .dfold{display:none;margin-top:4px;padding:6px 10px;border-radius:8px;background:rgba(192,57,43,.08);color:var(--tx2);font-size:12.5px;line-height:1.5;white-space:normal}
   .dfold.on{display:block}
-</style>
+/* גלאסיקס (20.11.2026, דורון): שני גוונים — שוחח בגלאסיקס לפני הקנייה (ירוק), נסגר בתוך הצ'אט (ירוק כהה ומודגש). לבעלים בלבד בשלב זה */.gx1{color:var(--okfg);font-weight:600;white-space:nowrap}.gxn{color:var(--tx3);font-size:12px;font-weight:400}.gx2{color:var(--okfg);font-weight:700;font-size:12px;white-space:nowrap;margin-top:2px}.gxm{color:var(--tx3);font-size:12px}#gxchip{display:none}</style>
 </head>
 <body>
 <div class="wrap">
@@ -781,7 +781,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   </div>
   <div class="dimbar" id="phbar" style="display:none" role="group" aria-label="טיפול בערוץ הטלפוני">
     <button type="button" class="chip on" data-ph="0" aria-pressed="true">טלפוני בתוך הסניף</button>
-    <button type="button" class="chip" data-ph="1" aria-pressed="false">טלפוני בנפרד</button>
+    <button type="button" class="chip" data-ph="1" aria-pressed="false">טלפוני בנפרד</button><button type="button" class="chip" id="gxchip" data-gx="1" aria-pressed="false" title="רק מכירות של לקוחות ששוחחו עם מכירות בגלאסיקס עד 30 יום לפני ההזמנה">גלאסיקס בלבד</button>
   </div>
   <div class="dimbar" id="dimbar" style="display:none" role="group" aria-label="בחירת פילוח">
     <button type="button" class="chip on" data-d="fam" aria-pressed="true">קטגוריות</button>
@@ -1030,6 +1030,19 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   var PAL=['#0d9668','#3a6fc4','#b0791f','#8a5bc4'];
   function trendRange(){var t=(META&&META.today)||iso(new Date());var e=new Date(t.slice(0,7)+'-01T12:00:00');e.setDate(0);var d=new Date(e.getFullYear(),e.getMonth()-11,1,12);return [iso(d),iso(e)];}
   var brPhoneSep=false;   // false = phone counted inside its branch · true = phone shown separately
+  // 20.11.2026 (דורון): "גלאסיקס בלבד" בסניפים + עמודת גלאסיקס בסוכנים. gx בשורה: 2 = ההזמנה אושרה בתוך הצ'אט,
+  // 1 = הלקוח שוחח עם מכירות בגלאסיקס עד 30 יום לפני ההזמנה, 0 = לא. לבעלים בלבד עד שדורון יאשר לכולם.
+  var brGxOnly=false;
+  function gxOn(){return !!(META&&META.owner&&!previewUser);}
+  function gxCell(c){
+    if(!c)return '';
+    if(c.depth0===false){return c.gx===2?'<span class="gx2">נסגר בצ\'אט</span>':(c.gx===1?'<span class="gxm">שוחח בגלאסיקס</span>':'');}
+    var gs=c.gs||0, ds=c.ds||0;
+    if(!gs)return '<span class="mut">—</span>';
+    var h='<span class="gx1">'+ils(gs)+'</span><span class="gxn"> · '+(c.gn||0)+'</span>';
+    if(ds)h+='<div class="gx2" title="הזמנה שאושרה בתוך הצ\'אט בגלאסיקס">נסגר בצ\'אט: '+ils(ds)+' · '+(c.dn||0)+'</div>';
+    return h;
+  }
   var BRN={'':'ללא שיוך סניף','PHONE':'טלפוני','101':'נתניה','102':'ראשל"צ','103':'אתר דיוואני','104':'מוקד משרדים','105':'חיפה','106':'ירושלים','107':'בית שמש'};
   function brName(b){var k=(b==null?'':String(b));return BRN[k]||k;}
   var eT={}, stage=document.getElementById('stage');
@@ -1168,12 +1181,13 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var agents={}, custSet={}, orderCount=rows.length, posTotal=0;
     rows.forEach(function(r){
       var an=r.a||'ללא סוכן', ak='a_'+an, ck='c_'+r.cn;
-      var ag=agents[ak]||(agents[ak]={n:an,raw:(r.a||''),s:0,profit:0,cu:{},custIds:{}});
+      var ag=agents[ak]||(agents[ak]={n:an,raw:(r.a||''),s:0,profit:0,cu:{},custIds:{},gs:0,gn:0,ds:0,dn:0});
+      var lv=r.gx||0; if(lv>=1)ag.gn++; if(lv===2)ag.dn++;
       ag.custIds[ck]=1; custSet[ck]=1;
-      var cu=ag.cu[ck]||(ag.cu[ck]={n:r.c||r.cn,s:0,profit:0,k:[]});if(r.w)cu.w=1;if(r.pd){cu.pd=r.pd;cu.d=r.d;}
+      var cu=ag.cu[ck]||(ag.cu[ck]={n:r.c||r.cn,s:0,profit:0,k:[]});if(r.w)cu.w=1;if(r.pd){cu.pd=r.pd;cu.d=r.d;} if(lv>(cu.gx||0))cu.gx=lv;
       (r.k||[]).forEach(function(L){
         var s=L[2]||0,p=L[3]||0;
-        ag.s+=s;ag.profit+=p;cu.s+=s;cu.profit+=p;
+        ag.s+=s;ag.profit+=p;cu.s+=s;cu.profit+=p; if(lv>=1)ag.gs+=s; if(lv===2)ag.ds+=s;
         var sub=(L[1]?'מק"ט: '+L[1]:'')+(multi?(L[1]?' · ':'')+heShort(r.d):'');
         cu.k.push({n:L[0]||L[1]||'פריט',code:sub,s:s,profit:p,pm:s>0?100*p/s:null});
       });
@@ -1182,10 +1196,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       var ag=agents[ak];
       var custKids=Object.keys(ag.cu).map(function(ck){
         var cu=ag.cu[ck];
-        return {n:cu.n,s:cu.s,profit:cu.profit,pm:cu.s>0?100*cu.profit/cu.s:null,k:cu.k,w:cu.w,pd:cu.pd,d:cu.d};
+        return {n:cu.n,s:cu.s,profit:cu.profit,pm:cu.s>0?100*cu.profit/cu.s:null,k:cu.k,w:cu.w,pd:cu.pd,d:cu.d,gx:cu.gx||0,depth0:false};
       });
       if(ag.s>0)posTotal+=ag.s;
-      return {n:ag.n,rawk:ag.raw,s:ag.s,profit:ag.profit,pm:ag.s>0?100*ag.profit/ag.s:null,c:Object.keys(ag.custIds).length,k:custKids};
+      return {n:ag.n,rawk:ag.raw,s:ag.s,profit:ag.profit,gs:ag.gs,gn:ag.gn,ds:ag.ds,dn:ag.dn,pm:ag.s>0?100*ag.profit/ag.s:null,c:Object.keys(ag.custIds).length,k:custKids};
     });
     var ts=0,tp=0;kids.forEach(function(a){ts+=a.s;tp+=a.profit;});
     var tc=Object.keys(custSet).length;
@@ -1194,7 +1208,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
 
   function buildAgg(agg){
     var kids=(agg.agents||[]).map(function(g){
-      return {n:g.a||'ללא סוכן',rawk:(g.a||''),s:g.s||0,profit:g.p||0,pm:(g.s>0)?100*g.p/g.s:null,c:g.c||0,k:null};
+      return {n:g.a||'ללא סוכן',rawk:(g.a||''),s:g.s||0,profit:g.p||0,pm:(g.s>0)?100*g.p/g.s:null,c:g.c||0,k:null,gs:g.gs||0,gn:g.gn||0,ds:g.ds||0,dn:g.dn||0};
     });
     var ts=0,tp=0,pos=0;kids.forEach(function(a){ts+=a.s;tp+=a.profit;if(a.s>0)pos+=a.s;});
     var tc=agg.customers||0;
@@ -1224,7 +1238,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         if(ag.s>0)posTotal+=ag.s;
         var custKids=Object.keys(ag.cu).map(function(ck){
           var cu=ag.cu[ck];
-          return {n:cu.n,s:cu.s,profit:cu.profit,pm:cu.s>0?100*cu.profit/cu.s:null,k:cu.k,w:cu.w,pd:cu.pd,d:cu.d};
+          return {n:cu.n,s:cu.s,profit:cu.profit,pm:cu.s>0?100*cu.profit/cu.s:null,k:cu.k,w:cu.w,pd:cu.pd,d:cu.d,gx:cu.gx||0,depth0:false};
         });
         return {n:ag.n,s:ag.s,profit:ag.profit,pm:ag.s>0?100*ag.profit/ag.s:null,k:custKids};
       });
@@ -1239,7 +1253,13 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
 
   function buildAggBr(agg){
     var src=(agg.branches||[]), kids=[];
-    if(brPhoneSep){
+    if(brGxOnly){   // 20.11.2026: רק החלק של גלאסיקס בכל סניף (gs/gp/gn/gcn מהשרת); טלפוני נשאר בתוך הסניף שלו
+      src.forEach(function(g){
+        var gs=g.gs||0, gp=g.gp||0;
+        if(gs!==0||(g.gn||0)>0) kids.push({n:brName(g.b),rawk:(g.b==null?'':String(g.b)),s:gs,profit:gp,pm:(gs>0)?100*gp/gs:null,c:g.gcn||0,k:null,gs:gs,gn:g.gn||0,ds:g.ds||0,dn:g.dn||0});
+      });
+      kids.sort(function(a,b){return b.s-a.s;});
+    } else if(brPhoneSep){
       var pS=0,pP=0;
       src.forEach(function(g){
         var ps=g.ps||0, pp=g.pp||0, pn=g.pn||0;
@@ -1261,7 +1281,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     }
     var ts=0,tp=0,pos=0;kids.forEach(function(a){ts+=a.s;tp+=a.profit;if(a.s>0)pos+=a.s;});
     if(typeof agg.pos==='number')pos=agg.pos;
-    var tc=agg.customers||0;
+    var tc=brGxOnly?(agg.gcust||0):(agg.customers||0);   // 20.11.2026: לקוחות דרך גלאסיקס ברשת, מהשרת
     return {c:tc,s:ts,p:tp,pm:ts>0?100*tp/ts:null,av:tc>0?ts/tc:0,k:kids,orders:agg.orders||0,pos:pos};
   }
 
@@ -1357,7 +1377,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(cache.mode==='cashlines')return buildCash(cache.rows||[]);
     if(cache.mode==='collect')return buildCollect(cache.agg||{});
     if(cache.mode==='dim'||cache.mode==='tree'||cache.mode==='segdrill')return buildDim(cache.agg||{});
-    return view==='branches'?buildBr(cache.rows||[]):build(cache.rows||[]);
+    return view==='branches'?buildBr(brGxOnly?(cache.rows||[]).filter(function(r){return (r.gx||0)>=1;}):(cache.rows||[])):build(cache.rows||[]);
   }
   function treeDepth(){return dimPath.model?3:(dimPath.fam?2:(dimPath.grp?1:0));}
   function treeCrumbs(){
@@ -1398,7 +1418,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       ? {s:'svc_sales',p:null,c:'svc_customers',d:'agent',l:'חיובים'}
       : {s:'sales',p:'profit',c:'customers',
          d:(view==='branches'?(brPhoneSep?'branchp':'branch'):'agent'),l:'מכירות'};
-    var h='<div class="tw"><table><thead><tr><th class="nm">שם</th><th>'+(view==='service'?'חיובים':'מכירות')+'</th><th>אחוז מסה"כ</th>'+(NP?'':'<th>רווח</th><th>אחוז רווח</th>')+'<th>לקוחות</th><th>ממוצע</th></tr></thead><tbody>';
+    var GXCOL=gxOn()&&view==='agents', GT={gs:0,gn:0,ds:0,dn:0};
+    if(GXCOL)rows.forEach(function(it){if(it.depth===0){GT.gs+=it.c.gs||0;GT.gn+=it.c.gn||0;GT.ds+=it.c.ds||0;GT.dn+=it.c.dn||0;}});
+    var h='<div class="tw"><table><thead><tr><th class="nm">שם</th><th>'+(view==='service'?'חיובים':'מכירות')+'</th><th>אחוז מסה"כ</th>'+(NP?'':'<th>רווח</th><th>אחוז רווח</th>')+'<th>לקוחות</th>'+(GXCOL?'<th title="מכירות של לקוחות ששוחחו עם מכירות בגלאסיקס עד 30 יום לפני ההזמנה · מספר הזמנות. בשורה השנייה: מה אושר בתוך הצ\'אט">גלאסיקס</th>':'')+'<th>ממוצע</th></tr></thead><tbody>';
     rows.forEach(function(it){
       var c=it.c, cls=(it.depth===0?'d0':'dn')+(c.w?' tmp':''), ind=it.depth*14;
       var pct=(R.pos>0&&c.s>0)?Math.round(c.s/R.pos*100)+'%':'—';
@@ -1410,9 +1432,9 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       var cC=d0?srNum(String(nc),SRT.c,SRT.d,rk,c.n+' · לקוחות'):'';
       var ch=it.hasK?chevSvg(!!eT[it.id]):'<span style="width:15px;flex:none"></span>';
       var sub=c.code?'<div class="c" title="'+esc(c.code)+'">'+esc(c.code)+'</div>':'';
-      h+='<tr class="'+cls+(it.hasK?' row':'')+'" '+(it.hasK?'data-t="'+it.id+'" role="button" tabindex="0"':'')+'><td class="nm"><div class="nmc" style="margin-right:'+ind+'px">'+ch+'<div class="nlab'+(it.depth?' rail':'')+'"><div class="t" style="font-weight:'+(it.depth===0?500:400)+'">'+esc(c.n)+(c.w?' <span class="tmpchip" title="הזמנת אתר ששולמה באשראי ועדיין לא הוקלדה לפריוריטי">אתר זמני</span>':'')+(c.pd?' <span class="dflag" role="button" tabindex="0" title="התאריך בפריוריטי שונה מתאריך הכניסה באתר">!</span>':'')+'</div>'+(c.pd?'<div class="dfold">'+esc(dateNote(c))+'</div>':'')+sub+'</div></div></td><td>'+cS+'</td><td class="mut">'+pct+'</td>'+(NP?'':'<td>'+cP+'</td><td>'+pill(c)+'</td>')+'<td>'+cC+'</td><td class="mut">'+(it.depth===0?ils(avg):'')+'</td></tr>';
+      h+='<tr class="'+cls+(it.hasK?' row':'')+'" '+(it.hasK?'data-t="'+it.id+'" role="button" tabindex="0"':'')+'><td class="nm"><div class="nmc" style="margin-right:'+ind+'px">'+ch+'<div class="nlab'+(it.depth?' rail':'')+'"><div class="t" style="font-weight:'+(it.depth===0?500:400)+'">'+esc(c.n)+(c.w?' <span class="tmpchip" title="הזמנת אתר ששולמה באשראי ועדיין לא הוקלדה לפריוריטי">אתר זמני</span>':'')+(c.pd?' <span class="dflag" role="button" tabindex="0" title="התאריך בפריוריטי שונה מתאריך הכניסה באתר">!</span>':'')+'</div>'+(c.pd?'<div class="dfold">'+esc(dateNote(c))+'</div>':'')+sub+'</div></div></td><td>'+cS+'</td><td class="mut">'+pct+'</td>'+(NP?'':'<td>'+cP+'</td><td>'+pill(c)+'</td>')+'<td>'+cC+'</td>'+(GXCOL?'<td>'+gxCell(c)+'</td>':'')+'<td class="mut">'+(it.depth===0?ils(avg):'')+'</td></tr>';
     });
-    h+='</tbody><tfoot><tr><td class="nm">סך הכל</td><td>'+ils(R.s)+'</td><td>'+(R.pos>0?'100%':'—')+'</td>'+(NP?'':'<td>'+ils(R.p)+'</td><td>'+pill({s:R.s,profit:R.p,pm:R.pm})+'</td>')+'<td>'+R.c+'</td><td>'+ils(R.av)+'</td></tr></tfoot></table></div>';
+    h+='</tbody><tfoot><tr><td class="nm">סך הכל</td><td>'+ils(R.s)+'</td><td>'+(R.pos>0?'100%':'—')+'</td>'+(NP?'':'<td>'+ils(R.p)+'</td><td>'+pill({s:R.s,profit:R.p,pm:R.pm})+'</td>')+'<td>'+R.c+'</td>'+(GXCOL?'<td>'+gxCell(GT)+'</td>':'')+'<td>'+ils(R.av)+'</td></tr></tfoot></table></div>';
     stage.innerHTML=h;
   }
 
@@ -2320,6 +2342,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(view==='branches'&&state.from<'2024-03-01')msgs.push('שיוך הזמנות לסניפים קיים בפריוריטי רק מתחילת 2024 (במלואו מסוף פברואר) — הזמנות מוקדמות יותר מופיעות תחת "ללא שיוך סניף".');
     if(view==='cash'&&state.from<'2024-03-01')msgs.push('שיוך קבלות לסניפים קיים בפריוריטי רק משנת 2024 — קבלות מוקדמות יותר מופיעות כולן תחת "ללא שיוך סניף".');
     else if(view==='cash')msgs.push('חלק מהקבלות נרשמות בפריוריטי בלי שיוך סניף ומופיעות בשורה נפרדת.');
+    if(view==='branches'&&brGxOnly)msgs.push('מוצגות רק מכירות של לקוחות ששוחחו עם מכירות בגלאסיקס עד 30 יום לפני ההזמנה (כולל מי שאישר את ההזמנה בתוך הצ\'אט).');
     if(view==='service')msgs.push('מוצגת פעילות אנשי השירות בלבד — היא אינה נספרת בדוחות המכירות.');
     if(view==='collect'){var _R=ROOT();msgs.push('על ההזמנות שנכתבו בתקופה שבחרת: כמה הנחות ניתנו עליהן, וכמה כסף התקבל עליהן באותה תקופה. התקבולים כוללים מע"מ, ולכן היחס מחושב מול המחזור בהמרה לכולל מע"מ ולא מול המחזור המוצג. הנחות = שורות קיזוז, קופונים ושוברים.');if(_R&&_R.linkPct!=null&&_R.linkPct<80){msgs.push('שים לב: בתקופה הזו רק '+Math.round(_R.linkPct)+' אחוז מהקבלות נושאות מספר הזמנה בפריוריטי, ולכן חלק מהתקבולים לא משויכים להזמנה.');}}
     if(view==='dim'){
@@ -4572,6 +4595,8 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(META&&state.from)apply();
   }
   document.getElementById('phbar').addEventListener('click',function(e){
+    var g=e.target.closest('[data-gx]');
+    if(g){brGxOnly=!brGxOnly;g.classList.toggle('on',brGxOnly);g.setAttribute('aria-pressed',brGxOnly?'true':'false');renderAll();return;}
     var b=e.target.closest('[data-ph]'); if(!b)return;
     brPhoneSep=(b.getAttribute('data-ph')==='1');
     var bs=this.querySelectorAll('button');
@@ -5183,6 +5208,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
 
   function applyOwnerUI(){
     var owner=!!(META&&META.owner), prev=owner&&previewUser;
+    var gxc=document.getElementById('gxchip'); if(gxc){gxc.style.display=(owner&&!previewUser)?'':'none'; if(!(owner&&!previewUser)){brGxOnly=false;gxc.classList.remove('on');}}
     if(isKeren()){
       var sgk=document.getElementById('seg');
       if(sgk){

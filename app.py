@@ -1085,6 +1085,81 @@ async def api_alerts_push(request: Request):
         return JSONResponse({"error": str(e)[:200]}, status_code=502)
 
 
+_GX_HEX_RE = re.compile(r"^[0-9a-f]{32}$")
+_GX_ISO_RE = re.compile(r"^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?$")
+
+
+def _gx_ts(v):
+    v = str(v or "").strip()
+    return v if _GX_ISO_RE.fullmatch(v) else None
+
+
+def _gx_txt(v, n):
+    return re.sub(r"\s+", " ", str(v or "")).strip()[:n]
+
+
+@app.post("/api/glassix/sales")
+async def api_glassix_sales(request: Request):
+    """שיחות המכירה בגלאסיקס מהבקרה שבמחשב של דורון (20.11.2026, דורון: עמודת „גלאסיקס” בביצועי סוכנים + כפתור
+    „גלאסיקס בלבד” בסניפים; שאלה 31 = ג). השולח: GlassixMonitor\\push_glassix_sales.py, בכל ריצה. אימות באותו
+    טוקן של ההתראה (GLASSIX_ALERT_TOKEN) — לבקרה אין ולא יהיה מפתח סופאבייס. הטלפונים מגיעים כבר מגובבים
+    (md5 של 9 הספרות האחרונות, כמו bi_customers.phones_h) — מספר טלפון גולמי לא נכנס לכאן ולא נשמר.
+    גוף: {tickets:[{ticket, phone_h, opened, closed, state, agent, first_cust, last_cust, last_agent, n_cust, n_agent,
+    protocol}], deals:[{ticket, at, phone_h, agent, kind, product, amount}]}. upsert: bi_glassix_sales על ticket,
+    bi_glassix_deals על ticket+at. המשמעות העסקית (30 יום אחורה, רמה 1/2) יושבת ב-bi_gx_level בסופאבייס."""
+    if not GLASSIX_ALERT_TOKEN:
+        return JSONResponse({"error": "off"}, status_code=404)
+    auth = request.headers.get("authorization", "")
+    tok = auth[7:].strip() if auth.lower().startswith("bearer ") else request.headers.get("x-alert-token", "")
+    if not tok or not hmac.compare_digest(tok, GLASSIX_ALERT_TOKEN):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    try:
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise ValueError("not an object")
+    except Exception:
+        return JSONResponse({"error": "bad request"}, status_code=400)
+    rows, deals = [], []
+    for t in (body.get("tickets") or [])[:2000]:
+        if not isinstance(t, dict):
+            continue
+        try:
+            tid = int(t.get("ticket"))
+        except (TypeError, ValueError):
+            continue
+        h = str(t.get("phone_h") or "").lower()
+        if tid <= 0 or not _GX_HEX_RE.fullmatch(h):
+            continue
+        rows.append({"ticket": tid, "phone_h": h, "opened": _gx_ts(t.get("opened")), "closed": _gx_ts(t.get("closed")),
+                     "state": _gx_txt(t.get("state"), 20), "agent": _gx_txt(t.get("agent"), 80),
+                     "first_cust": _gx_ts(t.get("first_cust")), "last_cust": _gx_ts(t.get("last_cust")),
+                     "last_agent": _gx_ts(t.get("last_agent")),
+                     "n_cust": max(0, min(int(t.get("n_cust") or 0), 100000)), "n_agent": max(0, min(int(t.get("n_agent") or 0), 100000)),
+                     "protocol": _gx_txt(t.get("protocol"), 30), "pushed_at": dt.datetime.now(dt.timezone.utc).isoformat()})
+    for d in (body.get("deals") or [])[:2000]:
+        if not isinstance(d, dict):
+            continue
+        try:
+            tid = int(d.get("ticket"))
+        except (TypeError, ValueError):
+            continue
+        h, at = str(d.get("phone_h") or "").lower(), _gx_ts(d.get("at"))
+        if tid <= 0 or not at or not _GX_HEX_RE.fullmatch(h):
+            continue
+        deals.append({"ticket": tid, "at": at, "phone_h": h, "agent": _gx_txt(d.get("agent"), 80),
+                      "kind": _gx_txt(d.get("kind"), 20) or "sale", "product": _gx_txt(d.get("product"), 120),
+                      "amount": _gx_txt(d.get("amount"), 120), "pushed_at": dt.datetime.now(dt.timezone.utc).isoformat()})
+    try:
+        if rows:
+            sb_upsert("bi_glassix_sales?on_conflict=ticket", rows)
+        if deals:
+            sb_upsert("bi_glassix_deals?on_conflict=ticket,at", deals)
+        print(f"glassix/sales: {len(rows)} tickets, {len(deals)} deals", flush=True)
+        return JSONResponse({"ok": True, "tickets": len(rows), "deals": len(deals)})
+    except Exception as e:
+        return JSONResponse({"error": str(e)[:200]}, status_code=502)
+
+
 @app.get("/api/site")
 def api_site(request: Request, h: int = 24, strategy: str = "mobile", f: str = "", t: str = ""):
     """כל מה שמסך בריאות האתר צריך בקריאה אחת.
