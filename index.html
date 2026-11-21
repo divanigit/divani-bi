@@ -832,10 +832,6 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
     </button>
 <!--DORON-->
-    <a class="rfr" id="kerenbtn" href="/view-as/keren" title="לראות את הינשוף בדיוק כמו קרן (ספקית האתר)" style="display:none;text-decoration:none">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-      קרן
-    </a>
 <!--/DORON-->
 <!--/OWNER-->
 
@@ -946,6 +942,8 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     <a class="varow" id="vadov" href="/view-as/dov" role="link"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>דב<span class="vasub">משתמש רגיל + מי עובד בלייקי + ינשוף גיבור</span></span></a>
     <!-- כפיר ואייל מדיגיטאץ': תצוגה מהשרת (עוגייה), כמו קרן. בריאות האתר בלבד. בלי data-va בכוונה. -->
     <a class="varow" id="vadigi" href="/view-as/digi" role="link"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>כפיר ואייל (דיגיטאץ')<span class="vasub">בריאות האתר בלבד, צפייה בלבד</span></span></a>
+    <!-- קרן, ספקית האתר (21.11.2026, דורון: "תעיף לי… את הכפתור שכתוב עליו קרן ותעביר לי את זה תחת העין"): תצוגה מהשרת (עוגייה /view-as/keren), כמו רום ודב. לדורון בלבד, כמו הכפתור שהיה. בלי data-va בכוונה. -->
+    <!--DORON--><a class="varow" id="vakeren" href="/view-as/keren" role="link"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>קרן (ספקית האתר)<span class="vasub">בריאות האתר, קלריטי, נטישות וחמישה מסכי מכירות</span></span></a><!--/DORON-->
     <button type="button" class="varow" data-va="ido" role="radio" aria-checked="false"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>עידו אהרון</span></button>
     <button type="button" class="varow" data-va="user-video" role="radio" aria-checked="false"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>משתמש רגיל — לסרטון<span class="vasub">בלי העין, להקלטת מסך</span></span></button>
     <button type="button" class="varow" data-va="ido-video" role="radio" aria-checked="false"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>עידו אהרון — לסרטון<span class="vasub">בלי העין, להקלטת מסך</span></span></button>
@@ -5324,8 +5322,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(vb){ vb.style.display=(owner&&!prevVideo())?'':'none';
             vb.classList.toggle('on',prev);
             vb.title='בחירת תצוגה'; }
-    var kb=document.getElementById('kerenbtn');
-    if(kb)kb.style.display=(owner&&!prevVideo())?'':'none';
+
 /*ENDOWNER*/
     // חיפוש הזמנה: בעלים ורום (META.orders; הגוש ORDERS נמחק בשרת לכל אחד אחר). נשאר גם כשהעין
     // מכוונת לתצוגה של מישהו אחר (29.10.2026: העין נשארה דלוקה והכפתור 'נעלם'). נסתר רק בווידאו.

@@ -1558,17 +1558,10 @@ def _clarity_avail():
 def _owner_keren(request: Request) -> str:
     """כפתור "קרן" לבעלים בכל מסך, לא רק במסך הראשי (דורון, 25.10.2026: חיפש אותו
     בבריאות האתר ולא מצא). נכנס לשורת הכפתורים העליונה של המסך."""
-    if not (_is_admin(request) and _is_doron(request)):
-        return ""
-    return ('<script>document.addEventListener("DOMContentLoaded",function(){'
-            'if(document.getElementById("kerenbtn"))return;'
-            'var a=document.createElement("a");a.id="kerenbtn";a.href="/view-as/keren";'
-            'a.title="לראות את הינשוף בדיוק כמו קרן";a.textContent="קרן";a.style.whiteSpace="nowrap";'
-            'var box=document.querySelector(".owlacts")||document.querySelector(".acts");'
-            'if(box){a.className=box.querySelector(".owlxls")?"owlxls":"btn";a.style.textDecoration="none";box.insertBefore(a,box.firstChild);}'
-            'else{a.style.cssText="position:fixed;bottom:12px;left:12px;z-index:200;background:#4a3aa7;color:#fff;'
-            'font:600 13px system-ui,sans-serif;padding:7px 12px;border-radius:999px;text-decoration:none";'
-            'document.body.appendChild(a);}});</script>')
+    # 21.11.2026 (דורון: "תעיף לי מהממשק של הינשוף את הכפתור שכתוב עליו קרן ותעביר לי את זה תחת העין"): אין יותר כפתור
+    # „קרן” באף מסך. התצוגה כמו קרן נבחרת מהעין במסך הראשי (שורה vakeren → /view-as/keren), והעוגייה מחזיקה בכל המסכים.
+    # הפונקציה נשארת כדי שששת המסכים שקוראים לה לא ישתנו; היא מחזירה ריק.
+    return ""
 
 
 def _ops_switch(request: Request) -> str:
