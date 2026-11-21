@@ -151,6 +151,12 @@ def _dov_token() -> str:
     return hmac.new(DASH_PASS_DOV.encode("utf-8"), b"divani-bi-dov-v1", hashlib.sha256).hexdigest()
 
 
+def _sharon_token() -> str:
+    # שרון מקבלת עוגייה משלה ולא את המשותפת (22.11.2026, דורון: "אפשר לפתוח לחיים שרון רום ודב"), כדי שהשרת
+    # יוכל לפתוח לה את גלאסיקס בלי לפתוח אותו לכל מי שמחזיק בסיסמה המשותפת. מחיקת DASH_PASS_SHARON ב-Render מנתקת אותה מיד.
+    return hmac.new(DASH_PASS_SHARON.encode("utf-8"), b"divani-bi-sharon-v1", hashlib.sha256).hexdigest()
+
+
 def _kfir_token() -> str:
     # מחיקת DASH_PASS_KFIR ב-Render מנתקת את כפיר מיד
     return hmac.new(DASH_PASS_KFIR.encode("utf-8"), b"divani-bi-kfir-v1", hashlib.sha256).hexdigest()
@@ -197,6 +203,11 @@ def _dov_preview(request: Request) -> bool:
     return request.cookies.get(PREVIEW_COOKIE, "") == "dov" and _is_doron(request)
 
 
+def _sharon_preview(request: Request) -> bool:
+    # דורון רואה את הינשוף בדיוק כמו שרון (22.11.2026): אותה עוגיית תצוגה, ערך "sharon"
+    return request.cookies.get(PREVIEW_COOKIE, "") == "sharon" and _is_doron(request)
+
+
 def _digi_preview(request: Request) -> bool:
     # הבעלים רואה את הינשוף בדיוק כמו כפיר ואייל (הבקשה, 12.11.2026): אותה עוגיית תצוגה, ערך "digi"
     return request.cookies.get(PREVIEW_COOKIE, "") == "digi" and _is_doron(request)
@@ -228,6 +239,8 @@ def _preview_label(request: Request) -> str:
         return "סבינה"
     if _dov_preview(request):
         return "דב"
+    if _sharon_preview(request):
+        return "שרון"
     if _digi_preview(request):
         return "כפיר ואייל"
     return ""
@@ -267,6 +280,22 @@ def _is_dov(request: Request) -> bool:
         return False
     tok = request.cookies.get(COOKIE_NAME, "")
     return hmac.compare_digest(tok, _dov_token())
+
+
+def _is_sharon(request: Request) -> bool:
+    if _sharon_preview(request):
+        return True
+    if not DASH_PASS_SHARON:
+        return False
+    tok = request.cookies.get(COOKIE_NAME, "")
+    return hmac.compare_digest(tok, _sharon_token())
+
+
+def _can_gx(request: Request) -> bool:
+    """גלאסיקס בינשוף (עמודת גלאסיקס בסוכנים, "גלאסיקס בלבד" בסניפים, משפך גלאסיקס): הבעלים, חיים, שרון, רום ודב
+    (דורון, 22.11.2026 00:1x: "אפשר לפתוח לחיים שרון רום ודב"). לא הסיסמה המשותפת, לא עידו, לא קרן, לא היועצים."""
+    return (_is_admin(request) or _is_ask2(request) or _is_sharon(request)
+            or _is_rom(request) or _is_dov(request))
 
 
 def _can_see_likey(request: Request) -> bool:
@@ -327,7 +356,7 @@ def _is_admin(request: Request, raw: bool = False) -> bool:
     # produce a real digest of the empty key, and anyone able to compute it
     # would be an owner.
     # raw=True: מי הוא באמת, גם כשהוא כרגע רואה את הינשוף כמו קרן
-    if not raw and request.cookies.get(PREVIEW_COOKIE, "") in ("keren", "rom", "yoatz", "dov", "digi"):
+    if not raw and request.cookies.get(PREVIEW_COOKIE, "") in ("keren", "rom", "yoatz", "dov", "digi", "sharon"):
         return False
     tok = request.cookies.get(COOKIE_NAME, "")
     if DASH_PASS_ADMIN and hmac.compare_digest(tok, _admin_token()):
@@ -346,7 +375,7 @@ def _logged_in(request: Request) -> bool:
     return (hmac.compare_digest(tok, _session_token()) or _is_admin(request)
             or _is_ask2(request) or _is_noprofit(request) or _is_yoatz(request)
             or _is_keren(request) or _is_rom(request) or _is_dov(request)
-            or _is_digi(request))
+            or _is_sharon(request) or _is_digi(request))
 
 
 def _health_ok(request: Request) -> bool:
@@ -419,7 +448,7 @@ def _identity(p: str):
     if _match(p, DASH_PASS_DOV):
         return "דב", _dov_token()
     if _match(p, DASH_PASS_SHARON):
-        return "שרון", _session_token()
+        return "שרון", _sharon_token()     # 22.11.2026: עוגייה משלה (גלאסיקס)
     if _match(p, DASH_PASS):
         return "משותף", _session_token()
     if _match(p, DASH_PASS_ROM):
@@ -459,6 +488,8 @@ def _who_cookie(request: Request) -> str:
         return "קרן"
     if DASH_PASS_ROM and hmac.compare_digest(tok, _rom_token()):
         return "רום"
+    if DASH_PASS_SHARON and hmac.compare_digest(tok, _sharon_token()):
+        return "שרון"
     if _digi_who(request):
         return _digi_who(request)
     return "צוות"
@@ -1101,11 +1132,11 @@ def _gx_txt(v, n):
 @app.get("/api/glassix/funnel")
 def api_glassix_funnel(request: Request, d_from: str = "", d_to: str = ""):
     """משפך גלאסיקס (דורון 20.11.2026 13:4x; שאלה 34 = כן): כמה פניות נכנסו למכירות בגלאסיקס בתקופה, כמה מהן קנו עד 30 יום
-    אחרי הפנייה, בטלפון (סוג הזמנה טלפוני בפריוריטי) או בסניף, ויחסי ההמרה. לבעלים בלבד: לכל אחד אחר {dev:true}, כמו
-    קניבליזציה. החישוב: bi_glassix_funnel (cloud\\sql\\bi_glassix_funnel.sql)."""
+    אחרי הפנייה, בטלפון (סוג הזמנה טלפוני בפריוריטי) או בסניף, ויחסי ההמרה. לבעלים, חיים, שרון, רום ודב (_can_gx,
+    דורון 22.11.2026): לכל אחד אחר {dev:true}, כמו קניבליזציה. החישוב: bi_glassix_funnel (cloud\\sql\\bi_glassix_funnel.sql)."""
     if not _logged_in(request):
         return JSONResponse({"error": "auth"}, status_code=401)
-    if not _is_admin(request):
+    if not _can_gx(request):
         return JSONResponse({"dev": True})
     f, t = _parse_date(d_from), _parse_date(d_to)
     if not f or not t:
@@ -1664,6 +1695,16 @@ def view_as_dov(request: Request):
         return RedirectResponse("/", status_code=303)
     resp = RedirectResponse("/", status_code=303)
     resp.set_cookie(PREVIEW_COOKIE, "dov", max_age=8 * 3600, httponly=True,
+                    secure=True, samesite="lax")
+    return resp
+
+
+@app.get("/view-as/sharon")
+def view_as_sharon(request: Request):
+    if not _is_doron(request):
+        return RedirectResponse("/", status_code=303)
+    resp = RedirectResponse("/", status_code=303)
+    resp.set_cookie(PREVIEW_COOKIE, "sharon", max_age=8 * 3600, httponly=True,
                     secure=True, samesite="lax")
     return resp
 
@@ -4009,7 +4050,7 @@ def index(request: Request):
         html = _NOPROFIT_BLOCK.sub("", html)
     if _is_keren(request):
         html = html.replace("</head>", _keren_bar(request) + _keren_nav(request, "/") + "\n</head>", 1)
-    elif _rom_preview(request) or _yoatz_preview(request) or _dov_preview(request):
+    elif _rom_preview(request) or _yoatz_preview(request) or _dov_preview(request) or _sharon_preview(request):
         html = html.replace("</head>", _keren_bar(request) + "\n</head>", 1)
     return HTMLResponse(html, headers=hdr)
 
@@ -4054,6 +4095,7 @@ def api_meta(request: Request):
                          "orders": _can_search_orders(request),
                          "likey": _can_see_likey(request),
                          "ops": _can_ops(request),
+                         "gx": _can_gx(request),
                          "keren": _is_keren(request)})
 
 

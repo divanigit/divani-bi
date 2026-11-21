@@ -935,11 +935,13 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     <button type="button" class="varow" data-va="" role="radio" aria-checked="false"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>התצוגה שלי</span></button>
     <button type="button" class="varow" data-va="user" role="radio" aria-checked="false"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>משתמש רגיל</span></button>
     <!-- רום: תצוגה מהשרת (עוגייה), לא מהדפדפן — בדיוק מה שהסיסמה שלו מקבלת. בלי data-va בכוונה. -->
-    <a class="varow" id="varom" href="/view-as/rom" role="link"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>רום (עם חיפוש הזמנה)</span></a>
+    <a class="varow" id="varom" href="/view-as/rom" role="link"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>רום (עם חיפוש הזמנה)<span class="vasub">+ גלאסיקס</span></span></a>
     <!-- סבינה והיועצים: תצוגה מהשרת (עוגייה), כמו רום. חמישה מסכים בלבד. בלי data-va בכוונה. -->
     <a class="varow" id="vayoatz" href="/view-as/yoatz" role="link"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>סבינה (היועצים)<span class="vasub">חמישה מסכים בלבד</span></span></a>
     <!-- דב: תצוגה מהשרת (עוגייה), כמו רום. משתמש רגיל + "מי עובד בלייקי". בלי data-va בכוונה. -->
-    <a class="varow" id="vadov" href="/view-as/dov" role="link"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>דב<span class="vasub">משתמש רגיל + מי עובד בלייקי + ינשוף גיבור</span></span></a>
+    <a class="varow" id="vadov" href="/view-as/dov" role="link"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>דב<span class="vasub">משתמש רגיל + מי עובד בלייקי + ינשוף גיבור + גלאסיקס</span></span></a>
+    <!-- שרון: תצוגה מהשרת (עוגייה), כמו דב. משתמשת רגילה + גלאסיקס (22.11.2026). בלי data-va בכוונה. -->
+    <a class="varow" id="vasharon" href="/view-as/sharon" role="link"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>שרון<span class="vasub">משתמשת רגילה + גלאסיקס</span></span></a>
     <!-- כפיר ואייל מדיגיטאץ': תצוגה מהשרת (עוגייה), כמו קרן. בריאות האתר בלבד. בלי data-va בכוונה. -->
     <a class="varow" id="vadigi" href="/view-as/digi" role="link"><svg class="vachk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span>כפיר ואייל (דיגיטאץ')<span class="vasub">בריאות האתר בלבד, צפייה בלבד</span></span></a>
     <!-- קרן, ספקית האתר (21.11.2026, דורון: "תעיף לי… את הכפתור שכתוב עליו קרן ותעביר לי את זה תחת העין"): תצוגה מהשרת (עוגייה /view-as/keren), כמו רום ודב. לדורון בלבד, כמו הכפתור שהיה. בלי data-va בכוונה. -->
@@ -1029,9 +1031,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   function trendRange(){var t=(META&&META.today)||iso(new Date());var e=new Date(t.slice(0,7)+'-01T12:00:00');e.setDate(0);var d=new Date(e.getFullYear(),e.getMonth()-11,1,12);return [iso(d),iso(e)];}
   var brPhoneSep=false;   // false = phone counted inside its branch · true = phone shown separately
   // 20.11.2026 (דורון): "גלאסיקס בלבד" בסניפים + עמודת גלאסיקס בסוכנים. gx בשורה: 2 = ההזמנה אושרה בתוך הצ'אט,
-  // 1 = הלקוח שוחח עם מכירות בגלאסיקס עד 45 יום לפני ההזמנה, 0 = לא. לבעלים בלבד עד שדורון יאשר לכולם.
+  // 1 = הלקוח שוחח עם מכירות בגלאסיקס עד 45 יום לפני ההזמנה, 0 = לא.
+  // 22.11.2026 (דורון: "אפשר לפתוח לחיים שרון רום ודב"): META.gx מהשרת (_can_gx) = בעלים, חיים, שרון, רום, דב.
   var brGxOnly=false;
-  function gxOn(){return !!(META&&META.owner&&!previewUser);}
+  function gxOn(){return !!(META&&META.gx&&!previewUser);}
   function gxCell(c){
     if(!c)return '';
     if(c.depth0===false){return c.gx===2?'<span class="gx2">נסגר בצ\'אט</span>':(c.gx===1?'<span class="gxm">שוחח בגלאסיקס</span>':'');}
@@ -2290,7 +2293,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   function gxPct(a,b){a=+a||0;b=+b||0;return b>0?((100*a/b).toFixed(1).replace(/\.0$/,''))+'%':'—';}
   function gxW(a,b,min){a=+a||0;b=+b||0;var w=b>0?Math.round(100*a/b):0;return Math.max(w,min||0);}
   function renderGxFunnel(a){
-    if(!(META&&META.owner&&!previewUser)||cache.dev||(a&&a.dev)){stage.innerHTML=devBoxHTML();return;}
+    if(!gxOn()||cache.dev||(a&&a.dev)){stage.innerHTML=devBoxHTML();return;}
     a=a||{};
     var X=+a.conv||0, B=+a.buyers||0, PH=+a.phone_only||0, BR=+a.branch_only||0, BO=+a.both||0;
     // 21.11.2026 19:1x (Doron: "כשאני מפלטר מתחילת השנה הסכום נמוך באופן לא תקין"): first_data = the first day the
@@ -4638,8 +4641,8 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     // שום הודעה שמסגירה שהוא בכלל קיים
     // מ-2.11.2026 גם דב (META.likey מהשרת: בעלים או דב)
     if(v==='likey'&&!(META&&META.likey&&!previewUser))v='agents';
-    // משפך גלאסיקס (21.11.2026): לבעלים בלבד, ולא בתצוגת העין. קישור ישיר למי שאינו דורון פשוט נופל לסוכנים.
-    if(v==='gxfunnel'&&!(META&&META.owner&&!previewUser))v='agents';
+    // משפך גלאסיקס (21.11.2026; 22.11 פתוח לחיים, שרון, רום ודב דרך META.gx): מי שאין לו פשוט נופל לסוכנים.
+    if(v==='gxfunnel'&&!gxOn())v='agents';
     if(view===v)return;
     if(v!=='mdown')mdDes=null;   // leaving the drill resets it, so coming back opens on the list
     if(v!=='cancels'){cxSel=null;cxOrd=null;}
@@ -5289,7 +5292,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
 
   function applyOwnerUI(){
     var owner=!!(META&&META.owner), prev=owner&&previewUser;
-    var gxc=document.getElementById('gxchip'); if(gxc){gxc.style.display=(owner&&!previewUser)?'':'none'; if(!(owner&&!previewUser)){brGxOnly=false;gxc.classList.remove('on');}}
+    var gxc=document.getElementById('gxchip'); if(gxc){gxc.style.display=gxOn()?'':'none'; if(!gxOn()){brGxOnly=false;gxc.classList.remove('on');}}
     if(isKeren()){
       var sgk=document.getElementById('seg');
       if(sgk){
@@ -5363,7 +5366,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     // מ-2.11.2026 גם דב רואה את המסך (הבקשה): השרת אומר מי (META.likey), והתצוגה
     // המקומית של "משתמש רגיל" עדיין מסירה אותו.
     likeyBtnSync(!!(META&&META.likey)&&!prev);
-    gxFunnelBtnSync(owner&&!prev);   // משפך גלאסיקס: דורון בלבד (21.11.2026)
+    gxFunnelBtnSync(gxOn());   // משפך גלאסיקס: בעלים, חיים, שרון, רום ודב (22.11.2026)
     var lg=document.querySelector('.logo'); if(lg){lg.style.cursor='';lg.title='';}
   }
   function boot(){
