@@ -1130,7 +1130,7 @@ def _gx_txt(v, n):
 
 
 @app.get("/api/glassix/funnel")
-def api_glassix_funnel(request: Request, d_from: str = "", d_to: str = ""):
+def api_glassix_funnel(request: Request, d_from: str = "", d_to: str = "", bucket: str = "week"):
     """משפך גלאסיקס (דורון 20.11.2026 13:4x; שאלה 34 = כן): כמה פניות נכנסו למכירות בגלאסיקס בתקופה, כמה מהן קנו עד 30 יום
     אחרי הפנייה, בטלפון (סוג הזמנה טלפוני בפריוריטי) או בסניף, ויחסי ההמרה. לבעלים, חיים, שרון, רום ודב (_can_gx,
     דורון 22.11.2026): לכל אחד אחר {dev:true}, כמו קניבליזציה. החישוב: bi_glassix_funnel (cloud\\sql\\bi_glassix_funnel.sql)."""
@@ -1143,8 +1143,16 @@ def api_glassix_funnel(request: Request, d_from: str = "", d_to: str = ""):
         return JSONResponse({"error": "bad dates"}, status_code=400)
     if f > t:
         f, t = t, f
-    agg = sb_rpc("bi_glassix_funnel", {"p_from": f.isoformat(), "p_to": t.isoformat()})
-    return JSONResponse({"mode": "gxfunnel", "agg": agg or {}})
+    agg = sb_rpc("bi_glassix_funnel", {"p_from": f.isoformat(), "p_to": t.isoformat()}) or {}
+    # 22.11.2026 (דורון, שאלה 37 = א): יחס ההמרה לאורך זמן, תקופה-תקופה (יום / שבוע / חודש), אותה הגדרה.
+    if bucket not in ("day", "week", "month"):
+        bucket = "week"
+    if bucket == "day" and (t - f).days > 62:
+        bucket = "week"
+    agg["bucket"] = bucket
+    agg["series"] = sb_rpc("bi_glassix_funnel_series",
+                           {"p_from": f.isoformat(), "p_to": t.isoformat(), "p_bucket": bucket}) or []
+    return JSONResponse({"mode": "gxfunnel", "agg": agg})
 
 
 @app.post("/api/glassix/sales")
