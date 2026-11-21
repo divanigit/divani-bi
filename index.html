@@ -2296,7 +2296,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     // 21.11.2026 19:1x (Doron: "כשאני מפלטר מתחילת השנה הסכום נמוך באופן לא תקין"): first_data = the first day the
     // conversations are FULLY loaded (coverage ledger). When the chosen period starts before it, say so on top.
     var early=(a.first_data&&state.from&&state.from<a.first_data);
-    var earlyNote=early?'<div class="card" style="border-color:var(--amber,#d9a300)"><p class="note" style="margin:0;color:var(--tx)">שים לב: התקופה שבחרת מתחילה ב־'+heDate(state.from)+', אבל השיחות מגלאסיקס שמורות במלואן רק מ־'+heDate(a.first_data)+'. המספרים כאן הם מ־'+heDate(a.first_data)+' והלאה. שיחות מלפני כן עוד לא נטענו.</p></div>':'';
+    var earlyNote=early?'<div class="card" style="background:#fff4d6;border:2px solid #e3a008;color:#5a3d00"><p class="note" style="margin:0;color:#5a3d00;font-size:14px;line-height:1.55"><b>שים לב:</b> התקופה שבחרת מתחילה ב־'+heDate(state.from)+', אבל השיחות מגלאסיקס שמורות במלואן רק מ־'+heDate(a.first_data)+'. המספרים כאן הם מ־'+heDate(a.first_data)+' והלאה. שיחות מלפני כן עוד לא נטענו.</p></div>':'';
     if(!X){stage.innerHTML=earlyNote+'<div class="empty">אין פניות בגלאסיקס בתקופה הזאת.'+(a.first_data?' השיחות שמורות במלואן מ־'+heDate(a.first_data)+'.':'')+'</div>';return;}
     function step(lbl,n,base,cls,sub,min){return '<div class="step"><div class="lbl"><span>'+lbl+'</span><span class="pct">'+(sub||gxPct(n,base))+'</span></div>'
       +'<div class="bar"><i'+(cls?' class="'+cls+'"':'')+' style="width:'+gxW(n,base,min)+'%"></i></div></div>';}
