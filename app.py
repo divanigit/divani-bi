@@ -1123,7 +1123,7 @@ async def api_glassix_sales(request: Request):
     טוקן של ההתראה (GLASSIX_ALERT_TOKEN) — לבקרה אין ולא יהיה מפתח סופאבייס. הטלפונים מגיעים כבר מגובבים
     (md5 של 9 הספרות האחרונות, כמו bi_customers.phones_h) — מספר טלפון גולמי לא נכנס לכאן ולא נשמר.
     גוף: {tickets:[{ticket, phone_h, opened, closed, state, agent, first_cust, last_cust, last_agent, n_cust, n_agent,
-    protocol}], deals:[{ticket, at, phone_h, agent, kind, product, amount}]}. upsert: bi_glassix_sales על ticket,
+    protocol}], deals:[{ticket, at, phone_h, agent, kind, product, amount}], coverage:[{from, to}] (ימים שנטענו במלואם)}. upsert: bi_glassix_sales על ticket,
     bi_glassix_deals על ticket+at. המשמעות העסקית (30 יום אחורה, רמה 1/2) יושבת ב-bi_gx_level בסופאבייס."""
     if not GLASSIX_ALERT_TOKEN:
         return JSONResponse({"error": "off"}, status_code=404)
@@ -1167,13 +1167,28 @@ async def api_glassix_sales(request: Request):
         deals.append({"ticket": tid, "at": at, "phone_h": h, "agent": _gx_txt(d.get("agent"), 80),
                       "kind": _gx_txt(d.get("kind"), 20) or "sale", "product": _gx_txt(d.get("product"), 120),
                       "amount": _gx_txt(d.get("amount"), 120), "pushed_at": dt.datetime.now(dt.timezone.utc).isoformat()})
+    # 21.11.2026 19:1x (Doron: "כשאני מפלטר 'מתחילת השנה' הסכום נמוך באופן לא תקין"): coverage = which calendar days are
+    # FULLY loaded; the funnel's first_data is the start of the unbroken covered stretch (bi_glassix_coverage).
+    cover = []
+    today = dt.datetime.now(dt.timezone(dt.timedelta(hours=3))).date()
+    for c in (body.get("coverage") or [])[:50]:
+        if not isinstance(c, dict):
+            continue
+        try:
+            f, to = dt.date.fromisoformat(str(c.get("from"))), dt.date.fromisoformat(str(c.get("to")))
+        except (TypeError, ValueError):
+            continue
+        if f <= to and to <= today + dt.timedelta(days=1) and (to - f).days <= 400:
+            cover.append({"from_d": f.isoformat(), "to_d": to.isoformat(), "pushed_at": dt.datetime.now(dt.timezone.utc).isoformat()})
     try:
         if rows:
             sb_upsert("bi_glassix_sales?on_conflict=ticket", rows)
         if deals:
             sb_upsert("bi_glassix_deals?on_conflict=ticket,at", deals)
-        print(f"glassix/sales: {len(rows)} tickets, {len(deals)} deals", flush=True)
-        return JSONResponse({"ok": True, "tickets": len(rows), "deals": len(deals)})
+        if cover:
+            sb_upsert("bi_glassix_coverage?on_conflict=from_d,to_d", cover)
+        print(f"glassix/sales: {len(rows)} tickets, {len(deals)} deals, {len(cover)} coverage", flush=True)
+        return JSONResponse({"ok": True, "tickets": len(rows), "deals": len(deals), "coverage": len(cover)})
     except Exception as e:
         return JSONResponse({"error": str(e)[:200]}, status_code=502)
 

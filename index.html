@@ -2293,7 +2293,11 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(!(META&&META.owner&&!previewUser)||cache.dev||(a&&a.dev)){stage.innerHTML=devBoxHTML();return;}
     a=a||{};
     var X=+a.conv||0, B=+a.buyers||0, PH=+a.phone_only||0, BR=+a.branch_only||0, BO=+a.both||0;
-    if(!X){stage.innerHTML='<div class="empty">אין פניות בגלאסיקס בתקופה הזאת.'+(a.first_data?' יש נתונים מ־'+heDate(a.first_data)+'.':'')+'</div>';return;}
+    // 21.11.2026 19:1x (Doron: "כשאני מפלטר מתחילת השנה הסכום נמוך באופן לא תקין"): first_data = the first day the
+    // conversations are FULLY loaded (coverage ledger). When the chosen period starts before it, say so on top.
+    var early=(a.first_data&&state.from&&state.from<a.first_data);
+    var earlyNote=early?'<div class="card" style="border-color:var(--amber,#d9a300)"><p class="note" style="margin:0;color:var(--tx)">שים לב: התקופה שבחרת מתחילה ב־'+heDate(state.from)+', אבל השיחות מגלאסיקס שמורות במלואן רק מ־'+heDate(a.first_data)+'. המספרים כאן הם מ־'+heDate(a.first_data)+' והלאה. שיחות מלפני כן עוד לא נטענו.</p></div>':'';
+    if(!X){stage.innerHTML=earlyNote+'<div class="empty">אין פניות בגלאסיקס בתקופה הזאת.'+(a.first_data?' השיחות שמורות במלואן מ־'+heDate(a.first_data)+'.':'')+'</div>';return;}
     function step(lbl,n,base,cls,sub,min){return '<div class="step"><div class="lbl"><span>'+lbl+'</span><span class="pct">'+(sub||gxPct(n,base))+'</span></div>'
       +'<div class="bar"><i'+(cls?' class="'+cls+'"':'')+' style="width:'+gxW(n,base,min)+'%"></i></div></div>';}
     var h='<div class="gfx"><div class="card"><p class="ttl">מהפנייה לקנייה</p><p class="sub">מכל מי שכתב למכירות בגלאסיקס בתקופה: מי קנה עד 45 יום אחרי הפנייה, ואיפה</p>'
@@ -2332,8 +2336,8 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     }
     h+='<div class="card"><p class="note" style="margin:0">מה זה: מכל מי שכתב למכירות בגלאסיקס בתקופה, מי קנה עד 45 יום אחרי הפנייה. "בטלפון" = הזמנה שפריוריטי מסמן טלפוני; כל השאר = בסניף (כולל האתר). '
       +'אם סופרים גם שיחות שהנציג פתח ללא תגובת לקוח: '+nf(a.conv_all||0)+' פניות, '+nf(a.buyers_all||0)+' קונים ('+gxPct(a.buyers_all,a.conv_all)+'). '
-      +(a.first_data?'השיחות שמורות מ־'+heDate(a.first_data)+'.':'')+'</p></div></div>';
-    stage.innerHTML=h;
+      +(a.first_data?'השיחות שמורות במלואן מ־'+heDate(a.first_data)+'; שיחות מלפני כן עוד לא נטענו.':'')+'</p></div></div>';
+    stage.innerHTML=earlyNote+h;
   }
   function renderCannibMeta(){
     document.getElementById('kpis').innerHTML='';
