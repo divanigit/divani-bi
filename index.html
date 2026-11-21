@@ -2317,7 +2317,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var bb=(a.by_branch||[]).filter(function(r){return (r.b||'')!=='';});
     if(bb.length){
       h+='<div class="card"><p class="ttl">לפי הסניף שבו נקנה</p><p class="sub">הקניות של מי שכתב בגלאסיקס, סניף סניף · טלפוני נספר בסניף שלו</p>'
-        +'<table class="gxbr"><thead><tr><th>סניף</th><th>לקוחות</th><th>הזמנות</th><th>₪</th><th>בטלפון ₪</th><th>בטלפון הזמנות</th></tr></thead><tbody>';
+        +'<table class="gxbr"><thead><tr><th>סניף</th><th>לקוחות</th><th>הזמנות</th><th>סך הכל ₪</th><th>מתוכן בטלפון ₪</th><th>מס' הזמנות טלפוניות</th></tr></thead><tbody>';
       bb.forEach(function(r){h+='<tr><td class="n">'+esc(brName(r.b))+'</td><td>'+nf(r.buyers||0)+'</td><td>'+nf(r.orders||0)+'</td><td class="n">'+ils(r.sales||0)+'</td><td class="n">'+((r.orders_phone||0)?ils(r.sales_phone||0):'<span class="mut">—</span>')+'</td><td>'+((r.orders_phone||0)?nf(r.orders_phone):'<span class="mut">—</span>')+'</td></tr>';});
       h+='</tbody></table></div>';
     }
@@ -2326,7 +2326,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     var ba=(a.by_agent||[]).filter(function(r){return (r.a||'')!=='';});
     if(ba.length){
       h+='<div class="card"><p class="ttl">לפי הנציג שמכר</p><p class="sub">הקניות של מי שכתב בגלאסיקס, לפי הנציג שרשום על ההזמנה בפריוריטי</p>'
-        +'<table class="gxbr"><thead><tr><th>נציג</th><th>לקוחות</th><th>הזמנות</th><th>₪</th><th>בטלפון ₪</th><th>בטלפון הזמנות</th></tr></thead><tbody>';
+        +'<table class="gxbr"><thead><tr><th>נציג</th><th>לקוחות</th><th>הזמנות</th><th>סך הכל ₪</th><th>מתוכן בטלפון ₪</th><th>מס' הזמנות טלפוניות</th></tr></thead><tbody>';
       ba.forEach(function(r){h+='<tr><td class="n">'+esc(r.a)+'</td><td>'+nf(r.buyers||0)+'</td><td>'+nf(r.orders||0)+'</td><td class="n">'+ils(r.sales||0)+'</td><td class="n">'+((r.orders_phone||0)?ils(r.sales_phone||0):'<span class="mut">—</span>')+'</td><td>'+((r.orders_phone||0)?nf(r.orders_phone):'<span class="mut">—</span>')+'</td></tr>';});
       h+='</tbody></table></div>';
     }
