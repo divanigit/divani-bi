@@ -684,7 +684,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   .dflag{display:inline-block;margin-inline-start:6px;width:18px;height:18px;line-height:18px;text-align:center;border-radius:50%;background:#c0392b;color:#fff;font-weight:800;font-size:12px;cursor:pointer;vertical-align:middle}
   .dfold{display:none;margin-top:4px;padding:6px 10px;border-radius:8px;background:rgba(192,57,43,.08);color:var(--tx2);font-size:12.5px;line-height:1.5;white-space:normal}
   .dfold.on{display:block}
-/* גלאסיקס (20.11.2026, דורון): שני גוונים — שוחח בגלאסיקס לפני הקנייה (ירוק), נסגר בתוך הצ'אט (ירוק כהה ומודגש). לבעלים בלבד בשלב זה */.gx1{color:var(--okfg);font-weight:600;white-space:nowrap}.gxn{color:var(--tx3);font-size:12px;font-weight:400}.gx2{color:var(--okfg);font-weight:700;font-size:12px;white-space:nowrap;margin-top:2px}.gxm{color:var(--tx3);font-size:12px}#gxchip{display:none}</style>
+/* גלאסיקס (20.11.2026, דורון): שני גוונים — שוחח בגלאסיקס לפני הקנייה (ירוק), נסגר בתוך הצ'אט (ירוק כהה ומודגש). לבעלים בלבד בשלב זה */.gx1{color:var(--okfg);font-weight:600;white-space:nowrap}.gxn{color:var(--tx3);font-size:12px;font-weight:400}.gx2{color:var(--okfg);font-weight:700;font-size:12px;white-space:nowrap;margin-top:2px}.gxm{color:var(--tx3);font-size:12px}#gxchip{display:none}/* משפך גלאסיקס (21.11.2026): פסים ירוקים לפי אחוז, שלושה אריחי יחס, טבלאות בקווי שיער. בלי צבע דקורטיבי */.gfx{max-width:720px}.gfx .card{background:var(--card,#fff);border:1px solid var(--line2,#e3e6ea);border-radius:12px;padding:14px 12px;margin:0 0 12px}.gfx .ttl{font-size:16px;font-weight:700;margin:0 0 2px}.gfx .sub{font-size:12px;color:var(--tx3);margin:0 0 12px}.gfx .step{margin:0 0 10px}.gfx .lbl{display:flex;justify-content:space-between;gap:8px;font-size:13px;margin:0 0 3px}.gfx .lbl b{font-size:15px}.gfx .bar{height:12px;background:var(--line2,#edf0f3);border-radius:6px;overflow:hidden}.gfx .bar i{display:block;height:12px;background:#1d8f4a;border-radius:6px}.gfx .bar i.ph{background:var(--brand,#0d2b52)}.gfx .bar i.nn{background:var(--tx3,#9aa4b1)}.gfx .pct{color:var(--tx3);font-size:12px;white-space:nowrap}.gfx .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:6px 0 0}.gfx .kpi{border:1px solid var(--line2,#e3e6ea);border-radius:10px;padding:8px 6px;text-align:center}.gfx .kpi .v{font-size:20px;font-weight:700}.gfx .kpi .k{font-size:11px;color:var(--tx3);line-height:1.3}.gfx table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}.gfx th{text-align:right;color:var(--tx3);font-weight:600;font-size:12px;padding:6px 4px;border-bottom:1px solid var(--line2,#e3e6ea)}.gfx td{padding:7px 4px;border-bottom:1px solid var(--line2,#eef0f3);white-space:nowrap}.gfx td.n{font-weight:700}.gfx .note{font-size:12px;color:var(--tx3);margin:10px 0 0;line-height:1.5}.gfx .chip{display:inline-block;border:1px solid #e07b00;color:#8a4b00;background:#fdf4e7;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600}</style>
 </head>
 <body>
 <div class="wrap">
@@ -1086,6 +1086,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(view==='custs')return state.from+'|'+state.to+'|CU|'+custCut;
     if(view==='baskets')return state.from+'|'+state.to+'|BK';
     if(view==='cannib')return 'CN';
+    if(view==='gxfunnel')return state.from+'|'+state.to+'|GX';
     if(view==='mdown')return state.from+'|'+state.to+'|MD|'+mdScope+'|'+(mdDes||'');
     if(view==='cancels')return state.from+'|'+state.to+'|CX'+(cxOrd?('|O|'+cxOrd):(cxSel?('|'+cxSel.t+'|'+cxSel.k):''));
     if(view==='comp')return state.from+'|'+state.to+'|CP'+(cpSel?('|'+cpSel):'');
@@ -1138,6 +1139,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
            :view==='custs'?('/api/custcount?d_from='+state.from+'&d_to='+state.to+'&cut='+custCut)
            :view==='baskets'?('/api/baskets?d_from='+state.from+'&d_to='+state.to)
            :view==='cannib'?('/api/panel?name=contrib')
+           :view==='gxfunnel'?('/api/glassix/funnel?d_from='+state.from+'&d_to='+state.to)
            :view==='mdown'?('/api/moneydown?d_from='+state.from+'&d_to='+state.to+'&scope='+mdScope+(mdDes?'&des='+encodeURIComponent(mdDes):''))
            :view==='cancels'?(cxOrd?('/api/cancelcase?ord='+encodeURIComponent(cxOrd))
               :cxSel?('/api/cancelorders?d_from='+state.from+'&d_to='+state.to+'&by='+cxSel.t+'&key='+encodeURIComponent(cxSel.k))
@@ -2279,6 +2281,53 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   }
 
   /* ---- כדאיות סניף — תרומה נטו מנוכת צמיחת שוק (diff-in-diff) ---- */
+  /* ---- משפך גלאסיקס (21.11.2026, דורון 20.11 13:4x; שאלה 34) ----
+     X פניות נכנסו למכירות בגלאסיקס בתקופה (לקוח שכתב לפחות הודעה אחת) → מי קנה עד 30 יום אחרי הפנייה, בטלפון
+     (סוג הזמנה טלפוני בפריוריטי) או בסניף, ויחסי ההמרה. הנתונים: bi_glassix_sales (הבקרה דוחפת), bi_glassix_funnel. */
+  function renderGxFunnelMeta(){
+    document.getElementById('kpis').innerHTML='';
+    document.getElementById('sellbl').textContent=rangeLbl(state.from,state.to)+' · פניות למכירות בגלאסיקס';
+    document.getElementById('builtlbl').textContent=META.last_sync?('עודכן '+META.last_sync):'';
+  }
+  function gxPct(a,b){a=+a||0;b=+b||0;return b>0?((100*a/b).toFixed(1).replace(/\.0$/,''))+'%':'—';}
+  function gxW(a,b,min){a=+a||0;b=+b||0;var w=b>0?Math.round(100*a/b):0;return Math.max(w,min||0);}
+  function renderGxFunnel(a){
+    if(!(META&&META.owner&&!previewUser)||cache.dev||(a&&a.dev)){stage.innerHTML=devBoxHTML();return;}
+    a=a||{};
+    var X=+a.conv||0, B=+a.buyers||0, PH=+a.phone_only||0, BR=+a.branch_only||0, BO=+a.both||0;
+    if(!X){stage.innerHTML='<div class="empty">אין פניות בגלאסיקס בתקופה הזאת.'+(a.first_data?' יש נתונים מ־'+heDate(a.first_data)+'.':'')+'</div>';return;}
+    function step(lbl,n,base,cls,sub,min){return '<div class="step"><div class="lbl"><span>'+lbl+'</span><span class="pct">'+(sub||gxPct(n,base))+'</span></div>'
+      +'<div class="bar"><i'+(cls?' class="'+cls+'"':'')+' style="width:'+gxW(n,base,min)+'%"></i></div></div>';}
+    var h='<div class="gfx"><div class="card"><p class="ttl">מהפנייה לקנייה</p><p class="sub">מכל מי שכתב למכירות בגלאסיקס בתקופה: מי קנה עד 30 יום אחרי הפנייה, ואיפה</p>'
+      +step('<b>'+nf(X)+'</b> פניות נכנסו למכירות בגלאסיקס',X,X,'','100%')
+      +step('<b>'+nf(B)+'</b> מהם קנו (עד 30 יום אחרי הפנייה)',B,X,'','',3)
+      +step('&nbsp;&nbsp;&nbsp;קנו <b>בסניף</b> · '+nf(BR),BR,X,'',gxPct(BR,X)+' מהפניות',3)
+      +step('&nbsp;&nbsp;&nbsp;קנו <b>בטלפון</b> · '+nf(PH),PH,X,'ph',gxPct(PH,X)+' מהפניות',2)
+      +step('&nbsp;&nbsp;&nbsp;קנו <b>גם וגם</b> · '+nf(BO),BO,X,'nn','',1)
+      +'<div class="grid"><div class="kpi"><div class="v">'+gxPct(B,X)+'</div><div class="k">מכל הפניות<br>לכל קנייה</div></div>'
+      +'<div class="kpi"><div class="v">'+gxPct(BR+BO,X)+'</div><div class="k">מכל הפניות<br>לקנייה בסניף</div></div>'
+      +'<div class="kpi"><div class="v">'+gxPct(PH+BO,X)+'</div><div class="k">מכל הפניות<br>לקנייה בטלפון</div></div></div>'
+      +'<p class="note"><span class="chip">אישור הזמנה בצ\'אט · '+nf(a.chat_closed||0)+'</span>&nbsp; פניות שבהן ההזמנה אושרה בתוך השיחה'+(a.deals_since?' (נספר מ־'+heDate(a.deals_since)+')':'')+'.</p></div>';
+    var NP=noProfit();
+    h+='<div class="card"><p class="ttl">איפה קנו אלה שדיברו איתנו</p><p class="sub">₪ לפני מע"מ · הזמנות (לא אספקות)</p>'
+      +'<table><thead><tr><th>מי שדיברנו איתו וקנה</th><th>לקוחות</th><th>מתוך הקונים</th><th>הזמנות</th><th>₪</th></tr></thead><tbody>'
+      +'<tr><td class="n">קנה בסניף בלבד</td><td>'+nf(BR)+'</td><td>'+gxPct(BR,B)+'</td><td>'+nf(a.orders_branch||0)+'</td><td>'+ils(a.sales_branch||0)+'</td></tr>'
+      +'<tr><td class="n">קנה בטלפון בלבד</td><td>'+nf(PH)+'</td><td>'+gxPct(PH,B)+'</td><td>'+nf(a.orders_phone||0)+'</td><td>'+ils(a.sales_phone||0)+'</td></tr>'
+      +'<tr><td class="n">קנה גם וגם</td><td>'+nf(BO)+'</td><td>'+gxPct(BO,B)+'</td><td class="mut">—</td><td class="mut">—</td></tr>'
+      +'<tr><td class="n">סך הכל</td><td class="n">'+nf(B)+'</td><td class="n">'+(B?'100%':'—')+'</td><td class="n">'+nf(a.orders||0)+'</td><td class="n">'+ils(a.sales||0)+'</td></tr></tbody></table>'
+      +(NP?'':'<p class="note">רווח גולמי על הקניות האלה: '+ils(a.profit||0)+'.</p>')+'</div>';
+    var bb=(a.by_branch||[]).filter(function(r){return (r.b||'')!=='';});
+    if(bb.length){
+      h+='<div class="card"><p class="ttl">לפי הסניף שבו נקנה</p><p class="sub">הקניות של מי שכתב בגלאסיקס, סניף סניף · טלפוני נספר בסניף שלו</p>'
+        +'<table><thead><tr><th>סניף</th><th>לקוחות</th><th>הזמנות</th><th>₪</th><th>מתוכן בטלפון</th></tr></thead><tbody>';
+      bb.forEach(function(r){h+='<tr><td class="n">'+esc(brName(r.b))+'</td><td>'+nf(r.buyers||0)+'</td><td>'+nf(r.orders||0)+'</td><td>'+ils(r.sales||0)+'</td><td class="mut">'+nf(r.orders_phone||0)+' · '+ils(r.sales_phone||0)+'</td></tr>';});
+      h+='</tbody></table></div>';
+    }
+    h+='<div class="card"><p class="note" style="margin:0">מה זה: מכל מי שכתב למכירות בגלאסיקס בתקופה, מי קנה עד 30 יום אחרי הפנייה. "בטלפון" = הזמנה שפריוריטי מסמן טלפוני; כל השאר = בסניף (כולל האתר). '
+      +'אם סופרים גם שיחות שהנציג פתח ללא תגובת לקוח: '+nf(a.conv_all||0)+' פניות, '+nf(a.buyers_all||0)+' קונים ('+gxPct(a.buyers_all,a.conv_all)+'). '
+      +(a.first_data?'השיחות שמורות מ־'+heDate(a.first_data)+'.':'')+'</p></div></div>';
+    stage.innerHTML=h;
+  }
   function renderCannibMeta(){
     document.getElementById('kpis').innerHTML='';
     document.getElementById('sellbl').textContent='תרומת כל סניף מאז פתיחתו';
@@ -3488,6 +3537,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(view==='custs'){renderCustMeta();renderCust(cache.agg);return;}
     if(view==='baskets'){renderBasketsMeta();renderBaskets(cache.agg);return;}
     if(view==='cannib'){renderCannibMeta();renderCannib(cache.agg);return;}
+    if(view==='gxfunnel'){renderGxFunnelMeta();renderGxFunnel(cache.agg);return;}
     // רצועת האחוזים שייכת למסך המזומן בלבד — מנקים אותה לפני כל מסך אחר,
     // אחרת היא נשארת תלויה מתחת לאריחים של מסך שאין לה בו משמעות
     var kp=document.getElementById('kpipct');if(kp)kp.innerHTML='';
@@ -4577,12 +4627,14 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     // שום הודעה שמסגירה שהוא בכלל קיים
     // מ-2.11.2026 גם דב (META.likey מהשרת: בעלים או דב)
     if(v==='likey'&&!(META&&META.likey&&!previewUser))v='agents';
+    // משפך גלאסיקס (21.11.2026): לבעלים בלבד, ולא בתצוגת העין. קישור ישיר למי שאינו דורון פשוט נופל לסוכנים.
+    if(v==='gxfunnel'&&!(META&&META.owner&&!previewUser))v='agents';
     if(view===v)return;
     if(v!=='mdown')mdDes=null;   // leaving the drill resets it, so coming back opens on the list
     if(v!=='cancels'){cxSel=null;cxOrd=null;}
     if(v!=='comp')cpSel=null;
     view=v;
-    var H1={agents:'ביצועי סוכנים',branches:'מכירות לפי סניפים',cash:'תקבולים במזומן',service:'פעילות שירות',collect:'מקדמות והנחות',dim:'פילוח מכירות',branchsrc:'מקורות הגעה לסניף',custs:'מספר לקוחות לתקופה',baskets:'סל מכירות ממוצע ללקוח',cannib:'קניבליזציה — תמהיל ערוצים',/*NOPROFIT*/mdown:'מוריד כסף',/*ENDNOPROFIT*/cancels:'אחוז ביטולים',comp:'פיצויים ללקוחות',dow:'ימים חזקים בשבוע',site:'מכירות האתר',products:'מוצרים',hours:'שעות חזקות וחלשות',ins:'תובנות',/*NOPROFIT*/pctrl:'בקרת מחירים',/*ENDNOPROFIT*/likey:'מי עובד בלייקי'};
+    var H1={agents:'ביצועי סוכנים',branches:'מכירות לפי סניפים',cash:'תקבולים במזומן',service:'פעילות שירות',collect:'מקדמות והנחות',dim:'פילוח מכירות',branchsrc:'מקורות הגעה לסניף',custs:'מספר לקוחות לתקופה',baskets:'סל מכירות ממוצע ללקוח',cannib:'קניבליזציה — תמהיל ערוצים',/*NOPROFIT*/mdown:'מוריד כסף',/*ENDNOPROFIT*/cancels:'אחוז ביטולים',comp:'פיצויים ללקוחות',dow:'ימים חזקים בשבוע',site:'מכירות האתר',products:'מוצרים',hours:'שעות חזקות וחלשות',ins:'תובנות',/*NOPROFIT*/pctrl:'בקרת מחירים',/*ENDNOPROFIT*/likey:'מי עובד בלייקי',gxfunnel:'משפך גלאסיקס'};
     document.getElementById('h1t').textContent=H1[v]||H1.agents;
     var bs=document.querySelectorAll('#seg button');
     for(var i=0;i<bs.length;i++){var on=bs[i].getAttribute('data-v')===v;bs[i].classList.toggle('on',on);bs[i].setAttribute('aria-pressed',on?'true':'false');}
@@ -4858,7 +4910,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   function vaApply(m){
     previewAs=m; previewUser=(previewAs!==''); applyOwnerUI();
     // המסך "מי עובד בלייקי" סגור לכל מי שאינו דורון, ולכן גם בתצוגה של מישהו אחר
-    if(previewUser&&view==='likey'){setView('agents');}
+    if(previewUser&&(view==='likey'||view==='gxfunnel')){setView('agents');}
     else if(noProfit()&&view==='mdown'){setView('agents');}
     else if(META&&state.from){apply();}
   }
@@ -5187,6 +5239,24 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   })();
 
   /* ---- boot ---- */
+  function gxFunnelBtnSync(show){
+    var seg=document.getElementById('seg'), b=document.getElementById('gxfunnelbtn');
+    if(!seg)return;
+    if(!show){ if(b)b.remove(); return; }   // remove, לא hide: לא נשאר זכר ב-DOM למי שאינו דורון
+    if(b)return;
+    var after=seg.querySelector('[data-v="branches"]');
+    b=document.createElement('button');
+    b.type='button'; b.id='gxfunnelbtn'; b.setAttribute('data-v','gxfunnel');
+    b.setAttribute('aria-pressed','false');
+    b.innerHTML='<svg class="rico" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+      +'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'
+      +'<path d="M3 5h18l-7 8v6l-4-2v-4z"/></svg>'
+      +'<span class="rlbl">משפך גלאסיקס</span>'
+      +'<svg class="rchk" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+      +'stroke-width="2.2" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
+    if(after&&after.nextSibling)seg.insertBefore(b,after.nextSibling); else seg.appendChild(b);
+    b.addEventListener('click',function(){setView('gxfunnel');});
+  }
   function likeyBtnSync(show){
     var seg=document.getElementById('seg'), b=document.getElementById('likeybtn');
     if(!seg)return;
@@ -5283,6 +5353,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     // מ-2.11.2026 גם דב רואה את המסך (הבקשה): השרת אומר מי (META.likey), והתצוגה
     // המקומית של "משתמש רגיל" עדיין מסירה אותו.
     likeyBtnSync(!!(META&&META.likey)&&!prev);
+    gxFunnelBtnSync(owner&&!prev);   // משפך גלאסיקס: דורון בלבד (21.11.2026)
     var lg=document.querySelector('.logo'); if(lg){lg.style.cursor='';lg.title='';}
   }
   function boot(){

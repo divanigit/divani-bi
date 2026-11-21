@@ -1098,6 +1098,24 @@ def _gx_txt(v, n):
     return re.sub(r"\s+", " ", str(v or "")).strip()[:n]
 
 
+@app.get("/api/glassix/funnel")
+def api_glassix_funnel(request: Request, d_from: str = "", d_to: str = ""):
+    """משפך גלאסיקס (דורון 20.11.2026 13:4x; שאלה 34 = כן): כמה פניות נכנסו למכירות בגלאסיקס בתקופה, כמה מהן קנו עד 30 יום
+    אחרי הפנייה, בטלפון (סוג הזמנה טלפוני בפריוריטי) או בסניף, ויחסי ההמרה. לבעלים בלבד: לכל אחד אחר {dev:true}, כמו
+    קניבליזציה. החישוב: bi_glassix_funnel (cloud\\sql\\bi_glassix_funnel.sql)."""
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    if not _is_admin(request):
+        return JSONResponse({"dev": True})
+    f, t = _parse_date(d_from), _parse_date(d_to)
+    if not f or not t:
+        return JSONResponse({"error": "bad dates"}, status_code=400)
+    if f > t:
+        f, t = t, f
+    agg = sb_rpc("bi_glassix_funnel", {"p_from": f.isoformat(), "p_to": t.isoformat()})
+    return JSONResponse({"mode": "gxfunnel", "agg": agg or {}})
+
+
 @app.post("/api/glassix/sales")
 async def api_glassix_sales(request: Request):
     """שיחות המכירה בגלאסיקס מהבקרה שבמחשב של דורון (20.11.2026, דורון: עמודת „גלאסיקס” בביצועי סוכנים + כפתור
