@@ -1631,7 +1631,24 @@ def _ops_switch(request: Request) -> str:
             'display:inline-flex;border:1px solid #c9d3e0;border-radius:999px;overflow:hidden;background:#fff;box-shadow:0 4px 18px rgba(16,28,46,.18);font:600 12.5px system-ui,sans-serif";'
             'd.innerHTML=\'<span style="padding:8px 13px;min-height:36px;display:inline-flex;align-items:center;background:rgba(13,150,104,.12);color:#0b6e4f">מכירות</span>'
             '<a href="/ops" style="padding:8px 13px;min-height:36px;display:inline-flex;align-items:center;color:#2457a6;text-decoration:none">תפעול</a>\';'
-            'document.body.appendChild(d);});</script>')
+            'document.body.appendChild(d);'
+            # 22.11.2026 (דורון: "הקפסולה למטה מכירות/תפעול מסתירה לי"): הכפתור צף מעל השורות
+            # האחרונות ומעל חלונות שנפתחים מלמטה (כרטיס לקוח). מקום בסוף העמוד, והכפתור נעלם
+            # כל עוד חלון [aria-modal] פתוח, וכשגוללים למטה. גלילה למעלה מחזירה אותו.
+            'document.body.style.paddingBottom="calc(64px + env(safe-area-inset-bottom,0px))";'
+            'function modal(){var m=document.querySelectorAll("[aria-modal=true],dialog[open]");'
+            'for(var i=0;i<m.length;i++){var e=m[i];if(e.closest("[aria-hidden=true]"))continue;'
+            'if(e.getClientRects().length&&getComputedStyle(e).visibility!=="hidden")return true;}return false;}'
+            'var down=false,ly=window.scrollY,cur=null;'
+            'function upd(){var h=modal()||down;if(h===cur)return;cur=h;'  # בלי כתיבה כשאין שינוי: אחרת המשקיף מעיר את עצמו
+            'd.style.opacity=h?"0":"1";d.style.pointerEvents=h?"none":"";'
+            'd.setAttribute("aria-hidden",h?"true":"false");}'
+            'd.style.transition="opacity .18s";'
+            'window.addEventListener("scroll",function(){var y=window.scrollY;if(Math.abs(y-ly)<8)return;'
+            'down=y>ly&&y>80;ly=y;upd();},{passive:true});'
+            'new MutationObserver(upd).observe(document.body,{subtree:true,attributes:true,'
+            'attributeFilter:["class","aria-hidden","style","open","hidden"],childList:true});'
+            'upd();});</script>')
 
 
 def _keren_nav(request: Request, here: str) -> str:
