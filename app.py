@@ -1634,6 +1634,103 @@ def _ops_switch(request: Request) -> str:
             'document.body.appendChild(d);});</script>')
 
 
+_OWL_NAV_RE = re.compile(r"window\.OWL_NAV = \[.*?\n\];", re.S)
+_OWL_MENU_CSS = (
+    '<style>'
+    '.owlbar{display:flex;align-items:center;gap:11px;margin:0 0 12px}'
+    '.owlham{width:46px;height:46px;flex:none;border:1px solid var(--line,#e2e9e5);border-radius:13px;'
+    'background:var(--surface,#f4f8f6);color:var(--tx,#18241f);display:grid;place-items:center;cursor:pointer;padding:0}'
+    '.owlham svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round}'
+    '.owlov{position:fixed;inset:0;background:rgba(10,18,14,.45);z-index:320;display:none;text-align:start}'
+    '.owlov.on{display:block}'
+    '.owlsheet{position:absolute;top:0;bottom:0;inset-inline-end:0;width:min(330px,88vw);background:var(--bg,#fff);'
+    'color:var(--tx,#18241f);border-inline-start:1px solid var(--line,#e2e9e5);padding:14px;overflow:auto;'
+    'font-family:inherit;direction:rtl}'
+    '.owlhead{display:flex;align-items:center;justify-content:space-between;margin:0 0 10px}'
+    '.owlhead b{font-size:17px}'
+    '.owlx{width:44px;height:44px;border:0;background:transparent;color:inherit;cursor:pointer;border-radius:10px;'
+    'display:grid;place-items:center;padding:0}'
+    '.owlx svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}'
+    '.owlg{font-size:10.5px;font-weight:700;letter-spacing:.09em;color:var(--tx3,#8a978f);margin:12px 4px 5px}'
+    '.owlsheet a{display:flex;align-items:center;gap:9px;min-height:44px;padding:9px 11px;border-radius:11px;'
+    'text-decoration:none;color:inherit;font-size:15px;border:1px solid transparent}'
+    '.owlsheet a:hover{background:var(--surface,#f4f8f6);border-color:var(--line,#e2e9e5)}'
+    '@media print{.owlbar,.owlov{display:none!important}}'
+    '</style>')
+_OWL_MENU_JS = r"""
+(function(){
+  function build(){
+    if (document.getElementById('owlham')) return;
+    var role = window.OWL_MENU_ROLE || {}, h = '', pend = null;
+    (window.OWL_NAV || []).forEach(function(it){
+      var last = it[it.length - 1];
+      if (last === 'profit' && role.noprofit) return;
+      if (last === 'ops' && !role.ops) return;
+      if (last === 'rep' && !role.reports) return;
+      if (it[0] === 'g') { pend = it[1]; return; }
+      if (pend) { h += '<div class="owlg">' + pend + '</div>'; pend = null; }
+      var href = it[0] === 'a' ? it[1] : '/?v=' + it[1];
+      h += '<a href="' + href + '">' + it[2] + '</a>';
+    });
+    var bar = document.createElement('div');
+    bar.className = 'owlbar';
+    bar.innerHTML = '<button type="button" class="owlham" id="owlham" aria-label="תפריט">' +
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 7h17"/><path d="M3.5 12h17"/><path d="M3.5 17h17"/></svg></button>';
+    var ov = document.createElement('div');
+    ov.className = 'owlov'; ov.id = 'owlov';
+    ov.innerHTML = '<div class="owlsheet" role="dialog" aria-modal="true" aria-label="תפריט">' +
+      '<div class="owlhead"><b>תפריט</b><button type="button" class="owlx" id="owlx" aria-label="סגירה">' +
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg></button></div>' +
+      '<div id="owllist">' + h + '</div></div>';
+    var hd = document.querySelector('.hdr') || document.querySelector('header.top') || document.querySelector('.top');
+    if (hd && hd.parentNode) hd.parentNode.insertBefore(bar, hd.nextSibling);
+    else { bar.style.padding = '10px 16px 0'; document.body.insertBefore(bar, document.body.firstChild); }
+    document.body.appendChild(ov);
+    function open(){ ov.classList.add('on'); document.body.style.overflow = 'hidden'; }
+    function close(){ ov.classList.remove('on'); document.body.style.overflow = ''; }
+    document.getElementById('owlham').addEventListener('click', open);
+    document.getElementById('owlx').addEventListener('click', close);
+    ov.addEventListener('click', function(e){ if (e.target === ov) close(); });
+    document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && ov.classList.contains('on')) close(); });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', build); else build();
+})();
+"""
+
+
+def _role_reports(request: Request) -> str:
+    """שורת "דוחות להורדה" בתפריט של יחס ההמרה ושל תמהיל התנועה מוצגת רק למי שרשאי לפתוח
+    את מסך הדוחות (בעלים ורום). התפקיד מוזרק מהשרת, כמו ops."""
+    if not _can_reports(request):
+        return ""
+    return "<script>window.OWL_ROLE=window.OWL_ROLE||{};window.OWL_ROLE.reports=true;</script>"
+
+
+def _owl_menu(request: Request) -> str:
+    """תפריט הינשוף (ההמבורגר) למסכים שאין להם תפריט משלהם — לקוחות, חיפוש הזמנות, דוחות,
+    קלריטי וינשוף גיבור (דורון, 22.11.2026: "אין את ההמבורגר של התפריט בראש העמוד. זה צריך להיות
+    בכל מקום שהוא בממשק של הינשוף"). רשימת התפריט אינה עותק נוסף: היא נקראת מ-conversion.html,
+    אותו מקור ש-QA משווה ללוח הראשי. שורות הרווח נחתכות בשרת למי שאינו רואה רווח, בדיוק כמו שם.
+    שכבות עם מסך אחד או ניווט משלהן (קרן, היועצים, רום, דיגיטאץ') נשארות בלי תפריט, כמו עד היום."""
+    if _is_keren(request) or _is_yoatz(request) or _is_rom(request) or _is_digi(request):
+        return ""
+    try:
+        with open(os.path.join(HERE, "conversion.html"), encoding="utf-8") as f:
+            m = _OWL_NAV_RE.search(f.read())
+    except Exception:
+        m = None
+    if not m:
+        return ""
+    nav = m.group(0)
+    np = _is_noprofit(request)
+    if np:
+        nav = re.sub(r"/\*NOPROFIT\*/.*?/\*ENDNOPROFIT\*/", "", nav, flags=re.S)
+    role = '{"noprofit":%s,"ops":%s,"reports":%s}' % ("true" if np else "false",
+                                                    "true" if _can_ops(request) else "false",
+                                                    "true" if _can_reports(request) else "false")
+    return (_OWL_MENU_CSS + "<script>" + nav + "\nwindow.OWL_MENU_ROLE=" + role + ";" + _OWL_MENU_JS + "</script>")
+
+
 def _keren_nav(request: Request, here: str) -> str:
     """שורת ניווט קטנה בין שלושת המסכים של קרן (אצלה תפריט הינשוף מוסתר)."""
     if not _is_keren(request):
@@ -1936,6 +2033,7 @@ def orders_page(request: Request):
     except Exception:
         return HTMLResponse("<div dir='rtl' style='font-family:sans-serif;padding:40px'>המסך לא נמצא.</div>",
                             status_code=404)
+    html = html.replace("</head>", _owl_menu(request) + chr(10) + "</head>", 1)
     return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
 
@@ -1955,7 +2053,7 @@ def clarity_page(request: Request):
         "true" if _is_admin(request) else "false",
         "true" if _is_keren(request) else "false")
     role += _keren_bar(request) + _keren_nav(request, "/clarity")
-    html = html.replace("</head>", role + _owner_keren(request) + _ops_switch(request) + chr(10) + "</head>", 1)
+    html = html.replace("</head>", role + _owl_menu(request) + _owner_keren(request) + _ops_switch(request) + chr(10) + "</head>", 1)
     return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
 
@@ -3891,7 +3989,7 @@ def conversion(request: Request):
         "true" if _is_noprofit(request) else "false",
         "true" if _is_admin(request) else "false",
         "true" if _can_ops(request) else "false")
-    html = html.replace("</head>", role + _owner_keren(request) + _ops_switch(request) + chr(10) + "</head>", 1)
+    html = html.replace("</head>", role + _role_reports(request) + _owner_keren(request) + _ops_switch(request) + chr(10) + "</head>", 1)
     return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
 
@@ -3929,7 +4027,7 @@ def traffic(request: Request):
         "true" if _is_noprofit(request) else "false",
         "true" if _is_admin(request) else "false",
         "true" if _can_ops(request) else "false")
-        html = html.replace("</head>", role + _owner_keren(request) + _ops_switch(request) + "\n</head>", 1)
+        html = html.replace("</head>", role + _role_reports(request) + _owner_keren(request) + _ops_switch(request) + "\n</head>", 1)
         # בלי הכותרת הזו הדפדפן מחזיק את העמוד וממשיך להציג גרסה ישנה.
         # דורון דיווח על באנר שכבר נמחק מהקוד — זו היתה הסיבה.
         return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
@@ -4932,6 +5030,7 @@ def reports_page(request: Request):
            "f": d_from.isoformat(), "t": d_to.isoformat()}
     html = html.replace("</head>", "<script>window.OWL_REPORTS=%s;</script>\n</head>"
                         % json.dumps(cfg, ensure_ascii=False), 1)
+    html = html.replace("</head>", _owl_menu(request) + chr(10) + "</head>", 1)
     return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
 
@@ -5006,7 +5105,7 @@ def customers_page(request: Request):
         "true" if _is_noprofit(request) else "false",
         "true" if _is_admin(request) else "false",
         "true" if _can_ops(request) else "false")
-    html = html.replace("</head>", role + _owner_keren(request) + _ops_switch(request) + chr(10) + "</head>", 1)
+    html = html.replace("</head>", role + _owl_menu(request) + _owner_keren(request) + _ops_switch(request) + chr(10) + "</head>", 1)
     return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
 
@@ -5084,6 +5183,26 @@ def api_cust_prod(request: Request, d_from: str = "", d_to: str = "", level: str
                                       "p_level": "model" if level == "model" else "family",
                                       "p_min_units": max(1, min(500, min_units))})
     return JSONResponse({"rows": rows or []})
+
+
+@app.get("/api/cust/proddrill")
+def api_cust_proddrill(request: Request, d_from: str = "", d_to: str = "", level: str = "family",
+                       k: str = ""):
+    """פירוט התלונות על דגם / משפחה אחת (דורון, 22.11.2026: "דריל דאון לבעיה עצמה כי אז אפשר
+    להבין דפוס ולמנוע"). אותה אוכלוסייה כמו /api/cust/prod — הסכום כאן שווה למספר בטבלה.
+    SQL: cloud/sql/bi_prod_quality_drill.sql"""
+    if not _logged_in(request):
+        return JSONResponse({"error": "auth"}, status_code=401)
+    f, t = _parse_date(d_from), _parse_date(d_to)
+    kk = (k or "").strip()[:80]
+    if not f or not t or not kk:
+        return JSONResponse({"error": "bad params"}, status_code=400)
+    if f > t:
+        f, t = t, f
+    j = sb_rpc("bi_prod_quality_drill", {"p_from": f.isoformat(), "p_to": t.isoformat(),
+                                         "p_level": "model" if level == "model" else "family",
+                                         "p_k": kk})
+    return JSONResponse(j or {})
 
 
 @app.get("/api/cust/card")
@@ -6470,6 +6589,7 @@ def ops_page(request: Request):
         html = _OWNER_BLOCK.sub("", html)      # הסברים, אפיון ושאלות — לבעלים בלבד
     if _dov_preview(request):
         html = html.replace("</head>", _keren_bar(request) + "\n</head>", 1)
+    html = html.replace("</head>", _owl_menu(request) + chr(10) + "</head>", 1)
     return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
 

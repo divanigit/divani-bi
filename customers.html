@@ -137,6 +137,32 @@ details.exp b{color:var(--tx);font-weight:600}
 .tl li.ok{color:var(--okfg)}
 .kv{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:13px;margin:0 0 10px}
 .kv span{color:var(--tx3);font-size:12px}
+/* ---------- פירוט תלונות לדגם (22.11.2026) ---------- */
+#prod tr.row td:first-child{text-decoration:underline dotted;text-underline-offset:3px}
+.dg{margin:0 0 14px}
+.dg h3{font-size:13px;font-weight:700;margin:0 0 6px;color:var(--tx)}
+.dg .h{font-size:11.5px;color:var(--tx3);margin:-3px 0 6px}
+.dgr{display:grid;grid-template-columns:minmax(0,1fr) 34px 38px;gap:8px;align-items:center;font-size:13px;padding:3px 0}
+.dgr .k{min-width:0;overflow-wrap:anywhere}
+.dgr .k .pbar{margin-top:3px}
+.dgr .n,.dgr .p{text-align:end;font-variant-numeric:tabular-nums}
+.dgr .p{color:var(--tx3);font-size:12px}
+.dgm{display:flex;align-items:flex-end;gap:3px;height:74px;padding-top:14px}
+.dgm div{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;font-size:10px;color:var(--tx3);font-variant-numeric:tabular-nums}
+.dgm i{display:block;width:100%;max-width:22px;background:var(--dfg);border-radius:3px 3px 0 0;min-height:1px}
+.dgm b{font-weight:500;color:var(--tx2);font-size:10.5px}
+.dgnote{border:1px solid var(--wfg);background:var(--wbg);color:var(--wfg);border-radius:11px;padding:8px 11px;font-size:12.5px;margin:0 0 14px}
+.dgc{border-bottom:1px solid var(--line);padding:9px 0;font-size:13px;cursor:pointer}
+.dgc:hover{background:var(--surface)}
+.dgc .top{display:flex;flex-wrap:wrap;gap:5px 8px;align-items:center}
+.dgc .d{color:var(--tx3);font-size:12px;font-variant-numeric:tabular-nums}
+.dgc .pd{color:var(--tx2);font-size:12px;margin-top:3px;overflow-wrap:anywhere}
+.dgc .w{margin-top:5px;padding:5px 9px;border-inline-start:3px solid var(--line2);color:var(--tx);font-size:12.5px}
+.dgc .w span{display:block}
+.dgf{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
+.dgf button{border:1px solid var(--line2);background:var(--bg);color:var(--tx2);border-radius:999px;padding:6px 11px;font:inherit;font-size:12.5px;min-height:36px;cursor:pointer}
+.dgf button.on{background:var(--brandSoft);border-color:var(--brand);color:var(--brand);font-weight:700}
+.back{border:0;background:none;color:var(--sys);font:inherit;font-size:13px;padding:6px 0;min-height:36px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -261,6 +287,7 @@ details.exp b{color:var(--tx);font-weight:600}
       <button class="chip on" data-lvl="family">משפחות</button>
       <button class="chip" data-lvl="model">דגמים</button>
     </div>
+    <p class="h" style="font-size:12px;color:var(--tx3);margin:0 0 8px">לחיצה על שורה פותחת את פירוט התלונות: סוג התקלה, איזה מוצר בדיוק, מי אחראי, ומה הלקוח כתב</p>
     <div class="tw" id="prod"></div>
   </div>
 </div>
@@ -472,16 +499,77 @@ details.exp b{color:var(--tx);font-weight:600}
       var mx=Math.max.apply(null,rows.map(function(r){return +r.per_100||0;}))||1;
       var h='<table><thead><tr><th>'+(prodLvl==='model'?'דגם':'משפחה')+'</th><th class="n">סופקו</th><th class="n">תלונות</th><th class="n">ל-100</th><th style="width:30%"></th><th>הבעיה הנפוצה</th></tr></thead><tbody>';
       rows.forEach(function(r){
-        h+='<tr><td>'+esc(r.k)+'</td><td class="n">'+Math.round(r.units)+'</td><td class="n">'+r.complaints+'</td><td class="n">'+(r.per_100==null?'—':r.per_100)+'</td><td><div class="pbar"><i style="width:'+Math.round(100*(+r.per_100||0)/mx)+'%"></i></div></td><td class="muted" style="font-size:12px">'+esc(r.top_issue||'')+'</td></tr>';
+        h+='<tr'+(r.complaints>0?' class="row" data-k="'+esc(r.k)+'"':'')+'><td>'+esc(r.k)+'</td><td class="n">'+Math.round(r.units)+'</td><td class="n">'+r.complaints+'</td><td class="n">'+(r.per_100==null?'—':r.per_100)+'</td><td><div class="pbar"><i style="width:'+Math.round(100*(+r.per_100||0)/mx)+'%"></i></div></td><td class="muted" style="font-size:12px">'+esc(r.top_issue||'')+'</td></tr>';
       });
       $('#prod').innerHTML=h+'</tbody></table>';
+      $('#prod').querySelector('tbody').addEventListener('click',function(ev){var tr=ev.target.closest('tr.row');if(tr)openDrill(tr.getAttribute('data-k'));});
     }).catch(function(e){if(e!==0)$('#prod').innerHTML='<div class="empty">שגיאה בטעינת נתונים</div>';});
   }
-  function openCard(c,name){
+  var drill=null,drillF='';
+  function dgBars(title,hint,rows,tot){
+    if(!rows||!rows.length)return '';
+    var mx=Math.max.apply(null,rows.map(function(r){return r.n;}))||1;
+    var h='<div class="dg"><h3>'+title+'</h3>'+(hint?'<p class="h">'+hint+'</p>':'');
+    rows.forEach(function(r){
+      h+='<div class="dgr"><div class="k">'+esc(r.k)+'<div class="pbar"><i style="width:'+Math.round(100*r.n/mx)+'%"></i></div></div><div class="n">'+r.n+'</div><div class="p">'+pct(r.n,tot)+'%</div></div>';
+    });
+    return h+'</div>';
+  }
+  function dgCases(){
+    var j=drill.j,rows=(j.cases||[]).filter(function(c){return !drillF||c.issue===drillF;});
+    var h='';
+    rows.forEach(function(c,i){
+      var bits=[],pt='';if((c.pdes||'').indexOf('-דגם-')>0){var fr=c.pdes.split('-דגם-')[0].replace(/^-+|-+$/g,'');(j.by_type||[]).forEach(function(r){if(fr&&r.k!=='לא ידוע'&&r.k.slice(-fr.length)===fr)pt=r.k;});}if(pt)bits.push(pt);if(c.side)bits.push(c.side);if(c.fabric)bits.push('בד '+c.fabric);
+      h+='<div class="dgc" data-c="'+esc(c.cust)+'" data-n="'+esc(c.cdes)+'"><div class="top"><span class="d">'+fmtD(c.d)+'</span><span class="tag bad">'+esc(c.issue)+'</span>'+
+         (bits.length?'<span class="tag">'+esc(bits.join(' · '))+'</span>':'')+'<span class="muted" style="font-size:12px">'+esc(c.ord||'')+'</span></div>'+
+         '<div class="pd">אחראי: '+esc(c.resp||'')+(c.status?' · '+esc(c.status):'')+(c.cdes?' · '+esc(c.cdes):'')+'</div>'+
+         (c.words&&c.words.length?'<div class="w">'+c.words.map(function(w){return '<span>„'+esc(w)+'”</span>';}).join('')+'</div>':'')+'</div>';
+    });
+    if(!rows.length)h='<div class="empty">אין מקרים</div>';
+    if((j.n||0)>(j.cases||[]).length&&!drillF)h+='<div class="empty">מוצגים '+(j.cases||[]).length+' המקרים האחרונים מתוך '+j.n+'</div>';
+    $('#dgCases').innerHTML=h;
+  }
+  function renderDrill(){
+    var j=drill.j,n=j.n||0,h='';
+    $('#shT').textContent=drill.k+' · '+n+' תלונות על המוצר';
+    h+='<p class="h" style="font-size:12px;color:var(--tx3);margin:0 0 10px">'+fmtD(drill.from)+' עד '+fmtD(drill.to)+' · תלונות שנרשמו בפריוריטי כמשימת שירות עם קוד תקלה</p>';
+    if(!n){$('#shB').innerHTML=h+'<div class="empty">אין תלונות בתקופה</div>';return;}
+    if((window.OWL_ROLE||{}).owner)h+='<div class="dgnote">בפריוריטי נרשם רק סוג התקלה, בלי תיאור כתוב של המקום במוצר. המקום עצמו נמצא בתמונות ובסרטונים שהלקוח שלח, והם עדיין לא מוצגים כאן. „מה הלקוח כתב” = הודעות ווטסאפ של אותו לקוח, 30 יום לפני או אחרי המשימה ('+(j.with_words||0)+' מתוך '+n+' מקרים).</div>';
+    h+=dgBars('סוג התקלה','',j.by_issue,n);
+    if((j.by_model||[]).length>1)h+=dgBars('איזה דגם','',j.by_model,n);
+    if((j.by_type||[]).length>1)h+=dgBars('סוג המוצר','',j.by_type,n);
+    if((j.by_side||[]).length)h+=dgBars('צד הפינה','רק מוצרים שהצד רשום בתיאור שלהם',j.by_side,n);
+    if((j.by_fabric||[]).length)h+=dgBars('בד','רק מוצרים שהבד רשום בתיאור שלהם · אחוז מכלל התלונות',j.by_fabric,n);
+    h+=dgBars('מי אחראי','כפי שנרשם במשימת השירות בפריוריטי',j.by_resp,n);
+    var bm=j.by_month||[];
+    if(bm.length>1){var mx=Math.max.apply(null,bm.map(function(r){return r.n;}))||1;
+      h+='<div class="dg"><h3>לפי חודש</h3><p class="h">מספר תלונות בכל חודש. חודש בלי תלונות אינו מופיע</p><div class="dgm">';
+      bm.forEach(function(r){h+='<div><b>'+r.n+'</b><i style="height:'+Math.max(2,Math.round(44*r.n/mx))+'px"></i><span>'+r.k.slice(5)+'/'+r.k.slice(2,4)+'</span></div>';});
+      h+='</div></div>';}
+    h+=dgBars('מצב המשימה','',j.by_status,n);
+    h+='<div class="dg"><h3>המקרים</h3><p class="h">החדש למעלה · לחיצה על מקרה פותחת את כרטיס הלקוח</p><div class="dgf" id="dgF"><button data-f="" class="'+(drillF?'':'on')+'">הכול ('+n+')</button>';
+    (j.by_issue||[]).forEach(function(r){h+='<button data-f="'+esc(r.k)+'" class="'+(drillF===r.k?'on':'')+'">'+esc(r.k)+' ('+r.n+')</button>';});
+    h+='</div><div id="dgCases"></div></div>';
+    $('#shB').innerHTML=h;$('#shB').onclick=null;
+    dgCases();
+    $('#dgF').addEventListener('click',function(ev){var b=ev.target.closest('button[data-f]');if(!b)return;drillF=b.getAttribute('data-f');
+      Array.prototype.forEach.call($('#dgF').querySelectorAll('button'),function(x){x.classList.toggle('on',x===b);});dgCases();});
+    $('#dgCases').addEventListener('click',function(ev){var d=ev.target.closest('.dgc');if(d&&d.getAttribute('data-c'))openCard(d.getAttribute('data-c'),d.getAttribute('data-n'),true);});
+  }
+  function openDrill(k){
+    drillF='';drill=null;
+    $('#shT').textContent=k;$('#shB').innerHTML='<div class="load">טוען…</div>';$('#shB').onclick=null;
+    $('#ovl').classList.add('on');$('#ovl').setAttribute('aria-hidden','false');
+    var f=state.from,t=state.to;
+    fetch('/api/cust/proddrill?d_from='+f+'&d_to='+t+'&level='+prodLvl+'&k='+encodeURIComponent(k),{cache:'no-store'}).then(ok).then(function(j){
+      drill={k:k,j:j,from:f,to:t};renderDrill();
+    }).catch(function(e){if(e!==0)$('#shB').innerHTML='<div class="empty">שגיאה בטעינה</div>';});
+  }
+  function openCard(c,name,fromDrill){
     $('#shT').textContent=(name||'')+' · לקוח '+c;$('#shB').innerHTML='<div class="load">טוען…</div>';
     $('#ovl').classList.add('on');$('#ovl').setAttribute('aria-hidden','false');
     fetch('/api/cust/card?cust='+encodeURIComponent(c),{cache:'no-store'}).then(ok).then(function(j){
-      var h='';
+      var h=(fromDrill&&drill)?'<button type="button" class="back" id="dgBack">→ חזרה אל '+esc(drill.k)+'</button>':'';
       var os=j.orders||[];
       h+='<h2 style="font-size:14px;margin:0 0 4px">אספקות ('+os.length+')</h2><ul class="tl">';
       if(!os.length)h+='<li><span class="t">—</span><span class="muted">אין הזמנות מ-2023</span></li>';
@@ -493,7 +581,7 @@ details.exp b{color:var(--tx);font-weight:600}
       fb.forEach(function(f){h+='<li class="'+(f.kind==='thanks'?'ok':f.kind==='neutral'?'':'late')+'"><span class="t">'+fmtD(f.dt)+'</span><span><span class="tag '+(f.kind==='thanks'?'ok':f.kind==='neutral'?'':'bad')+'">'+esc(KIND[f.kind]||f.kind)+'</span> '+esc(f.q||'')+(f.prod?' <span class="muted">· '+esc(f.prod)+'</span>':'')+' <span class="muted">· '+esc(SRC[f.src]||f.src)+'</span></span></li>';});
       h+='</ul>';
       $('#shB').innerHTML=h;
-      $('#shB').onclick=function(ev){var a=ev.target.closest('a.olink');if(a){ev.preventDefault();openTimeline(a.getAttribute('data-o'),name);}};
+      $('#shB').onclick=function(ev){if(ev.target.id==='dgBack'){renderDrill();return;}var a=ev.target.closest('a.olink');if(a){ev.preventDefault();openTimeline(a.getAttribute('data-o'),name);}};
     }).catch(function(){$('#shB').innerHTML='<div class="empty">שגיאה בטעינה</div>';});
   }
 
