@@ -1044,6 +1044,15 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     if(ds)h+='<div class="gx2" title="הזמנה שאושרה בתוך הצ\'אט בגלאסיקס">נסגר בצ\'אט: '+ils(ds)+' · '+(c.dn||0)+'</div>';
     return h;
   }
+  // 23.11.2026 (הבקשה בצילום ביצועי סוכנים): הזמנת אתר שהוקלדה לפריוריטי נשארת מכירה של האתר, לא של הנציג שהקליד -
+  // תגית „אתר” ליד שם הלקוח בפירוט (סניף 103), וליד שם הנציג: „אתר” כשכל ההזמנות שלו מהאתר, „N מהאתר” כשחלקן.
+  function webChip(c){
+    if(!c)return '';
+    if(c.depth0===false){return c.web?' <span class="tmpchip" title="הזמנת אתר שהוקלדה לפריוריטי - מכירה של האתר, לא של הנציג">אתר</span>':'';}
+    if(!c.wn)return '';
+    var t=(c.on&&c.wn>=c.on)?'אתר':(c.wn+' מהאתר');
+    return ' <span class="tmpchip" title="הזמנות שנכנסו מהאתר (סניף אתר דיוואני); הנציג רק הקליד אותן לפריוריטי">'+t+'</span>';
+  }
   var BRN={'':'ללא שיוך סניף','PHONE':'טלפוני','101':'נתניה','102':'ראשל"צ','103':'אתר דיוואני','104':'מוקד משרדים','105':'חיפה','106':'ירושלים','107':'בית שמש'};
   function brName(b){var k=(b==null?'':String(b));return BRN[k]||k;}
   var eT={}, stage=document.getElementById('stage');
@@ -1187,7 +1196,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       var ag=agents[ak]||(agents[ak]={n:an,raw:(r.a||''),s:0,profit:0,cu:{},custIds:{},gs:0,gn:0,ds:0,dn:0});
       var lv=r.gx||0; if(lv>=1)ag.gn++; if(lv===2)ag.dn++;
       ag.custIds[ck]=1; custSet[ck]=1;
-      var cu=ag.cu[ck]||(ag.cu[ck]={n:r.c||r.cn,s:0,profit:0,k:[]});if(r.w)cu.w=1;if(r.pd){cu.pd=r.pd;cu.d=r.d;} if(lv>(cu.gx||0))cu.gx=lv;
+      var cu=ag.cu[ck]||(ag.cu[ck]={n:r.c||r.cn,s:0,profit:0,k:[]});if(r.w)cu.w=1;if(r.pd){cu.pd=r.pd;cu.d=r.d;} if(lv>(cu.gx||0))cu.gx=lv; var web=!!(r.w||String(r.b||'')==='103');if(web){cu.web=1;ag.wn=(ag.wn||0)+1;}ag.on=(ag.on||0)+1;
       (r.k||[]).forEach(function(L){
         var s=L[2]||0,p=L[3]||0;
         ag.s+=s;ag.profit+=p;cu.s+=s;cu.profit+=p; if(lv>=1)ag.gs+=s; if(lv===2)ag.ds+=s;
@@ -1199,10 +1208,10 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       var ag=agents[ak];
       var custKids=Object.keys(ag.cu).map(function(ck){
         var cu=ag.cu[ck];
-        return {n:cu.n,s:cu.s,profit:cu.profit,pm:cu.s>0?100*cu.profit/cu.s:null,k:cu.k,w:cu.w,pd:cu.pd,d:cu.d,gx:cu.gx||0,depth0:false};
+        return {n:cu.n,s:cu.s,profit:cu.profit,pm:cu.s>0?100*cu.profit/cu.s:null,k:cu.k,w:cu.w,web:cu.web,pd:cu.pd,d:cu.d,gx:cu.gx||0,depth0:false};
       });
       if(ag.s>0)posTotal+=ag.s;
-      return {n:ag.n,rawk:ag.raw,s:ag.s,profit:ag.profit,gs:ag.gs,gn:ag.gn,ds:ag.ds,dn:ag.dn,pm:ag.s>0?100*ag.profit/ag.s:null,c:Object.keys(ag.custIds).length,k:custKids};
+      return {n:ag.n,rawk:ag.raw,s:ag.s,profit:ag.profit,gs:ag.gs,gn:ag.gn,ds:ag.ds,dn:ag.dn,wn:ag.wn||0,on:ag.on||0,pm:ag.s>0?100*ag.profit/ag.s:null,c:Object.keys(ag.custIds).length,k:custKids};
     });
     var ts=0,tp=0;kids.forEach(function(a){ts+=a.s;tp+=a.profit;});
     var tc=Object.keys(custSet).length;
@@ -1211,7 +1220,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
 
   function buildAgg(agg){
     var kids=(agg.agents||[]).map(function(g){
-      return {n:g.a||'ללא סוכן',rawk:(g.a||''),s:g.s||0,profit:g.p||0,pm:(g.s>0)?100*g.p/g.s:null,c:g.c||0,k:null,gs:g.gs||0,gn:g.gn||0,ds:g.ds||0,dn:g.dn||0};
+      return {n:g.a||'ללא סוכן',rawk:(g.a||''),s:g.s||0,profit:g.p||0,pm:(g.s>0)?100*g.p/g.s:null,c:g.c||0,k:null,gs:g.gs||0,gn:g.gn||0,ds:g.ds||0,dn:g.dn||0,wn:g.wn||0,on:g.n||0};
     });
     var ts=0,tp=0,pos=0;kids.forEach(function(a){ts+=a.s;tp+=a.profit;if(a.s>0)pos+=a.s;});
     var tc=agg.customers||0;
@@ -1241,7 +1250,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
         if(ag.s>0)posTotal+=ag.s;
         var custKids=Object.keys(ag.cu).map(function(ck){
           var cu=ag.cu[ck];
-          return {n:cu.n,s:cu.s,profit:cu.profit,pm:cu.s>0?100*cu.profit/cu.s:null,k:cu.k,w:cu.w,pd:cu.pd,d:cu.d,gx:cu.gx||0,depth0:false};
+          return {n:cu.n,s:cu.s,profit:cu.profit,pm:cu.s>0?100*cu.profit/cu.s:null,k:cu.k,w:cu.w,web:cu.web,pd:cu.pd,d:cu.d,gx:cu.gx||0,depth0:false};
         });
         return {n:ag.n,s:ag.s,profit:ag.profit,pm:ag.s>0?100*ag.profit/ag.s:null,k:custKids};
       });
@@ -1435,7 +1444,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
       var cC=d0?srNum(String(nc),SRT.c,SRT.d,rk,c.n+' · לקוחות'):'';
       var ch=it.hasK?chevSvg(!!eT[it.id]):'<span style="width:15px;flex:none"></span>';
       var sub=c.code?'<div class="c" title="'+esc(c.code)+'">'+esc(c.code)+'</div>':'';
-      h+='<tr class="'+cls+(it.hasK?' row':'')+'" '+(it.hasK?'data-t="'+it.id+'" role="button" tabindex="0"':'')+'><td class="nm"><div class="nmc" style="margin-right:'+ind+'px">'+ch+'<div class="nlab'+(it.depth?' rail':'')+'"><div class="t" style="font-weight:'+(it.depth===0?500:400)+'">'+esc(c.n)+(c.w?' <span class="tmpchip" title="הזמנת אתר ששולמה באשראי ועדיין לא הוקלדה לפריוריטי">אתר זמני</span>':'')+(c.pd?' <span class="dflag" role="button" tabindex="0" title="התאריך בפריוריטי שונה מתאריך הכניסה באתר">!</span>':'')+'</div>'+(c.pd?'<div class="dfold">'+esc(dateNote(c))+'</div>':'')+sub+'</div></div></td><td>'+cS+'</td><td class="mut">'+pct+'</td>'+(NP?'':'<td>'+cP+'</td><td>'+pill(c)+'</td>')+'<td>'+cC+'</td>'+(GXCOL?'<td>'+gxCell(c)+'</td>':'')+'<td class="mut">'+(it.depth===0?ils(avg):'')+'</td></tr>';
+      h+='<tr class="'+cls+(it.hasK?' row':'')+'" '+(it.hasK?'data-t="'+it.id+'" role="button" tabindex="0"':'')+'><td class="nm"><div class="nmc" style="margin-right:'+ind+'px">'+ch+'<div class="nlab'+(it.depth?' rail':'')+'"><div class="t" style="font-weight:'+(it.depth===0?500:400)+'">'+esc(c.n)+(c.w?' <span class="tmpchip" title="הזמנת אתר ששולמה באשראי ועדיין לא הוקלדה לפריוריטי">אתר זמני</span>':webChip(c))+(c.pd?' <span class="dflag" role="button" tabindex="0" title="התאריך בפריוריטי שונה מתאריך הכניסה באתר">!</span>':'')+'</div>'+(c.pd?'<div class="dfold">'+esc(dateNote(c))+'</div>':'')+sub+'</div></div></td><td>'+cS+'</td><td class="mut">'+pct+'</td>'+(NP?'':'<td>'+cP+'</td><td>'+pill(c)+'</td>')+'<td>'+cC+'</td>'+(GXCOL?'<td>'+gxCell(c)+'</td>':'')+'<td class="mut">'+(it.depth===0?ils(avg):'')+'</td></tr>';
     });
     h+='</tbody><tfoot><tr><td class="nm">סך הכל</td><td>'+ils(R.s)+'</td><td>'+(R.pos>0?'100%':'—')+'</td>'+(NP?'':'<td>'+ils(R.p)+'</td><td>'+pill({s:R.s,profit:R.p,pm:R.pm})+'</td>')+'<td>'+R.c+'</td>'+(GXCOL?'<td>'+gxCell(GT)+'</td>':'')+'<td>'+ils(R.av)+'</td></tr></tfoot></table></div>';
     stage.innerHTML=h;
