@@ -204,7 +204,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
   table{border-collapse:collapse;min-width:452px;width:100%;font-variant-numeric:tabular-nums}
   th{background:var(--surface);color:var(--tx3);font-size:10.5px;font-weight:700;padding:8px 5px;text-align:center;white-space:nowrap}
   th.nm{position:sticky;right:0;z-index:3;text-align:right;box-shadow:-5px 0 5px -5px rgba(0,0,0,.18)}
-  th.nm,td.nm{min-width:94px}
+  th.nm,td.nm{min-width:112px}/* 23.11.2026 15:2x: שם + תגית „אתר” בשורה אחת */
   td{padding:7px 5px;text-align:center;white-space:nowrap;font-size:12.5px}
   td.nm{position:sticky;right:0;z-index:2;text-align:right;box-shadow:-5px 0 5px -5px rgba(0,0,0,.18)}
   /* עמודת השם המוצמדת חייבת להיות אטומה. בלי זה, בטבלה עם שורות בלי d0/dn המספרים
@@ -218,7 +218,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
      בשורות המוצר (ההזחה של שלוש רמות אכלה את הרוחב) והשבירה הייתה מותרת בכל מקום. עכשיו לשם יש רוחב
      מינימלי ושוברים רק בין מילים. הטבלה מתרחבת וגוללת לרוחב, והשם נשאר מוצמד לימין. */
   .nlab{min-width:0}/* 23.11.2026 (הבקשה 15:1x, צילום: רווח ריק בין עמודת השם למכירות): העמודה ברוחב השם הארוך ביותר, לא 128 פיקסל קבועים */
-  .nlab .t{font-size:12.5px;white-space:normal;word-break:normal;overflow-wrap:break-word;max-width:230px;text-align:right}
+  .nlab .t{font-size:12.5px;white-space:normal;word-break:normal;overflow-wrap:break-word;max-width:230px;text-align:right}.nlab .t .tmpchip{white-space:nowrap}
   .nlab .c{font-size:10.5px;color:var(--tx3);white-space:normal;word-break:normal;overflow-wrap:break-word;max-width:230px;text-align:right}
   th[data-hsort]{cursor:pointer;user-select:none}
   th[data-hsort].on{color:var(--bd)}
