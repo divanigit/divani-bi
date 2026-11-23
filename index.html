@@ -1104,7 +1104,7 @@ if(location.protocol==='file:'){document.addEventListener('DOMContentLoaded',fun
     sc.onload=go; sc.onerror=function(){toast('לא הצלחתי לטעון את יוצר התמונה');};
     document.head.appendChild(sc);
   }
-  function shareBtnVisible(v){var b=document.getElementById('sharebtn'); if(b)b.style.display=((v||view)==='agents'&&!!(META&&META.admin)&&!previewUser)?'':'none';}
+  function shareBtnVisible(v){var b=document.getElementById('sharebtn'); if(b)b.style.display=((v||view)==='agents'&&!!(META&&META.owner)&&!previewUser)?'':'none';}   // 23.11.2026 14:2x: owner only ("את הכפתור רק לי")
   window.owlShare={open:openShare,close:closeShare,save:shareSave};   // the toolbar wiring lives in another script block
   var BRN={'':'ללא שיוך סניף','PHONE':'טלפוני','101':'נתניה','102':'ראשל"צ','103':'אתר דיוואני','104':'מוקד משרדים','105':'חיפה','106':'ירושלים','107':'בית שמש'};
   function brName(b){var k=(b==null?'':String(b));return BRN[k]||k;}
