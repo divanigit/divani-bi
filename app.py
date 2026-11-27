@@ -2385,7 +2385,10 @@ def sync_site_sales(d_from, d_to):
             tot = float(li.get("total") or 0); qty = float(li.get("qty") or 1)
             net = round(tot / WEB_VAT, 2); lines_total += tot
             cost = woo_product_cost(auth, li.get("pid")) if (auth and li.get("pid")) else None
-            profit = round(net - cost * qty, 2) if cost is not None else 0.0
+            # עלות האתר (raw_price_-_base) כוללת מע"מ, כמו כל נתוני האתר (הכלל מ-27.9.2026, שאלה 338):
+            # רווח לפני מע"מ = מחיר נטו פחות העלות חלקי 1.18. עד 27.11.2026 העלות הופחתה כמו שהיא
+            # ממחיר שכבר נוקה ממע"מ, והרווח של הזמנה זמנית הוצג נמוך מדי (17.7% במקום 27.8% ב-15 הזמנות).
+            profit = round(net - (cost * qty) / WEB_VAT, 2) if cost is not None else 0.0
             rows.append(dict(base, partname=(li.get("partname") or f"WEB-{li.get('pid')}"),
                              pdes=(li.get("name") or "")[:120], qprice=net, qprofit=profit,
                              line_no=ln, tquant=qty, qprice_list=net, qprofit_list=profit)); ln += 1
