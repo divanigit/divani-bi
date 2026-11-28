@@ -2334,12 +2334,22 @@ def sb_patch(path, row):
 
 
 _web_cost_cache = {}
+_web_cost_fail_at = 0.0        # מתי נכשלה לאחרונה קריאת עלות מהאתר
+WEB_COST_RETRY_SEC = 120       # אחרי כישלון לא מנסים שוב באותו סבב, כדי שאתר חסום לא יעכב את הסנכרון
 
 
 def woo_product_cost(auth, pid):
-    """עלות המוצר באתר — מטא raw_price_-_base (המדויק, דורון 27.9.26). None אם אין."""
+    """עלות המוצר באתר — מטא raw_price_-_base (המדויק, דורון 27.9.26). None אם אין.
+
+    28.11.2026 (שאלה 380): קריאה שנכשלה לא נשמרת בזיכרון. עד אז כישלון אחד (למשל 403 כשהאתר חסם
+    את השרת, 27–28.11.2026) נשמר כ"אין עלות" עד שהשרת עלה מחדש, וההזמנה הזמנית הוצגה עם רווח 0.
+    עכשיו הסבב הבא מנסה שוב, והרווח מתתקן לבד. רק תשובה אמיתית מהאתר נשמרת (כולל 404 — מוצר שנמחק).
+    """
+    global _web_cost_fail_at
     if pid in _web_cost_cache:
         return _web_cost_cache[pid]
+    if time.time() - _web_cost_fail_at < WEB_COST_RETRY_SEC:
+        return None
     cost = None
     try:
         req = urllib.request.Request(f"{WOO_API}/products/{pid}?_fields=meta_data",
@@ -2349,8 +2359,13 @@ def woo_product_cost(auth, pid):
             for m in (json.loads(r.read().decode("utf-8")).get("meta_data") or []):
                 if m.get("key") == "raw_price_-_base" and m.get("value") not in (None, ""):
                     cost = float(m.get("value"))
-    except Exception:
-        cost = None
+    except Exception as e:
+        if isinstance(e, urllib.error.HTTPError) and e.code == 404:
+            _web_cost_cache[pid] = None      # המוצר נמחק מהאתר — תשובה סופית
+            return None
+        _web_cost_fail_at = time.time()
+        print(f"site-sales: cost read failed for product {pid}: {e!r}", flush=True)
+        return None
     _web_cost_cache[pid] = cost
     return cost
 
